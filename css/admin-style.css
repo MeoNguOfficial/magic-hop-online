@@ -1,0 +1,120 @@
+body {
+    font-family: 'Rajdhani', sans-serif;
+    background-color: #020108;
+    color: #fff;
+}
+
+h1,
+h2,
+h3,
+.font-orbitron {
+    font-family: 'Orbitron', sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(6, 182, 212, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(6, 182, 212, 0.5);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(6, 182, 212, 0.8);
+}
+
+/* Sidebar collapsed styles */
+#admin-sidebar {
+    width: 16rem; /* 256px, đồng bộ với w-64 của Tailwind */
+}
+
+#admin-sidebar.sidebar-collapsed {
+    width: 5rem !important; /* 80px - !important để thắng class w-64 của Tailwind */
+}
+
+.sidebar-collapsed .sidebar-text {
+    display: none;
+}
+
+.sidebar-collapsed .admin-tab-btn {
+    justify-content: center;
+}
+
+.sidebar-collapsed .sidebar-text-container {
+    display: none;
+}
+
+/* Mặc định mũi tên chỉ sang trái << (sidebar đang mở -> bấm để thu nhỏ) */
+#sidebar-toggle-icon {
+    transform: rotate(0deg);
+}
+
+/* Khi thu nhỏ, xoay mũi tên lại để chỉ sang phải >> (bấm để mở rộng) */
+.sidebar-collapsed #sidebar-toggle-icon {
+    transform: rotate(180deg);
+}
+
+/* ==========================================================================
+   Modal Animation Styles - Windows-style open/close
+   ========================================================================== */
+
+.modal-container {
+    opacity: 1;
+    transition: opacity 0.22s ease-out;
+}
+
+.modal-container.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.modal-window {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+                opacity 0.22s ease-out;
+    transform-origin: center center;
+}
+
+.modal-container.hidden .modal-window {
+    transform: scale(0.85) translateY(10px);
+    opacity: 0;
+    transition: transform 0.18s cubic-bezier(0.4, 0, 1, 1),
+                opacity 0.18s ease-in;
+}
+
+/* Trạng thái "closing": áp animation thu nhỏ/biến mất giống khi minimize
+   cửa sổ Windows, được JS gắn vào trước khi thêm class hidden */
+.modal-container.modal-closing {
+    opacity: 0;
+}
+
+.modal-container.modal-closing .modal-window {
+    transform: scale(0.85) translateY(10px);
+    opacity: 0;
+    transition: transform 0.18s cubic-bezier(0.4, 0, 1, 1),
+                opacity 0.18s ease-in;
+}
+
+/* Trạng thái "opening": bắt đầu từ nhỏ + mờ, JS sẽ remove hidden rồi
+   trigger transition về trạng thái bình thường ngay sau đó (kiểu restore) */
+.modal-container.modal-opening {
+    opacity: 0;
+}
+
+.modal-container.modal-opening .modal-window {
+    transform: scale(0.85) translateY(10px);
+    opacity: 0;
+}
+
+/* Đảm bảo bảng không bị co lại quá mức trên màn hình nhỏ */
+#tab-users table, #tab-beatmaps table, #tab-scores table {
+    min-width: 640px; /* sm breakpoint */
+}

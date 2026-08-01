@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,65 90,80 50,95 10,80%22 fill=%22%2322d3ee%22/><circle cx=%2250%22 cy=%2235%22 r=%2225%22 fill=%22%23ec4899%22/></svg>">
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,65 90,80 50,95 10,80%22 fill=%22%2322d3ee%22/><circle cx=%2250%22 cy=%2235%22 r=%2225%22 fill=%22%23ec4899%22/></svg>">
+    <link rel="manifest" href="manifest.json">
+    <title>Terms of Service - Cyber Beat Hopper</title>
+    <!-- Google Fonts for Cyberpunk Aesthetic -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        if (window.tailwind) {
+            tailwind.config = {
+                theme: {
+                    extend: {
+                        fontFamily: {
+                            orbitron: ['Orbitron', 'sans-serif'],
+                            rajdhani: ['Rajdhani', 'sans-serif'],
+                            montserrat: ['Montserrat', 'sans-serif'],
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #020617; /* Deep dark slate-950 */
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(6, 182, 212, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(236, 72, 153, 0.05) 0%, transparent 40%),
+                linear-gradient(rgba(34, 211, 238, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(34, 211, 238, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+        }
+
+        .neon-glow-cyan {
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8), 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+
+        .neon-glow-pink {
+            text-shadow: 0 0 10px rgba(236, 72, 153, 0.8), 0 0 20px rgba(236, 72, 153, 0.4);
+        }
+
+        .cyber-border {
+            position: relative;
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(34, 211, 238, 0.25);
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.1);
+        }
+
+        .cyber-border::before {
+            content: '';
+            position: absolute;
+            top: -1px;
+            left: 20px;
+            width: 40px;
+            height: 3px;
+            background: #00ffff;
+            box-shadow: 0 0 10px #00ffff;
+        }
+
+        .cyber-border::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            right: 20px;
+            width: 40px;
+            height: 3px;
+            background: #ec4899;
+            box-shadow: 0 0 10px #ec4899;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(34, 211, 238, 0.4);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(34, 211, 238, 0.7);
+        }
+
+        .tab-btn {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-btn.active {
+            border-color: #00ffff;
+            color: #00ffff;
+            box-shadow: 0 0 10px rgba(6, 182, 212, 0.4);
+            background: rgba(6, 182, 212, 0.1);
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col items-center justify-center p-4 font-montserrat select-none">
+
+    <!-- Glowing header effect -->
+    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[2px]"></div>
+
+    <div class="w-full max-w-3xl my-8 animate-fade-in">
+        <!-- Logo / Title -->
+        <div class="text-center mb-8">
+            <h2 class="text-[11px] font-orbitron tracking-[0.4em] text-cyan-400/70 uppercase">Cyber Beat Hopper</h2>
+            <h1 class="text-3xl md:text-4xl font-black font-orbitron mt-2 tracking-wide neon-glow-cyan text-cyan-300">
+                TERMS OF SERVICE
+            </h1>
+            <p class="text-xs text-gray-500 font-orbitron tracking-wider mt-1">ĐIỀU KHOẢN DỊCH VỤ v1.0</p>
+        </div>
+
+        <!-- Cyber Box Container -->
+        <div class="cyber-border rounded-xl backdrop-blur-xl p-6 md:p-8 space-y-6">
+            
+            <!-- Language Selector Tabs -->
+            <div class="flex border-b border-cyan-500/20 pb-4 justify-center gap-4">
+                <button id="tab-vi" class="tab-btn active px-6 py-2 border border-transparent rounded-md text-xs font-orbitron uppercase tracking-wider text-slate-400 font-bold hover:text-cyan-300" onclick="switchLanguage('vi')">
+                    Tiếng Việt
+                </button>
+                <button id="tab-en" class="tab-btn px-6 py-2 border border-transparent rounded-md text-xs font-orbitron uppercase tracking-wider text-slate-400 font-bold hover:text-cyan-300" onclick="switchLanguage('en')">
+                    English
+                </button>
+            </div>
+
+            <!-- Content Area - VIETNAMESE -->
+            <div id="content-vi" class="space-y-6">
+                <div class="text-sm font-semibold text-pink-400/90 font-orbitron border-l-2 border-pink-500 pl-3 py-1">
+                    Bằng việc truy cập hoặc chơi Cyber Beat Hopper, bạn đồng ý tuân thủ các điều khoản dịch vụ sau đây.
+                </div>
+
+                <div class="space-y-4 text-sm text-slate-300 leading-relaxed text-justify">
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></span>
+                            1. Tạo và Bảo mật Tài khoản
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            Khi đăng ký tài khoản, bạn có trách nhiệm bảo mật thông tin đăng nhập của mình. Mọi hoạt động diễn ra dưới tài khoản của bạn sẽ thuộc trách nhiệm cá nhân của bạn. Không chia sẻ tài khoản cho người khác để tránh tranh chấp điểm số và dữ liệu.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-pink-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-pink-500 rounded-full animate-ping"></span>
+                            2. Chống Gian lận & Hack (Fair Play)
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            Trò chơi tích hợp hệ thống bảo mật <strong>MeoTN Easy Cheat</strong>. Nghiêm cấm mọi hành vi can thiệp vào mã nguồn, sử dụng công cụ hack/cheat, công cụ nhấp tự động trái phép, hoặc sửa đổi dữ liệu điểm số gửi lên máy chủ. Tài khoản vi phạm sẽ bị khóa (Ban) vĩnh viễn hoặc tạm thời tùy mức độ vi phạm.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></span>
+                            3. Chuẩn mực Ứng xử trong Chat
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            Khi sử dụng hệ thống chatroom trong game, người dùng không được gửi các nội dung xúc phạm, quấy rối, ngôn từ kích động thù địch, spam, hoặc chia sẻ các liên kết độc hại. Vi phạm sẽ dẫn đến việc khóa tính năng chat hoặc khóa tài khoản.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-pink-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-pink-500 rounded-full animate-ping"></span>
+                            4. Giới hạn Trách nhiệm
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            Chúng tôi cung cấp trò chơi này cho mục đích giải trí phi thương mại. Chúng tôi không chịu trách nhiệm đối với bất kỳ sự gián đoạn dịch vụ, mất dữ liệu điểm số do sự cố mạng, hoặc các xung đột phần mềm trên thiết bị của bạn.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-gray-500 text-center font-semibold pt-4 border-t border-slate-800/60">
+                    CẢM ƠN BẠN ĐÃ ĐỌC VÀ TUÂN THỦ ĐIỀU KHOẢN ĐỂ XÂY DỰNG CỘNG ĐỒNG GAME LÀNH MẠNH!
+                </div>
+            </div>
+
+            <!-- Content Area - ENGLISH -->
+            <div id="content-en" class="space-y-6 hidden">
+                <div class="text-sm font-semibold text-pink-400/90 font-orbitron border-l-2 border-pink-500 pl-3 py-1">
+                    By accessing or playing Cyber Beat Hopper, you agree to comply with the following Terms of Service.
+                </div>
+
+                <div class="space-y-4 text-sm text-slate-300 leading-relaxed text-justify">
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></span>
+                            1. Account Registration & Security
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            When creating an account, you are responsible for maintaining the confidentiality of your login credentials. All activities under your account are your sole responsibility. Sharing accounts is prohibited to avoid disputes over scores and data.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-pink-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-pink-500 rounded-full animate-ping"></span>
+                            2. Anti-Cheat & Fair Play
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            The game integrates the <strong>MeoTN Easy Cheat</strong> system. Any form of code manipulation, hack/cheat tools, unauthorized auto-clickers, or remote database manipulation is strictly forbidden. Offending accounts will be suspended or permanently banned.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-cyan-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"></span>
+                            3. Chatroom Code of Conduct
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            While communicating in the in-game chatroom, users must not post offensive language, harassment, hate speech, spam, or malicious links. Violating this code will result in a chat mute or account suspension.
+                        </p>
+                    </div>
+
+                    <div class="bg-slate-900/40 p-4 border border-slate-800 rounded-lg">
+                        <h3 class="text-xs font-orbitron font-bold text-pink-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 bg-pink-500 rounded-full animate-ping"></span>
+                            4. Limitation of Liability
+                        </h3>
+                        <p class="pl-3 text-slate-400 text-xs md:text-sm">
+                            This game is provided "as is" for non-commercial entertainment. We are not liable for any service interruptions, loss of score records due to network errors, or device compatibility issues.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="text-[10px] text-gray-500 text-center font-semibold pt-4 border-t border-slate-800/60">
+                    THANK YOU FOR READING AND COMPLYING WITH OUR TERMS TO KEEP THE COMMUNITY FAIR!
+                </div>
+            </div>
+
+            <!-- Footer Close/Back button -->
+            <div class="flex justify-center pt-4">
+                <button onclick="window.close()" class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black text-xs font-orbitron tracking-[0.2em] rounded-md transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.75)] transform active:scale-95 uppercase">
+                    Đóng / Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script to toggle language tabs -->
+    <script>
+        function switchLanguage(lang) {
+            const tabVi = document.getElementById('tab-vi');
+            const tabEn = document.getElementById('tab-en');
+            const contentVi = document.getElementById('content-vi');
+            const contentEn = document.getElementById('content-en');
+
+            if (lang === 'vi') {
+                tabVi.classList.add('active');
+                tabEn.classList.remove('active');
+                contentVi.classList.remove('hidden');
+                contentEn.classList.add('hidden');
+            } else {
+                tabEn.classList.add('active');
+                tabVi.classList.remove('active');
+                contentEn.classList.remove('hidden');
+                contentVi.classList.add('hidden');
+            }
+        }
+
+        // Set default tab based on language parameters or browser preferences
+        window.addEventListener('DOMContentLoaded', () => {
+            const userLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+            if (userLang.startsWith('vi')) {
+                switchLanguage('vi');
+            } else {
+                switchLanguage('en');
+            }
+        });
+    </script>
+</body>
+</html>

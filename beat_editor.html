@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beat Editor Pro - Audio Timeline Editor with Custom Context Menu & Clipboard</title>
+    
+    <!-- Tích hợp mô hình bên thứ 3 từ CDN (Meyda.js) dùng để trích xuất đặc trưng âm thanh -->
+    <script src="https://cdn.jsdelivr.net/npm/meyda@5.6.3/dist/web/meyda.min.js"></script>
+
+    <link rel="stylesheet" href="css/beat-editor.css">
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,65 90,80 50,95 10,80%22 fill=%22%2322d3ee%22/><circle cx=%2250%22 cy=%2235%22 r=%2225%22 fill=%22%23ec4899%22/></svg>">
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><polygon points=%2250,65 90,80 50,95 10,80%22 fill=%22%2322d3ee%22/><circle cx=%2250%22 cy=%2235%22 r=%2225%22 fill=%22%23ec4899%22/></svg>">
+    <link rel="manifest" href="manifest.json">
+</head>
+
+<body>
+
+    <header>
+        <h1>🎵 Beat Editor Pro</h1>
+        <p class="subtitle">Công cụ tạo & chỉnh sửa sơ đồ beat nhạc trực quan - Tích hợp AI & Tạo Beat theo BPM</p>
+    </header>
+
+    <div id="dropZone">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+        </svg>
+        <p style="font-weight: 600; margin-bottom: 5px;">Kéo thả file âm thanh vào đây</p>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">Hoặc nhấp chuột để chọn tệp tin từ thiết bị</p>
+        <input type="file" id="fileInput" accept="audio/*" hidden>
+    </div>
+
+    <div id="songName">🎵 Chưa chọn bài hát</div>
+
+    <!-- Timeline Chỉnh Sửa & Xem Trước Beat Nâng Cao -->
+    <div class="timeline-panel" id="timelinePanel">
+        <div class="timeline-header">
+            <div class="timeline-title">
+                <span>🔍 Xem Trước & Biên Tập Sơ Đồ Beat (Quét chuột để chọn nhiều)</span>
+                <span id="durationInfo" style="color: var(--primary); font-family: monospace;">--:-- / --:--</span>
+            </div>
+            
+            <div class="timeline-controls-group">
+                <div class="selection-indicator" id="selectionIndicator" style="display: none;">
+                    <span class="selection-label" id="selectionLabel">Đã chọn: 0</span>
+                </div>
+                <div class="speed-controls" title="Điều chỉnh tốc độ phát âm thanh (Không đổi mốc thời gian gốc)">
+                    <span class="speed-label" id="speedLabel">Tốc độ: 1.0x</span>
+                    <button class="speed-btn" id="speedOutBtn">−</button>
+                    <input type="range" class="speed-slider" id="speedSlider" min="0.25" max="2.0" value="1.0" step="0.05">
+                    <button class="speed-btn" id="speedInBtn">+</button>
+                    <button class="pitch-toggle-btn active" id="pitchToggleBtn" title="Bật/tắt giữ nguyên cao độ giọng (Preserved Pitch). Khi BẬT: tốc độ thay đổi nhưng giọng không bị biến dạng.">🎵 Pitch</button>
+                </div>
+                <div class="zoom-controls">
+                    <span class="zoom-label" id="zoomLabel">Zoom: 1x</span>
+                    <button class="zoom-btn" id="zoomOutBtn" title="Thu nhỏ timeline">−</button>
+                    <input type="range" class="zoom-slider" id="zoomSlider" min="1" max="30" value="1" step="0.5">
+                    <button class="zoom-btn" id="zoomInBtn" title="Phóng to timeline">+</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline-viewport" id="timelineViewport">
+            <div class="drag-select-box" id="dragSelectBox"></div>
+            <div class="timeline-container" id="timelineContainer">
+                <div class="timeline-ruler" id="timelineRuler"></div>
+                <div class="timeline-playhead" id="timelinePlayhead" style="left: 0%;"></div>
+                <div id="timelineBeats"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu Tùy Biến -->
+    <div class="context-menu" id="customContextMenu">
+        <div class="context-item" id="ctxCopy"><span style="display: flex; align-items: center; gap: 8px;">📋 Sao chép</span><span class="shortcut">Ctrl+C</span></div>
+        <div class="context-item" id="ctxPaste"><span style="display: flex; align-items: center; gap: 8px;">📥 Dán beat</span><span class="shortcut">Ctrl+V</span></div>
+        <div class="context-item" id="ctxDelete"><span style="display: flex; align-items: center; gap: 8px;">❌ Xóa</span><span class="shortcut">Del</span></div>
+        <div class="context-divider"></div>
+        <div class="context-item" id="ctxGroupAlign"><span style="display: flex; align-items: center; gap: 8px;">📐 Căn nhịp đều</span><span class="shortcut">Ctrl+G</span></div>
+        <div class="context-item" id="ctxGroupShift"><span style="display: flex; align-items: center; gap: 8px;">⏳ Dịch chuyển</span><span class="shortcut">Ctrl+G</span></div>
+        <div class="context-divider"></div>
+        <div class="context-item" id="ctxSelectAll"><span style="display: flex; align-items: center; gap: 8px;">✨ Chọn tất cả</span><span class="shortcut">Ctrl+A</span></div>
+        <div class="context-item" id="ctxClearSelection"><span style="display: flex; align-items: center; gap: 8px;">🚫 Hủy lựa chọn</span><span class="shortcut">Esc</span></div>
+        <div class="context-item" id="ctxAddBeatHere"><span style="display: flex; align-items: center; gap: 8px;">➕ Thêm beat tại đây</span><span class="shortcut">DblClick</span></div>
+    </div>
+
+    <div class="workspace">
+        <div class="panel" id="controlPanel">
+            <div class="flash-overlay" id="flashOverlay"></div>
+            
+            <div class="countdown-overlay" id="countdownOverlay">
+                <div class="countdown-number" id="countdownNumber">3</div>
+                <div class="countdown-label">Chuẩn bị ghi beat</div>
+            </div>
+
+            <div style="position: relative; z-index: 10;">
+                <div id="time">00:00.000</div>
+                <div id="status">Sẵn sàng</div>
+                <div id="beatCount">Beat: 0</div>
+            </div>
+
+            <div class="controls" style="position: relative; z-index: 10;">
+                <button class="play" id="playBtn" disabled>▶ Phát</button>
+                <button class="record" id="recordBtn" disabled>⏺ Ghi Beat</button>
+                <button class="add-current" id="addCurrentBtn" disabled>➕ Thêm Beat</button>
+                <button class="undo" id="undoBtn" disabled>↶ Hoàn tác (Undo)</button>
+                <button class="export" id="exportBtn" disabled>📦 Xuất JSON</button>
+                <button class="reset-btn" id="resetBtn" disabled>🔄 Làm lại từ đầu</button>
+            </div>
+
+            <!-- Tự động Tạo Beat bằng các Mô Hình khác nhau -->
+            <div class="auto-beat-section">
+                <div class="auto-beat-title">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    ⚡ Sinh mốc Beat Tự động (AI / Fixed BPM)
+                </div>
+                
+                <div class="full-width" style="margin-bottom: 12px;">
+                    <label class="auto-input-label" for="autoModelSelect">Lựa chọn Mô hình tạo / phân tích (Engine)</label>
+                    <select class="auto-input" id="autoModelSelect">
+                        <option value="model_v5" selected>Model V5: Nhập số BPM (Tạo nhịp cố định - Siêu nhanh)</option>
+                        <option value="model_v4">Model V4: AI Transient Derivative & Adaptive (Pro)</option>
+                        <option value="model_v3">Model V3: AI High-Pass Filter (Bắt Drum/Clap mạnh)</option>
+                        <option value="model_v2">Model V2: Meyda.js AI (Trích xuất đặc trưng âm sắc)</option>
+                        <option value="model_v1">Model V1: RMS Energy (Cơ bản)</option>
+                    </select>
+                </div>
+
+                <!-- Group cấu hình cho AI Models (Ẩn mặc định vì chọn V5 trước) -->
+                <div class="auto-controls-grid" id="aiParamsGroup" style="display: none;">
+                    <div>
+                        <label class="auto-input-label" for="autoThreshold" title="Giá trị nhỏ hơn sẽ nhạy hơn và sinh nhiều beat hơn.">Độ nhạy phân tích (0.5 - 3.0)</label>
+                        <input type="number" class="auto-input" id="autoThreshold" min="0.5" max="3.0" value="1.4" step="0.1">
+                    </div>
+                    <div>
+                        <label class="auto-input-label" for="autoMinDist" title="Khoảng cách thời gian tối thiểu giữa 2 nhịp beat liên tiếp.">Khoảng cách tối thiểu (s)</label>
+                        <input type="number" class="auto-input" id="autoMinDist" min="0.1" max="2.0" value="0.25" step="0.05">
+                    </div>
+                </div>
+
+                <!-- Group cấu hình cho Fixed BPM Model -->
+                <div class="auto-controls-grid" id="bpmParamsGroup" style="display: grid;">
+                    <div>
+                        <label class="auto-input-label" for="autoBpmVal" title="Nhịp trên phút (Beats Per Minute)">Chỉ số BPM (Ví dụ: 120)</label>
+                        <input type="number" class="auto-input" id="autoBpmVal" min="10" max="300" value="120" step="1">
+                    </div>
+                    <div>
+                        <label class="auto-input-label" for="autoBpmOffset" title="Thời gian bắt đầu rơi nhịp đầu tiên (tính bằng giây)">Bắt đầu từ (giây)</label>
+                        <input type="number" class="auto-input" id="autoBpmOffset" min="0" value="0" step="0.01">
+                    </div>
+                </div>
+
+                <button class="auto-generate-btn" id="autoGenerateBtn" disabled style="margin-top: 15px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+                    </svg>
+                    Bắt đầu Tạo Beat
+                </button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="output-container">
+                <div class="output-header">
+                    <span class="output-title">Dữ liệu Beatmap JSON</span>
+                    <div class="output-actions">
+                        <button class="import-btn" id="importBtn" title="Nạp dữ liệu JSON đã sửa đổi ngược lại timeline">📥 Nạp JSON</button>
+                        <div class="format-selector">
+                            <button class="format-btn active" id="formatOneLine">1 Dòng (Inline)</button>
+                            <button class="format-btn" id="formatBeautify">Đầy Đủ (Beautified)</button>
+                        </div>
+                    </div>
+                </div>
+                <textarea id="output" placeholder="// Dữ liệu xuất ra sẽ hiển thị ở đây... Bạn có thể tự dán JSON vào đây rồi bấm nút 'Nạp JSON' bên trên để chỉnh sửa"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="tip-box">
+        <div class="tip-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            Hướng dẫn sử dụng Tạo Beat Tự động:
+        </div>
+        <ul class="tip-list">
+            <li><strong>Model V5 (Nhập số BPM):</strong> Không cần AI quét. Hệ thống sẽ toán học rải đều nhịp từ đầu bài hát tới cuối bài. Nhớ căn chỉnh <em>"Bắt đầu từ"</em> vì rất ít bài hát nào có âm thanh nhạc đập ngay mốc 0 giây.</li>
+            <li><strong>Model V4 (Pro AI):</strong> AI thuật toán mới nhất, phát hiện chính xác thời điểm "bắt đầu" của nhịp âm thanh thay vì đỉnh âm thanh to nhất. Phù hợp các bài hát nhịp không đều.</li>
+            <li><strong>Model V3:</strong> Áp dụng màng lọc High-pass ẩn, lọc bỏ hoàn toàn Bass/Vocal và chỉ tập trung truy vết âm thanh của Snare, Clap. Dành cho nhạc Trap/Hiphop.</li>
+            <li><strong>Model V2 & V1:</strong> Dùng thuật toán Root Mean Square và trích xuất độ sắc của tần số truyền thống. Nếu beat tạo ra dày đặc quá, hãy Tăng độ nhạy phân tích lên.</li>
+        </ul>
+    </div>
+
+    <audio id="audio"></audio>
+
+    <!-- Modal Xác Nhận Reset -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal">
+            <h3>Làm lại từ đầu?</h3>
+            <p>Toàn bộ danh sách beat bạn đã ghi cho bài hát này sẽ bị xóa sạch để bắt đầu thu lại. Bài hát đã tải lên vẫn sẽ được giữ nguyên. Bạn có chắc chắn?</p>
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" id="cancelReset">Hủy bỏ</button>
+                <button class="modal-btn btn-confirm btn-danger" id="confirmReset">Đồng ý làm lại</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thông Báo / Cảnh Báo -->
+    <div class="modal-overlay" id="alertModal">
+        <div class="modal">
+            <h3 id="alertTitle" style="color: var(--warning); margin-bottom: 12px;">Thông báo</h3>
+            <p id="alertMessage" style="color: var(--text-color); margin-bottom: 20px; line-height: 1.6;"></p>
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" id="closeAlert" style="background: var(--primary); color: var(--bg-color);">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Menu Nhóm nâng cao (Ctrl + G) -->
+    <div class="modal-overlay" id="groupActionModal">
+        <div class="modal" style="max-width: 480px; text-align: left;">
+            <h3 style="color: var(--warning); text-align: center; margin-bottom: 15px;">🛠 Cài đặt Chỉnh sửa Nhóm Beat (Ctrl+G)</h3>
+            <p style="text-align: center; margin-bottom: 15px; font-size: 0.9rem;" id="groupActionSummary">Đang chọn: 0 beat</p>
+            <div style="border-bottom: 1px solid var(--border-color); margin-bottom: 15px;"></div>
+            <div style="margin-bottom: 20px;">
+                <h4 style="color: var(--primary); margin-bottom: 8px; font-size: 0.95rem;">1. Căn nhịp beat đều giữa điểm đầu & cuối</h4>
+                <div class="modal-input-group">
+                    <label for="subdivideParts">Số phần con muốn chia (Ví dụ: 4, 8, 16):</label>
+                    <input type="number" id="subdivideParts" min="1" max="128" value="4">
+                </div>
+                <button class="modal-btn btn-confirm" id="btnGroupAlign" style="width: 100%;">Căn Đều Beat</button>
+            </div>
+            <div style="border-bottom: 1px solid var(--border-color); margin-bottom: 15px;"></div>
+            <div style="margin-bottom: 10px;">
+                <h4 style="color: var(--primary); margin-bottom: 8px; font-size: 0.95rem;">2. Di chuyển nhóm mốc beat đồng thời</h4>
+                <div class="modal-input-group">
+                    <label for="shiftOffset">Thời gian dịch chuyển (Mili-giây ms):</label>
+                    <input type="number" id="shiftOffset" value="50" step="10">
+                </div>
+                <button class="modal-btn btn-confirm" id="btnGroupShift" style="width: 100%;">Áp Dụng Dịch Chuyển</button>
+            </div>
+            <div style="margin-bottom: 15px;"></div>
+            <div class="modal-buttons" style="border-top: 1px solid var(--border-color); padding-top: 15px;">
+                <button class="modal-btn btn-cancel" id="closeGroupModal" style="width: 100%;">Đóng bảng điều khiển</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/beat-editor.js"></script>
+</body>
+</html>
