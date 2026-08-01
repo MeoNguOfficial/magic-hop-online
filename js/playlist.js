@@ -446,6 +446,9 @@ window.mergeIntoPlaylist = function (newMaps) {
             // thoát ra vào lại hoặc gọi refreshPlaylist/loadPlaylistData lần 2+.
             const prevBeats = playlist[existingIndex].beats;
             const prevLoaded = playlist[existingIndex].loaded;
+            const prevNormalPassed = playlist[existingIndex].is_normal_mode_passed;
+            const prevHardPassed = playlist[existingIndex].is_hard_mode_passed;
+            const prevPassed = playlist[existingIndex].is_passed;
 
             playlist[existingIndex] = {
                 ...playlist[existingIndex],
@@ -454,7 +457,10 @@ window.mergeIntoPlaylist = function (newMaps) {
                 no_fake_block: newMap.no_fake_block === true,
                 // Không cho newMap.beats=null/[] ghi đè dữ liệu cũ đã có sẵn
                 beats: hasBeats ? newMap.beats : prevBeats,
-                loaded: hasBeats ? true : prevLoaded
+                loaded: hasBeats ? true : prevLoaded,
+                is_normal_mode_passed: newMap.is_normal_mode_passed ?? prevNormalPassed,
+                is_hard_mode_passed: newMap.is_hard_mode_passed ?? prevHardPassed,
+                is_passed: newMap.is_passed ?? prevPassed
             };
         }
         resultIndices.push(existingIndex);
@@ -502,6 +508,11 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
                 // Lưu vào IndexedDB để dùng khi offline
                 if (typeof cachePlaylistToDB === 'function' && !search) {
                     cachePlaylistToDB(newMaps);
+                }
+
+                // Đồng bộ cờ passed từ server cho các bài nhạc vừa tải
+                if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
+                    window.preloadBackendAndPassedStatusOnStartup();
                 }
             }
 
@@ -559,6 +570,10 @@ async function loadMoreSongs() {
 
         const indices = window.mergeIntoPlaylist(newMaps);
         currentPlaylistIndices.push(...indices);
+
+        if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
+            window.preloadBackendAndPassedStatusOnStartup();
+        }
 
         // Cập nhật thêm vào cache offline để tránh mất dữ liệu mới kéo
         if (typeof cachePlaylistToDB === 'function' && !currentSearchTerm && typeof getCachedPlaylistFromDB === 'function') {

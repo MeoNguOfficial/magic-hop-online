@@ -304,6 +304,10 @@ async function checkLoginStatus(forceRefresh = false) {
                 localStorage.setItem('auth_user', JSON.stringify(userData));
                 saveAccountToSavedList(userData, token, tokenExp);
                 renderLoggedInState(userData);
+                syncServerDataToLocal(userData.id);
+                if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
+                    window.preloadBackendAndPassedStatusOnStartup();
+                }
             } else {
                 throw new Error("Không có dữ liệu user");
             }
@@ -326,6 +330,10 @@ async function checkLoginStatus(forceRefresh = false) {
             const cachedUser = getAuthUser();
             if (cachedUser && cachedUser.id) {
                 renderLoggedInState(cachedUser);
+                syncServerDataToLocal(cachedUser.id);
+                if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
+                    window.preloadBackendAndPassedStatusOnStartup();
+                }
             } else {
                 renderLoggedOutState();
             }
@@ -852,7 +860,7 @@ async function syncServerDataToLocal(userId) {
         const mergedScores = {};
         serverScores.forEach(s => {
             if (typeof playlist !== 'undefined') {
-                const songIndex = playlist.findIndex(p => p.id === s.beatmap_id);
+                const songIndex = playlist.findIndex(p => String(p.id) === String(s.beatmap_id) || String(p.id) === String(s.song_id));
                 if (songIndex !== -1) {
                     const isHard = s.is_hard_mode || s.hard_mode || s.is_rage_mode || s.rage_mode;
                     if (!mergedScores[songIndex]) {
@@ -863,18 +871,21 @@ async function syncServerDataToLocal(userId) {
                             ragePassed: false
                         };
                     }
+
+                    const isNormalPassed = Boolean(s.is_normal_mode_passed) || Number(s.is_normal_mode_passed) === 1 || String(s.is_normal_mode_passed) === '1' || s.is_normal_mode_passed === true;
+
                     if (isHard) {
                         if (s.score > mergedScores[songIndex].rageScore) {
                             mergedScores[songIndex].rageScore = s.score;
                         }
-                        if (s.is_hard_mode_passed || s.hard_mode_passed || s.is_rage_mode_passed || s.rage_mode_passed || s.is_normal_mode_passed) {
+                        if (isNormalPassed) {
                             mergedScores[songIndex].ragePassed = true;
                         }
                     } else {
                         if (s.score > mergedScores[songIndex].normalScore) {
                             mergedScores[songIndex].normalScore = s.score;
                         }
-                        if (s.is_normal_mode_passed) {
+                        if (isNormalPassed) {
                             mergedScores[songIndex].normalPassed = true;
                         }
                     }
@@ -1130,7 +1141,7 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
                                 const mergedScores = {};
                                 serverScores.forEach(s => {
                                     if (typeof playlist !== 'undefined') {
-                                        const songIndex = playlist.findIndex(p => p.id === s.beatmap_id);
+                                        const songIndex = playlist.findIndex(p => String(p.id) === String(s.beatmap_id) || String(p.id) === String(s.song_id));
                                         if (songIndex !== -1) {
                                             const isHard = s.is_hard_mode || s.hard_mode || s.is_rage_mode || s.rage_mode;
                                             if (!mergedScores[songIndex]) {
@@ -1141,18 +1152,21 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
                                                     ragePassed: false
                                                 };
                                             }
+
+                                            const isNormalPassed = Boolean(s.is_normal_mode_passed) || Number(s.is_normal_mode_passed) === 1 || String(s.is_normal_mode_passed) === '1' || s.is_normal_mode_passed === true;
+
                                             if (isHard) {
                                                 if (s.score > mergedScores[songIndex].rageScore) {
                                                     mergedScores[songIndex].rageScore = s.score;
                                                 }
-                                                if (s.is_hard_mode_passed || s.hard_mode_passed || s.is_rage_mode_passed || s.rage_mode_passed || s.is_normal_mode_passed) {
+                                                if (isNormalPassed) {
                                                     mergedScores[songIndex].ragePassed = true;
                                                 }
                                             } else {
                                                 if (s.score > mergedScores[songIndex].normalScore) {
                                                     mergedScores[songIndex].normalScore = s.score;
                                                 }
-                                                if (s.is_normal_mode_passed) {
+                                                if (isNormalPassed) {
                                                     mergedScores[songIndex].normalPassed = true;
                                                 }
                                             }

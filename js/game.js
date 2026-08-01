@@ -247,6 +247,17 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
         } else {
             updatedRecord.isNormalModePassed = true;
         }
+
+        const targetSong = (typeof activePlaylist !== 'undefined' && activePlaylist[songIndex]) || 
+                           (typeof playlist !== 'undefined' && playlist[songIndex]);
+        if (targetSong) {
+            if (isRage || isAsian) {
+                targetSong.is_hard_mode_passed = true;
+            } else {
+                targetSong.is_normal_mode_passed = true;
+            }
+            targetSong.is_passed = true;
+        }
     }
 
     // Chỉ cập nhật kỷ lục điểm số cao nhất (High Score) nếu KHÔNG BẬT chế độ hỗ trợ
