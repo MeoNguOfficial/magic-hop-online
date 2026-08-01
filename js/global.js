@@ -470,7 +470,7 @@ async function changeSong(index, autoStart = false) {
         if (activePlaylist[index].url) localStorage.setItem('selectedSongUrl', activePlaylist[index].url);
     }
 
-    if (typeof stopPreview === 'function') stopPreview(true);
+    if (!autoStart && typeof stopPreview === 'function') stopPreview(true);
 
     const options = document.querySelectorAll('.song-option');
     options.forEach((opt) => {
@@ -579,19 +579,30 @@ async function changeSong(index, autoStart = false) {
             if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
             if (tipInterval) clearInterval(tipInterval);
             if (autoStart) {
-                if (audioCtx && menuFilterNode && menuGainNode) {
+                if (audioCtx && menuFilterNode) {
                     const now = audioCtx.currentTime;
                     menuFilterNode.frequency.cancelScheduledValues(now);
                     menuFilterNode.frequency.setValueAtTime(menuFilterNode.frequency.value, now);
                     menuFilterNode.frequency.exponentialRampToValueAtTime(350, now + 0.8);
 
-                    menuGainNode.gain.cancelScheduledValues(now);
-                    menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
-                    menuGainNode.gain.linearRampToValueAtTime(0, now + 1.2);
+                    if (menuGainNode) {
+                        menuGainNode.gain.cancelScheduledValues(now);
+                        menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
+                        menuGainNode.gain.linearRampToValueAtTime(0, now + 1.2);
+                    }
+                    if (typeof previewGainNode !== 'undefined' && previewGainNode) {
+                        previewGainNode.gain.cancelScheduledValues(now);
+                        previewGainNode.gain.setValueAtTime(previewGainNode.gain.value, now);
+                        previewGainNode.gain.linearRampToValueAtTime(0, now + 1.2);
+                    }
+                } else if (!audioCtx) {
+                    if (menuAudio) menuAudio.volume = 0;
+                    if (typeof previewAudio !== 'undefined' && previewAudio) previewAudio.volume = 0;
                 }
 
                 setTimeout(() => {
                     if (isSongLoadingCancelled) return;
+                    if (typeof stopPreview === 'function') stopPreview(true);
                     loadingOverlay.style.display = 'none';
                     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
                         anime({

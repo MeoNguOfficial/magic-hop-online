@@ -423,7 +423,7 @@ function updatePreviewUI(index, state) {
     if (!btn) return;
     const icon = btn.querySelector('.preview-icon');
     
-    btn.classList.remove('animate-pulse', 'text-pink-400', 'border-pink-500/50', 'bg-cyan-800/80', 'text-cyan-400');
+    btn.classList.remove('playing', 'animate-pulse', 'text-pink-400', 'border-pink-500/50', 'bg-cyan-800/80', 'text-cyan-400');
     if (icon) icon.classList.remove('animate-spin');
     
     if (state === 'loading') {
@@ -433,9 +433,10 @@ function updatePreviewUI(index, state) {
             icon.innerHTML = '<circle cx="12" cy="12" r="10" stroke-dasharray="16 16"></circle>';
         }
     } else if (state === 'playing') {
-        btn.classList.add('text-pink-400', 'border-pink-500/50', 'bg-cyan-800/80');
+        btn.classList.add('playing', 'text-pink-400', 'border-pink-500/50', 'bg-cyan-800/80');
         if (icon) {
-            icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle>';
+            icon.classList.add('animate-spin');
+            icon.innerHTML = '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="6 3"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle>';
         }
     } else {
         btn.classList.add('text-cyan-400');

@@ -194,15 +194,15 @@ function initAudio() {
         menuFilterNode.frequency.value = 22050;
         menuGainNode = audioCtx.createGain();
         menuGainNode.gain.value = menuVolume;
-        menuSource.connect(menuFilterNode);
-        menuFilterNode.connect(menuGainNode);
-        menuGainNode.connect(audioCtx.destination);
+        menuSource.connect(menuGainNode);
+        menuGainNode.connect(menuFilterNode);
+        menuFilterNode.connect(audioCtx.destination);
 
         previewSource = audioCtx.createMediaElementSource(previewAudio);
         previewGainNode = audioCtx.createGain();
         previewGainNode.gain.value = 0;
         previewSource.connect(previewGainNode);
-        previewGainNode.connect(audioCtx.destination);
+        previewGainNode.connect(menuFilterNode);
 
         roundStartSource = audioCtx.createMediaElementSource(roundStartAudio);
         scoreTickSource = audioCtx.createMediaElementSource(scoreTickAudio);
@@ -324,6 +324,24 @@ async function togglePreview(index) {
     stopPreview(true); // Dừng ngay preview cũ
     currentPreviewIndex = index;
     const targetIndex = index;
+
+    if (typeof selectedSongIndex !== 'undefined') {
+        selectedSongIndex = index;
+        try {
+            localStorage.setItem('selectedSongIndex', index);
+            if (typeof activePlaylist !== 'undefined' && activePlaylist[index]) {
+                if (activePlaylist[index].id) localStorage.setItem('selectedSongId', activePlaylist[index].id);
+                if (activePlaylist[index].url) localStorage.setItem('selectedSongUrl', activePlaylist[index].url);
+            }
+        } catch (e) { }
+        const options = document.querySelectorAll('.song-option');
+        options.forEach((opt) => {
+            opt.classList.toggle('active', parseInt(opt.dataset.index) === index);
+        });
+        if (typeof renderBestScoreUI === 'function') {
+            renderBestScoreUI(index);
+        }
+    }
     
     const song = activePlaylist[index];
     if (!previewAudio) return;

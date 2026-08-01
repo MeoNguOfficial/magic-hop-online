@@ -2764,12 +2764,46 @@ async function gameVictory() {
     const gameoverTitle = gameoverScreen.querySelector('h2');
     if (gameoverTitle) {
         gameoverTitle.innerText = t('normal_mode_completed') || "Hoàn thành";
-        gameoverTitle.className = "text-4xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase mb-6";
         gameoverTitle.setAttribute('data-i18n', 'normal_mode_completed');
     }
-    if (gameoverScreenWindow) {
-        gameoverScreenWindow.classList.remove('border-pink-500/40');
-        gameoverScreenWindow.classList.add('border-cyan-500/40');
+
+    // Kích hoạt hiệu ứng Particle và Style cho Màn hình Hoàn thành (Victory / Mode Completed) như Game Over
+    const isRage = window.HardModeManager && window.HardModeManager.isEnabled;
+    const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
+    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+
+    if (isAsian && window.AsianGameOverFireManager) {
+        if (window.RageGameOverFireManager) window.RageGameOverFireManager.stop();
+        if (window.EasyGameOverCloverManager) window.EasyGameOverCloverManager.stop();
+        if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
+        window.AsianGameOverFireManager.start();
+    } else if (isRage && window.RageGameOverFireManager) {
+        if (window.AsianGameOverFireManager) window.AsianGameOverFireManager.stop();
+        if (window.EasyGameOverCloverManager) window.EasyGameOverCloverManager.stop();
+        if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
+        window.RageGameOverFireManager.start();
+    } else if (isEasy && window.EasyGameOverCloverManager) {
+        if (window.AsianGameOverFireManager) window.AsianGameOverFireManager.stop();
+        if (window.RageGameOverFireManager) window.RageGameOverFireManager.stop();
+        if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
+        window.EasyGameOverCloverManager.start();
+    } else if (window.DefaultGameOverParticleManager) {
+        if (window.AsianGameOverFireManager) window.AsianGameOverFireManager.stop();
+        if (window.RageGameOverFireManager) window.RageGameOverFireManager.stop();
+        if (window.EasyGameOverCloverManager) window.EasyGameOverCloverManager.stop();
+        window.DefaultGameOverParticleManager.start(true);
+    } else {
+        if (window.AsianGameOverFireManager) window.AsianGameOverFireManager.stop();
+        if (window.RageGameOverFireManager) window.RageGameOverFireManager.stop();
+        if (window.EasyGameOverCloverManager) window.EasyGameOverCloverManager.stop();
+        if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
+        if (gameoverTitle) {
+            gameoverTitle.className = "text-4xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase mb-6 animate-pulse";
+        }
+        if (gameoverScreenWindow) {
+            gameoverScreenWindow.classList.remove('border-pink-500/40', 'border-red-500/70', 'border-orange-500/70', 'border-green-500/70');
+            gameoverScreenWindow.classList.add('border-cyan-500/40');
+        }
     }
 
     gameoverScreen.style.display = 'flex';
@@ -2778,9 +2812,36 @@ async function gameVictory() {
     if (!gameOverMiniCard) {
         gameOverMiniCard = document.createElement('div');
         gameOverMiniCard.id = 'gameover-mini-music-card';
-        gameOverMiniCard.className = "absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border border-cyan-500/40 bg-cyan-950/80 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none";
         gameoverScreen.appendChild(gameOverMiniCard);
     }
+
+    let cardBorder = "border-cyan-500/40 bg-cyan-950/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]";
+    let iconColor = "text-cyan-400";
+    let iconBg = "bg-cyan-900/50 border-cyan-500/50";
+    let textColor = "text-cyan-300";
+    let textShadow = "0 0 8px rgba(34,211,238,0.6)";
+
+    if (isAsian) {
+        cardBorder = "border-red-500/40 bg-red-950/80 shadow-[0_0_20px_rgba(239,68,68,0.2)]";
+        iconColor = "text-red-400";
+        iconBg = "bg-red-900/50 border-red-500/50";
+        textColor = "text-red-300";
+        textShadow = "0 0 8px rgba(239,68,68,0.6)";
+    } else if (isRage) {
+        cardBorder = "border-orange-500/40 bg-orange-950/80 shadow-[0_0_20px_rgba(249,115,22,0.2)]";
+        iconColor = "text-orange-400";
+        iconBg = "bg-orange-900/50 border-orange-500/50";
+        textColor = "text-orange-300";
+        textShadow = "0 0 8px rgba(249,115,22,0.6)";
+    } else if (isEasy) {
+        cardBorder = "border-emerald-500/40 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.2)]";
+        iconColor = "text-emerald-400";
+        iconBg = "bg-emerald-900/50 border-emerald-500/50";
+        textColor = "text-emerald-300";
+        textShadow = "0 0 8px rgba(16,185,129,0.6)";
+    }
+
+    gameOverMiniCard.className = `absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border ${cardBorder} backdrop-blur-md min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none`;
 
     const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
     const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
@@ -2788,11 +2849,11 @@ async function gameVictory() {
 
     gameOverMiniCard.innerHTML = `
         <div class="flex items-center gap-3 w-full">
-            <div class="w-10 h-10 rounded-full bg-cyan-900/50 flex items-center justify-center border border-cyan-500/50 shrink-0">
-                <svg class="w-5 h-5 text-cyan-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+            <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                <svg class="w-5 h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
             </div>
             <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
-                <div class="text-cyan-300 font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: 0 0 8px rgba(34,211,238,0.6)">
+                <div class="${textColor} font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
                     <span class="marquee-text inline-block">${songName}</span>
                 </div>
                 <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
@@ -2996,7 +3057,7 @@ window.DefaultGameOverParticleManager = {
         this.pinkTexture = this.createGlowTexture('rgba(255, 255, 255, 1)', 'rgba(236, 72, 153, 0.85)');
     },
 
-    start: function () {
+    start: function (isVictory = false) {
         this.init();
         if (!this.canvas) return;
 
@@ -3015,7 +3076,7 @@ window.DefaultGameOverParticleManager = {
                 vx: (Math.random() - 0.5) * 0.6,
                 vy: -Math.random() * 1.5 - 0.5,
                 size: Math.random() * 16 + 10,
-                type: Math.random() > 0.5 ? 'cyan' : 'pink',
+                type: isVictory ? (Math.random() > 0.3 ? 'cyan' : 'pink') : (Math.random() > 0.5 ? 'cyan' : 'pink'),
                 opacity: Math.random() * 0.6 + 0.4,
                 pulseSpeed: Math.random() * 0.04 + 0.015,
                 pulseOffset: Math.random() * Math.PI * 2
@@ -3024,17 +3085,29 @@ window.DefaultGameOverParticleManager = {
 
         const gameoverTitle = document.querySelector('#gameover-screen-window h2');
         if (gameoverTitle) {
-            gameoverTitle.className = "text-4xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase mb-6";
-            gameoverTitle.style.textShadow = '';
-            gameoverTitle.style.color = '';
+            if (isVictory) {
+                gameoverTitle.className = "text-4xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase mb-6 animate-pulse";
+                gameoverTitle.style.textShadow = '0 0 14px #22d3ee, 0 0 28px #06b6d4, 0 0 50px #0891b2';
+                gameoverTitle.style.color = '#22d3ee';
+            } else {
+                gameoverTitle.className = "text-4xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase mb-6";
+                gameoverTitle.style.textShadow = '';
+                gameoverTitle.style.color = '';
+            }
         }
 
         const gameoverWindow = document.getElementById('gameover-screen-window');
         if (gameoverWindow) {
             gameoverWindow.style.boxShadow = '';
             gameoverWindow.style.borderColor = '';
-            gameoverWindow.classList.remove('border-red-500/70', 'border-green-500/70');
-            gameoverWindow.classList.add('border-pink-500/40');
+            gameoverWindow.classList.remove('border-red-500/70', 'border-green-500/70', 'border-orange-500/70', 'border-pink-500/40', 'border-cyan-500/70', 'border-cyan-500/40');
+            if (isVictory) {
+                gameoverWindow.classList.add('border-cyan-500/70');
+                gameoverWindow.style.borderColor = '#06b6d4';
+                gameoverWindow.style.boxShadow = '0 0 35px rgba(6, 182, 212, 0.6), inset 0 0 20px rgba(34, 211, 238, 0.3)';
+            } else {
+                gameoverWindow.classList.add('border-pink-500/40');
+            }
         }
 
         if (this.animationFrameId) {
