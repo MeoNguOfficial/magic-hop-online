@@ -23,6 +23,18 @@ function normalizeBeats(beats) {
 }
 window.normalizeBeats = normalizeBeats;
 
+function getBeatmapIdFromSong(song) {
+    if (!song) return null;
+    if (song.id !== undefined && song.id !== null && song.id !== '') return String(song.id);
+    const url = song.file_url || song.beatmapUrl;
+    if (url && typeof url === 'string') {
+        const match = url.match(/music_(\d+)\.json/) || url.match(/(\d+)/);
+        if (match) return match[1];
+    }
+    return null;
+}
+window.getBeatmapIdFromSong = getBeatmapIdFromSong;
+
 let playlistSource =
     [
         {
@@ -407,13 +419,14 @@ window.refreshPlaylist = refreshPlaylist;
 window.mergeIntoPlaylist = function (newMaps) {
     const processedMaps = newMaps.map(item => {
         const normalized = normalizeBeats(item.beats);
+        const songId = item.id !== undefined && item.id !== null ? item.id : (typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(item) : null);
         return {
             ...item, // Kế thừa toàn bộ dữ liệu từ DB (url nhạc, beats, speed, bpm...)
-            id: item.id,
+            id: songId,
             name: item.title || item.name,
             artist: item.artist || "Unknown",
             beats: normalized,
-            beatmapUrl: item.file_url || item.beatmapUrl || (normalized ? null : `beatmap/music_${item.id}.json`),
+            beatmapUrl: item.file_url || item.beatmapUrl || (normalized ? null : `beatmap/music_${songId}.json`),
             date_show: item.date_show || null,
             time_hide: item.time_hide || null,
             is_available: item.is_available ?? true,
@@ -424,7 +437,8 @@ window.mergeIntoPlaylist = function (newMaps) {
     const resultIndices = [];
 
     processedMaps.forEach(newMap => {
-        let existingIndex = playlist.findIndex(m => m.id === newMap.id);
+        const targetIdStr = getBeatmapIdFromSong(newMap);
+        let existingIndex = playlist.findIndex(m => getBeatmapIdFromSong(m) === targetIdStr);
         const hasBeats = newMap.beats && Array.isArray(newMap.beats) && newMap.beats.length > 0;
 
         if (existingIndex === -1) {

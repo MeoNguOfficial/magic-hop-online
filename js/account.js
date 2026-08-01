@@ -281,6 +281,88 @@ function removeSavedAccount(accountId) {
     localStorage.setItem('saved_accounts', JSON.stringify(list));
 }
 
+// --- HÀM TỰ ĐỘNG KÉO VÀ GHI ĐÈ DỮ LIỆU TỪ SERVER VỀ THIẾT BỊ KHI CHUYỂN TÀI KHOẢN ---
+async function syncServerDataToLocal(userId) {
+    if (!userId) return;
+    try {
+        const scoreRes = await window.ApiService.getScores({ user_id: userId, limit: 1000 });
+        const serverScores = scoreRes.data?.data || scoreRes.data || [];
+        
+        const db = typeof getDB === 'function' ? await getDB() : (typeof initDB === 'function' ? await initDB() : null);
+        if (!db) return;
+
+        const tx = db.transaction("highScores", "readwrite");
+        const store = tx.objectStore("highScores");
+
+        // Xóa hoàn toàn kỷ lục cũ trên IndexedDB thiết bị để nạp dữ liệu sạch từ Server tài khoản mới
+        await new Promise((resolve) => {
+            const clearReq = store.clear();
+            clearReq.onsuccess = resolve;
+            clearReq.onerror = resolve;
+        });
+
+        const mergedScores = {};
+        serverScores.forEach(s => {
+            if (typeof playlist !== 'undefined') {
+                const rawBeatmapId = s.beatmap_id ?? s.beatmapId ?? s.song_id ?? s.songId ?? s.map_id ?? s.beatmap?.id ?? s.song?.id ?? s.beatmap?.beatmap_id;
+                const targetBeatmapId = (rawBeatmapId !== undefined && rawBeatmapId !== null) ? String(rawBeatmapId) : null;
+                if (!targetBeatmapId) return;
+
+                const songIndex = playlist.findIndex(p => {
+                    const bId = typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(p) : String(p.id);
+                    return bId && bId === targetBeatmapId;
+                });
+                if (songIndex !== -1) {
+                    const isHard = s.is_hard_mode || s.hard_mode || s.is_rage_mode || s.rage_mode;
+                    if (!mergedScores[songIndex]) {
+                        mergedScores[songIndex] = {
+                            normalScore: 0,
+                            normalPassed: false,
+                            rageScore: 0,
+                            ragePassed: false
+                        };
+                    }
+
+                    const rawPassed = s.is_normal_mode_passed ?? s.is_normal_passed ?? s.is_passed ?? s.isNormalModePassed ?? s.isNormalPassed ?? s.normal_passed;
+                    const isNormalPassed = Boolean(rawPassed) || Number(rawPassed) === 1 || String(rawPassed) === '1' || String(rawPassed).toLowerCase() === 'true' || rawPassed === true;
+
+                    if (isHard) {
+                        if (s.score > mergedScores[songIndex].rageScore) {
+                            mergedScores[songIndex].rageScore = s.score;
+                        }
+                        if (isNormalPassed) {
+                            mergedScores[songIndex].ragePassed = true;
+                        }
+                    } else {
+                        if (s.score > mergedScores[songIndex].normalScore) {
+                            mergedScores[songIndex].normalScore = s.score;
+                        }
+                        if (isNormalPassed) {
+                            mergedScores[songIndex].normalPassed = true;
+                        }
+                    }
+                }
+            }
+        });
+
+        Object.keys(mergedScores).forEach(songIdxStr => {
+            const songIdx = parseInt(songIdxStr, 10);
+            const ms = mergedScores[songIdx];
+            const record = {
+                songIndex: songIdx,
+                score: ms.normalScore > 0 ? btoa(ms.normalScore.toString()) : undefined,
+                isNormalModePassed: ms.normalPassed ? true : false,
+                rageScore: ms.rageScore > 0 ? btoa(ms.rageScore.toString()) : undefined,
+                isRageModePassed: ms.ragePassed ? true : false
+            };
+            store.put(record);
+        });
+    } catch (e) {
+        console.error('[Account] Lỗi đồng bộ dữ liệu từ server khi chuyển tài khoản:', e);
+    }
+}
+window.syncServerDataToLocal = syncServerDataToLocal;
+
 async function checkLoginStatus(forceRefresh = false) {
     const token = localStorage.getItem('auth_token');
     const tokenExp = localStorage.getItem('auth_token_exp');
@@ -838,78 +920,6 @@ function renderSwitchAccountState(currentUser) {
         renderLoggedOutState(true, prevSession);
     });
 
-// --- HÀM TỰ ĐỘNG KÉO VÀ GHI ĐÈ DỮ LIỆU TỪ SERVER VỀ THIẾT BỊ KHI CHUYỂN TÀI KHOẢN ---
-async function syncServerDataToLocal(userId) {
-    try {
-        const scoreRes = await window.ApiService.getScores({ user_id: userId, limit: 1000 });
-        const serverScores = scoreRes.data?.data || scoreRes.data || [];
-        
-        const db = typeof getDB === 'function' ? await getDB() : (typeof initDB === 'function' ? await initDB() : null);
-        if (!db) return;
-
-        const tx = db.transaction("highScores", "readwrite");
-        const store = tx.objectStore("highScores");
-
-        // Xóa hoàn toàn kỷ lục cũ trên IndexedDB thiết bị để nạp dữ liệu sạch từ Server tài khoản mới
-        await new Promise((resolve) => {
-            const clearReq = store.clear();
-            clearReq.onsuccess = resolve;
-            clearReq.onerror = resolve;
-        });
-
-        const mergedScores = {};
-        serverScores.forEach(s => {
-            if (typeof playlist !== 'undefined') {
-                const songIndex = playlist.findIndex(p => String(p.id) === String(s.beatmap_id) || String(p.id) === String(s.song_id));
-                if (songIndex !== -1) {
-                    const isHard = s.is_hard_mode || s.hard_mode || s.is_rage_mode || s.rage_mode;
-                    if (!mergedScores[songIndex]) {
-                        mergedScores[songIndex] = {
-                            normalScore: 0,
-                            normalPassed: false,
-                            rageScore: 0,
-                            ragePassed: false
-                        };
-                    }
-
-                    const isNormalPassed = Boolean(s.is_normal_mode_passed) || Number(s.is_normal_mode_passed) === 1 || String(s.is_normal_mode_passed) === '1' || s.is_normal_mode_passed === true;
-
-                    if (isHard) {
-                        if (s.score > mergedScores[songIndex].rageScore) {
-                            mergedScores[songIndex].rageScore = s.score;
-                        }
-                        if (isNormalPassed) {
-                            mergedScores[songIndex].ragePassed = true;
-                        }
-                    } else {
-                        if (s.score > mergedScores[songIndex].normalScore) {
-                            mergedScores[songIndex].normalScore = s.score;
-                        }
-                        if (isNormalPassed) {
-                            mergedScores[songIndex].normalPassed = true;
-                        }
-                    }
-                }
-            }
-        });
-
-        Object.keys(mergedScores).forEach(songIdxStr => {
-            const songIdx = parseInt(songIdxStr, 10);
-            const ms = mergedScores[songIdx];
-            const record = {
-                songIndex: songIdx,
-                score: ms.normalScore > 0 ? btoa(ms.normalScore.toString()) : undefined,
-                isNormalModePassed: ms.normalPassed ? true : false,
-                rageScore: ms.rageScore > 0 ? btoa(ms.rageScore.toString()) : undefined,
-                isRageModePassed: ms.ragePassed ? true : false
-            };
-            store.put(record);
-        });
-    } catch (e) {
-        console.error('[Account] Lỗi đồng bộ dữ liệu từ server khi chuyển tài khoản:', e);
-    }
-}
-
     // Sự kiện chọn chuyển đổi sang tài khoản khác
     container.querySelectorAll('.btn-select-account').forEach(btn => {
         btn.addEventListener('click', async (e) => {
@@ -1153,7 +1163,8 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
                                                 };
                                             }
 
-                                            const isNormalPassed = Boolean(s.is_normal_mode_passed) || Number(s.is_normal_mode_passed) === 1 || String(s.is_normal_mode_passed) === '1' || s.is_normal_mode_passed === true;
+                                            const rawPassed = s.is_normal_mode_passed ?? s.is_normal_passed ?? s.is_passed ?? s.isNormalModePassed ?? s.isNormalPassed ?? s.normal_passed;
+                                            const isNormalPassed = Boolean(rawPassed) || Number(rawPassed) === 1 || String(rawPassed) === '1' || String(rawPassed).toLowerCase() === 'true' || rawPassed === true;
 
                                             if (isHard) {
                                                 if (s.score > mergedScores[songIndex].rageScore) {

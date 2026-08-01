@@ -772,7 +772,8 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
 
     // 3. Lấy ID bài nhạc
     const currentSong = (typeof activePlaylist !== 'undefined' && activePlaylist && activePlaylist[selectedSongIndex]) || (typeof songs !== 'undefined' && songs && songs[selectedSongIndex]);
-    if (!currentSong || !currentSong.id) {
+    const targetBeatmapId = currentSong ? (currentSong.id || (typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(currentSong) : null)) : null;
+    if (!currentSong || !targetBeatmapId) {
         return;
     }
 
@@ -828,7 +829,7 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
 
     if (isRage || isAsian) {
         payload = {
-            beatmap_id: currentSong.id,
+            beatmap_id: targetBeatmapId,
             score: normalScore,
             hard_mode_score: rageScore,
             is_hard_mode: 1,
@@ -842,7 +843,7 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
         };
     } else {
         payload = {
-            beatmap_id: currentSong.id,
+            beatmap_id: targetBeatmapId,
             score: normalScore,
             hard_mode_score: rageScore,
             is_hard_mode: 0,

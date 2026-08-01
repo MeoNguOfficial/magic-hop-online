@@ -48,11 +48,29 @@ async function checkBackendOnlineStatusWith60sCache() {
     return cachedBackendOnlineState;
 }
 
+function isDevModeActive() {
+    try {
+        if (typeof window.getDevMode === 'function' && window.getDevMode() === true) return true;
+        if (localStorage.getItem('MeoTNDevModeExp') === 'true') return true;
+        if (localStorage.getItem('dev_mode') === 'true') return true;
+        if (window.isDevMode === true) return true;
+    } catch (e) {}
+    return false;
+}
+
+function devLog(...args) {
+    if (isDevModeActive()) {
+        console.log(...args);
+    }
+}
+
 async function checkSongPassedStatus(song, songIndex) {
     if (!song) return false;
 
     // 1. Kiểm tra cờ passed đã có trên đối tượng bài hát (in-memory)
-    if (song.is_normal_mode_passed || song.is_hard_mode_passed || song.is_passed || song.isPassed) {
+    const memoryPassed = !!(song.is_normal_mode_passed || song.is_hard_mode_passed || song.is_passed || song.isPassed);
+    devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex} - "${song.name || song.title}"]: Memory passed status = ${memoryPassed}`);
+    if (memoryPassed) {
         return true;
     }
 
@@ -68,6 +86,7 @@ async function checkSongPassedStatus(song, songIndex) {
                 request.onsuccess = () => resolve(request.result);
                 request.onerror = () => resolve(null);
             });
+            devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex}]: Local IndexedDB record =`, record);
             if (record && (record.isNormalModePassed || record.isRageModePassed)) {
                 if (record.isNormalModePassed) song.is_normal_mode_passed = true;
                 if (record.isRageModePassed) song.is_hard_mode_passed = true;
@@ -85,10 +104,11 @@ window.checkSongPassedStatus = checkSongPassedStatus;
 
 // --- QUÉT TRƯỚC HỆ THỐNG BACKEND & PASSED METADATA NGAY TỪ LÚC MỞ GAME ---
 async function preloadBackendAndPassedStatusOnStartup() {
-    console.log('[SongSelector] Quét trước trạng thái Backend & Passed metadata ngay khi mở game...');
+    devLog('[SongSelector] Quét trước trạng thái Backend & Passed metadata ngay khi mở game...');
 
     // 1. Quét trước kết nối Backend Server
     const isOnline = await checkBackendOnlineStatusWith60sCache();
+    devLog('[SongSelector] Server online:', isOnline);
 
     // 2. Nếu Online và có playlist, đồng bộ cờ passed cho các bài hát từ Server metadata
     if (isOnline && typeof playlist !== 'undefined' && Array.isArray(playlist)) {
@@ -104,8 +124,14 @@ async function preloadBackendAndPassedStatusOnStartup() {
                 const scoreParams = { limit: 1000 };
                 if (userId) scoreParams.user_id = userId;
 
-                const res = await window.ApiService.getScores(scoreParams).catch(() => null);
+                devLog(`[SongSelector] Đang tải danh sách điểm từ Server cho userId = "${userId}"...`);
+                const res = await window.ApiService.getScores(scoreParams).catch((err) => {
+                    console.error('[SongSelector] API getScores thất bại:', err);
+                    return null;
+                });
                 const scoresData = res?.data?.data || res?.data || [];
+                devLog(`[SongSelector] Số điểm lấy được từ Server: ${scoresData.length}`, scoresData);
+
                 if (Array.isArray(scoresData)) {
                     let db = null;
                     try {
@@ -113,32 +139,48 @@ async function preloadBackendAndPassedStatusOnStartup() {
                     } catch(e){}
 
                     scoresData.forEach(item => {
-                        const songIndex = playlist.findIndex(s => String(s.id) === String(item.beatmap_id) || String(s.id) === String(item.song_id));
-                        if (songIndex !== -1) {
-                            const targetSong = playlist[songIndex];
+                        const rawBeatmapId = item.beatmap_id ?? item.beatmapId ?? item.song_id ?? item.songId ?? item.map_id ?? item.beatmap?.id ?? item.song?.id ?? item.beatmap?.beatmap_id;
+                        const targetBeatmapId = (rawBeatmapId !== undefined && rawBeatmapId !== null) ? String(rawBeatmapId) : null;
 
-                            const isNormalPassed = Boolean(item.is_normal_mode_passed) || Number(item.is_normal_mode_passed) === 1 || String(item.is_normal_mode_passed) === '1' || item.is_normal_mode_passed === true;
+                        const rawPassed = item.is_normal_mode_passed ?? item.is_normal_passed ?? item.is_passed ?? item.isNormalModePassed ?? item.isNormalPassed ?? item.normal_passed;
+                        const isNormalPassed = Boolean(rawPassed) || Number(rawPassed) === 1 || String(rawPassed) === '1' || String(rawPassed).toLowerCase() === 'true' || rawPassed === true;
 
-                            if (isNormalPassed) {
-                                targetSong.is_normal_mode_passed = true;
-                                targetSong.is_passed = true;
+                        devLog(`[SongSelector] Server Score Item: targetBeatmapId=${targetBeatmapId} (rawObj:`, item, `), rawPassed=${rawPassed}, isNormalPassed=${isNormalPassed}`);
 
-                                if (db) {
-                                    try {
-                                        const tx = db.transaction("highScores", "readwrite");
-                                        const store = tx.objectStore("highScores");
-                                        const req = store.get(songIndex);
-                                        req.onsuccess = () => {
-                                            const rec = req.result || { songIndex };
-                                            rec.isNormalModePassed = true;
-                                            store.put(rec);
-                                        };
-                                    } catch(e){}
+                        if (targetBeatmapId) {
+                            const songIndex = playlist.findIndex(s => {
+                                const bId = typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(s) : String(s.id);
+                                return bId && bId === targetBeatmapId;
+                            });
+
+                            devLog(`[SongSelector] Match Song Index = ${songIndex} for beatmap_id = ${targetBeatmapId}`);
+
+                            if (songIndex !== -1) {
+                                const targetSong = playlist[songIndex];
+
+                                if (isNormalPassed) {
+                                    targetSong.is_normal_mode_passed = true;
+                                    targetSong.is_passed = true;
+
+                                    if (db) {
+                                        try {
+                                            const tx = db.transaction("highScores", "readwrite");
+                                            const store = tx.objectStore("highScores");
+                                            const req = store.get(songIndex);
+                                            req.onsuccess = () => {
+                                                const rec = req.result || { songIndex };
+                                                rec.isNormalModePassed = true;
+                                                store.put(rec);
+                                            };
+                                        } catch(e){}
+                                    }
                                 }
                             }
                         }
                     });
                 }
+            } else {
+                devLog('[SongSelector] Chưa đăng nhập (không có auth_token), dùng dữ liệu Local IndexedDB.');
             }
         } catch (e) {
             console.warn('[SongSelector] Lỗi quét trước Server passed status:', e);
