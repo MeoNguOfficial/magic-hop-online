@@ -25,8 +25,12 @@ window.EasyModeManager = {
             }
         }
 
-        // Cập nhật nền menu chính (xanh lá rực rỡ khi bật Easy mode)
-        this.updateMenuBackground();
+        // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
+        if (typeof window.updateMainMenuTheme === 'function') {
+            window.updateMainMenuTheme();
+        } else {
+            this.updateMenuBackground();
+        }
     },
 
     updateMenuBackground: function () {

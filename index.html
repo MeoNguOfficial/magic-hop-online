@@ -227,12 +227,10 @@
 
         /* Active song styling override */
         .song-option.active {
-            border-color: rgba(34, 211, 238, 0.8) !important;
+            border-color: var(--theme-color, rgba(34, 211, 238, 0.8)) !important;
             background-color: #0c081e !important;
-            box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3) !important;
-            position: sticky;
-            top: 0;
-            z-index: 20;
+            box-shadow: 0 4px 20px var(--theme-glow, rgba(6, 182, 212, 0.3)) !important;
+            position: relative;
         }
 
         /* Custom Scrollbar for horizontal tabs */

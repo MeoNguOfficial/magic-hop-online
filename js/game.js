@@ -1073,6 +1073,10 @@ async function initThree() {
             mainNavBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
+            if (typeof window.updateMainMenuTheme === 'function') {
+                window.updateMainMenuTheme();
+            }
+
             const panels = [
                 { id: 'nav-home', el: panelHome },
                 { id: 'nav-personalize', el: panelPersonalize },

@@ -1141,3 +1141,160 @@ document.addEventListener('keydown', function (event) {
         event.preventDefault();
     }
 });
+
+// ============================================================
+// HỆ THỐNG GIAO DIỆN NỀN & MÀU KHUNG/TEXT THEO ĐỘ KHÓ (MAIN MENU THEME)
+// ============================================================
+function updateMainMenuTheme() {
+    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+    const isHard  = window.HardModeManager && window.HardModeManager.isEnabled;
+    const isEasy  = window.EasyModeManager && window.EasyModeManager.isEnabled;
+
+    let theme = {
+        name: 'normal',
+        primaryColor: '#22d3ee',        // Neon Cyan
+        borderColor: 'rgba(6, 182, 212, 0.45)',
+        glowColor: 'rgba(6, 182, 212, 0.3)',
+        activeTabBg: 'rgba(6, 182, 212, 0.15)'
+    };
+
+    if (isAsian) {
+        theme = {
+            name: 'asian',
+            primaryColor: '#f43f5e',     // Red / Crimson
+            borderColor: 'rgba(239, 68, 68, 0.65)',
+            glowColor: 'rgba(239, 68, 68, 0.45)',
+            activeTabBg: 'rgba(239, 68, 68, 0.15)'
+        };
+    } else if (isHard) {
+        theme = {
+            name: 'hard',
+            primaryColor: '#fbbf24',     // Amber / Flame Orange
+            borderColor: 'rgba(245, 158, 11, 0.55)',
+            glowColor: 'rgba(245, 158, 11, 0.35)',
+            activeTabBg: 'rgba(245, 158, 11, 0.15)'
+        };
+    } else if (isEasy) {
+        theme = {
+            name: 'easy',
+            primaryColor: '#34d399',     // Emerald Green
+            borderColor: 'rgba(16, 185, 129, 0.55)',
+            glowColor: 'rgba(16, 185, 129, 0.35)',
+            activeTabBg: 'rgba(16, 185, 129, 0.15)'
+        };
+    }
+
+    // Dynamic Style Tag Injection to apply theme to ALL UI elements seamlessly
+    let styleTag = document.getElementById('dynamic-difficulty-theme-style');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'dynamic-difficulty-theme-style';
+        document.head.appendChild(styleTag);
+    }
+
+    styleTag.textContent = `
+        :root {
+            --theme-color: ${theme.primaryColor} !important;
+            --theme-border: ${theme.borderColor} !important;
+            --theme-glow: ${theme.glowColor} !important;
+            --theme-bg-alpha: ${theme.activeTabBg} !important;
+        }
+
+        /* 1. Main Menu Window & Cyber Modal */
+        #start-screen-window, 
+        #dynamic-cyber-modal #cyber-modal-window {
+            border: 1.5px solid ${theme.borderColor} !important;
+            box-shadow: 0 0 35px ${theme.glowColor}, inset 0 0 15px ${theme.glowColor} !important;
+            transition: border-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out !important;
+        }
+
+        /* 2. Panel Titles & Modal Titles */
+        #panel-home h2, 
+        #panel-personalize h2, 
+        #panel-music h2, 
+        #panel-account h2, 
+        #panel-settings h2,
+        #cyber-modal-title {
+            color: ${theme.primaryColor} !important;
+            text-shadow: 0 0 12px ${theme.glowColor} !important;
+            transition: color 0.5s ease-in-out, text-shadow 0.5s ease-in-out !important;
+        }
+
+        /* 3. Navigation Header Tabs */
+        .main-nav-tabs-container .nav-btn.active {
+            color: ${theme.primaryColor} !important;
+            border-bottom: 2px solid ${theme.primaryColor} !important;
+            text-shadow: 0 0 8px ${theme.glowColor} !important;
+        }
+
+        /* 4. Song Selector Cards & Active Highlights */
+        .song-option.active {
+            border-color: ${theme.primaryColor} !important;
+            background-color: #0c081e !important;
+            box-shadow: 0 0 15px ${theme.glowColor} !important;
+            position: relative !important;
+            top: auto !important;
+        }
+        .song-option.active .text-cyan-400,
+        .song-option:hover .text-cyan-400,
+        .song-option.active h3,
+        .song-option:hover h3 {
+            color: ${theme.primaryColor} !important;
+        }
+
+        /* 5. Preview & Play Buttons */
+        .preview-btn {
+            color: ${theme.primaryColor} !important;
+            border-color: ${theme.borderColor} !important;
+        }
+        .preview-btn.playing {
+            background-color: ${theme.primaryColor} !important;
+            color: #000000 !important;
+            box-shadow: 0 0 10px ${theme.glowColor} !important;
+        }
+
+        /* 6. Cyber Modal Actions & Main Buttons */
+        #cyber-modal-actions button:last-child {
+            background-color: ${theme.primaryColor} !important;
+            box-shadow: 0 0 15px ${theme.glowColor} !important;
+            color: #000000 !important;
+        }
+
+        /* 7. Mobile Header & Toggle */
+        #nav-menu-wrapper > div {
+            color: ${theme.primaryColor} !important;
+        }
+        #nav-menu-toggle {
+            border-color: ${theme.borderColor} !important;
+            color: ${theme.primaryColor} !important;
+        }
+
+        /* 8. Inputs & Filter Titles */
+        #song-search {
+            border-color: ${theme.borderColor} !important;
+        }
+        #song-search:focus {
+            border-color: ${theme.primaryColor} !important;
+            box-shadow: 0 0 10px ${theme.glowColor} !important;
+        }
+        [data-i18n="filter_title"] {
+            color: ${theme.primaryColor} !important;
+        }
+    `;
+
+    // 8. Cập nhật nền Background động tương ứng cho từng chế độ
+    if (window.EasyModeManager && typeof window.EasyModeManager.updateMenuBackground === 'function') {
+        window.EasyModeManager.updateMenuBackground();
+    }
+    if (window.HardModeManager && typeof window.HardModeManager.updateMenuBackground === 'function') {
+        window.HardModeManager.updateMenuBackground();
+    }
+    if (window.AsianModeManager && typeof window.AsianModeManager.updateMenuBackground === 'function') {
+        window.AsianModeManager.updateMenuBackground();
+    }
+}
+window.updateMainMenuTheme = updateMainMenuTheme;
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(updateMainMenuTheme, 100);
+});

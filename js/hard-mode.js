@@ -25,8 +25,12 @@ window.HardModeManager = {
             }
         }
 
-        // Cập nhật nền menu chính (rực lửa khi bật Rage mode)
-        this.updateMenuBackground();
+        // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
+        if (typeof window.updateMainMenuTheme === 'function') {
+            window.updateMainMenuTheme();
+        } else {
+            this.updateMenuBackground();
+        }
     },
 
     updateMenuBackground: function () {
