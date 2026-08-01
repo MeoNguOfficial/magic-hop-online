@@ -1698,108 +1698,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (typeof clearCacheBtn !== 'undefined' && clearCacheBtn) {
-        clearCacheBtn.addEventListener('click', async () => {
-            if (typeof clearAllCache === 'function') {
-                await clearAllCache();
-            } else if (typeof clearAudioCache === 'function') {
-                await clearAudioCache();
-            }
-
-            // Xóa và đăng ký lại Service Worker
-            if ('serviceWorker' in navigator) {
-                try {
-                    const registrations = await navigator.serviceWorker.getRegistrations();
-                    for (let registration of registrations) {
-                        await registration.unregister();
-                    }
-                    navigator.serviceWorker.register('./sw.js').then(reg => {
-                        console.log('[ServiceWorker] Đã đăng ký lại thành công sau khi xóa cache.');
-                    });
-                } catch (e) {
-                    console.warn('[ServiceWorker] Lỗi khi đăng ký lại:', e);
-                }
-            }
-
-            if (typeof showCyberModal === 'function') {
-                showCyberModal({ message: t('msg_cleared') });
-            }
-            if (typeof renderStorageList === 'function') {
-                renderStorageList();
-            }
-        });
-    }
-
-    if (typeof clearBeatmapCacheBtn !== 'undefined' && clearBeatmapCacheBtn) {
-        clearBeatmapCacheBtn.addEventListener('click', async () => {
-            if (typeof clearBeatmapCache === 'function') {
-                await clearBeatmapCache();
-            }
-
-            if (typeof renderSongList === 'function') {
-                renderSongList();
-            }
-
-            if (typeof showCyberModal === 'function') {
-                showCyberModal({ message: t('msg_beatmap_cleared') });
-            }
-            if (typeof renderStorageList === 'function') {
-                renderStorageList();
-            }
-        });
-    }
-
-    if (typeof checkStorageIntegrityBtn !== 'undefined' && checkStorageIntegrityBtn) {
-        checkStorageIntegrityBtn.addEventListener('click', () => {
-            checkAndCleanLocalStorageIntegrity(false);
-        });
-    }
-
-    if (typeof clearAllStorageBtn !== 'undefined' && clearAllStorageBtn) {
-        clearAllStorageBtn.addEventListener('click', async () => {
-            if (typeof showCyberModal === 'function') {
-                showCyberModal({
-                    title: typeof t === 'function' ? t('btn_clear_all_storage') : "XÓA TOÀN BỘ BỘ NHỚ",
-                    message: typeof t === 'function' ? t('msg_confirm_clear_all') : "Bạn có chắc chắn muốn xóa toàn bộ nhạc và beatmap đã tải về không?",
-                    type: 'confirm',
-                    onConfirm: async () => {
-                        if (typeof clearAllCache === 'function') {
-                            await clearAllCache();
-                        } else if (typeof clearAudioCache === 'function') {
-                            await clearAudioCache();
-                        }
-
-                        if (typeof clearBeatmapCache === 'function') {
-                            await clearBeatmapCache();
-                        }
-
-                        if ('serviceWorker' in navigator) {
-                            try {
-                                const registrations = await navigator.serviceWorker.getRegistrations();
-                                for (let registration of registrations) {
-                                    await registration.unregister();
-                                }
-                                navigator.serviceWorker.register('./sw.js').then(reg => {
-                                    console.log('[ServiceWorker] Re-registered after clear all storage.');
-                                });
-                            } catch (e) {
-                                console.warn('[ServiceWorker] SW registration error:', e);
-                            }
-                        }
-
-                        if (typeof renderSongList === 'function') {
-                            renderSongList();
-                        }
-
-                        showCyberModal({ message: typeof t === 'function' ? t('msg_all_storage_cleared') : "Đã xóa sạch bộ nhớ nhạc và beatmap tải về!" });
-                        if (typeof renderStorageList === 'function') {
-                            renderStorageList();
-                        }
-                    }
-                });
-            }
-        });
-    }
+    // Các sự kiện cho nút Storage được quản lý tập trung bởi StorageManager (storage-manager.js)
 
     if (refreshDataBtn) {
         refreshDataBtn.addEventListener('click', () => {
@@ -1855,89 +1754,212 @@ async function renderStorageList() {
 
     listContainer.innerHTML = `<div class="text-[10px] text-gray-500 italic py-2 text-center" data-i18n="msg_loading_cached_list">${typeof t === 'function' ? t('msg_loading_cached_list') : 'Đang kiểm tra bộ nhớ...'}</div>`;
 
-    if (typeof playlist === 'undefined' || playlist.length === 0) {
-        listContainer.innerHTML = `<div class="text-[10px] text-gray-500 italic py-2 text-center">Không có danh sách nhạc.</div>`;
-        return;
-    }
-
-    const cachedItems = [];
-
-    // Check cache status for all songs in the playlist
-    for (let index = 0; index < playlist.length; index++) {
-        const song = playlist[index];
-        const audioPromise = typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
-        const jsonPromise = (song.lazyUrl && typeof isJsonCached === 'function') ? isJsonCached(song.lazyUrl) : Promise.resolve(false);
-
-        const [hasAudio, hasJson] = await Promise.all([audioPromise, jsonPromise]);
-
-        if (hasAudio || hasJson) {
-            cachedItems.push({
-                index,
-                song,
-                hasAudio,
-                hasJson
-            });
+    try {
+        // 1. Thu thập tất cả các danh mục bài hát từ RAM playlist, playlistSource, và IndexedDB/OPFS public_playlist
+        const candidates = [];
+        if (typeof playlist !== 'undefined' && Array.isArray(playlist)) {
+            candidates.push(...playlist);
         }
-    }
+        if (typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
+            candidates.push(...playlistSource);
+        }
+        if (typeof getCachedPlaylistFromDB === 'function') {
+            try {
+                const cachedMaps = await getCachedPlaylistFromDB();
+                if (Array.isArray(cachedMaps)) {
+                    candidates.push(...cachedMaps);
+                }
+            } catch (e) {}
+        }
 
-    if (cachedItems.length === 0) {
-        listContainer.innerHTML = `<div class="text-[10px] text-gray-500 italic py-2 text-center" data-i18n="msg_no_cached_songs">${typeof t === 'function' ? t('msg_no_cached_songs') : 'Không có bài hát nào được lưu ngoại tuyến.'}</div>`;
-        return;
-    }
+        // Lọc trùng lặp danh mục theo URL hoặc LazyURL
+        const catalog = [];
+        const seenUrls = new Set();
 
-    listContainer.innerHTML = '';
-
-    cachedItems.forEach(item => {
-        const { index, song, hasAudio, hasJson } = item;
-        const itemDiv = document.createElement('div');
-        itemDiv.className = "flex items-center justify-between p-2 rounded bg-cyan-950/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all";
-        
-        let details = [];
-        if (hasAudio) details.push("Nhạc");
-        if (hasJson) details.push("Beatmap");
-        const detailsText = details.join(" + ");
-
-        itemDiv.innerHTML = `
-            <div class="flex flex-col min-w-0 flex-1 pr-2">
-                <span class="text-[10px] font-bold text-gray-200 truncate font-orbitron">${song.name}</span>
-                <span class="text-[8px] text-gray-400 truncate">${song.artist || 'Chưa rõ nghệ sĩ'} (${detailsText})</span>
-            </div>
-            <button class="shrink-0 p-1.5 rounded bg-red-950/20 border border-red-500/20 hover:bg-red-900/30 hover:border-red-400 text-red-400 transition-all cursor-pointer delete-cached-song-btn" data-index="${index}">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                </svg>
-            </button>
-        `;
-
-        // Bind delete action
-        const deleteBtn = itemDiv.querySelector('.delete-cached-song-btn');
-        deleteBtn.addEventListener('click', async () => {
-            if (typeof showCyberModal === 'function') {
-                showCyberModal({
-                    title: typeof t === 'function' ? t('btn_delete_cache') : "XÓA BỘ NHỚ ĐỆM",
-                    message: (typeof t === 'function' ? t('msg_confirm_delete_song_cache') : 'Bạn có chắc chắn muốn xóa bộ nhớ đệm (âm thanh và bản đồ) của bài hát "{name}" không?').replace('{name}', song.name),
-                    type: 'confirm',
-                    onConfirm: async () => {
-                        if (typeof deleteSongCache === 'function') {
-                            await deleteSongCache(song.url, song.lazyUrl);
-                        }
-
-                        // Re-render list
-                        renderStorageList();
-
-                        // Refresh play lists if needed
-                        if (typeof renderSongList === 'function') {
-                            renderSongList();
-                        }
-                    }
+        candidates.forEach(raw => {
+            if (!raw) return;
+            const songUrl = raw.url || raw.file_url || raw.audioUrl || '';
+            const jsonUrl = raw.lazyUrl || raw.beatmapUrl || raw.file_url || '';
+            const key = songUrl || jsonUrl;
+            if (key && !seenUrls.has(key)) {
+                seenUrls.add(key);
+                catalog.push({
+                    id: raw.id,
+                    name: raw.name || raw.title || 'Chưa rõ tên',
+                    artist: raw.artist || 'Chưa rõ nghệ sĩ',
+                    url: songUrl,
+                    lazyUrl: jsonUrl
                 });
             }
         });
 
-        listContainer.appendChild(itemDiv);
-    });
+        const cachedItems = [];
+        const matchedOpfsFiles = new Set();
+        const matchedIdbKeys = new Set();
+
+        // 2. Kiểm tra trạng thái cache thực tế cho tất cả bài hát trong danh mục
+        for (const song of catalog) {
+            const audioPromise = song.url && typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
+            const jsonPromise = song.lazyUrl && typeof isJsonCached === 'function' ? isJsonCached(song.lazyUrl) : Promise.resolve(false);
+
+            const [hasAudio, hasJson] = await Promise.all([audioPromise, jsonPromise]);
+
+            if (hasAudio || hasJson) {
+                cachedItems.push({
+                    song,
+                    hasAudio,
+                    hasJson
+                });
+                if (song.url) {
+                    if (typeof urlToFilename === 'function') {
+                        matchedOpfsFiles.add(urlToFilename(song.url));
+                    }
+                    matchedIdbKeys.add(song.url);
+                }
+            }
+        }
+
+        // 3. Quét trực tiếp thư mục OPFS audio để tìm các file nhạc chưa được map trong catalog
+        if (typeof navigator !== 'undefined' && navigator.storage && typeof navigator.storage.getDirectory === 'function') {
+            try {
+                const root = await navigator.storage.getDirectory();
+                try {
+                    const audioDirHandle = await root.getDirectoryHandle('audio', { create: false });
+                    for await (const entry of audioDirHandle.values()) {
+                        if (entry.kind === 'file' && !matchedOpfsFiles.has(entry.name)) {
+                            let cleanName = decodeURIComponent(entry.name).replace(/[*"\/\\<>:|?]/g, ' ');
+                            if (cleanName.includes('.')) cleanName = cleanName.substring(0, cleanName.lastIndexOf('.'));
+                            if (cleanName.length > 45) cleanName = cleanName.substring(0, 45) + '...';
+
+                            cachedItems.push({
+                                song: {
+                                    name: cleanName || 'File nhạc OPFS',
+                                    artist: 'Bộ nhớ OPFS',
+                                    url: entry.name,
+                                    lazyUrl: null,
+                                    isRawFileName: true
+                                },
+                                hasAudio: true,
+                                hasJson: false
+                            });
+                        }
+                    }
+                } catch (e) {}
+            } catch (e) {}
+        }
+
+        // 4. Quét trực tiếp IndexedDB audio_cache store để tìm các key nhạc chưa được map
+        if (typeof getDB === 'function') {
+            try {
+                const db = await getDB();
+                if (db && db.objectStoreNames.contains('audio_cache')) {
+                    const tx = db.transaction('audio_cache', 'readonly');
+                    const store = tx.objectStore('audio_cache');
+                    const keys = await new Promise((resolve) => {
+                        const req = store.getAllKeys();
+                        req.onsuccess = () => resolve(req.result || []);
+                        req.onerror = () => resolve([]);
+                    });
+
+                    keys.forEach(urlKey => {
+                        if (typeof urlKey === 'string' && !matchedIdbKeys.has(urlKey)) {
+                            let cleanName = urlKey.split('/').pop() || urlKey;
+                            if (cleanName.includes('?')) cleanName = cleanName.split('?')[0];
+                            cleanName = decodeURIComponent(cleanName);
+
+                            cachedItems.push({
+                                song: {
+                                    name: cleanName,
+                                    artist: 'Bộ nhớ IndexedDB',
+                                    url: urlKey,
+                                    lazyUrl: null
+                                },
+                                hasAudio: true,
+                                hasJson: false
+                            });
+                        }
+                    });
+                }
+            } catch (e) {}
+        }
+
+        // Cập nhật tiêu đề hiển thị tổng số bài hát đã tải
+        const titleSpan = document.querySelector('[data-i18n="cached_songs_list_title"]');
+        if (titleSpan) {
+            const baseTitle = typeof t === 'function' ? t('cached_songs_list_title') : 'Danh sách bài hát đã tải';
+            titleSpan.textContent = `${baseTitle} (${cachedItems.length})`;
+        }
+
+        if (cachedItems.length === 0) {
+            listContainer.innerHTML = `<div class="text-[10px] text-gray-500 italic py-2 text-center" data-i18n="msg_no_cached_songs">${typeof t === 'function' ? t('msg_no_cached_songs') : 'Không có bài hát nào được lưu ngoại tuyến.'}</div>`;
+            return;
+        }
+
+        listContainer.innerHTML = '';
+
+        cachedItems.forEach(item => {
+            const { song, hasAudio, hasJson } = item;
+            const itemDiv = document.createElement('div');
+            itemDiv.className = "flex items-center justify-between p-2 rounded bg-cyan-950/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all";
+            
+            let details = [];
+            if (hasAudio) details.push("Nhạc");
+            if (hasJson) details.push("Beatmap");
+            const detailsText = details.join(" + ");
+
+            itemDiv.innerHTML = `
+                <div class="flex flex-col min-w-0 flex-1 pr-2">
+                    <span class="text-[10px] font-bold text-gray-200 truncate font-orbitron">${song.name}</span>
+                    <span class="text-[8px] text-gray-400 truncate">${song.artist || 'Chưa rõ nghệ sĩ'} (${detailsText})</span>
+                </div>
+                <button class="shrink-0 p-1.5 rounded bg-red-950/20 border border-red-500/20 hover:bg-red-900/30 hover:border-red-400 text-red-400 transition-all cursor-pointer delete-cached-song-btn">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
+            `;
+
+            // Gắn sự kiện xóa cache cho bài hát
+            const deleteBtn = itemDiv.querySelector('.delete-cached-song-btn');
+            deleteBtn.addEventListener('click', async () => {
+                if (typeof showCyberModal === 'function') {
+                    showCyberModal({
+                        title: typeof t === 'function' ? t('btn_delete_cache') : "XÓA BỘ NHỚ ĐỆM",
+                        message: (typeof t === 'function' ? t('msg_confirm_delete_song_cache') : 'Bạn có chắc chắn muốn xóa bộ nhớ đệm của bài hát "{name}" không?').replace('{name}', song.name),
+                        type: 'confirm',
+                        onConfirm: async () => {
+                            if (song.isRawFileName) {
+                                try {
+                                    const root = await navigator.storage.getDirectory();
+                                    const dir = await root.getDirectoryHandle('audio', { create: false });
+                                    await dir.removeEntry(song.url);
+                                } catch(e) {}
+                            } else if (typeof deleteSongCache === 'function') {
+                                await deleteSongCache(song.url, song.lazyUrl);
+                            }
+
+                            // Re-render storage list & update storage statistics bar
+                            renderStorageList();
+                            if (window.StorageManager && typeof window.StorageManager.updateStorageUI === 'function') {
+                                window.StorageManager.updateStorageUI();
+                            }
+                            if (typeof renderSongList === 'function') {
+                                renderSongList();
+                            }
+                        }
+                    });
+                }
+            });
+
+            listContainer.appendChild(itemDiv);
+        });
+    } catch (err) {
+        console.error('[StorageManager] Lỗi renderStorageList:', err);
+        listContainer.innerHTML = `<div class="text-[10px] text-red-400 italic py-2 text-center">Lỗi tải danh sách nhạc đã lưu.</div>`;
+    }
 }
 window.renderStorageList = renderStorageList;
+window.renderStorageSongsList = renderStorageList;
 
 // Listen to storage event to reactively update showHitboxEnabled when toggled in admin panel
 window.addEventListener('storage', (e) => {

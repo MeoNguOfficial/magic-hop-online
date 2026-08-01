@@ -181,7 +181,9 @@ window.StorageManager = {
             }
 
             // Reload danh sách bài hát trong storage nếu có hàm
-            if (typeof window.renderStorageSongsList === 'function') {
+            if (typeof window.renderStorageList === 'function') {
+                window.renderStorageList();
+            } else if (typeof window.renderStorageSongsList === 'function') {
                 window.renderStorageSongsList();
             }
         } catch (e) {
@@ -563,7 +565,16 @@ window.StorageManager = {
             });
         }
 
-        // Tích hợp đồng bộ xóa cho các nút xóa nhanh khác
+        const checkStorageIntegrityBtn = document.getElementById('check-storage-integrity-btn');
+        if (checkStorageIntegrityBtn) {
+            checkStorageIntegrityBtn.addEventListener('click', () => {
+                if (typeof checkAndCleanLocalStorageIntegrity === 'function') {
+                    checkAndCleanLocalStorageIntegrity(false);
+                }
+            });
+        }
+
+        // Tích hợp hỗ trợ tương thích nếu có nút xóa riêng lẻ
         const clearCacheBtn = document.getElementById('clear-cache-btn');
         if (clearCacheBtn) {
             clearCacheBtn.addEventListener('click', async () => {

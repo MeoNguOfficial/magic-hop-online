@@ -1667,101 +1667,100 @@
 
                         <!-- TAB: Game -->
                         <div id="tab-game" class="tab-pane hidden space-y-4">
-                            <div class="space-y-3">
-                                <div class="space-y-1">
-                                    <span class="text-xs text-cyan-400 font-bold uppercase tracking-wider font-orbitron"
-                                        data-i18n="data_mng_title">Quản lý dữ liệu</span>
-                                    <p class="text-[9px] text-gray-500" data-i18n="data_mng_desc">Cập nhật nội dung mới
-                                        hoặc
-                                        đặt lại hoàn toàn tiến trình.</p>
-                                </div>
-                                <!-- Limit Beatmap Audio song setting -->
-                                <div class="space-y-1 pt-1 pb-1">
-                                    <div class="flex justify-between text-[10px] text-gray-300">
-                                        <span class="font-bold uppercase text-gray-200"
-                                            data-i18n="limit_beatmap_audio_title">Limit Beatmap Audio song</span>
+                            <div class="space-y-4">
+                                <!-- Section 1: Quản lý dữ liệu Game -->
+                                <div class="space-y-2.5 pb-3 border-b border-cyan-500/15">
+                                    <div class="space-y-1">
+                                        <span class="text-xs text-cyan-400 font-bold uppercase tracking-wider font-orbitron"
+                                            data-i18n="data_mng_title">Quản lý dữ liệu</span>
+                                        <p class="text-[9px] text-gray-500" data-i18n="data_mng_desc">Cập nhật nội dung mới hoặc đặt lại hoàn toàn tiến trình.</p>
                                     </div>
-                                    <p class="text-[9px] text-gray-500" data-i18n="limit_beatmap_audio_desc">Giới hạn số
-                                        lượng bài hát lưu trữ trong bộ nhớ đệm (LRU).</p>
-                                    <select id="limit-beatmap-audio-select"
-                                        class="w-full bg-[#0c081e] text-white border border-cyan-500/30 p-2 rounded-lg text-xs focus:outline-none cursor-pointer font-orbitron">
-                                        <option value="10" data-i18n="limit_beatmap_audio_10">10 bài</option>
-                                        <option value="20" data-i18n="limit_beatmap_audio_20">20 bài</option>
-                                        <option value="30" data-i18n="limit_beatmap_audio_30">30 bài (Mặc định)</option>
-                                        <option value="50" data-i18n="limit_beatmap_audio_50">50 bài</option>
-                                        <option value="100" data-i18n="limit_beatmap_audio_100">100 bài</option>
-                                        <option value="0" data-i18n="limit_beatmap_audio_unlimited">Không giới hạn
-                                        </option>
-                                    </select>
-                                </div>
-                                <button id="update-data-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all"
-                                    data-i18n="btn_update">
-                                    Update Data Now
-                                </button>
-
-                                <label
-                                    class="flex items-center justify-between text-xs text-gray-300 cursor-pointer pt-2">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold uppercase text-gray-200"
-                                            data-i18n="auto_fullscreen_title">Tự động toàn màn hình</span>
-                                        <span class="text-[9px] text-gray-500" data-i18n="auto_fullscreen_desc">Tự động
-                                            phóng to toàn màn hình khi chơi và thu nhỏ khi về menu.</span>
+                                    <!-- Limit Beatmap Audio song setting -->
+                                    <div class="space-y-1 pt-1">
+                                        <div class="flex justify-between text-[10px] text-gray-300">
+                                            <span class="font-bold uppercase text-gray-200"
+                                                data-i18n="limit_beatmap_audio_title">Limit Beatmap Audio song</span>
+                                        </div>
+                                        <p class="text-[9px] text-gray-500" data-i18n="limit_beatmap_audio_desc">Giới hạn số lượng bài hát lưu trữ trong bộ nhớ đệm (LRU).</p>
+                                        <select id="limit-beatmap-audio-select"
+                                            class="w-full bg-[#0c081e] text-white border border-cyan-500/30 p-2 rounded-lg text-xs focus:outline-none cursor-pointer font-orbitron">
+                                            <option value="10" data-i18n="limit_beatmap_audio_10">10 bài</option>
+                                            <option value="20" data-i18n="limit_beatmap_audio_20">20 bài</option>
+                                            <option value="30" data-i18n="limit_beatmap_audio_30">30 bài (Mặc định)</option>
+                                            <option value="50" data-i18n="limit_beatmap_audio_50">50 bài</option>
+                                            <option value="100" data-i18n="limit_beatmap_audio_100">100 bài</option>
+                                            <option value="0" data-i18n="limit_beatmap_audio_unlimited">Không giới hạn</option>
+                                        </select>
                                     </div>
-                                    <input type="checkbox" id="toggle-auto-fullscreen" class="accent-cyan-400 w-4 h-4">
-                                </label>
-
-                                <label
-                                    class="flex items-center justify-between text-xs text-gray-300 cursor-pointer pt-2">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold uppercase text-gray-200"
-                                            data-i18n="show_fps_title">Hiển thị FPS</span>
-                                        <span class="text-[9px] text-gray-500" data-i18n="show_fps_desc">Hiển thị số khung hình trên giây để theo dõi hiệu năng.</span>
+                                    <div class="grid grid-cols-2 gap-2 pt-1">
+                                        <button id="update-data-btn"
+                                            class="py-2 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/30 rounded-lg uppercase font-orbitron transition-all"
+                                            data-i18n="btn_update">
+                                            Update Data Now
+                                        </button>
+                                        <button id="refresh-data-btn"
+                                            class="py-2 text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-950/30 rounded-lg uppercase font-orbitron transition-all"
+                                            data-i18n="btn_reset">
+                                            Clear Data (Reset)
+                                        </button>
                                     </div>
-                                    <input type="checkbox" id="toggle-show-fps" class="accent-cyan-400 w-4 h-4">
-                                </label>
-
-                                <div class="space-y-1 pt-2">
-                                    <div class="flex justify-between text-[10px] text-cyan-400 font-bold font-orbitron">
-                                        <span data-i18n="max_fps_title">Giới hạn FPS</span>
-                                        <span id="max-fps-value" class="text-cyan-400 font-bold font-orbitron">Không giới hạn</span>
-                                    </div>
-                                    <p class="text-[9px] text-gray-500" data-i18n="max_fps_desc">Giới hạn số khung hình trên giây (FPS) tối đa của trò chơi.</p>
-                                    <input type="range" id="max-fps-slider" min="0" max="362" step="1" value="0"
-                                        class="w-full h-1 bg-gray-800 rounded-lg appearance-none accent-cyan-400 cursor-pointer">
                                 </div>
 
-                                <div class="space-y-3 pt-2">
-                                    <label
-                                        class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                                <!-- Section 2: Hiệu năng & Hiển thị -->
+                                <div class="space-y-3 pb-3 border-b border-cyan-500/15">
+                                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold uppercase text-gray-200"
+                                                data-i18n="auto_fullscreen_title">Tự động toàn màn hình</span>
+                                            <span class="text-[9px] text-gray-500" data-i18n="auto_fullscreen_desc">Tự động phóng to toàn màn hình khi chơi và thu nhỏ khi về menu.</span>
+                                        </div>
+                                        <input type="checkbox" id="toggle-auto-fullscreen" class="accent-cyan-400 w-4 h-4">
+                                    </label>
+
+                                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                                        <div class="flex flex-col">
+                                            <span class="font-bold uppercase text-gray-200"
+                                                data-i18n="show_fps_title">Hiển thị FPS</span>
+                                            <span class="text-[9px] text-gray-500" data-i18n="show_fps_desc">Hiển thị số khung hình trên giây để theo dõi hiệu năng.</span>
+                                        </div>
+                                        <input type="checkbox" id="toggle-show-fps" class="accent-cyan-400 w-4 h-4">
+                                    </label>
+
+                                    <div class="space-y-1">
+                                        <div class="flex justify-between text-[10px] text-cyan-400 font-bold font-orbitron">
+                                            <span data-i18n="max_fps_title">Giới hạn FPS</span>
+                                            <span id="max-fps-value" class="text-cyan-400 font-bold font-orbitron">Không giới hạn</span>
+                                        </div>
+                                        <p class="text-[9px] text-gray-500" data-i18n="max_fps_desc">Giới hạn số khung hình trên giây (FPS) tối đa của trò chơi.</p>
+                                        <input type="range" id="max-fps-slider" min="0" max="362" step="1" value="0"
+                                            class="w-full h-1 bg-gray-800 rounded-lg appearance-none accent-cyan-400 cursor-pointer">
+                                    </div>
+                                </div>
+
+                                <!-- Section 3: Ứng dụng PWA -->
+                                <div class="space-y-2.5">
+                                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
                                         <div class="flex flex-col">
                                             <span class="font-bold uppercase text-gray-200"
                                                 data-i18n="sw_auto_update_title">Tự động cập nhật App</span>
-                                            <span class="text-[9px] text-gray-500" data-i18n="sw_auto_update_desc">Tự
-                                                động thông báo khi có phiên bản mới.</span>
+                                            <span class="text-[9px] text-gray-500" data-i18n="sw_auto_update_desc">Tự động thông báo khi có phiên bản mới.</span>
                                         </div>
-                                        <input type="checkbox" id="toggle-sw-auto-update" checked
-                                            class="accent-cyan-400 w-4 h-4">
+                                        <input type="checkbox" id="toggle-sw-auto-update" checked class="accent-cyan-400 w-4 h-4">
                                     </label>
 
-                                    <button id="check-app-update-btn"
-                                        class="w-full py-2 text-[10px] font-bold text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/20 rounded uppercase font-orbitron transition-all"
-                                        data-i18n="btn_check_app_update">
-                                        Kiểm tra bản cập nhật App
-                                    </button>
+                                    <div class="grid grid-cols-2 gap-2 pt-1">
+                                        <button id="check-app-update-btn"
+                                            class="py-2 text-[10px] font-bold text-cyan-400 border border-cyan-500/20 hover:bg-cyan-900/20 rounded-lg uppercase font-orbitron transition-all"
+                                            data-i18n="btn_check_app_update">
+                                            Kiểm tra bản cập nhật App
+                                        </button>
+                                        <button id="install-app-btn"
+                                            class="py-2 text-[10px] font-bold text-white bg-cyan-600 hover:bg-cyan-500 rounded-lg uppercase font-orbitron transition-all"
+                                            data-i18n="btn_install">
+                                            Tải App (PWA)
+                                        </button>
+                                    </div>
                                 </div>
-
-                                <button id="refresh-data-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-950/20 rounded uppercase font-orbitron transition-all"
-                                    data-i18n="btn_reset">
-                                    Clear Data (Reset)
-                                </button>
-                                <!-- Nút cài đặt App PWA -->
-                                <button id="install-app-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-white bg-cyan-600 hover:bg-cyan-500 rounded uppercase font-orbitron transition-all"
-                                    data-i18n="btn_install">
-                                    Tải App (PWA)
-                                </button>
                             </div>
                         </div>
 
@@ -1822,7 +1821,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Nút Hành động Nổi bật: Clear Storage -->
+                                <!-- Nút Hành động Chính: Clear Storage (Mở modal chọn chế độ dọn dẹp) -->
                                 <button id="btn-clear-local-storage"
                                     class="w-full py-2.5 text-xs font-bold text-yellow-300 bg-yellow-950/20 border border-yellow-500/40 hover:bg-yellow-950/40 hover:border-yellow-300 rounded-lg uppercase font-orbitron shadow-[0_0_10px_rgba(234,179,8,0.15)] hover:shadow-[0_0_15px_rgba(234,179,8,0.3)] transition-all flex items-center justify-center gap-2">
                                     <svg class="w-4 h-4 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1831,25 +1830,14 @@
                                     <span data-i18n="btn_clear_storage">Clear Storage (Dọn dẹp bộ nhớ)</span>
                                 </button>
 
-                                <button id="clear-cache-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-gray-300 border border-cyan-500/20 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all"
-                                    data-i18n="btn_clear_cache">
-                                    Xóa Cache Nhạc
-                                </button>
-                                <button id="clear-beatmap-cache-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all mt-2"
-                                    data-i18n="btn_clear_beatmap_cache">
-                                    Xóa Cache Beatmap
-                                </button>
+                                <!-- Nút Công cụ Chẩn đoán: Kiểm Tra Tính Toàn Vẹn -->
                                 <button id="check-storage-integrity-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-950/20 rounded uppercase font-orbitron transition-all mt-2 flex items-center justify-center gap-1.5"
+                                    class="w-full py-2.5 text-xs font-bold text-emerald-400 border border-emerald-500/30 hover:bg-emerald-950/20 hover:border-emerald-400 rounded-lg uppercase font-orbitron transition-all flex items-center justify-center gap-1.5"
                                     data-i18n="btn_check_storage_integrity">
-                                    Kiểm Tra Tính Toàn Vẹn Local Storage
-                                </button>
-                                <button id="clear-all-storage-btn"
-                                    class="w-full py-2.5 text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-950/20 rounded uppercase font-orbitron transition-all mt-2"
-                                    data-i18n="btn_clear_all_storage">
-                                    Xóa Toàn Bộ Dữ Liệu Tải Về
+                                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span>Kiểm Tra Tính Toàn Vẹn Local Storage</span>
                                 </button>
                                 
                                 <div class="space-y-2 pt-3 border-t border-cyan-500/20">
