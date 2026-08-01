@@ -90,7 +90,15 @@ async function getBestScore(songIndex) {
 
             if (targetSong && (targetSong.id || targetSong.beatmap_id)) {
                 const beatmapId = targetSong.id || targetSong.beatmap_id;
-                const res = await window.ApiService.getScores({ beatmap_id: beatmapId, limit: 100 }).catch(() => null);
+                // Lấy user_id hiện tại để chỉ lấy điểm của user đang đăng nhập, tránh lấy điểm của admin hoặc user khác
+                let currentUserId = null;
+                try {
+                    const rawAuthUser = localStorage.getItem('auth_user');
+                    if (rawAuthUser) currentUserId = JSON.parse(rawAuthUser)?.id;
+                } catch (e) {}
+                const scoreQueryParams = { beatmap_id: beatmapId, limit: 100 };
+                if (currentUserId) scoreQueryParams.user_id = currentUserId;
+                const res = await window.ApiService.getScores(scoreQueryParams).catch(() => null);
                 const scoresData = res?.data?.data || res?.data || [];
 
                 if (Array.isArray(scoresData) && scoresData.length > 0) {
