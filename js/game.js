@@ -3517,6 +3517,8 @@ function resetGameScene() {
     }
 
     score = 0;
+    lastDisplayedScore = -1;      // BUG FIX: reset để score display không mang giá trị cũ sang lần chơi mới
+    lastDisplayedPerfectHUD = -1; // BUG FIX: tương tự cho perfect streak HUD
     comboCount = 0;
     gameSpeed = 1.0;
     nonPerfectStreak = 0;

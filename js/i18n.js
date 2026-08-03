@@ -121,19 +121,23 @@ function applyTranslations() {
         const radioButtons = langOptions.querySelectorAll('input[name="selected-language"]');
         radioButtons.forEach(radio => {
             const label = radio.closest('label');
-            const span = label.querySelector('span');
+            const span = label.querySelector('.lang-text') || label.querySelector('span');
             if (radio.value === userLang) {
                 radio.checked = true;
                 label.classList.add('border-cyan-400', 'shadow-[0_0_10px_rgba(6,182,212,0.1)]', 'bg-cyan-950/40');
                 label.classList.remove('border-cyan-500/20');
-                span.classList.add('text-cyan-400');
-                span.classList.remove('text-gray-300');
+                if (span) {
+                    span.classList.add('text-cyan-400');
+                    span.classList.remove('text-gray-300');
+                }
             } else {
                 radio.checked = false;
                 label.classList.remove('border-cyan-400', 'shadow-[0_0_10px_rgba(6,182,212,0.1)]', 'bg-cyan-950/40');
                 label.classList.add('border-cyan-500/20');
-                span.classList.remove('text-cyan-400');
-                span.classList.add('text-gray-300');
+                if (span) {
+                    span.classList.remove('text-cyan-400');
+                    span.classList.add('text-gray-300');
+                }
             }
         });
     }

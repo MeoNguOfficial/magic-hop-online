@@ -1746,6 +1746,64 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof manualCheckForUpdate === 'function') manualCheckForUpdate();
         });
     }
+
+    // Gắn sự kiện cho nút Xóa Kỷ Lục Cục Bộ
+    const resetLocalHighscoresBtn = document.getElementById('reset-local-highscores-btn');
+    if (resetLocalHighscoresBtn) {
+        resetLocalHighscoresBtn.addEventListener('click', () => {
+            if (typeof showCyberModal === 'function') {
+                showCyberModal({
+                    message: typeof t === 'function' ? t('msg_reset_local_highscores_confirm') : '⚠️ Xóa toàn bộ kỷ lục Best Score lưu cục bộ?\n\nHành động này sẽ xóa điểm cao của tất cả bài hát khỏi thiết bị này. Điểm trên server (nếu đã đăng nhập) sẽ KHÔNG bị ảnh hưởng.',
+                    type: 'confirm',
+                    onConfirm: async () => {
+                        try {
+                            // 1. Xóa store highScores trong IndexedDB
+                            await new Promise((resolve, reject) => {
+                                const request = indexedDB.open('MagicHopDB', 2);
+                                request.onsuccess = (e) => {
+                                    const db = e.target.result;
+                                    if (db.objectStoreNames.contains('highScores')) {
+                                        const tx = db.transaction('highScores', 'readwrite');
+                                        const store = tx.objectStore('highScores');
+                                        store.clear();
+                                        tx.oncomplete = () => { db.close(); resolve(); };
+                                        tx.onerror = () => { db.close(); reject(tx.error); };
+                                    } else {
+                                        db.close(); resolve();
+                                    }
+                                };
+                                request.onerror = () => reject(request.error);
+                            });
+
+                            // 2. Xóa các key bestScore_* trong localStorage (nếu có)
+                            const keysToRemove = [];
+                            for (let i = 0; i < localStorage.length; i++) {
+                                const key = localStorage.key(i);
+                                if (key && (key.startsWith('bestScore') || key.startsWith('highScore') || key.startsWith('best_score'))) {
+                                    keysToRemove.push(key);
+                                }
+                            }
+                            keysToRemove.forEach(k => localStorage.removeItem(k));
+
+                            // 3. Reset UI bestScoreLabel nếu đang hiển thị
+                            const bestScoreLabelEl = document.getElementById('best-score-label');
+                            if (bestScoreLabelEl) bestScoreLabelEl.innerText = (typeof t === 'function' ? t('best_score') : 'Kỷ lục:') + ' 0';
+
+                            if (typeof showCyberModal === 'function') {
+                                const successMsg = typeof t === 'function' ? t('msg_reset_local_highscores_success') : '✅ Đã xóa toàn bộ kỷ lục cục bộ thành công!';
+                                showCyberModal({ message: `${successMsg}\n(Đã xóa ${keysToRemove.length + 1} mục dữ liệu)`, type: 'info' });
+                            }
+                        } catch (err) {
+                            console.error('[Settings] Lỗi xóa kỷ lục:', err);
+                            if (typeof showCyberModal === 'function') {
+                                showCyberModal({ message: `❌ Không thể xóa kỷ lục: ${err.message}`, type: 'info' });
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
 });
 
 async function renderStorageList() {
@@ -2394,7 +2452,7 @@ window.adjustTabsKerning = function() {
         // Save original transitions and disable them
         const originalTransitions = [];
         labels.forEach((label, index) => {
-            const span = label.querySelector('span');
+            const span = label.querySelector('.lang-text') || label.querySelector('span');
             originalTransitions[index] = {
                 label: label.style.transition,
                 span: span ? span.style.transition : ''
@@ -2404,7 +2462,7 @@ window.adjustTabsKerning = function() {
         });
 
         labels.forEach(label => {
-            const span = label.querySelector('span');
+            const span = label.querySelector('.lang-text') || label.querySelector('span');
             if (!span) return;
 
             // Reset styles first

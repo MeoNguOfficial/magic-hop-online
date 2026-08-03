@@ -1839,6 +1839,15 @@
                                     </svg>
                                     <span>Kiểm Tra Tính Toàn Vẹn Local Storage</span>
                                 </button>
+
+                                <!-- Nút Xóa Kỷ Lục Cục Bộ -->
+                                <button id="reset-local-highscores-btn"
+                                    class="w-full py-2.5 text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-950/20 hover:border-red-400 rounded-lg uppercase font-orbitron transition-all flex items-center justify-center gap-1.5">
+                                    <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                                    </svg>
+                                    <span data-i18n="btn_reset_local_highscores">Xóa Kỷ Lục Cục Bộ (Best Scores)</span>
+                                </button>
                                 
                                 <div class="space-y-2 pt-3 border-t border-cyan-500/20">
                                     <span class="text-[10px] text-cyan-400 font-bold uppercase tracking-wider font-orbitron"
@@ -1856,71 +1865,82 @@
                                 <span class="text-xs text-cyan-400 font-bold uppercase tracking-wider font-orbitron"
                                     data-i18n="lang_title">Ngôn ngữ (Language)</span>
                                 <div id="language-options" class="grid grid-cols-4 gap-2">
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="auto" class="sr-only">
-                                        <span class="text-[9px] text-gray-300 font-bold uppercase font-orbitron"
-                                            data-i18n="lang_auto">Tự động</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0zM3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 000 18M12.5 3a17 17 0 010 18"/></svg>
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron" data-i18n="lang_auto">Tự động</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="vi" class="sr-only">
-                                        <span class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">Tiếng
-                                            Việt</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/vn.svg" alt="VN" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">Tiếng Việt</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="en" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">English</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/us.svg" alt="US" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">English</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="fr" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">Français</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/fr.svg" alt="FR" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">Français</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="zh-CN" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">简体中文</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/cn.svg" alt="CN" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">简体中文</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="zh-TW" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">繁體中文</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/tw.svg" alt="TW" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">繁體中文</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="ko" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">한국어</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/kr.svg" alt="KR" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">한국어</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="ja" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">日本語</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/jp.svg" alt="JP" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">日本語</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="es" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">Español</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/es.svg" alt="ES" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">Español</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="pt" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">Português</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/pt.svg" alt="PT" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">Português</span>
                                     </label>
-                                    <label
-                                        class="flex flex-col items-center justify-center p-2.5 rounded bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
+                                    <label class="flex flex-col items-center justify-center p-2.5 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400 cursor-pointer transition-all text-center">
                                         <input type="radio" name="selected-language" value="ru" class="sr-only">
-                                        <span
-                                            class="text-[9px] text-gray-300 font-bold uppercase font-orbitron">Русский</span>
+                                        <span class="lang-flag flex items-center justify-center h-9 mb-1.5 shrink-0">
+                                            <img src="https://flagcdn.io/flags/4x3/ru.svg" alt="RU" class="h-8 w-auto rounded-[3px] shadow-sm object-contain shrink-0 pointer-events-none" loading="lazy">
+                                        </span>
+                                        <span class="lang-text text-[9px] text-gray-300 font-bold uppercase font-orbitron">Русский</span>
                                     </label>
                                 </div>
                             </div>
