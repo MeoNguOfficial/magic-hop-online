@@ -651,6 +651,45 @@ function updateBeatList() {
 }
 
 // --- NHÓM HOẠT ĐỘNG (Ctrl + G) ---
+
+/**
+ * Quick Align: Căn đều ngay lập tức beat trong vùng chọn
+ * Dùng số phần chia từ input subdivideParts (mặc định 4)
+ * Không mở modal - áp dụng thẳng
+ */
+function quickGroupAlign() {
+    if (selectedBeatsIndices.size < 2) {
+        showNotification("Hãy chọn ít nhất 2 mốc beat để căn đều!", "Lưu ý chọn mốc");
+        return;
+    }
+    const indices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
+    const startTime = beats[indices[0]], endTime = beats[indices[indices.length - 1]], totalSpan = endTime - startTime;
+    if (totalSpan <= 0) {
+        showNotification("Độ dài khoảng thời gian phải > 0s!", "Lỗi căn đều", true);
+        return;
+    }
+
+    // Thông minh: đếm số beat trong vùng chọn để tự tính số phần chia
+    // Nếu chọn N beat → chia N-1 khoảng → vẫn ra đúng N beat phân đều
+    // Fallback: nếu chỉ chọn đúng 2 beat (chỉ đầu/cuối) → dùng subdividePartsInput
+    const autoCount = indices.length;
+    const parts = autoCount > 2 ? autoCount - 1 : (parseInt(subdividePartsInput.value) || 4);
+
+    const newSubbeats = [];
+    for (let i = 0; i <= parts; i++) newSubbeats.push(Number((startTime + (totalSpan * (i / parts))).toFixed(3)));
+
+    const leftPart = beats.slice(0, indices[0]), rightPart = beats.slice(indices[indices.length - 1] + 1);
+    beats = [...leftPart, ...newSubbeats, ...rightPart].sort((a, b) => a - b);
+    selectedBeatsIndices.clear();
+    newSubbeats.forEach(val => { const idx = beats.indexOf(val); if (idx !== -1) selectedBeatsIndices.add(idx); });
+
+    updateBeatList(); playTickSound(1000, 0.15);
+    const modeLabel = autoCount > 2 ? `${autoCount} beat → ${parts} khoảng đều` : `${parts} khoảng chia`;
+    status.textContent = `⚡ Căn đều: ${modeLabel} · ${startTime.toFixed(3)}s → ${endTime.toFixed(3)}s`;
+    status.className = "active";
+    setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+}
+
 function openGroupActions() {
     if (selectedBeatsIndices.size < 2) { showNotification("Hãy chọn ít nhất 2 mốc beat để thực hiện!", "Lưu ý chọn mốc"); return; }
     groupActionSummary.innerHTML = `Đang chọn: <strong>${selectedBeatsIndices.size} beat</strong>. Nhịp đầu: <strong>${beats[Math.min(...selectedBeatsIndices)].toFixed(3)}s</strong>, Nhịp cuối: <strong>${beats[Math.max(...selectedBeatsIndices)].toFixed(3)}s</strong>.`;
@@ -971,7 +1010,7 @@ document.addEventListener("mousedown", (e) => { if (!customContextMenu.contains(
 ctxCopy.onclick = (e) => { e.stopPropagation(); copySelectedBeats(); hideContextMenu(); };
 ctxPaste.onclick = (e) => { e.stopPropagation(); pasteBeats(lastTargetTimeForContext); hideContextMenu(); };
 ctxDelete.onclick = (e) => { e.stopPropagation(); if (selectedBeatsIndices.size > 0) { Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); }); clearSelection(); updateBeatList(); playTickSound(400, 0.1); } hideContextMenu(); };
-ctxGroupAlign.onclick = (e) => { e.stopPropagation(); openGroupActions(); hideContextMenu(); };
+ctxGroupAlign.onclick = (e) => { e.stopPropagation(); quickGroupAlign(); hideContextMenu(); };
 ctxGroupShift.onclick = (e) => { e.stopPropagation(); openGroupActions(); hideContextMenu(); };
 ctxSelectAll.onclick = (e) => { e.stopPropagation(); if (beats.length > 0) { selectedBeatsIndices.clear(); beats.forEach((_, index) => { if (index > 0) selectedBeatsIndices.add(index); }); updateSelectionIndicator(); playTickSound(1000, 0.05); } hideContextMenu(); };
 ctxClearSelection.onclick = (e) => { e.stopPropagation(); clearSelection(); hideContextMenu(); };
@@ -984,6 +1023,7 @@ document.addEventListener("keydown", e => {
 
     if (e.code === "Space") { e.preventDefault(); togglePlayPause(); return; }
     if (e.ctrlKey && key === "g") { e.preventDefault(); openGroupActions(); return; }
+    if (!e.ctrlKey && key === "e") { e.preventDefault(); quickGroupAlign(); return; }
     if (e.ctrlKey && e.key === "ArrowLeft") { e.preventDefault(); playFromStart(); return; }
     if (e.ctrlKey && key === "c") { e.preventDefault(); copySelectedBeats(); return; }
     if (e.ctrlKey && key === "v") { e.preventDefault(); if (audio.src) pasteBeats(audio.currentTime); return; }
