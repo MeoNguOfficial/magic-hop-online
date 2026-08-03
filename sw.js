@@ -7,7 +7,7 @@
 const STATIC_CACHE = 'magic-hop-static-v1.0.0.5';
 const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.5';
 
-// Pre-load toàn bộ các file hệ thống cốt lõi & JS (Không cache nhạc hay extensions động)
+// Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
     './',
     './index.html',
@@ -48,7 +48,6 @@ const CORE_ASSETS = [
     './js/chat.js',
     './js/admin-panel.js',
     './js/pwa-installer.js',
-    // Lá cờ ngôn ngữ (flagcdn.io SVG 4x3)
     'https://flagcdn.io/flags/4x3/vn.svg',
     'https://flagcdn.io/flags/4x3/us.svg',
     'https://flagcdn.io/flags/4x3/fr.svg',
@@ -61,12 +60,27 @@ const CORE_ASSETS = [
     'https://flagcdn.io/flags/4x3/ru.svg'
 ];
 
+// Thay đoạn cache.addAll(...) hoặc cache.add(...) trong sự kiện install:
 self.addEventListener('install', event => {
     self.skipWaiting();
     event.waitUntil(
-        caches.open(STATIC_CACHE).then(cache => {
-            console.log('[ServiceWorker] Đang pre-load các file hệ thống và JS mới...');
-            return cache.addAll(CORE_ASSETS);
+        caches.open(STATIC_CACHE).then(async cache => {
+            console.log('[ServiceWorker] Pre-load assets...');
+            
+            return Promise.allSettled(
+                CORE_ASSETS.map(async url => {
+                    try {
+                        // Nếu là link CDN bên ngoài, dùng mode no-cors
+                        const isExternal = url.startsWith('http') && !url.includes(location.hostname);
+                        const request = isExternal ? new Request(url, { mode: 'no-cors' }) : url;
+                        
+                        const response = await fetch(request);
+                        await cache.put(url, response);
+                    } catch (err) {
+                        console.warn('[ServiceWorker] Lỗi cache:', url, err);
+                    }
+                })
+            );
         })
     );
 });
@@ -76,7 +90,6 @@ self.addEventListener('activate', event => {
         caches.keys().then(keys => {
             return Promise.all(
                 keys.map(key => {
-                    // Xóa các cache cũ của SW nhưng giữ lại cache âm thanh của cacheManager.js
                     if (key !== STATIC_CACHE && key !== DYNAMIC_CACHE && !key.startsWith('magic-hop-audio')) {
                         return caches.delete(key);
                     }
@@ -89,31 +102,41 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Bỏ qua các request không thuộc HTTP/HTTPS (như blob URL, chrome-extension)
+    // Bỏ qua các request không thuộc HTTP/HTTPS
     if (event.request.method !== 'GET' || !url.protocol.startsWith('http')) return;
 
-    // Bỏ qua các file âm thanh, để cacheManager.js tự xử lý qua fetch+blob (tránh lỗi Range Request iOS)
+    // Bỏ qua file âm thanh
     if (url.pathname.match(/\.(mp3|m4a|wav|ogg)$/i)) return;
 
     event.respondWith(
-        // Chiến lược Network-First: Ưu tiên tải bản mới nhất từ mạng
-        fetch(event.request).then(networkResponse => {
-            if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-                const responseToCache = networkResponse.clone();
-                caches.open(DYNAMIC_CACHE).then(cache => cache.put(event.request, responseToCache));
-            }
-            return networkResponse;
-        }).catch(async err => {
-            // Nếu mất mạng (Offline), lập tức lục tìm trong Cache để sử dụng
-            console.warn('[ServiceWorker] Ngoại tuyến, đang dùng Cache cho:', event.request.url);
-            const cachedResponse = await caches.match(event.request);
-            if (cachedResponse) return cachedResponse;
-            throw err;
-        })
+        fetch(event.request)
+            .then(networkResponse => {
+                // Kiểm tra response hợp lệ trước khi cache
+                if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
+                    const responseToCache = networkResponse.clone();
+                    
+                    // Thêm .catch() ở đây để triệt tiêu lỗi Uncaught (in promise) khi cache.put thất bại
+                    caches.open(DYNAMIC_CACHE)
+                        .then(cache => cache.put(event.request, responseToCache))
+                        .catch(err => console.warn('[ServiceWorker] Lỗi lưu DYNAMIC_CACHE:', err));
+                }
+                return networkResponse;
+            })
+            .catch(async () => {
+                // Khi mất mạng/Fetch thất bại -> Lấy từ Cache
+                const cachedResponse = await caches.match(event.request);
+                if (cachedResponse) return cachedResponse;
+
+                // Nếu trong Cache cũng không có -> Trả về lỗi 503 thay vì ném (throw) lỗi ra Console
+                return new Response('Ngoại tuyến: Tài nguyên chưa có trong Cache', {
+                    status: 503,
+                    statusText: 'Service Unavailable',
+                    headers: new Headers({ 'Content-Type': 'text/plain; charset=utf-8' })
+                });
+            })
     );
 });
 
-// Lắng nghe lệnh skipWaiting từ giao diện chính
 self.addEventListener('message', (event) => {
     if (event.data === 'skipWaiting') {
         self.skipWaiting();
