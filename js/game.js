@@ -95,7 +95,7 @@ async function getBestScore(songIndex) {
                 try {
                     const rawAuthUser = localStorage.getItem('auth_user');
                     if (rawAuthUser) currentUserId = JSON.parse(rawAuthUser)?.id;
-                } catch (e) {}
+                } catch (e) { }
                 const scoreQueryParams = { beatmap_id: beatmapId, limit: 100 };
                 if (currentUserId) scoreQueryParams.user_id = currentUserId;
                 const res = await window.ApiService.getScores(scoreQueryParams).catch(() => null);
@@ -146,7 +146,7 @@ async function getBestScore(songIndex) {
 
     // 3. Ưu tiên tuyệt đối điểm Backend nếu kết nối thành công
     if (backendScore !== null) {
-        saveBestScore(songIndex, backendScore).catch(() => {});
+        saveBestScore(songIndex, backendScore).catch(() => { });
         cachedBestScores[songIndex] = backendScore;
         return backendScore;
     }
@@ -186,7 +186,7 @@ function renderBestScoreUI(songIndex) {
             if (!isBackendLoaded && currentShownScore < 0) {
                 setScoreText(locBest);
             }
-        }).catch(() => {});
+        }).catch(() => { });
     }
 
     // Ưu tiên tuyệt đối điểm từ Backend Server
@@ -224,7 +224,7 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
     }
 
     const db = await initDB();
-    
+
     // Đọc kỷ lục cũ để giữ trạng thái đã có
     let oldRecord = null;
     try {
@@ -235,12 +235,12 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => resolve(null);
         });
-    } catch (e) {}
+    } catch (e) { }
 
     const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
     const isRage = window.HardModeManager && window.HardModeManager.isEnabled;
     const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
-    
+
     let updatedRecord = {
         songIndex,
         score: oldRecord && oldRecord.score !== undefined ? oldRecord.score : btoa("0"),
@@ -256,8 +256,8 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
             updatedRecord.isNormalModePassed = true;
         }
 
-        const targetSong = (typeof activePlaylist !== 'undefined' && activePlaylist[songIndex]) || 
-                           (typeof playlist !== 'undefined' && playlist[songIndex]);
+        const targetSong = (typeof activePlaylist !== 'undefined' && activePlaylist[songIndex]) ||
+            (typeof playlist !== 'undefined' && playlist[songIndex]);
         if (targetSong) {
             if (isRage || isAsian) {
                 targetSong.is_hard_mode_passed = true;
@@ -273,7 +273,7 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
         if (isRage || isAsian) {
             let currentRage = 0;
             if (oldRecord && oldRecord.rageScore) {
-                try { currentRage = parseInt(atob(oldRecord.rageScore)) || 0; } catch (e) {}
+                try { currentRage = parseInt(atob(oldRecord.rageScore)) || 0; } catch (e) { }
             }
             if (score > currentRage) {
                 updatedRecord.rageScore = btoa(score.toString());
@@ -281,7 +281,7 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
         } else {
             let currentNormal = 0;
             if (oldRecord && oldRecord.score) {
-                try { currentNormal = parseInt(atob(oldRecord.score)) || 0; } catch (e) {}
+                try { currentNormal = parseInt(atob(oldRecord.score)) || 0; } catch (e) { }
             }
             if (score > currentNormal) {
                 updatedRecord.score = btoa(score.toString());
@@ -357,7 +357,7 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
                 else if (currentGraphicsQuality === 'fhd') baseCurve = 12;
                 else if (currentGraphicsQuality === 'qhd') baseCurve = 18;
                 else if (currentGraphicsQuality === 'uhd') baseCurve = 24;
-                
+
                 const curveSegments = Math.max(1, Math.round(baseCurve * detailScale));
                 cachedShockwaveGeo = new THREE.ShapeGeometry(waveShape, curveSegments);
             }
@@ -378,7 +378,7 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
         waveLine.position.y = surfaceY + 0.03;
         waveLine.rotation.x = -Math.PI / 2;
         waveLine.scale.set(tileScale * scaleMultiplier, tileScale * scaleMultiplier, 1);
-        
+
         const baseScale = tileScale * scaleMultiplier;
         shockwaves.push({
             mesh: waveLine,
@@ -415,7 +415,7 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
                 depthWrite: false
             });
         }
-        
+
         let beatDistance = Math.abs(baseBallVelocityZ) * 1.0;
         if (tiles && tiles.length > 0) {
             const currentTileIdx = tiles.findIndex(t => Math.abs(t.position.z - tile.position.z) < 0.1);
@@ -435,14 +435,14 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
                 const mat = pulseMaterialTemplate.clone();
                 mesh = new THREE.Mesh(pulseGeometry, mat);
             }
-            
+
             if (dynamicColorsEnabled) {
                 mesh.material.color.setHex(themeColor);
             } else {
                 mesh.material.color.setHex(0x00ffff);
             }
             mesh.material.opacity = 0.85;
-            
+
             mesh.position.set(x, (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) + 0.01, z);
             scene.add(mesh);
             boundaryPulses.push({
@@ -453,14 +453,14 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
                 opacity: 0.85
             });
         };
-        
+
         spawnPulse(-6.75, tile.position.z, beatDistance);
         spawnPulse(6.75, tile.position.z, beatDistance);
     }
 }
 
 // Replaced/Removed perfect ring
-function triggerPerfectRing(position) {}
+function triggerPerfectRing(position) { }
 
 function initBallTrail() {
     if (ballTrailSegments.length > 0) {
@@ -644,16 +644,16 @@ function checkAndApplyFloatingOrigin() {
 // --- ĐIỀU KHIỂN ĐẦU VÀO ---
 function onInputMove(clientX) {
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) || (window.AutoplayManager && window.AutoplayManager.shouldBypassInput())) return;
-    
+
     const controlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
     const halfControlWidth = controlWidth / 2;
-    
+
     if (typeof window.absoluteControlCenter !== 'number') {
         window.absoluteControlCenter = window.innerWidth / 2;
     }
-    
+
     let relativeX = clientX - window.absoluteControlCenter;
-    
+
     if (relativeX < -halfControlWidth) {
         window.absoluteControlCenter = clientX + halfControlWidth;
         relativeX = -halfControlWidth;
@@ -661,9 +661,9 @@ function onInputMove(clientX) {
         window.absoluteControlCenter = clientX - halfControlWidth;
         relativeX = halfControlWidth;
     }
-    
+
     let normalizedX = relativeX / halfControlWidth;
-    
+
     if (typeof invertControlsEnabled !== 'undefined' && invertControlsEnabled) {
         normalizedX = -normalizedX;
     }
@@ -1055,7 +1055,7 @@ async function initThree() {
         let deltaX = currentX - lastInputX;
         if (typeof invertControlsEnabled !== 'undefined' && invertControlsEnabled) {
             deltaX = -deltaX;
-            }
+        }
         lastInputX = currentX;
         const controlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
         ballTargetX = Math.max(-6.75, Math.min(6.75, ballTargetX + (deltaX / controlWidth) * 13.5 * sensitivity));
@@ -1228,7 +1228,7 @@ async function initThree() {
     }
 
     // Hàm cập nhật trạng thái hiển thị của tab hiện tại trên header di động
-    window.updateActiveTabIndicator = function(activeBtnId) {
+    window.updateActiveTabIndicator = function (activeBtnId) {
         const activeBtn = document.getElementById(activeBtnId);
         const activeText = document.getElementById('active-tab-text');
         const activeIcon = document.getElementById('active-tab-icon');
@@ -1382,17 +1382,17 @@ function drawPortalCanvas() {
         portalCanvas.height = 256;
         portalCtx = portalCanvas.getContext('2d');
     }
-    
+
     const ctx = portalCtx;
     ctx.clearRect(0, 0, 256, 256);
-    
+
     // Nền đen hoàn toàn (vì ta sẽ nhân màu trên GPU)
     ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, 256, 256);
-    
+
     ctx.save();
     ctx.translate(128, 128);
-    
+
     // Lớp 1: Ambient Glow ngoài cùng (trắng mờ)
     const grad1 = ctx.createRadialGradient(0, 0, 20, 0, 0, 120);
     grad1.addColorStop(0, 'rgba(255,255,255,0)');
@@ -1426,7 +1426,7 @@ function drawPortalCanvas() {
     ctx.globalCompositeOperation = 'screen';
     ctx.fillRect(-128, -128, 256, 256);
     ctx.restore();
-    
+
     // Lớp 4: Lõi tối ở trung tâm để làm nổi bật bóng khi chơi
     const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 42);
     coreGrad.addColorStop(0, '#000000');
@@ -1435,7 +1435,7 @@ function drawPortalCanvas() {
     ctx.fillStyle = coreGrad;
     ctx.globalCompositeOperation = 'source-over';
     ctx.fillRect(-128, -128, 256, 256);
-    
+
     ctx.restore();
 }
 
@@ -1465,7 +1465,7 @@ function updateBackgroundStyle() {
             portalCanvas.width = 256;
             portalCanvas.height = 256;
             portalCtx = portalCanvas.getContext('2d');
-            
+
             drawPortalCanvas();
             portalTexture = new THREE.CanvasTexture(portalCanvas);
             portalTexture.center.set(0.5, 0.5);
@@ -1477,7 +1477,7 @@ function updateBackgroundStyle() {
         if (activeTile && activeTile.userData && activeTile.userData.themeColor) {
             tileColorHex = activeTile.userData.themeColor;
         }
-        
+
         const baseGray = 0.10;
         targetBgColor.setHex(tileColorHex).multiplyScalar(0.07);
         targetBgColor.r += baseGray;
@@ -1507,9 +1507,9 @@ function updateBackgroundStyle() {
         }
 
         bgMesh.visible = true;
-        
+
         // Căn thẳng hàng và bám sát camera ở khoảng cách 15 đơn vị
-        const distance = 15; 
+        const distance = 15;
         bgMesh.position.copy(camera.position);
         bgMesh.quaternion.copy(camera.quaternion);
         bgMesh.translateZ(-distance);
@@ -1682,7 +1682,7 @@ function animate() {
         }
 
         // --- ĐỒNG BỘ ROUND & TỐC ĐỘ ---
-        if (!isFalling && !isFailTransition) {
+        if (!isFailTransition) {
             if (audio && audio.duration) {
                 const isWarmupPhase = (roundCount === 0 && totalTilesJumped < 16);
                 if ((activeRoundCount > 1 || activeEndlessMode) && !isWarmupPhase) {
@@ -1810,14 +1810,14 @@ function animate() {
         for (let i = boundaryPulses.length - 1; i >= 0; i--) {
             const pulse = boundaryPulses[i];
             pulse.mesh.position.z += pulse.speed * gameSpeed * delta; // Chạy nhanh về phía trước (Z âm) đồng bộ với game speed
-            
+
             const distanceTraveled = Math.abs(pulse.mesh.position.z - pulse.startZ);
             pulse.opacity = 0.85 * (1.0 - (distanceTraveled / pulse.maxDistance));
-            
+
             if (pulse.mesh.material) {
                 pulse.mesh.material.opacity = Math.max(0, pulse.opacity);
             }
-            
+
             if (pulse.opacity <= 0 || distanceTraveled >= pulse.maxDistance) {
                 scene.remove(pulse.mesh);
                 boundaryPulsePool.push(pulse.mesh);
@@ -1897,7 +1897,7 @@ function animate() {
                 if (tile.userData.baseY === undefined) {
                     tile.userData.baseY = 0;
                 }
-                
+
                 // Cập nhật vị trí Y (chỉ nhún xuống theo trục Y)
                 tile.position.y = tile.userData.baseY + springY;
 
@@ -2045,34 +2045,34 @@ function animate() {
         const camZ = typeof camera !== 'undefined' ? camera.position.z : (ball ? ball.position.z + 10 : 0);
         for (let i = shockwaves.length - 1; i >= 0; i--) {
             const sw = shockwaves[i];
-            
+
             // Dọn dẹp lập tức nếu tile mục tiêu đã bị thu hồi/ẩn, hoặc sóng đã trôi ra sau camera
             const isTileInactive = sw.targetTile && (!sw.targetTile.parent || !sw.targetTile.visible);
             const isBehindCam = sw.mesh.position.z > camZ + 5;
-            
+
             if (isTileInactive || isBehindCam) {
                 sw.mesh.visible = false;
                 shockwavePool.push(sw.mesh);
                 shockwaves.splice(i, 1);
                 continue;
             }
-            
+
             // Tính toán tỷ lệ lan rộng hiện tại (từ 0 đến 1)
             const startScale = sw.startScale || 1.0;
             const progress = Math.min(1.0, (sw.scale - startScale) / (sw.maxScale - startScale + 0.001));
-            
+
             // Tốc độ lan nở có quán tính (chậm dần khi lan rộng - ease-out)
             const currentSpeed = sw.speed * (1.0 - progress * 0.45);
             sw.scale += currentSpeed * delta;
-            
+
             sw.mesh.scale.set(sw.scale, sw.scale, 1);
-            
+
             // Đồng bộ vị trí thực tế của sóng theo tile (cho cả trục X di động và trục Z khi trượt thoát)
             if (sw.targetTile && sw.targetTile.parent) {
                 sw.mesh.position.x = sw.targetTile.position.x;
                 sw.mesh.position.z = sw.targetTile.position.z;
             }
-            
+
             // Fade out mượt bằng hàm cosine bình phương (smooth step-down)
             // Bắt đầu nhanh, kết thúc cực kỳ nhẹ nhàng và trong suốt dần, không thô cụt
             const fadeFactor = Math.pow(Math.cos(progress * Math.PI / 2), 2.0);
@@ -2090,19 +2090,19 @@ function animate() {
         // --- VẬT LÝ BÓNG ---
         if (isVictoryTransition) {
             victoryTimeElapsed += delta;
-            
+
             const progress = Math.min(1.0, victoryTimeElapsed / 2.0);
             const targetCeiling = 5.5; // Chiều cao trần nhảy tối đa như lúc chơi bình thường
-            
+
             // Bay xa và cao dần lên trần max theo đồ thị hình sin mượt mà, không bị rơi đột ngột
             ball.position.y = minFloor + Math.sin(progress * Math.PI / 2) * targetCeiling;
-            
+
             const flySpeedZ = baseBallVelocityZ * 1.5; // Bay vút nhanh về phía trước
             ball.position.z += flySpeedZ * delta;
-            
+
             // Giảm dần độ bám đuôi camera trục Z
             victoryCameraDecay = Math.max(0.0, victoryCameraDecay - delta * 0.85);
-            
+
             if (victoryTimeElapsed >= 2.0) {
                 isVictoryTransition = false;
                 gameVictory();
@@ -2204,10 +2204,10 @@ function animate() {
                             ballVictoryVelocityY = 32; // Khởi động nhảy cao
                             if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
                                 starCollectAudio.currentTime = 0;
-                                starCollectAudio.play().catch(() => {});
+                                starCollectAudio.play().catch(() => { });
                             } else if (newBestAudio) {
                                 newBestAudio.currentTime = 0;
-                                newBestAudio.play().catch(() => {});
+                                newBestAudio.play().catch(() => { });
                             }
                             fadeOutGameAudio(1.2);
                         } else {
@@ -2239,6 +2239,7 @@ function animate() {
                         isFalling = true;
                         // Cắt giảm vận tốc rơi tự do ban đầu để người chơi có thêm thời gian phản xạ cứu bóng
                         fallVelocityY = Math.max(-22, currentBounceVelocityY + currentGravity * flightTime);
+                        // fallVelocityY = currentBounceVelocityY + currentGravity * flightTime;
                         fallVelocityZ = ballVelocityZ;
                         fallVelocityX = (ballTargetX - ball.position.x) * 15;
                     }
@@ -2308,7 +2309,8 @@ function animate() {
                     failTimeElapsed = 0;
 
                     if (audio) {
-                        audio.playbackRate = Math.min(3.0, gameSpeed);
+                        const targetRescueAudioSpeed = Math.min(3.0, gameSpeed);
+                        audio.playbackRate += (targetRescueAudioSpeed - audio.playbackRate) * Math.min(1.0, 4.0 * delta);
                     }
                     if (gainNode) {
                         gainNode.gain.value = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
@@ -2387,10 +2389,10 @@ function animate() {
                         ballVictoryVelocityY = 32;
                         if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
                             starCollectAudio.currentTime = 0;
-                            starCollectAudio.play().catch(() => {});
+                            starCollectAudio.play().catch(() => { });
                         } else if (newBestAudio) {
                             newBestAudio.currentTime = 0;
-                            newBestAudio.play().catch(() => {});
+                            newBestAudio.play().catch(() => { });
                         }
                         fadeOutGameAudio(1.2);
                     } else {
@@ -2407,7 +2409,7 @@ function animate() {
                             }
                         }
 
-                        jumpElapsedTime = 0;
+                        jumpElapsedTime -= flightTime;
                         calculateRescueParabola(currentTileIndex);
                     }
 
@@ -2608,7 +2610,7 @@ function animate() {
         const lerpSpeed = 3.0;
         const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
         currentBgColor.lerp(targetBgColor, lerpFactor);
-        
+
         // Xoay texture trên GPU (Không vẽ lại Canvas, không upload texture lên GPU => 0% CPU cost!)
         const time = clock.getElapsedTime();
         portalTexture.rotation = time * 0.12;
@@ -3654,7 +3656,7 @@ function showIntroSlide(slideId, duration = 2000) {
         void slide.offsetWidth; // force reflow
         slide.classList.remove('opacity-0');
         slide.classList.add('opacity-100');
-        
+
         setTimeout(() => {
             slide.classList.remove('opacity-100');
             slide.classList.add('opacity-0');
@@ -3681,7 +3683,7 @@ function showIntroDisclaimer(slideId) {
         void slide.offsetWidth;
         slide.classList.remove('opacity-0');
         slide.classList.add('opacity-100');
-        
+
         // Hide tap text initially
         const tapText = document.getElementById('disclaimer-tap-text');
         if (tapText) {
@@ -3697,7 +3699,7 @@ function showIntroDisclaimer(slideId) {
                 tapText.classList.add('animate-pulse');
             }
             slide.style.cursor = 'pointer';
-            
+
             const handleProceed = () => {
                 slide.removeEventListener('click', handleProceed);
                 slide.classList.remove('opacity-100');
@@ -3708,7 +3710,7 @@ function showIntroDisclaimer(slideId) {
                     resolve();
                 }, 700);
             };
-            
+
             slide.addEventListener('click', handleProceed);
         }, 3000);
     });
@@ -3901,7 +3903,7 @@ async function handleIntro() {
 
 function startGame() {
     if (typeof selectedSongIndex !== 'undefined' && selectedSongIndex !== null) {
-        getBestScore(selectedSongIndex).catch(() => {});
+        getBestScore(selectedSongIndex).catch(() => { });
     }
 
     if (!audio) {
@@ -4363,7 +4365,7 @@ function isWebGLSupported() {
     try {
         const canvas = document.createElement('canvas');
         return !!(window.WebGL2RenderingContext && canvas.getContext('webgl2')) ||
-               !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+            !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
     } catch (e) {
         return false;
     }
@@ -4399,7 +4401,7 @@ async function bootGame() {
         const savedId = localStorage.getItem('selectedSongId');
         const savedUrl = localStorage.getItem('selectedSongUrl');
         const savedIndex = parseInt(localStorage.getItem('selectedSongIndex'));
-        
+
         let foundIndex = -1;
         if (savedId) {
             foundIndex = activePlaylist.findIndex(s => String(s.id) === String(savedId));
@@ -4410,11 +4412,11 @@ async function bootGame() {
         if (foundIndex === -1 && !isNaN(savedIndex) && savedIndex >= 0 && savedIndex < activePlaylist.length) {
             foundIndex = savedIndex;
         }
-        
+
         selectedSongIndex = foundIndex !== -1 ? foundIndex : 0;
 
         await initThree();
-        
+
         if (typeof initAudio === 'function') {
             initAudio();
         }
