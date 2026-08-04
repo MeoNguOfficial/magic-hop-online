@@ -2280,8 +2280,8 @@ function animate() {
 
             // Kiểm tra cứu nguy bóng rơi (Hitbox kéo dài xuống Neon Glow)
             let targetTile = tiles[currentTileIndex + 1];
-            // Hitbox vùng sáng cố định là 1.2 bất kể cài đặt đồ họa tắt hay giảm
-            const glowHeightHitbox = 1.2;
+            // Hitbox vùng sáng cố định là 1.0 bất kể cài đặt đồ họa tắt hay giảm
+            const glowHeightHitbox = 1.0;
             const bottomY = -currentTileThickness / 2 - glowHeightHitbox + ballRadius;
 
             if (targetTile && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
