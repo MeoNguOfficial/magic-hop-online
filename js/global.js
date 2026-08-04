@@ -97,6 +97,8 @@ const closeAdminBtn = document.getElementById('close-admin-btn');
 const adminAutoplayToggle = document.getElementById('admin-autoplay-toggle');
 const adminDevModeToggle = document.getElementById('admin-devmode-toggle');
 const adminClearScores = document.getElementById('admin-clear-scores');
+const adminSpeedGainInput = document.getElementById('admin-speed-gain-input');
+const adminSpeedGainReset = document.getElementById('admin-speed-gain-reset');
 const togglePreservePitch = document.getElementById('toggle-preserve-pitch');
 const limitBeatmapAudioSelect = document.getElementById('limit-beatmap-audio-select');
 
@@ -183,7 +185,7 @@ let activePlaylist = [{ name: 'Loading...', url: '', beats: [0, 1, 2, 3] }];
 
 let beatmapBeats = activePlaylist[0].beats;
 let BEATMAP_TOTAL_TIME = 10;
-const SPEED_GAIN_PER_ROUND = 0.2;
+let SPEED_GAIN_PER_ROUND = 0.2;
 
 let currentBeatIndex = 0;
 let isEndlessMode = false;
@@ -878,6 +880,9 @@ if (btnOpenAdminModal) {
             if (adminDevModeToggle && typeof window.getDevMode === 'function') {
                 adminDevModeToggle.checked = window.getDevMode();
             }
+            if (adminSpeedGainInput) {
+                adminSpeedGainInput.value = typeof SPEED_GAIN_PER_ROUND !== 'undefined' ? SPEED_GAIN_PER_ROUND : 0.2;
+            }
         }
     });
 }
@@ -1061,6 +1066,78 @@ if (adminClearScores) {
                 alert("Đã thiết lập lại. Vui lòng F5 (tải lại trang) để áp dụng.");
             }
         }
+    });
+}
+
+if (adminSpeedGainInput) {
+    adminSpeedGainInput.style.cursor = 'ew-resize';
+
+    let _sgDragging = false;
+    let _sgStartX = 0;
+    let _sgStartVal = 0.2;
+    let _sgMoved = false;
+
+    const _sgApply = (val) => {
+        val = Math.round(Math.min(4.0, Math.max(0.1, val)) * 100) / 100;
+        SPEED_GAIN_PER_ROUND = val;
+        adminSpeedGainInput.value = val;
+    };
+
+    adminSpeedGainInput.addEventListener('pointerdown', (e) => {
+        _sgDragging = true;
+        _sgMoved = false;
+        _sgStartX = e.clientX;
+        _sgStartVal = parseFloat(adminSpeedGainInput.value) || 0.2;
+        adminSpeedGainInput.setPointerCapture(e.pointerId);
+        adminSpeedGainInput.style.cursor = 'ew-resize';
+        e.preventDefault();
+    });
+
+    adminSpeedGainInput.addEventListener('pointermove', (e) => {
+        if (!_sgDragging) return;
+        const delta = e.clientX - _sgStartX;
+        if (Math.abs(delta) > 2) _sgMoved = true;
+        if (!_sgMoved) return;
+        // Mỗi 5px = 0.1 thay đổi
+        const change = Math.round(delta / 5) * 0.1;
+        _sgApply(_sgStartVal + change);
+    });
+
+    adminSpeedGainInput.addEventListener('pointerup', (e) => {
+        if (!_sgDragging) return;
+        _sgDragging = false;
+        adminSpeedGainInput.style.cursor = 'ew-resize';
+        if (_sgMoved) {
+            // Đã drag → không trigger focus/edit
+            adminSpeedGainInput.blur();
+        } else {
+            // Click thường → cho phép gõ số
+            adminSpeedGainInput.style.cursor = 'text';
+            adminSpeedGainInput.select();
+        }
+    });
+
+    adminSpeedGainInput.addEventListener('input', () => {
+        let val = parseFloat(adminSpeedGainInput.value);
+        if (isNaN(val)) return;
+        val = Math.min(4.0, Math.max(0.1, val));
+        SPEED_GAIN_PER_ROUND = val;
+    });
+    adminSpeedGainInput.addEventListener('blur', () => {
+        let val = parseFloat(adminSpeedGainInput.value);
+        if (isNaN(val)) val = 0.2;
+        val = Math.min(4.0, Math.max(0.1, val));
+        SPEED_GAIN_PER_ROUND = val;
+        adminSpeedGainInput.value = val;
+        adminSpeedGainInput.style.cursor = 'ew-resize';
+    });
+}
+
+
+if (adminSpeedGainReset) {
+    adminSpeedGainReset.addEventListener('click', () => {
+        SPEED_GAIN_PER_ROUND = 0.2;
+        if (adminSpeedGainInput) adminSpeedGainInput.value = 0.2;
     });
 }
 

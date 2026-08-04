@@ -100,17 +100,17 @@ function createGlowTexture() {
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext('2d');
-    
+
     // Create a linear gradient from top (darker/transparent) to bottom (bright)
     const gradient = ctx.createLinearGradient(0, 0, 0, size);
     gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
     gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
     gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.3)');
     gradient.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
-    
+
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, size, size);
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.ClampToEdgeWrapping;
     texture.wrapT = THREE.ClampToEdgeWrapping;
@@ -187,7 +187,7 @@ function createPercentLabel(percent) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     // Sử dụng màu hồng (Pink) để phân biệt với nhãn Round (Cyan)
     ctx.font = `bold 80px ${fontFamily}, sans-serif`;
-    ctx.fillStyle = '#ec4899'; 
+    ctx.fillStyle = '#ec4899';
     ctx.textAlign = 'center';
     ctx.shadowColor = '#ec4899';
     ctx.shadowBlur = 15;
@@ -209,7 +209,7 @@ function createStarLabel() {
     canvas.height = 128;
     ctx.fillStyle = 'rgba(0,0,0,0)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     ctx.font = 'bold 80px Arial, sans-serif';
     ctx.fillStyle = '#facc15'; // Bright yellow
     ctx.textAlign = 'center';
@@ -217,7 +217,7 @@ function createStarLabel() {
     ctx.shadowColor = '#facc15';
     ctx.shadowBlur = 20;
     ctx.fillText('⭐', 64, 64);
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
@@ -230,7 +230,7 @@ function createStarLabel() {
 // --- THỰC HIỆN GIẢI PHÓNG BỘ NHỚ CHO GẠCH BỊ HUỶ (ĐỂ TRÁNH LEAK GPU/RAM) ---
 function disposeTile(tile) {
     if (!tile) return;
-    
+
     // Giải phóng material của Mesh chính
     if (tile.material) {
         if (Array.isArray(tile.material)) {
@@ -241,7 +241,7 @@ function disposeTile(tile) {
             if (tile.material !== capMaterial) tile.material.dispose();
         }
     }
-    
+
     // Giải phóng các viền, highlight và hồng tâm
     if (tile.userData) {
         if (tile.userData.borderLine && tile.userData.borderLine.material) {
@@ -273,7 +273,7 @@ function disposeTile(tile) {
             }
         }
     }
-    
+
     // Giải phóng sprite nhãn đặc biệt (Round, Percent, Star)
     for (let i = tile.children.length - 1; i >= 0; i--) {
         const child = tile.children[i];
@@ -294,7 +294,7 @@ function pushTileToPool(tile) {
     if (typeof scene !== 'undefined' && scene) {
         scene.remove(tile);
     }
-    
+
     const limit = (typeof maxTilePoolSize !== 'undefined') ? maxTilePoolSize : 15;
     if (tilePool.length < limit) {
         tilePool.push(tile);
@@ -342,7 +342,7 @@ function getTileFromPool() {
             else if (currentGraphicsQuality === 'fhd') baseCurve = 12;
             else if (currentGraphicsQuality === 'qhd') baseCurve = 18;
             else if (currentGraphicsQuality === 'uhd') baseCurve = 24;
-            
+
             const bevelEnabled = currentBevelEnabled && (detailScale >= 0.3);
             const extrudeSettings = {
                 depth: currentTileThickness,
@@ -380,7 +380,7 @@ function getTileFromPool() {
         if (!cachedBorderGeo) {
             const borderThickness = 0.25;
             const shape = createRoundedRectShape(tileWidth + borderThickness, tileLength + borderThickness, 0.8 + borderThickness / 2);
-            const hole  = createRoundedRectShape(tileWidth - borderThickness, tileLength - borderThickness, Math.max(0, 0.8 - borderThickness / 2));
+            const hole = createRoundedRectShape(tileWidth - borderThickness, tileLength - borderThickness, Math.max(0, 0.8 - borderThickness / 2));
             shape.holes.push(hole);
             let baseCurve = currentGraphicsQuality === 'simple' ? 2 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
             cachedBorderGeo = new THREE.ShapeGeometry(shape, Math.max(1, Math.round(baseCurve * detailScale)));
@@ -536,9 +536,13 @@ function spawnTile(isFirst = false) {
             // 3 block đầu tiên luôn luôn thẳng hàng (maxDeltaX = 0)
             maxDeltaX = 0;
         } else if (isInitial16Blocks) {
-            // 13 block còn lại trong 16 block đầu lệch tối đa 0.8 (theo block)
+            // 13 block còn lại trong 16 block đầu: nếu nhịp beat gần (<0.3s) thì thẳng hàng, ngược lại lệch tối đa 0.8 block
             const blockUnit = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
-            maxDeltaX = 0.8 * blockUnit;
+            if (timeDiff < 0.3) {
+                maxDeltaX = 0; // Beat gần → ưu tiên thẳng hàng
+            } else {
+                maxDeltaX = 0.5 * blockUnit;
+            }
         } else if (timeDiff < 0.15) {
             maxDeltaX = 0.25;
         } else {
@@ -686,8 +690,8 @@ function spawnTile(isFirst = false) {
     if (!isFirst && !activeEndlessMode && roundCount === 0 && beatmapBeats.length > 10) {
         const milestones = [20, 40, 60, 80];
         // currentBeatIndex đã được tăng lên ở đoạn trên, nên ta lấy giá trị thực tế của tile đang spawn
-        const currentProgressIdx = currentBeatIndex - 1; 
-        
+        const currentProgressIdx = currentBeatIndex - 1;
+
         for (let m of milestones) {
             const targetIdx = Math.floor(beatmapBeats.length * (m / 100));
             if (currentProgressIdx === targetIdx) {

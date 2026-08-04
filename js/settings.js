@@ -519,7 +519,7 @@ function applySettings() {
                             if (toggleVisualizer) toggleVisualizer.checked = val;
                         }
                         if (backup.tileBounceEnabled !== undefined || backup.tileAnimationsEnabled !== undefined) {
-                            const val = (backup.tileBounceEnabled !== undefined) ? 
+                            const val = (backup.tileBounceEnabled !== undefined) ?
                                 (backup.tileBounceEnabled === true || backup.tileBounceEnabled === 'true') :
                                 (backup.tileAnimationsEnabled === true || backup.tileAnimationsEnabled === 'true');
                             localStorage.setItem('tileBounceEnabled', val);
@@ -801,10 +801,10 @@ function applySettings() {
         const initialDetailScale = typeof tileDetailScale !== 'undefined' ? parseFloat(tileDetailScale) : 1.0;
         const initialBevelEnabled = currentBevelEnabled && (initialDetailScale >= 0.3);
         const initialBevelThickness = initialBevelEnabled ? currentBevelThickness * Math.min(1.0, initialDetailScale) : 0;
-        
+
         const rawApiValY = localStorage.getItem('graphicsAPI') || 'webgl';
         const isWebGPUModeY = (rawApiValY === 'd2ViZ3B1' || rawApiValY === 'webgpu');
-        
+
         surfaceY = isWebGPUModeY ? (currentTileThickness / 2 + initialBevelThickness) : (currentTileThickness / 2);
         minFloor = surfaceY + ballRadius;
 
@@ -1252,33 +1252,33 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    window.restoreGameVolume = function() {
+    window.restoreGameVolume = function () {
         gameVolume = 0.8;
         isGameMuted = false;
         localStorage.setItem('gameVolume', gameVolume);
         localStorage.setItem('isGameMuted', false);
-        
+
         const gameVolumeSlider = document.getElementById('game-volume-slider');
         const gameVolumeValue = document.getElementById('game-volume-value');
         if (gameVolumeSlider) {
             gameVolumeSlider.value = 0.8;
             if (gameVolumeValue) gameVolumeValue.innerText = '80%';
         }
-        
+
         const qsVol = document.getElementById('qs-game-vol');
         const qsVolVal = document.getElementById('qs-game-vol-val');
         if (qsVol) {
             qsVol.value = 0.8;
             if (qsVolVal) qsVolVal.innerText = '80%';
         }
-        
+
         const btnMuteGame = document.getElementById('btn-mute-game');
         if (btnMuteGame) {
             updateMuteButtonUI(btnMuteGame, false);
         }
-        
+
         if (typeof applySettings === 'function') applySettings();
-        
+
         const lowVolWarn = document.getElementById('low-volume-warning');
         if (lowVolWarn) lowVolWarn.classList.add('hidden');
     };
@@ -1827,7 +1827,7 @@ async function renderStorageList() {
                 if (Array.isArray(cachedMaps)) {
                     candidates.push(...cachedMaps);
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Lọc trùng lặp danh mục theo URL hoặc LazyURL
@@ -1902,8 +1902,8 @@ async function renderStorageList() {
                             });
                         }
                     }
-                } catch (e) {}
-            } catch (e) {}
+                } catch (e) { }
+            } catch (e) { }
         }
 
         // 4. Quét trực tiếp IndexedDB audio_cache store để tìm các key nhạc chưa được map
@@ -1938,7 +1938,7 @@ async function renderStorageList() {
                         }
                     });
                 }
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Cập nhật tiêu đề hiển thị tổng số bài hát đã tải
@@ -1959,7 +1959,7 @@ async function renderStorageList() {
             const { song, hasAudio, hasJson } = item;
             const itemDiv = document.createElement('div');
             itemDiv.className = "flex items-center justify-between p-2 rounded bg-cyan-950/10 border border-cyan-500/10 hover:border-cyan-500/30 transition-all";
-            
+
             let details = [];
             if (hasAudio) details.push("Nhạc");
             if (hasJson) details.push("Beatmap");
@@ -1991,7 +1991,7 @@ async function renderStorageList() {
                                     const root = await navigator.storage.getDirectory();
                                     const dir = await root.getDirectoryHandle('audio', { create: false });
                                     await dir.removeEntry(song.url);
-                                } catch(e) {}
+                                } catch (e) { }
                             } else if (typeof deleteSongCache === 'function') {
                                 await deleteSongCache(song.url, song.lazyUrl);
                             }
@@ -2040,10 +2040,10 @@ window.addEventListener('storage', (e) => {
 (function initSettingsSearch() {
     // Đợi DOM sẵn sàng trước khi index
     function setup() {
-        const searchInput   = document.getElementById('settings-search-input');
-        const searchClear   = document.getElementById('settings-search-clear');
-        const resultsPanel  = document.getElementById('settings-search-results');
-        const tabContents   = document.getElementById('settings-tab-contents');
+        const searchInput = document.getElementById('settings-search-input');
+        const searchClear = document.getElementById('settings-search-clear');
+        const resultsPanel = document.getElementById('settings-search-results');
+        const tabContents = document.getElementById('settings-tab-contents');
         const tabsContainer = document.querySelector('.settings-tabs-container');
         if (!searchInput || !resultsPanel || !tabContents) return;
 
@@ -2076,8 +2076,8 @@ window.addEventListener('storage', (e) => {
             const tabPanes = tabContents.querySelectorAll('.tab-pane:not(#tab-account)');
             tabPanes.forEach(pane => {
                 // Tìm tab button tương ứng
-                const tabId   = pane.id;
-                const tabBtn  = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+                const tabId = pane.id;
+                const tabBtn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
                 const tabName = tabBtn ? (tabBtn.innerText || tabBtn.textContent || tabId) : tabId;
 
                 // Mỗi direct div child là một setting group
@@ -2283,7 +2283,7 @@ window.addEventListener('storage', (e) => {
         // Rebuild index khi đổi ngôn ngữ (applyTranslations được gọi lại)
         const origApply = window.applyTranslations;
         if (typeof origApply === 'function') {
-            window.applyTranslations = function() {
+            window.applyTranslations = function () {
                 origApply.apply(this, arguments);
                 // Cập nhật placeholder
                 if (searchInput) {
@@ -2323,7 +2323,7 @@ window.addEventListener('storage', (e) => {
 // ============================================================
 //  AUTO-KERNING FOR TABS (Dynamic adjustment to prevent overflow)
 // ============================================================
-window.adjustTabsKerning = function() {
+window.adjustTabsKerning = function () {
     function adjustContainer(containerSelector, itemSelector, options) {
         const container = document.querySelector(containerSelector);
         if (!container) return;
@@ -2448,7 +2448,7 @@ window.adjustTabsKerning = function() {
     const langContainer = document.getElementById('language-options');
     if (langContainer) {
         const labels = langContainer.querySelectorAll('label');
-        
+
         // Save original transitions and disable them
         const originalTransitions = [];
         labels.forEach((label, index) => {
@@ -2518,4 +2518,4 @@ window.adjustTabsKerning = function() {
         }, 100);
     }
 };
-
+
