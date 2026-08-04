@@ -167,7 +167,7 @@ let cachedTrailGeo = null;
 let cachedShockwaveGeo = null;
 let cachedPerfectRingGeo = null;
 let cachedGlowGeo = null;
-let currentGlowHeight = 1.5;
+let currentGlowHeight = 1.2;
 const trailPool = [];
 
 // Tối ưu: Dùng lại đối tượng để tránh Garbage Collector
