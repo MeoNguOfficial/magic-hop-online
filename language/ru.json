@@ -420,5 +420,7 @@
     "show_fps_title": "Счетчик FPS",
     "tab_gameplay": "Геймплей",
     "tab_storage": "Хранилище",
-    "vol_low_warn": "Низкий уровень громкости"
+    "vol_low_warn": "Низкий уровень громкости",
+    "score_cheat_title": "ПРЕДУПРЕЖДЕНИЕ О ЧИТАХ",
+    "msg_score_cheat_warning": "⚠️ Обнаружен нетипичный счет. Вы используете читы?"
 }

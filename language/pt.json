@@ -420,5 +420,7 @@
     "show_fps_title": "Exibir contador de FPS",
     "tab_gameplay": "Gameplay",
     "tab_storage": "Armazenamento",
-    "vol_low_warn": "Volume baixo"
+    "vol_low_warn": "Volume baixo",
+    "score_cheat_title": "AVISO DE TRAPAÇA",
+    "msg_score_cheat_warning": "⚠️ Pontuação incomum detectada, você está usando trapaças?"
 }

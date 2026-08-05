@@ -420,5 +420,7 @@
     "show_fps_title": "FPSカウンター表示",
     "tab_gameplay": "ゲームプレイ",
     "tab_storage": "ストレージ",
-    "vol_low_warn": "音量が小さいです"
+    "vol_low_warn": "音量が小さいです",
+    "score_cheat_title": "チート警告",
+    "msg_score_cheat_warning": "⚠️ 異常なスコアが検出されました。チートを使用していますか？"
 }

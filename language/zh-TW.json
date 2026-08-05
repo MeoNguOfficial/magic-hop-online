@@ -420,5 +420,7 @@
     "show_fps_title": "顯示 FPS 計數器",
     "tab_gameplay": "遊戲玩法",
     "tab_storage": "儲存管理",
-    "vol_low_warn": "音量較低"
+    "vol_low_warn": "音量較低",
+    "score_cheat_title": "作弊警告",
+    "msg_score_cheat_warning": "⚠️ 檢測到異常分數，您是否使用了作弊？"
 }

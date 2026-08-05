@@ -423,5 +423,7 @@
     "mp_tooltip_prev": "Previous track",
     "mp_tooltip_play": "Play / Pause music",
     "mp_tooltip_next": "Next track",
-    "mp_tooltip_loop": "Loop current track"
+    "mp_tooltip_loop": "Loop current track",
+    "score_cheat_title": "CHEAT WARNING",
+    "msg_score_cheat_warning": "⚠️ Unusual score detected, are you using cheats?"
 }

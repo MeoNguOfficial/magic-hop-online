@@ -423,5 +423,7 @@
     "mp_tooltip_prev": "Quay lại bài hát trước đó",
     "mp_tooltip_play": "Phát / Tạm dừng nhạc",
     "mp_tooltip_next": "Chuyển sang bài hát tiếp theo",
-    "mp_tooltip_loop": "Lặp lại bài hát hiện tại"
+    "mp_tooltip_loop": "Lặp lại bài hát hiện tại",
+    "score_cheat_title": "CẢNH BÁO GIAN LẬN",
+    "msg_score_cheat_warning": "⚠️ Phát hiện điểm số bất thường, bạn có đang dùng gian lận không?"
 }

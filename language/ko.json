@@ -420,5 +420,7 @@
     "show_fps_title": "FPS 카운터 표시",
     "tab_gameplay": "게임플레이",
     "tab_storage": "저장소",
-    "vol_low_warn": "볼륨이 낮음"
+    "vol_low_warn": "볼륨이 낮음",
+    "score_cheat_title": "치트 경고",
+    "msg_score_cheat_warning": "⚠️ 비정상적인 점수가 감지되었습니다. 치트를 사용 중인가요?"
 }

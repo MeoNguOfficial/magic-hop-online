@@ -805,6 +805,13 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
         const maxAllowedScore = countOnes * 21 * rounds;
         if (finalScore > maxAllowedScore) {
             console.warn(`[Score Verification] Điểm số gửi lên (${finalScore}) vượt quá giới hạn tối đa cho phép từ mảng beat (${maxAllowedScore}). Hủy đồng bộ điểm số khả nghi.`);
+            if (typeof showCyberModal === 'function') {
+                showCyberModal({
+                    title: typeof t === 'function' ? t('score_cheat_title') : 'CẢNH BÁO GIAN LẬN',
+                    message: typeof t === 'function' ? t('msg_score_cheat_warning') : '⚠️ Phát hiện điểm số bất thường, bạn có đang dùng gian lận không?',
+                    type: 'alert'
+                });
+            }
             return;
         }
     }
@@ -907,8 +914,20 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
     try {
         await window.ApiService.postScore(payload);
     } catch (error) {
+        const status = error?.response?.status;
         const errorMsg = error?.response?.data?.message || error?.message || 'Xác minh điểm số thất bại.';
         console.error("[Score] Đồng bộ điểm thất bại:", errorMsg);
+
+        // Hiển thị thông báo khi bị lỗi 422 hoặc thất bại xác minh điểm số
+        if (status === 422 || (typeof errorMsg === 'string' && (errorMsg.includes('verification') || errorMsg.includes('exceeds') || errorMsg.includes('Xác minh')))) {
+            if (typeof showCyberModal === 'function') {
+                showCyberModal({
+                    title: typeof t === 'function' ? t('score_cheat_title') : 'CẢNH BÁO GIAN LẬN',
+                    message: typeof t === 'function' ? t('msg_score_cheat_warning') : '⚠️ Phát hiện điểm số bất thường, bạn có đang dùng gian lận không?',
+                    type: 'alert'
+                });
+            }
+        }
     }
 }
 window.submitScoreToServer = submitScoreToServer;

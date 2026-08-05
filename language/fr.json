@@ -420,5 +420,7 @@
     "show_fps_title": "Afficher le compteur FPS",
     "tab_gameplay": "Gameplay",
     "tab_storage": "Stockage",
-    "vol_low_warn": "Volume faible"
+    "vol_low_warn": "Volume faible",
+    "score_cheat_title": "AVERTISSEMENT DE TRICHE",
+    "msg_score_cheat_warning": "⚠️ Score inhabituel détecté, utilisez-vous des triches ?"
 }
