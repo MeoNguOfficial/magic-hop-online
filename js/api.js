@@ -219,10 +219,15 @@ const ApiService = {
     resetPassword: (data) => apiClient.post('/reset-password', data),
     changePassword: (data) => apiClient.post('/change-password', data),
     getMe: (options = {}) => apiClient.get('/me', options),
+    // Lấy danh sách / chi tiết user — mọi người dùng đã đăng nhập đều gọi được
     getUsers: (params = {}, options = {}) => apiClient.get('/users', { params, ...options }),
     getUser: (id, options = {}) => apiClient.get(`/users/${id}`, options),
+    // Tạo / Cập nhật / Xóa user — CHỈ DÀNH CHO ADMIN (middleware 'admin' phía backend)
+    createUser: (data) => apiClient.post('/users', data),
     updateUser: (id, data) => apiClient.put(`/users/${id}`, data),
     deleteUser: (id) => apiClient.delete(`/users/${id}`),
+    // Tự cập nhật thông tin cá nhân (user tự sửa chính mình — không cần quyền admin)
+    updateMe: (data) => apiClient.put(`/users/${JSON.parse(localStorage.getItem('auth_user') || '{}').id}`, data),
 
     // 2. Quản lý Cấu hình Cài đặt Game (Âm thanh, Đồ họa)
     updateSettings: (userId, data) => apiClient.put(`/user-settings/${userId}`, data),
@@ -247,7 +252,8 @@ const ApiService = {
     checkAdminBeatmapsUpdated: (options = {}) => apiClient.get('/beatmaps', { params: { mode: 'admin', limit: 1, sort: 'updated_at_desc' }, ...options }),
 
     // 5. Hệ thống Chat Hỗ trợ & Trợ lý ảo (Dành cho Người dùng & Quản trị)
-    getChatRooms: (params = {}, options = {}) => apiClient.get('/chat/rooms', { params, ...options }),
+    // Lưu ý: GET /chat/rooms đã chuyển vào /admin/chat/rooms — getChatRooms giờ gọi endpoint admin.
+    getChatRooms: (params = {}, options = {}) => apiClient.get('/admin/chat/rooms', { params, ...options }),
     createChatRoom: (data) => apiClient.post('/chat/rooms', data),
 
     sendChatMessage: (roomId, data) => {

@@ -2731,6 +2731,11 @@ async function gameVictory() {
     comboEl.classList.remove('active');
     comboEl.innerText = "";
 
+    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(0, now);
+    }
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -3244,6 +3249,11 @@ async function gameOver() {
     comboEl.classList.remove('active');
     comboEl.innerText = "";
 
+    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(0, now);
+    }
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -3616,6 +3626,11 @@ function resetGameScene() {
     calculateNextParabola(0);
     updateBackgroundStyle();
 
+    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(0, now);
+    }
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -3920,7 +3935,11 @@ function startGame() {
     audio.mozPreservesPitch = typeof preservePitchEnabled !== 'undefined' ? preservePitchEnabled : false;
     audio.webkitPreservesPitch = typeof preservePitchEnabled !== 'undefined' ? preservePitchEnabled : false;
 
-    if (gainNode) {
+    if (gainNode && audioCtx) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume, now);
+    } else if (gainNode) {
         gainNode.gain.value = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
     }
 
@@ -4035,6 +4054,11 @@ function returnToMenu() {
         if (startScreenWindow) startScreenWindow.style.transform = 'scale(1)';
     }
 
+    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        gainNode.gain.setValueAtTime(0, now);
+    }
     if (audio && typeof audio.pause === 'function') audio.pause();
 
     const finalizeReturn = () => {
