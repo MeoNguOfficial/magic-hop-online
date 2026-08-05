@@ -588,7 +588,7 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
                 <div class="flex justify-between items-center bg-cyan-950/30 border border-cyan-500/20 p-2.5 rounded-lg hover:border-cyan-400/50 transition-all h-[44px]">
                     <div class="flex items-center gap-3">
                         <span class="w-6 text-center text-xs font-orbitron ${colorClass}">#${idx+1}</span>
-                        <span class="text-xs font-bold text-white truncate max-w-[130px] font-orbitron">${s.user?.name || s.user?.username || 'Unknown'}</span>
+                        <span class="text-xs font-bold text-white truncate max-w-[130px] font-orbitron">${s.user?.realname || s.user?.username || 'Unknown'}</span>
                     </div>
                     <div class="flex flex-col items-end">
                         <span class="text-cyan-400 font-orbitron font-bold text-xs">${scoreValue}</span>

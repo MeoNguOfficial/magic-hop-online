@@ -1639,7 +1639,7 @@ function renderAdminScoresTable() {
             scoreDisplay = `<span class="text-pink-400 font-bold" title="Normal Score">${s.score}</span> <span class="text-gray-600 text-xs">(${s.hard_mode_score ?? 0})</span>`;
         }
 
-        tbody.innerHTML += `<tr class="hover:bg-cyan-950/20 transition-colors"><td class="py-3 px-2 text-cyan-400 font-bold w-12">#${absoluteIndex + 1}</td><td class="py-3 px-2 font-bold text-white">${s.user?.name || s.user?.username || 'Unknown'}</td><td class="py-3 px-2 text-right font-orbitron font-bold">${scoreDisplay}</td><td class="py-3 px-2 text-right text-xs text-gray-500">${new Date(s.created_at).toLocaleDateString()}</td><td class="py-3 px-2 text-right"><button class="text-red-400 hover:text-red-300 btn-delete-score" data-id="${s.id}" title="Delete"><svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>`;
+        tbody.innerHTML += `<tr class="hover:bg-cyan-950/20 transition-colors"><td class="py-3 px-2 text-cyan-400 font-bold w-12">#${absoluteIndex + 1}</td><td class="py-3 px-2 font-bold text-white">${s.user?.realname || s.user?.username || 'Unknown'}</td><td class="py-3 px-2 text-right font-orbitron font-bold">${scoreDisplay}</td><td class="py-3 px-2 text-right text-xs text-gray-500">${new Date(s.created_at).toLocaleDateString()}</td><td class="py-3 px-2 text-right"><button class="text-red-400 hover:text-red-300 btn-delete-score" data-id="${s.id}" title="Delete"><svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>`;
     });
 
     document.querySelectorAll('.btn-delete-score').forEach(btn => {
@@ -2115,7 +2115,9 @@ document.getElementById('admin-beatmap-add-form')?.addEventListener('submit', as
             copyright_status: document.getElementById('add-bm-copyright')?.value,
             warning_alert: document.getElementById('add-bm-warning')?.value,
             is_available: document.getElementById('add-bm-available')?.checked ? 1 : 0,
-            no_fake_block: document.getElementById('add-bm-nofake')?.checked ? 1 : 0
+            no_fake_block: document.getElementById('add-bm-nofake')?.checked ? 1 : 0,
+            day_show: document.getElementById('add-bm-day-show')?.value || null,
+            day_hide: document.getElementById('add-bm-day-hide')?.value || null
         };
 
         setSubmitButtonState(btnSubmit, 'loading', { text: 'ĐANG TẠO...' });
@@ -2166,6 +2168,10 @@ function openEditBeatmapModal(id) {
     if (editBmAvailableEl) editBmAvailableEl.checked = bm.is_available !== false;
     if (editBmNofakeEl) editBmNofakeEl.checked = !!bm.no_fake_block;
     if (editBmBeatsEl) editBmBeatsEl.value = JSON.stringify(bm.beats || []);
+    const editBmDayShowEl = document.getElementById('edit-bm-day-show');
+    const editBmDayHideEl = document.getElementById('edit-bm-day-hide');
+    if (editBmDayShowEl) editBmDayShowEl.value = bm.day_show || '';
+    if (editBmDayHideEl) editBmDayHideEl.value = bm.day_hide || '';
     
     document.getElementById('edit-bm-error')?.classList.add('hidden');
     openModal(editBmModal);
@@ -2193,7 +2199,9 @@ document.getElementById('admin-beatmap-edit-form')?.addEventListener('submit', a
             copyright_status: document.getElementById('edit-bm-copyright').value,
             warning_alert: document.getElementById('edit-bm-warning').value,
             is_available: document.getElementById('edit-bm-available').checked ? 1 : 0,
-            no_fake_block: document.getElementById('edit-bm-nofake')?.checked ? 1 : 0
+            no_fake_block: document.getElementById('edit-bm-nofake')?.checked ? 1 : 0,
+            day_show: document.getElementById('edit-bm-day-show')?.value || null,
+            day_hide: document.getElementById('edit-bm-day-hide')?.value || null
         };
         setSubmitButtonState(btnSubmit, 'loading', { text: 'ĐANG LƯU...' });
         await ApiService.updateBeatmap(id, data);
