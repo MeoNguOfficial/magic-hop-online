@@ -2131,6 +2131,12 @@ function animate() {
                     if (diffX < maxAllowedOffset) {
                         const isPerfect = diffX < 0.6;
 
+                        if (!targetTile || !targetTile.userData || !targetTile.userData.isFake) {
+                            if (typeof currentBeatHits !== 'undefined' && Array.isArray(currentBeatHits)) {
+                                currentBeatHits.push(1);
+                            }
+                        }
+
                         if (isPerfect) {
                             nonPerfectStreak = 0;
                             comboCount++;
@@ -2318,6 +2324,13 @@ function animate() {
 
                     // Đánh giá điểm / combo cho cú nẩy cứu bóng
                     const isPerfect = diffX < 0.6;
+
+                    if (!targetTile || !targetTile.userData || !targetTile.userData.isFake) {
+                        if (typeof currentBeatHits !== 'undefined' && Array.isArray(currentBeatHits)) {
+                            currentBeatHits.push(1);
+                        }
+                    }
+
                     if (isPerfect) {
                         nonPerfectStreak = 0;
                         comboCount++;
@@ -2717,6 +2730,8 @@ async function gameVictory() {
 
     gameSpeed = 1.0;
     comboCount = 0;
+    currentBeatHits = [];
+    window.currentBeatHits = currentBeatHits;
     nonPerfectStreak = 0;
     currentTileScale = 1.0;
     currentBeatIndex = 0;
@@ -2993,7 +3008,7 @@ async function gameVictory() {
             try {
                 // Đồng bộ trạng thái pass bài lên Server & Local (để luôn mở khóa lựa chọn chế độ)
                 if (typeof window.submitScoreToServer === 'function') {
-                    window.submitScoreToServer(score, true);
+                    window.submitScoreToServer(score, true, currentBeatHits, typeof activeRoundCount !== 'undefined' ? activeRoundCount : (typeof roundCount !== 'undefined' ? roundCount : 1));
                 }
                 saveBestScore(selectedSongIndex, score, true);
 
@@ -3489,7 +3504,7 @@ async function gameOver() {
                 if (canSave) {
                     // Đồng bộ điểm lên Server và lưu kỷ lục cục bộ (Nếu chơi hợp lệ - không bot/relax/autoplay)
                     if (typeof window.submitScoreToServer === 'function') {
-                        window.submitScoreToServer(score);
+                        window.submitScoreToServer(score, false, currentBeatHits, typeof activeRoundCount !== 'undefined' ? activeRoundCount : (typeof roundCount !== 'undefined' ? roundCount : 1));
                     }
 
                     saveBestScore(selectedSongIndex, score);

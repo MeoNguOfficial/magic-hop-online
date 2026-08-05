@@ -216,6 +216,8 @@ let nonPerfectStreak = 0;
 let currentTileScale = 1.0;
 let lastInputX = 0;
 let isMouseDown = false;
+let currentBeatHits = [];
+window.currentBeatHits = currentBeatHits;
 
 // --- THÔNG SỐ VẬT LÝ ---
 let baseBallVelocityZ = -18; //Vận tốc lướt của block
@@ -758,7 +760,7 @@ function isAnyHelperModeActive() {
 window.isAnyHelperModeActive = isAnyHelperModeActive;
 
 // --- XỬ LÝ ĐỒNG BỘ ĐIỂM SỐ & TRẠNG THÁI PASS LÊN SERVER ---
-async function submitScoreToServer(finalScore, isNormalModePassed = false) {
+async function submitScoreToServer(finalScore, isNormalModePassed = false, beatHistory = null, roundEndless = 1) {
     const isHelper = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
 
     // 1. Nếu đang bật chế độ hỗ trợ VÀ KHÔNG PHẢI LÀ PASS BÀI HÁT, ngắt lệnh (không gửi điểm)
@@ -777,6 +779,34 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
     const targetBeatmapId = currentSong ? (currentSong.id || (typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(currentSong) : null)) : null;
     if (!currentSong || !targetBeatmapId) {
         return;
+    }
+
+    // Xử lý dữ liệu nhịp (beat hits) và vòng chơi (round_endless) để xác minh điểm số
+    const beatsInput = (Array.isArray(beatHistory) && beatHistory.length > 0) ? beatHistory : (window.currentBeatHits || []);
+    const rounds = Math.max(1, parseInt(roundEndless, 10) || 1);
+    const countOnes = Array.isArray(beatsInput) ? beatsInput.filter(v => v == 1 || v === '1' || v === true).length : 0;
+
+    // Log thông tin đếm tile và round endless khi bật Dev mode hoặc tài khoản Admin
+    const isDevMode = (typeof window.getDevMode === 'function' && window.getDevMode() === true) || localStorage.getItem('dev_mode') === 'true' || localStorage.getItem('is_dev_mode') === 'true';
+    let isAdminUser = false;
+    try {
+        const userObj = JSON.parse(localStorage.getItem('user_info') || '{}');
+        if (userObj && (userObj.is_admin === 1 || userObj.is_admin === true || userObj.role === 'admin')) {
+            isAdminUser = true;
+        }
+    } catch (e) {}
+
+    if (isDevMode || isAdminUser) {
+        console.log(`[Score Debug] Total Tiles Count: ${countOnes} | Round Endless: ${rounds} | Max Allowed Score: ${countOnes * 21 * rounds} | Final Score: ${finalScore}`);
+    }
+
+    // Xác minh điểm ở Client: Điểm không được vượt quá countOnes * 21 * rounds
+    if (countOnes > 0) {
+        const maxAllowedScore = countOnes * 21 * rounds;
+        if (finalScore > maxAllowedScore) {
+            console.warn(`[Score Verification] Điểm số gửi lên (${finalScore}) vượt quá giới hạn tối đa cho phép từ mảng beat (${maxAllowedScore}). Hủy đồng bộ điểm số khả nghi.`);
+            return;
+        }
     }
 
     let normalScore = 0;
@@ -809,6 +839,16 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
 
     const isRage = window.HardModeManager && window.HardModeManager.isEnabled;
     const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+    const isHardMode = isRage || isAsian;
+
+    const isBetterNormalScore = !isHardMode && (finalScore > normalScore);
+    const isBetterHardScore = isHardMode && (finalScore > rageScore);
+    const isNewPassStatus = isNormalModePassed && (isHardMode ? !ragePassed : !normalPassed);
+
+    // Bỏ qua nếu không vượt kỷ lục ở chế độ tương ứng VÀ không mở khóa/pass bài mới (khớp UserScoreController mới)
+    if (!isBetterNormalScore && !isBetterHardScore && !isNewPassStatus) {
+        return;
+    }
 
     if (isNormalModePassed) {
         if (isRage || isAsian) {
@@ -832,8 +872,8 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
     if (isRage || isAsian) {
         payload = {
             beatmap_id: targetBeatmapId,
-            score: normalScore,
-            hard_mode_score: rageScore,
+            score: finalScore,
+            hard_mode_score: finalScore,
             is_hard_mode: 1,
             hard_mode: 1,
             is_rage_mode: 1,
@@ -846,7 +886,7 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
     } else {
         payload = {
             beatmap_id: targetBeatmapId,
-            score: normalScore,
+            score: finalScore,
             hard_mode_score: rageScore,
             is_hard_mode: 0,
             hard_mode: 0,
@@ -856,11 +896,19 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false) {
         };
     }
 
+    if (Array.isArray(beatsInput) && beatsInput.length > 0) {
+        payload.beat = beatsInput;
+        payload.beats = beatsInput;
+        payload.round_endless = rounds;
+        payload.endless_round = rounds;
+    }
+
     // 4. Gọi API gửi điểm số / trạng thái pass bài lên Server
     try {
         await window.ApiService.postScore(payload);
     } catch (error) {
-        // console.error("[Score] Đồng bộ điểm thất bại:", error.response?.data?.message || error.message);
+        const errorMsg = error?.response?.data?.message || error?.message || 'Xác minh điểm số thất bại.';
+        console.error("[Score] Đồng bộ điểm thất bại:", errorMsg);
     }
 }
 window.submitScoreToServer = submitScoreToServer;
