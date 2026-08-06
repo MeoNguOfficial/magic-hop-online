@@ -510,5 +510,8 @@
     "webgpu_unsupported_msg": "Su navegador o dispositivo no es compatible con WebGPU. El juego cambiará automáticamente a WebGL 2.",
     "webgpu_insecure_msg": "WebGPU solo está permitido en HTTPS o localhost. Está ejecutando en HTTP no seguro, por lo que WebGPU se bloquea y se utiliza WebGL 2.",
     "webgpu_disabled_msg": "WebGPU o la aceleración por hardware están desactivados en su navegador/tarjeta gráfica. El juego cambiará a WebGL 2.",
-    "msg_confirm_reload": "¿Aún desea continuar y recargar la página?"
+    "msg_confirm_reload": "¿Aún desea continuar y recargar la página?",
+    "score_title": "PUNTUACIÓN FINAL",
+    "lbl_best_score": "MEJOR PUNTUACIÓN",
+    "lbl_final_speed": "VELOCIDAD"
 }

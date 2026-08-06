@@ -68,7 +68,7 @@ async function checkSongPassedStatus(song, songIndex) {
     if (!song) return false;
 
     // 1. Kiểm tra cờ passed đã có trên đối tượng bài hát (in-memory)
-    const memoryPassed = !!(song.is_normal_mode_passed || song.is_hard_mode_passed || song.is_passed || song.isPassed);
+    const memoryPassed = !!(song.is_easy_mode_passed || song.is_normal_mode_passed || song.is_hard_mode_passed || song.is_asian_mode_passed || song.is_passed || song.isPassed);
     devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex} - "${song.name || song.title}"]: Memory passed status = ${memoryPassed}`);
     if (memoryPassed) {
         return true;
@@ -87,9 +87,11 @@ async function checkSongPassedStatus(song, songIndex) {
                 request.onerror = () => resolve(null);
             });
             devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex}]: Local IndexedDB record =`, record);
-            if (record && (record.isNormalModePassed || record.isRageModePassed)) {
+            if (record && (record.isEasyModePassed || record.isNormalModePassed || record.isRageModePassed || record.isAsianModePassed)) {
+                if (record.isEasyModePassed) song.is_easy_mode_passed = true;
                 if (record.isNormalModePassed) song.is_normal_mode_passed = true;
                 if (record.isRageModePassed) song.is_hard_mode_passed = true;
+                if (record.isAsianModePassed) song.is_asian_mode_passed = true;
                 song.is_passed = true;
                 return true;
             }
@@ -142,10 +144,15 @@ async function preloadBackendAndPassedStatusOnStartup() {
                         const rawBeatmapId = item.beatmap_id ?? item.beatmapId ?? item.song_id ?? item.songId ?? item.map_id ?? item.beatmap?.id ?? item.song?.id ?? item.beatmap?.beatmap_id;
                         const targetBeatmapId = (rawBeatmapId !== undefined && rawBeatmapId !== null) ? String(rawBeatmapId) : null;
 
-                        const rawPassed = item.is_normal_mode_passed ?? item.is_normal_passed ?? item.is_passed ?? item.isNormalModePassed ?? item.isNormalPassed ?? item.normal_passed;
-                        const isNormalPassed = Boolean(rawPassed) || Number(rawPassed) === 1 || String(rawPassed) === '1' || String(rawPassed).toLowerCase() === 'true' || rawPassed === true;
+                        const isEasyPass = Boolean(item.is_easy_mode_passed);
+                        const isNormalPass = Boolean(item.is_normal_mode_passed ?? item.is_normal_passed ?? item.is_passed);
+                        const isHardPass = Boolean(item.is_hard_mode_passed ?? item.is_rage_mode_passed);
+                        const isAsianPass = Boolean(item.is_asian_mode_passed);
 
-                        devLog(`[SongSelector] Server Score Item: targetBeatmapId=${targetBeatmapId} (rawObj:`, item, `), rawPassed=${rawPassed}, isNormalPassed=${isNormalPassed}`);
+                        const easyVal = parseInt(item.easy_mode_score, 10) || 0;
+                        const normVal = parseInt(item.score, 10) || 0;
+                        const hardVal = parseInt(item.hard_mode_score ?? item.rage_score, 10) || 0;
+                        const asianVal = parseInt(item.asian_mode_score, 10) || 0;
 
                         if (targetBeatmapId) {
                             const songIndex = playlist.findIndex(s => {
@@ -153,27 +160,37 @@ async function preloadBackendAndPassedStatusOnStartup() {
                                 return bId && bId === targetBeatmapId;
                             });
 
-                            devLog(`[SongSelector] Match Song Index = ${songIndex} for beatmap_id = ${targetBeatmapId}`);
-
                             if (songIndex !== -1) {
                                 const targetSong = playlist[songIndex];
 
-                                if (isNormalPassed) {
-                                    targetSong.is_normal_mode_passed = true;
-                                    targetSong.is_passed = true;
+                                if (isEasyPass) targetSong.is_easy_mode_passed = true;
+                                if (isNormalPass) targetSong.is_normal_mode_passed = true;
+                                if (isHardPass) targetSong.is_hard_mode_passed = true;
+                                if (isAsianPass) targetSong.is_asian_mode_passed = true;
+                                if (isEasyPass || isNormalPass || isHardPass || isAsianPass) targetSong.is_passed = true;
 
-                                    if (db) {
-                                        try {
-                                            const tx = db.transaction("highScores", "readwrite");
-                                            const store = tx.objectStore("highScores");
-                                            const req = store.get(songIndex);
-                                            req.onsuccess = () => {
-                                                const rec = req.result || { songIndex };
-                                                rec.isNormalModePassed = true;
-                                                store.put(rec);
-                                            };
-                                        } catch(e){}
-                                    }
+                                if (db) {
+                                    try {
+                                        const tx = db.transaction("highScores", "readwrite");
+                                        const store = tx.objectStore("highScores");
+                                        const req = store.get(songIndex);
+                                        req.onsuccess = () => {
+                                            const rec = req.result || { songIndex };
+                                            let changed = false;
+
+                                            if (isEasyPass) { rec.isEasyModePassed = true; changed = true; }
+                                            if (isNormalPass) { rec.isNormalModePassed = true; changed = true; }
+                                            if (isHardPass) { rec.isRageModePassed = true; changed = true; }
+                                            if (isAsianPass) { rec.isAsianModePassed = true; changed = true; }
+
+                                            if (easyVal > 0) { rec.easyScore = btoa(easyVal.toString()); changed = true; }
+                                            if (normVal > 0) { rec.score = btoa(normVal.toString()); changed = true; }
+                                            if (hardVal > 0) { rec.rageScore = btoa(hardVal.toString()); changed = true; }
+                                            if (asianVal > 0) { rec.asianScore = btoa(asianVal.toString()); changed = true; }
+
+                                            if (changed) store.put(rec);
+                                        };
+                                    } catch(e){}
                                 }
                             }
                         }

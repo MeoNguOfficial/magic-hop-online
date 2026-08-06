@@ -190,11 +190,15 @@ html, body {
 .theme-font-xlarge#panel-home input {
     font-size: 16px !important;
 }
-.theme-font-xlarge .tab-pane p,
-.theme-font-xlarge .tab-pane span:not(.font-bold),
-.theme-font-xlarge .tab-pane label:not(.font-bold),
 .theme-font-xlarge#panel-home p,
 .theme-font-xlarge#panel-home span:not(.font-bold),
 .theme-font-xlarge#panel-home label:not(.font-bold) {
     font-size: 14px !important;
 }
+
+/* Frameless & Seamless Game Over / Completed Window */
+#gameover-screen-window {
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}

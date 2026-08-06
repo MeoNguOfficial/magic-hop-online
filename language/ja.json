@@ -510,5 +510,8 @@
     "webgpu_unsupported_msg": "お使いのブラウザまたはデバイスはWebGPUをサポートしていません。ゲームは自動的にWebGL 2に切り替わります。",
     "webgpu_insecure_msg": "WebGPUはHTTPSまたはlocalhostでのみ許可されています。非安全なHTTPで実行されているため、WebGPUはブロックされWebGL 2に切り替わります。",
     "webgpu_disabled_msg": "ブラウザまたはグラフィックカードでWebGPUまたはハードウェアアクセラレーションが無効になっています。ゲームはWebGL 2に切り替わります。",
-    "msg_confirm_reload": "それでも続行してページを再読み込みしますか？"
+    "msg_confirm_reload": "それでも続行してページを再読み込みしますか？",
+    "score_title": "最終スコア",
+    "lbl_best_score": "ハイスコア",
+    "lbl_final_speed": "スピード"
 }

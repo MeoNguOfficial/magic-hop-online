@@ -1620,8 +1620,12 @@ function renderAdminScoresTable() {
 
     // Sắp xếp điểm số theo tab đang chọn
     let sortedScores = [...adminScoreList];
-    if (mode === 'rage') {
+    if (mode === 'easy') {
+        sortedScores.sort((a, b) => (b.easy_mode_score ?? 0) - (a.easy_mode_score ?? 0));
+    } else if (mode === 'rage') {
         sortedScores.sort((a, b) => (b.hard_mode_score ?? 0) - (a.hard_mode_score ?? 0));
+    } else if (mode === 'asian') {
+        sortedScores.sort((a, b) => (b.asian_mode_score ?? 0) - (a.asian_mode_score ?? 0));
     } else {
         sortedScores.sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
     }
@@ -1633,10 +1637,14 @@ function renderAdminScoresTable() {
         const absoluteIndex = adminScoreRenderStartIndex + index;
         
         let scoreDisplay;
-        if (mode === 'rage') {
-            scoreDisplay = `<span class="text-orange-400 font-bold" title="Rage Score">${s.hard_mode_score ?? 0}</span> <span class="text-gray-600 text-xs">(${s.score})</span>`;
+        if (mode === 'easy') {
+            scoreDisplay = `<span class="text-green-400 font-bold" title="Easy Score">${s.easy_mode_score ?? 0}</span>`;
+        } else if (mode === 'rage') {
+            scoreDisplay = `<span class="text-orange-400 font-bold" title="Rage Score">${s.hard_mode_score ?? 0}</span>`;
+        } else if (mode === 'asian') {
+            scoreDisplay = `<span class="text-red-400 font-bold" title="Asian Score">${s.asian_mode_score ?? 0}</span>`;
         } else {
-            scoreDisplay = `<span class="text-pink-400 font-bold" title="Normal Score">${s.score}</span> <span class="text-gray-600 text-xs">(${s.hard_mode_score ?? 0})</span>`;
+            scoreDisplay = `<span class="text-pink-400 font-bold" title="Normal Score">${s.score ?? 0}</span>`;
         }
 
         tbody.innerHTML += `<tr class="hover:bg-cyan-950/20 transition-colors"><td class="py-3 px-2 text-cyan-400 font-bold w-12">#${absoluteIndex + 1}</td><td class="py-3 px-2 font-bold text-white">${s.user?.realname || s.user?.username || 'Unknown'}</td><td class="py-3 px-2 text-right font-orbitron font-bold">${scoreDisplay}</td><td class="py-3 px-2 text-right text-xs text-gray-500">${new Date(s.created_at).toLocaleDateString()}</td><td class="py-3 px-2 text-right"><button class="text-red-400 hover:text-red-300 btn-delete-score" data-id="${s.id}" title="Delete"><svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>`;
@@ -2871,28 +2879,33 @@ function initAdminFilters() {
 }
 
 function initAdminScoreTabs() {
+    const btnEasy = document.getElementById('btn-admin-score-tab-easy');
     const btnDefault = document.getElementById('btn-admin-score-tab-default');
     const btnRage = document.getElementById('btn-admin-score-tab-rage');
+    const btnAsian = document.getElementById('btn-admin-score-tab-asian');
     
-    if (btnDefault) {
-        btnDefault.addEventListener('click', () => {
-            if (window.adminScoreSelectedMode === 'default') return;
-            window.adminScoreSelectedMode = 'default';
-            btnDefault.className = "px-2.5 py-0.5 text-[10px] font-bold font-orbitron uppercase rounded bg-cyan-500 text-black transition-all";
-            if (btnRage) btnRage.className = "px-2.5 py-0.5 text-[10px] font-bold font-orbitron uppercase rounded text-cyan-400 hover:text-white transition-all";
-            renderAdminScoresTable();
-        });
-    }
-    
-    if (btnRage) {
-        btnRage.addEventListener('click', () => {
-            if (window.adminScoreSelectedMode === 'rage') return;
-            window.adminScoreSelectedMode = 'rage';
-            btnRage.className = "px-2.5 py-0.5 text-[10px] font-bold font-orbitron uppercase rounded bg-cyan-500 text-black transition-all";
-            if (btnDefault) btnDefault.className = "px-2.5 py-0.5 text-[10px] font-bold font-orbitron uppercase rounded text-cyan-400 hover:text-white transition-all";
-            renderAdminScoresTable();
-        });
-    }
+    const modeBtns = [
+        { id: 'easy', el: btnEasy },
+        { id: 'default', el: btnDefault },
+        { id: 'rage', el: btnRage },
+        { id: 'asian', el: btnAsian },
+    ];
+
+    const activeClass = "px-2 py-0.5 text-[10px] font-bold font-orbitron uppercase rounded bg-cyan-500 text-black transition-all";
+    const inactiveClass = "px-2 py-0.5 text-[10px] font-bold font-orbitron uppercase rounded text-cyan-400 hover:text-white transition-all";
+
+    modeBtns.forEach(item => {
+        if (item.el) {
+            item.el.addEventListener('click', () => {
+                if (window.adminScoreSelectedMode === item.id) return;
+                window.adminScoreSelectedMode = item.id;
+                modeBtns.forEach(b => {
+                    if (b.el) b.el.className = b.id === item.id ? activeClass : inactiveClass;
+                });
+                renderAdminScoresTable();
+            });
+        }
+    });
 }
 
 initAdminFilters();

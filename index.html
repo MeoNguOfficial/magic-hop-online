@@ -747,12 +747,6 @@
                 <div class="flex flex-col h-full overflow-hidden max-w-3xl mx-auto w-full">
                     <h2 class="text-2xl font-black text-cyan-400 font-orbitron tracking-wider uppercase mb-2"
                         data-i18n="select_song">CHỌN BÀI HÁT</h2>
-                    <div class="bg-purple-950/20 border border-purple-500/10 rounded-lg p-3 mb-4">
-                        <p class="text-yellow-400 text-xs font-bold uppercase tracking-wider font-orbitron"
-                            data-i18n="optimizing">GAME ĐANG TỐI ƯU HIỆU SUẤT</p>
-                        <p class="text-gray-400 text-[11px] mt-0.5" data-i18n="recommend">Khuyến nghị trải nghiệm trên
-                            thiết bị cấu hình trung bình - cao trở lên.</p>
-                    </div>
 
                     <!-- Search Input -->
                     <div class="relative mb-4 group">
@@ -2426,29 +2420,61 @@
         </div>
     </div>
 
-    <!-- Game Over Screen -->
+    <!-- Game Over / Victory Screen -->
     <div id="gameover-screen"
-        class="absolute inset-0 z-30 bg-black/85 backdrop-blur-md hidden flex flex-col justify-center items-center p-4">
+        class="absolute inset-0 z-30 bg-[#06030e]/95 backdrop-blur-xl hidden flex flex-col justify-between items-center p-2 sm:p-6 md:p-10 overflow-hidden select-none">
         <!-- Fire canvas for Rage Mode -->
         <canvas id="gameover-fire-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
+        
+        <!-- Tech/Cyber Grid background overlay -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#ec48990a_1px,transparent_1px),linear-gradient(to_bottom,#ec48990a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0"></div>
+        
+        <!-- Glowing ambient orb lights -->
+        <div class="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-pink-500/15 blur-[100px] pointer-events-none z-0"></div>
+        <div class="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-cyan-500/15 blur-[100px] pointer-events-none z-0"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-purple-600/10 blur-[120px] pointer-events-none z-0"></div>
+
         <div id="gameover-screen-window"
-            class="relative z-10 bg-[#0f041c]/95 border-2 border-pink-500/40 p-8 rounded-2xl max-w-md w-full text-center shadow-2xl">
-            <h2 class="text-4xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase mb-6"
-                data-i18n="game_over">GAME OVER</h2>
-            <div class="bg-black/40 border border-purple-900/30 p-4 rounded-xl space-y-2 mb-6 font-orbitron">
-                <div id="final-score" class="text-3xl text-cyan-400 font-bold">0</div>
-                <div id="high-score-display"
-                    class="text-sm text-yellow-400 neon-glow-yellow font-bold uppercase tracking-widest hidden animate-bounce"
-                    data-i18n="new_record">KỶ LỤC MỚI!</div>
-                <div id="best-score-label" class="text-xs text-gray-400 font-bold">Kỷ lục: 0</div>
-                <div id="final-speed" class="text-xs text-gray-400 font-bold">Tốc độ: 1.00x</div>
+            class="relative z-10 w-full h-full max-w-4xl mx-auto flex flex-col justify-between items-center py-3 sm:py-6 px-4 sm:px-8 border-0 bg-transparent shadow-none overflow-hidden select-none">
+            
+            <!-- [VỊ TRÍ 1] Khóa Đỉnh Trực Quan: Thẻ bài hát & Tiêu đề chính -->
+            <div class="w-full flex flex-col items-center shrink-0 pt-20 sm:pt-24 md:pt-24">
+                <h2 class="text-3xl sm:text-5xl md:text-6xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]"
+                    data-i18n="game_over">GAME OVER</h2>
             </div>
-            <div class="flex gap-4">
+
+            <!-- [VỊ TRÍ 2] Khóa Trung Tâm: Con số Điểm số cực đại -->
+            <div class="w-full max-w-xl mx-auto flex-1 flex flex-col items-center justify-center shrink-0 py-1 my-auto">
+                <div class="w-full flex flex-col items-center justify-center relative overflow-hidden">
+                    <div id="final-score" class="text-7xl sm:text-[9rem] md:text-[11rem] text-cyan-400 font-black font-orbitron tracking-tight leading-none text-shadow-[0_0_60px_rgba(34,211,238,0.9)] relative z-10 my-1 text-center">0</div>
+                    
+                    <div id="high-score-display"
+                        class="text-xs sm:text-sm text-yellow-400 neon-glow-yellow font-black uppercase tracking-widest hidden animate-bounce bg-yellow-500/10 border border-yellow-500/30 px-4 py-1 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.25)] relative z-10 mt-1"
+                        data-i18n="new_record">🏆 KỶ LỤC MỚI!</div>
+                </div>
+            </div>
+
+            <!-- [VỊ TRÍ 3] Khóa Cụm Thông Số: 2 cột Kỷ lục & Tốc độ -->
+            <div class="w-full max-w-md mx-auto grid grid-cols-2 gap-4 sm:gap-8 font-orbitron shrink-0 mb-3">
+                <!-- Best Score Card -->
+                <div class="flex flex-col items-center justify-center py-1">
+                    <span class="text-[11px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5" data-i18n="lbl_best_score">BEST SCORE</span>
+                    <div id="best-score-label" class="text-sm sm:text-xl text-yellow-400 font-bold text-center drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">0</div>
+                </div>
+                
+                <!-- Speed Card -->
+                <div class="flex flex-col items-center justify-center py-1">
+                    <span class="text-[11px] sm:text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5" data-i18n="lbl_final_speed">SPEED</span>
+                    <div id="final-speed" class="text-sm sm:text-xl text-cyan-300 font-bold text-center drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">1.00x</div>
+                </div>
+            </div>
+
+            <!-- [VỊ TRÍ 4] Khóa Chân Màn Hình: Cụm nút bấm Menu & Play Again -->
+            <div class="w-full max-w-md sm:max-w-lg mx-auto flex gap-3 sm:gap-5 shrink-0 pb-1 sm:pb-2">
                 <button id="menu-btn" data-i18n="btn_menu"
-                    class="flex-1 py-3 text-xs font-black text-cyan-400 border border-cyan-400/50 hover:bg-cyan-950/20 rounded-xl font-orbitron uppercase transition-all duration-200">MENU</button>
+                    class="flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black text-cyan-400 bg-cyan-950/40 border border-cyan-400/50 hover:bg-cyan-500/20 hover:border-cyan-400 rounded-xl sm:rounded-2xl font-orbitron uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(34,211,238,0.15)] active:scale-95 cursor-pointer">MENU</button>
                 <button id="restart-btn" data-i18n="btn_restart"
-                    class="flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105">CHƠI
-                    LẠI</button>
+                    class="flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black text-white bg-gradient-to-r from-pink-500 via-purple-600 to-cyan-500 hover:from-pink-400 hover:to-cyan-400 rounded-xl sm:rounded-2xl font-orbitron uppercase tracking-wider transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(236,72,153,0.4)] cursor-pointer">CHƠI LẠI</button>
             </div>
         </div>
     </div>

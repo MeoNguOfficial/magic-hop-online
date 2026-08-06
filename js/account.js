@@ -313,34 +313,29 @@ async function syncServerDataToLocal(userId) {
                     return bId && bId === targetBeatmapId;
                 });
                 if (songIndex !== -1) {
-                    const isHard = s.is_hard_mode || s.hard_mode || s.is_rage_mode || s.rage_mode;
                     if (!mergedScores[songIndex]) {
                         mergedScores[songIndex] = {
-                            normalScore: 0,
-                            normalPassed: false,
-                            rageScore: 0,
-                            ragePassed: false
+                            easyScore: 0, easyPassed: false,
+                            normalScore: 0, normalPassed: false,
+                            rageScore: 0, ragePassed: false,
+                            asianScore: 0, asianPassed: false
                         };
                     }
 
-                    const rawPassed = s.is_normal_mode_passed ?? s.is_normal_passed ?? s.is_passed ?? s.isNormalModePassed ?? s.isNormalPassed ?? s.normal_passed;
-                    const isNormalPassed = Boolean(rawPassed) || Number(rawPassed) === 1 || String(rawPassed) === '1' || String(rawPassed).toLowerCase() === 'true' || rawPassed === true;
+                    const easyVal = parseInt(s.easy_mode_score, 10) || 0;
+                    const normVal = parseInt(s.score, 10) || 0;
+                    const hardVal = parseInt(s.hard_mode_score ?? s.rage_score, 10) || 0;
+                    const asianVal = parseInt(s.asian_mode_score, 10) || 0;
 
-                    if (isHard) {
-                        if (s.score > mergedScores[songIndex].rageScore) {
-                            mergedScores[songIndex].rageScore = s.score;
-                        }
-                        if (isNormalPassed) {
-                            mergedScores[songIndex].ragePassed = true;
-                        }
-                    } else {
-                        if (s.score > mergedScores[songIndex].normalScore) {
-                            mergedScores[songIndex].normalScore = s.score;
-                        }
-                        if (isNormalPassed) {
-                            mergedScores[songIndex].normalPassed = true;
-                        }
-                    }
+                    if (easyVal > mergedScores[songIndex].easyScore) mergedScores[songIndex].easyScore = easyVal;
+                    if (normVal > mergedScores[songIndex].normalScore) mergedScores[songIndex].normalScore = normVal;
+                    if (hardVal > mergedScores[songIndex].rageScore) mergedScores[songIndex].rageScore = hardVal;
+                    if (asianVal > mergedScores[songIndex].asianScore) mergedScores[songIndex].asianScore = asianVal;
+
+                    if (s.is_easy_mode_passed) mergedScores[songIndex].easyPassed = true;
+                    if (s.is_normal_mode_passed ?? s.is_normal_passed ?? s.is_passed) mergedScores[songIndex].normalPassed = true;
+                    if (s.is_hard_mode_passed ?? s.is_rage_mode_passed) mergedScores[songIndex].ragePassed = true;
+                    if (s.is_asian_mode_passed) mergedScores[songIndex].asianPassed = true;
                 }
             }
         });
@@ -350,10 +345,14 @@ async function syncServerDataToLocal(userId) {
             const ms = mergedScores[songIdx];
             const record = {
                 songIndex: songIdx,
+                easyScore: ms.easyScore > 0 ? btoa(ms.easyScore.toString()) : undefined,
+                isEasyModePassed: ms.easyPassed ? true : false,
                 score: ms.normalScore > 0 ? btoa(ms.normalScore.toString()) : undefined,
                 isNormalModePassed: ms.normalPassed ? true : false,
                 rageScore: ms.rageScore > 0 ? btoa(ms.rageScore.toString()) : undefined,
-                isRageModePassed: ms.ragePassed ? true : false
+                isRageModePassed: ms.ragePassed ? true : false,
+                asianScore: ms.asianScore > 0 ? btoa(ms.asianScore.toString()) : undefined,
+                isAsianModePassed: ms.asianPassed ? true : false,
             };
             store.put(record);
         });
@@ -1067,7 +1066,7 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
                 }
             } catch (err) { }
 
-            // Hàm hỗ trợ đồng bộ ngầm lên Server cho cả Normal và Rage Mode
+            // Hàm hỗ trợ đồng bộ ngầm lên Server cho 4 chế độ độc lập
             const syncLocalToRemote = async () => {
                 try {
                     for (const s of localScores) {
@@ -1075,41 +1074,62 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
                             const song = playlist[s.songIndex];
                             if (!song || !song.id) continue;
 
-                            // 1. Đồng bộ Normal Mode
-                            let decodedScore = 0;
-                            if (typeof s.score === 'number') decodedScore = s.score;
-                            else if (s.score) {
-                                try {
-                                    decodedScore = parseInt(atob(s.score));
-                                    if (isNaN(decodedScore)) decodedScore = parseInt(s.score) || 0;
-                                } catch (e) { decodedScore = parseInt(s.score) || 0; }
-                            }
-                            if (decodedScore > 0) {
+                            const parseVal = (val) => {
+                                if (typeof val === 'number') return val;
+                                if (val) {
+                                    try {
+                                        const d = parseInt(atob(val));
+                                        return isNaN(d) ? (parseInt(val) || 0) : d;
+                                    } catch (e) { return parseInt(val) || 0; }
+                                }
+                                return 0;
+                            };
+
+                            // 1. Easy Mode
+                            const easyVal = parseVal(s.easyScore);
+                            if (easyVal > 0) {
                                 await window.ApiService.postScore({
                                     beatmap_id: song.id,
-                                    score: decodedScore,
+                                    easy_mode_score: easyVal,
+                                    is_easy_mode: 1,
+                                    mode: 'easy',
+                                    is_easy_mode_passed: s.isEasyModePassed ? 1 : 0
+                                }).catch(() => { });
+                            }
+
+                            // 2. Normal Mode
+                            const normVal = parseVal(s.score);
+                            if (normVal > 0) {
+                                await window.ApiService.postScore({
+                                    beatmap_id: song.id,
+                                    score: normVal,
+                                    mode: 'normal',
                                     is_normal_mode_passed: s.isNormalModePassed ? 1 : 0
                                 }).catch(() => { });
                             }
 
-                            // 2. Đồng bộ Rage Mode
-                            let decodedRageScore = 0;
-                            if (typeof s.rageScore === 'number') decodedRageScore = s.rageScore;
-                            else if (s.rageScore) {
-                                try {
-                                    decodedRageScore = parseInt(atob(s.rageScore));
-                                    if (isNaN(decodedRageScore)) decodedRageScore = parseInt(s.rageScore) || 0;
-                                } catch (e) { decodedRageScore = parseInt(s.rageScore) || 0; }
-                            }
-                            if (decodedRageScore > 0) {
+                            // 3. Hard / Rage Mode
+                            const hardVal = parseVal(s.rageScore);
+                            if (hardVal > 0) {
                                 await window.ApiService.postScore({
                                     beatmap_id: song.id,
-                                    score: decodedRageScore,
+                                    hard_mode_score: hardVal,
                                     is_hard_mode: 1,
-                                    is_hard_mode_passed: s.isRageModePassed ? 1 : 0,
-                                    hard_mode: 1,
                                     is_rage_mode: 1,
-                                    rage_mode: 1
+                                    mode: 'hard',
+                                    is_hard_mode_passed: s.isRageModePassed ? 1 : 0
+                                }).catch(() => { });
+                            }
+
+                            // 4. Asian Mode
+                            const asianVal = parseVal(s.asianScore);
+                            if (asianVal > 0) {
+                                await window.ApiService.postScore({
+                                    beatmap_id: song.id,
+                                    asian_mode_score: asianVal,
+                                    is_asian_mode: 1,
+                                    mode: 'asian',
+                                    is_asian_mode_passed: s.isAsianModePassed ? 1 : 0
                                 }).catch(() => { });
                             }
                         }
@@ -1147,77 +1167,46 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
                                 const tx = db.transaction("highScores", "readwrite");
                                 const store = tx.objectStore("highScores");
 
-                                // Gom nhóm các điểm số từ server theo songIndex trước để tránh xung đột ghi/đọc song song của IndexedDB
                                 const mergedScores = {};
                                 serverScores.forEach(s => {
                                     if (typeof playlist !== 'undefined') {
                                         const songIndex = playlist.findIndex(p => String(p.id) === String(s.beatmap_id) || String(p.id) === String(s.song_id));
                                         if (songIndex !== -1) {
-                                            const isHard = s.is_hard_mode || s.hard_mode || s.is_rage_mode || s.rage_mode;
                                             if (!mergedScores[songIndex]) {
                                                 mergedScores[songIndex] = {
-                                                    normalScore: 0,
-                                                    normalPassed: false,
-                                                    rageScore: 0,
-                                                    ragePassed: false
+                                                    easyScore: 0, easyPassed: false,
+                                                    normalScore: 0, normalPassed: false,
+                                                    rageScore: 0, ragePassed: false,
+                                                    asianScore: 0, asianPassed: false
                                                 };
                                             }
 
-                                            const rawPassed = s.is_normal_mode_passed ?? s.is_normal_passed ?? s.is_passed ?? s.isNormalModePassed ?? s.isNormalPassed ?? s.normal_passed;
-                                            const isNormalPassed = Boolean(rawPassed) || Number(rawPassed) === 1 || String(rawPassed) === '1' || String(rawPassed).toLowerCase() === 'true' || rawPassed === true;
+                                            const easyVal = parseInt(s.easy_mode_score, 10) || 0;
+                                            const normVal = parseInt(s.score, 10) || 0;
+                                            const hardVal = parseInt(s.hard_mode_score ?? s.rage_score, 10) || 0;
+                                            const asianVal = parseInt(s.asian_mode_score, 10) || 0;
 
-                                            if (isHard) {
-                                                if (s.score > mergedScores[songIndex].rageScore) {
-                                                    mergedScores[songIndex].rageScore = s.score;
-                                                }
-                                                if (isNormalPassed) {
-                                                    mergedScores[songIndex].ragePassed = true;
-                                                }
-                                            } else {
-                                                if (s.score > mergedScores[songIndex].normalScore) {
-                                                    mergedScores[songIndex].normalScore = s.score;
-                                                }
-                                                if (isNormalPassed) {
-                                                    mergedScores[songIndex].normalPassed = true;
-                                                }
-                                            }
+                                            if (easyVal > mergedScores[songIndex].easyScore) mergedScores[songIndex].easyScore = easyVal;
+                                            if (normVal > mergedScores[songIndex].normalScore) mergedScores[songIndex].normalScore = normVal;
+                                            if (hardVal > mergedScores[songIndex].rageScore) mergedScores[songIndex].rageScore = hardVal;
+                                            if (asianVal > mergedScores[songIndex].asianScore) mergedScores[songIndex].asianScore = asianVal;
+
+                                            if (s.is_easy_mode_passed) mergedScores[songIndex].easyPassed = true;
+                                            if (s.is_normal_mode_passed ?? s.is_normal_passed ?? s.is_passed) mergedScores[songIndex].normalPassed = true;
+                                            if (s.is_hard_mode_passed ?? s.is_rage_mode_passed) mergedScores[songIndex].ragePassed = true;
+                                            if (s.is_asian_mode_passed) mergedScores[songIndex].asianPassed = true;
                                         }
                                     }
                                 });
 
-                                // Sau đó ghi một lần duy nhất cho mỗi songIndex vào IndexedDB
                                 Object.keys(mergedScores).forEach(songIdxStr => {
-                                    const songIdx = parseInt(songIdxStr);
+                                    const songIdx = parseInt(songIdxStr, 10);
                                     const ms = mergedScores[songIdx];
                                     
                                     const req = store.get(songIdx);
                                     req.onsuccess = () => {
                                         const existing = req.result || { songIndex: songIdx };
                                         
-                                        // Cập nhật Normal score
-                                        if (ms.normalScore > 0) {
-                                             let currentNormal = 0;
-                                             if (existing.score) {
-                                                 try { currentNormal = parseInt(atob(existing.score)) || 0; } catch(e) {}
-                                             }
-                                             if (ms.normalScore > currentNormal) {
-                                                 existing.score = btoa(ms.normalScore.toString());
-                                             }
-                                        }
-                                        if (ms.normalPassed) {
-                                             existing.isNormalModePassed = true;
-                                        }
-
-                                        // Cập nhật Rage score
-                                        if (ms.rageScore > 0) {
-                                             let currentRage = 0;
-                                             if (existing.rageScore) {
-                                                 try { currentRage = parseInt(atob(existing.rageScore)) || 0; } catch(e) {}
-                                             }
-                                             if (ms.rageScore > currentRage) {
-                                                 existing.rageScore = btoa(ms.rageScore.toString());
-                                             }
-                                        }
                                         if (ms.ragePassed) {
                                              existing.isRageModePassed = true;
                                         }

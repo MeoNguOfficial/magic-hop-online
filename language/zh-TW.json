@@ -509,6 +509,9 @@
     "webgpu_warning_title": "WEBGPU 警告",
     "webgpu_unsupported_msg": "您的瀏覽器或裝置不支援 WebGPU。遊戲將自動降級為 WebGL 2。",
     "webgpu_insecure_msg": "WebGPU 僅允許在 HTTPS 或 localhost 環境下運作。由於您目前使用的是不安全的 HTTP 連線，WebGPU 已被封鎖並將自動降級為 WebGL 2。",
-    "webgpu_disabled_msg": "您的瀏覽器或顯示卡未啟用 WebGPU（或硬體加速功能已關閉）。遊戲將自動降級為 WebGL 2。",
-    "msg_confirm_reload": "您仍要繼續並重新載入頁面嗎？"
+    "webgpu_disabled_msg": "您的瀏覽器或顯示卡未啟用 WebGPU（或硬體加速已被停用）。遊戲將自動降級為 WebGL 2。",
+    "msg_confirm_reload": "您確定要繼續重新載入頁面嗎？",
+    "score_title": "最終得分",
+    "lbl_best_score": "最高紀錄",
+    "lbl_final_speed": "速度"
 }

@@ -510,5 +510,8 @@
     "webgpu_unsupported_msg": "Your browser or device does not support WebGPU. The game will automatically fall back to WebGL 2.",
     "webgpu_insecure_msg": "WebGPU is only allowed over HTTPS or localhost. You are running on insecure HTTP, so WebGPU is blocked and falling back to WebGL 2.",
     "webgpu_disabled_msg": "WebGPU or Hardware Acceleration is disabled in your browser/graphics card. The game will fall back to WebGL 2.",
-    "msg_confirm_reload": "Do you still want to proceed and reload the page?"
+    "msg_confirm_reload": "Do you still want to proceed and reload the page?",
+    "score_title": "FINAL SCORE",
+    "lbl_best_score": "BEST SCORE",
+    "lbl_final_speed": "SPEED"
 }

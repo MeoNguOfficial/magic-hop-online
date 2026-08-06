@@ -510,5 +510,8 @@
     "webgpu_unsupported_msg": "사용 중인 브라우저 또는 기기가 WebGPU를 지원하지 않습니다. 게임이 자동으로 WebGL 2로 전환됩니다.",
     "webgpu_insecure_msg": "WebGPU는 HTTPS 또는 localhost에서만 허용됩니다. 안전하지 않은 HTTP에서 실행 중이므로 WebGPU가 차단되고 WebGL 2로 전환됩니다.",
     "webgpu_disabled_msg": "브라우저 또는 그래픽 카드의 WebGPU 또는 하드웨어 가속이 비활성화되어 있습니다. 게임이 WebGL 2로 전환됩니다.",
-    "msg_confirm_reload": "그래도 계속 진행하여 페이지를 새로고침하시겠습니까?"
+    "msg_confirm_reload": "페이지를 다시 로드하시겠습니까?",
+    "score_title": "최종 점수",
+    "lbl_best_score": "최고 기록",
+    "lbl_final_speed": "속도"
 }

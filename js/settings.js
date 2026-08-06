@@ -1789,7 +1789,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             // 3. Reset UI bestScoreLabel nếu đang hiển thị
                             const bestScoreLabelEl = document.getElementById('best-score-label');
-                            if (bestScoreLabelEl) bestScoreLabelEl.innerText = (typeof t === 'function' ? t('best_score') : 'Kỷ lục:') + ' 0';
+                            if (bestScoreLabelEl) bestScoreLabelEl.innerText = '0';
 
                             if (typeof showCyberModal === 'function') {
                                 const successMsg = typeof t === 'function' ? t('msg_reset_local_highscores_success') : '✅ Đã xóa toàn bộ kỷ lục cục bộ thành công!';

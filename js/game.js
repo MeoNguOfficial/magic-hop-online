@@ -24,6 +24,19 @@ function initDB() {
     });
 }
 
+function getScoreMode() {
+    if (window.EasyModeManager && window.EasyModeManager.isEnabled) return 'easy';
+    if (window.AsianModeManager && window.AsianModeManager.isEnabled) return 'asian';
+    if (window.HardModeManager && window.HardModeManager.isEnabled) return 'hard';
+    return 'normal';
+}
+window.getScoreMode = getScoreMode;
+
+function getScoreCacheKey(songIndex) {
+    return `${songIndex}_${getScoreMode()}`;
+}
+window.getScoreCacheKey = getScoreCacheKey;
+
 async function getLocalBestScore(songIndex) {
     const db = await initDB();
     return new Promise((resolve) => {
@@ -32,40 +45,23 @@ async function getLocalBestScore(songIndex) {
         const request = store.get(songIndex);
         request.onsuccess = () => {
             if (request.result) {
-                const isHard = window.HardModeManager && window.HardModeManager.isEnabled;
-                const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+                const mode = getScoreMode();
+                let propName = 'score';
+                if (mode === 'easy') propName = 'easyScore';
+                else if (mode === 'asian') propName = 'asianScore';
+                else if (mode === 'hard') propName = 'rageScore';
 
-                // Nếu đang bật Hard Mode hoặc Asian Mode, lấy rageScore.
-                if (isHard || isAsian) {
-                    const val = request.result.rageScore;
-                    if (val !== undefined && val !== null) {
-                        if (typeof val === 'number') return resolve(val);
-                        try {
-                            const decoded = parseInt(atob(val));
-                            return resolve(isNaN(decoded) ? parseInt(val) || 0 : decoded);
-                        } catch (e) {
-                            return resolve(parseInt(val) || 0);
-                        }
+                const val = request.result[propName];
+                if (val !== undefined && val !== null) {
+                    if (typeof val === 'number') return resolve(val);
+                    try {
+                        const decoded = parseInt(atob(val));
+                        return resolve(isNaN(decoded) ? parseInt(val) || 0 : decoded);
+                    } catch (e) {
+                        return resolve(parseInt(val) || 0);
                     }
-                    return resolve(0);
                 }
-
-                // Default Mode & Easy Mode (dùng chung điểm của Default mode)
-                if (request.result.score !== undefined) {
-                    const val = request.result.score;
-                    if (typeof val === 'number') {
-                        resolve(val); // Hỗ trợ tương thích ngược với dữ liệu số cũ
-                    } else {
-                        try {
-                            const decoded = parseInt(atob(val));
-                            resolve(isNaN(decoded) ? parseInt(val) || 0 : decoded);
-                        } catch (e) {
-                            resolve(parseInt(val) || 0);
-                        }
-                    }
-                } else {
-                    resolve(0);
-                }
+                resolve(0);
             } else {
                 resolve(0);
             }
@@ -75,13 +71,9 @@ async function getLocalBestScore(songIndex) {
 }
 
 async function getBestScore(songIndex) {
-    const isHard = window.HardModeManager && window.HardModeManager.isEnabled;
-    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
-    const isRageOrAsian = isHard || isAsian;
-
+    const mode = getScoreMode();
     let backendScore = null;
 
-    // 1. Ưu tiên lấy điểm cao từ Backend Server nếu đã đăng nhập
     try {
         const token = localStorage.getItem('auth_token');
         if (token && window.ApiService && typeof window.ApiService.getScores === 'function') {
@@ -90,7 +82,6 @@ async function getBestScore(songIndex) {
 
             if (targetSong && (targetSong.id || targetSong.beatmap_id)) {
                 const beatmapId = targetSong.id || targetSong.beatmap_id;
-                // Lấy user_id hiện tại để chỉ lấy điểm của user đang đăng nhập, tránh lấy điểm của admin hoặc user khác
                 let currentUserId = null;
                 try {
                     const rawAuthUser = localStorage.getItem('auth_user');
@@ -106,28 +97,20 @@ async function getBestScore(songIndex) {
                     let foundBackend = false;
 
                     scoresData.forEach(item => {
-                        const itemIsHard = item.is_hard_mode || item.hard_mode || item.is_rage_mode || item.rage_mode || item.mode === 'hard' || item.mode === 'rage';
-                        const normalVal = (item.score !== undefined && item.score !== null) ? (parseInt(item.score, 10) || 0) : 0;
-                        const hardVal = (item.hard_mode_score !== undefined && item.hard_mode_score !== null)
-                            ? (parseInt(item.hard_mode_score, 10) || 0)
-                            : ((item.rage_score !== undefined && item.rage_score !== null)
-                                ? (parseInt(item.rage_score, 10) || 0)
-                                : (itemIsHard ? normalVal : 0));
-
-                        if (isRageOrAsian) {
-                            const targetVal = hardVal > 0 ? hardVal : (itemIsHard ? normalVal : 0);
-                            if (targetVal > 0) {
-                                maxBackendScore = Math.max(maxBackendScore, targetVal);
-                                foundBackend = true;
-                            }
+                        let targetVal = 0;
+                        if (mode === 'easy') {
+                            targetVal = (item.easy_mode_score !== undefined && item.easy_mode_score !== null) ? (parseInt(item.easy_mode_score, 10) || 0) : 0;
+                        } else if (mode === 'hard') {
+                            targetVal = (item.hard_mode_score !== undefined && item.hard_mode_score !== null) ? (parseInt(item.hard_mode_score, 10) || 0) : (parseInt(item.rage_score, 10) || 0);
+                        } else if (mode === 'asian') {
+                            targetVal = (item.asian_mode_score !== undefined && item.asian_mode_score !== null) ? (parseInt(item.asian_mode_score, 10) || 0) : 0;
                         } else {
-                            if (normalVal > 0 && !itemIsHard) {
-                                maxBackendScore = Math.max(maxBackendScore, normalVal);
-                                foundBackend = true;
-                            } else if (normalVal > 0 && !item.hard_mode_score && !item.rage_score) {
-                                maxBackendScore = Math.max(maxBackendScore, normalVal);
-                                foundBackend = true;
-                            }
+                            targetVal = (item.score !== undefined && item.score !== null) ? (parseInt(item.score, 10) || 0) : 0;
+                        }
+
+                        if (targetVal > 0) {
+                            maxBackendScore = Math.max(maxBackendScore, targetVal);
+                            foundBackend = true;
                         }
                     });
 
@@ -141,17 +124,16 @@ async function getBestScore(songIndex) {
         console.warn('[Score] Không thể kết nối Backend Server để lấy kỷ lục:', err);
     }
 
-    // 2. Lấy kỷ lục dự phòng từ Local Storage (IndexedDB)
     const localScore = await getLocalBestScore(songIndex);
+    const cacheKey = getScoreCacheKey(songIndex);
 
-    // 3. Ưu tiên tuyệt đối điểm Backend nếu kết nối thành công
     if (backendScore !== null) {
         saveBestScore(songIndex, backendScore).catch(() => { });
-        cachedBestScores[songIndex] = backendScore;
+        cachedBestScores[cacheKey] = backendScore;
         return backendScore;
     }
 
-    cachedBestScores[songIndex] = localScore;
+    cachedBestScores[cacheKey] = localScore;
     return localScore;
 }
 
@@ -168,20 +150,20 @@ function renderBestScoreUI(songIndex) {
 
     const setScoreText = (scoreVal) => {
         currentShownScore = scoreVal;
-        bestScoreLabel.innerHTML = `${getLabelText()} ${scoreVal}`;
+        bestScoreLabel.innerText = scoreVal;
     };
 
     const setLoadingState = () => {
-        bestScoreLabel.innerHTML = `<span class="inline-flex items-center justify-center gap-1.5 text-gray-400 font-bold"><svg class="w-3 h-3 animate-spin text-cyan-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>${getLabelText()}</span> <span class="animate-pulse text-cyan-300">...</span></span>`;
+        bestScoreLabel.innerHTML = `<span class="inline-flex items-center justify-center gap-1.5 text-gray-400 font-bold"><svg class="w-3 h-3 animate-spin text-cyan-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="animate-pulse text-cyan-300">...</span></span>`;
     };
 
-    const cachedScore = cachedBestScores[songIndex];
+    const cacheKey = getScoreCacheKey(songIndex);
+    const cachedScore = cachedBestScores[cacheKey];
     if (cachedScore !== undefined && cachedScore !== null) {
         setScoreText(cachedScore);
     } else {
         setLoadingState();
 
-        // Hiển thị tạm thời từ Local DB trong lúc đợi Backend
         getLocalBestScore(songIndex).then(locBest => {
             if (!isBackendLoaded && currentShownScore < 0) {
                 setScoreText(locBest);
@@ -189,11 +171,10 @@ function renderBestScoreUI(songIndex) {
         }).catch(() => { });
     }
 
-    // Ưu tiên tuyệt đối điểm từ Backend Server
     getBestScore(songIndex).then(backendBest => {
         isBackendLoaded = true;
         if (backendBest !== null && backendBest !== undefined) {
-            cachedBestScores[songIndex] = backendBest;
+            cachedBestScores[cacheKey] = backendBest;
             setScoreText(backendBest);
         }
     }).catch(() => {
@@ -210,22 +191,19 @@ window.renderBestScoreUI = renderBestScoreUI;
 
 window.chosenPlayMode = 'normal';
 
-async function saveBestScore(songIndex, score, isNormalModePassed = false) {
-    // Kiểm tra chế độ hỗ trợ
+async function saveBestScore(songIndex, score, isPassed = false) {
     const isHelper = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : (
         ((typeof relaxModeEnabled !== 'undefined' && relaxModeEnabled) || localStorage.getItem('relaxModeEnabled') === 'true') ||
         ((typeof botAssistEnabled !== 'undefined' && botAssistEnabled) || localStorage.getItem('botAssistEnabled') === 'true') ||
         ((typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay))
     );
 
-    // Nếu đang bật chế độ hỗ trợ (Autoplay / Relax / Bot Assist...), ngắt toàn bộ lệnh (không lưu điểm & không update pass status cục bộ)
     if (isHelper) {
         return false;
     }
 
     const db = await initDB();
 
-    // Đọc kỷ lục cũ để giữ trạng thái đã có
     let oldRecord = null;
     try {
         const transaction = db.transaction(STORE_NAME, "readonly");
@@ -237,59 +215,60 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
         });
     } catch (e) { }
 
-    const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
-    const isRage = window.HardModeManager && window.HardModeManager.isEnabled;
-    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+    const mode = getScoreMode();
 
     let updatedRecord = {
         songIndex,
+        easyScore: oldRecord && oldRecord.easyScore !== undefined ? oldRecord.easyScore : btoa("0"),
         score: oldRecord && oldRecord.score !== undefined ? oldRecord.score : btoa("0"),
         rageScore: oldRecord && oldRecord.rageScore !== undefined ? oldRecord.rageScore : btoa("0"),
+        asianScore: oldRecord && oldRecord.asianScore !== undefined ? oldRecord.asianScore : btoa("0"),
+        isEasyModePassed: oldRecord && oldRecord.isEasyModePassed ? true : false,
         isNormalModePassed: oldRecord && oldRecord.isNormalModePassed ? true : false,
-        isRageModePassed: oldRecord && oldRecord.isRageModePassed ? true : false
+        isRageModePassed: oldRecord && oldRecord.isRageModePassed ? true : false,
+        isAsianModePassed: oldRecord && oldRecord.isAsianModePassed ? true : false,
     };
 
-    if (isNormalModePassed) {
-        if (isRage || isAsian) {
+    const targetSong = (typeof activePlaylist !== 'undefined' && activePlaylist[songIndex]) ||
+        (typeof playlist !== 'undefined' && playlist[songIndex]);
+
+    if (isPassed) {
+        if (mode === 'easy') {
+            updatedRecord.isEasyModePassed = true;
+            if (targetSong) targetSong.is_easy_mode_passed = true;
+        } else if (mode === 'asian') {
+            updatedRecord.isAsianModePassed = true;
+            if (targetSong) targetSong.is_asian_mode_passed = true;
+        } else if (mode === 'hard') {
             updatedRecord.isRageModePassed = true;
+            if (targetSong) targetSong.is_hard_mode_passed = true;
         } else {
             updatedRecord.isNormalModePassed = true;
+            if (targetSong) targetSong.is_normal_mode_passed = true;
         }
-
-        const targetSong = (typeof activePlaylist !== 'undefined' && activePlaylist[songIndex]) ||
-            (typeof playlist !== 'undefined' && playlist[songIndex]);
-        if (targetSong) {
-            if (isRage || isAsian) {
-                targetSong.is_hard_mode_passed = true;
-            } else {
-                targetSong.is_normal_mode_passed = true;
-            }
-            targetSong.is_passed = true;
-        }
+        if (targetSong) targetSong.is_passed = true;
     }
 
-    if (isRage || isAsian) {
-        let currentRage = 0;
-        if (oldRecord && oldRecord.rageScore) {
-            try { currentRage = parseInt(atob(oldRecord.rageScore)) || 0; } catch (e) { }
-        }
-        if (score > currentRage) {
-            updatedRecord.rageScore = btoa(score.toString());
-        }
-    } else {
-        let currentNormal = 0;
-        if (oldRecord && oldRecord.score) {
-            try { currentNormal = parseInt(atob(oldRecord.score)) || 0; } catch (e) { }
-        }
-        if (score > currentNormal) {
-            updatedRecord.score = btoa(score.toString());
-        }
+    let propName = 'score';
+    if (mode === 'easy') propName = 'easyScore';
+    else if (mode === 'asian') propName = 'asianScore';
+    else if (mode === 'hard') propName = 'rageScore';
+
+    let currentVal = 0;
+    if (oldRecord && oldRecord[propName]) {
+        try { currentVal = parseInt(atob(oldRecord[propName])) || 0; } catch (e) { }
+    }
+    if (score > currentVal) {
+        updatedRecord[propName] = btoa(score.toString());
     }
 
     try {
         const transaction = db.transaction(STORE_NAME, "readwrite");
         const store = transaction.objectStore(STORE_NAME);
         store.put(updatedRecord);
+
+        const cacheKey = getScoreCacheKey(songIndex);
+        cachedBestScores[cacheKey] = Math.max(currentVal, score);
         return true;
     } catch (e) {
         return false;
@@ -2784,16 +2763,16 @@ async function gameVictory() {
     // Hiển thị UI ban đầu
     finalScoreEl.innerText = "0";
     if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-        finalScoreEl.className = "text-3xl text-red-500 font-bold neon-glow-red animate-pulse";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_60px_rgba(239,68,68,0.9)] my-1 text-center";
     } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-        finalScoreEl.className = "text-3xl text-orange-500 font-bold neon-glow-orange animate-pulse";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_60px_rgba(249,115,22,0.9)] my-1 text-center";
     } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-        finalScoreEl.className = "text-3xl text-green-400 font-bold neon-glow-green animate-pulse";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_60px_rgba(34,197,94,0.9)] my-1 text-center";
     } else {
-        finalScoreEl.className = "text-3xl text-cyan-400 font-bold";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-cyan-400 text-shadow-[0_0_60px_rgba(34,211,238,0.9)] my-1 text-center";
     }
     highScoreDisplay.classList.add('hidden');
-    finalSpeedEl.innerText = ""; // Ẩn tốc độ tối đa cho chế độ Thường
+    if (finalSpeedEl) finalSpeedEl.innerText = ""; // Ẩn tốc độ tối đa cho chế độ Thường
     speedEl.innerText = `${t('speed')} 1.00x`;
     lastDisplayedSpeedText = `${t('speed')} 1.00x`;
     if (perfectStreakHud) perfectStreakHud.innerText = "0";
@@ -2836,7 +2815,7 @@ async function gameVictory() {
         if (window.EasyGameOverCloverManager) window.EasyGameOverCloverManager.stop();
         if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
         if (gameoverTitle) {
-            gameoverTitle.className = "text-4xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase mb-6 animate-pulse";
+            gameoverTitle.className = "text-3xl sm:text-5xl md:text-6xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(34,211,238,0.8)]";
         }
         if (gameoverScreenWindow) {
             gameoverScreenWindow.classList.remove('border-pink-500/40', 'border-red-500/70', 'border-orange-500/70', 'border-green-500/70');
@@ -2879,7 +2858,7 @@ async function gameVictory() {
         textShadow = "0 0 8px rgba(16,185,129,0.6)";
     }
 
-    gameOverMiniCard.className = `absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border ${cardBorder} backdrop-blur-md min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none`;
+    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} backdrop-blur-md min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
 
     const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
     const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
@@ -3010,7 +2989,7 @@ async function gameVictory() {
                 saveBestScore(selectedSongIndex, score, true);
 
                 if (canSave && score > oldBest) {
-                    bestScoreLabel.innerText = `${t('best_score')} ${score}`;
+                    if (bestScoreLabel) bestScoreLabel.innerText = score;
                     highScoreDisplay.classList.remove('hidden');
                 }
             } catch (err) {
@@ -3124,11 +3103,11 @@ window.DefaultGameOverParticleManager = {
         const gameoverTitle = document.querySelector('#gameover-screen-window h2');
         if (gameoverTitle) {
             if (isVictory) {
-                gameoverTitle.className = "text-4xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase mb-6 animate-pulse";
+                gameoverTitle.className = "text-3xl sm:text-5xl md:text-6xl font-black text-cyan-400 neon-glow-cyan font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(34,211,238,0.8)]";
                 gameoverTitle.style.textShadow = '0 0 14px #22d3ee, 0 0 28px #06b6d4, 0 0 50px #0891b2';
                 gameoverTitle.style.color = '#22d3ee';
             } else {
-                gameoverTitle.className = "text-4xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase mb-6";
+                gameoverTitle.className = "text-3xl sm:text-5xl md:text-6xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]";
                 gameoverTitle.style.textShadow = '';
                 gameoverTitle.style.color = '';
             }
@@ -3234,7 +3213,7 @@ async function gameOver() {
     const gameoverTitle = gameoverScreen.querySelector('h2');
     if (gameoverTitle) {
         gameoverTitle.innerText = t('game_over') || "GAME OVER";
-        gameoverTitle.className = "text-4xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase mb-6";
+        gameoverTitle.className = "text-3xl sm:text-5xl md:text-6xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]";
         gameoverTitle.setAttribute('data-i18n', 'game_over');
     }
     if (gameoverScreenWindow) {
@@ -3314,16 +3293,16 @@ async function gameOver() {
     // Hiển thị UI ban đầu
     finalScoreEl.innerText = "0";
     if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-        finalScoreEl.className = "text-3xl text-red-500 font-bold neon-glow-red animate-pulse";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_60px_rgba(239,68,68,0.9)] my-1 text-center";
     } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-        finalScoreEl.className = "text-3xl text-orange-500 font-bold neon-glow-orange animate-pulse";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_60px_rgba(249,115,22,0.9)] my-1 text-center";
     } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-        finalScoreEl.className = "text-3xl text-green-400 font-bold neon-glow-green animate-pulse";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_60px_rgba(34,197,94,0.9)] my-1 text-center";
     } else {
-        finalScoreEl.className = "text-3xl text-cyan-400 font-bold";
+        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-cyan-400 text-shadow-[0_0_60px_rgba(34,211,238,0.9)] my-1 text-center";
     }
     highScoreDisplay.classList.add('hidden');
-    finalSpeedEl.innerText = `${t('max_speed')} ${maxSpeedReached.toFixed(2)}x`;
+    if (finalSpeedEl) finalSpeedEl.innerText = `${maxSpeedReached.toFixed(2)}x`;
     speedEl.innerText = `${t('speed')} 1.00x`;
     lastDisplayedSpeedText = `${t('speed')} 1.00x`;
     if (perfectStreakHud) perfectStreakHud.innerText = "0";
@@ -3366,7 +3345,7 @@ async function gameOver() {
     if (!gameOverMiniCard) {
         gameOverMiniCard = document.createElement('div');
         gameOverMiniCard.id = 'gameover-mini-music-card';
-        gameOverMiniCard.className = "absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border border-cyan-500/40 bg-cyan-950/80 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none";
+        gameOverMiniCard.className = "absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border border-cyan-500/40 bg-cyan-950/80 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none";
         gameoverScreen.appendChild(gameOverMiniCard);
     }
 
@@ -3507,7 +3486,7 @@ async function gameOver() {
                     saveBestScore(selectedSongIndex, score);
 
                     if (score > oldBest) {
-                        bestScoreLabel.innerText = `${t('best_score')} ${score}`;
+                        if (bestScoreLabel) bestScoreLabel.innerText = score;
                         highScoreDisplay.classList.remove('hidden');
                         if (newBestAudio) newBestAudio.play().catch(() => { });
                         setTimeout(showButtons, 1500); // Đợi audio kỷ lục phát xong mới hiện

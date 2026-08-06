@@ -850,60 +850,34 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
         }
     } catch (e) {}
 
+    const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
     const isRage = window.HardModeManager && window.HardModeManager.isEnabled;
     const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
-    const isHardMode = isRage || isAsian;
 
-    const isBetterNormalScore = !isHardMode && (finalScore > normalScore);
-    const isBetterHardScore = isHardMode && (finalScore > rageScore);
-    const isNewPassStatus = isNormalModePassed && (isHardMode ? !ragePassed : !normalPassed);
+    let payload = {
+        beatmap_id: targetBeatmapId
+    };
 
-    // Bỏ qua nếu không vượt kỷ lục ở chế độ tương ứng VÀ không mở khóa/pass bài mới (khớp UserScoreController mới)
-    if (!isBetterNormalScore && !isBetterHardScore && !isNewPassStatus) {
-        return;
-    }
-
-    if (isNormalModePassed) {
-        if (isRage || isAsian) {
-            ragePassed = true;
-        } else {
-            normalPassed = true;
-        }
-    }
-
-    if (isRage || isAsian) {
-        if (finalScore > rageScore) rageScore = finalScore;
+    if (isEasy) {
+        payload.easy_mode_score = finalScore;
+        payload.is_easy_mode = 1;
+        payload.mode = 'easy';
+        if (isNormalModePassed) payload.is_easy_mode_passed = 1;
+    } else if (isAsian) {
+        payload.asian_mode_score = finalScore;
+        payload.is_asian_mode = 1;
+        payload.mode = 'asian';
+        if (isNormalModePassed) payload.is_asian_mode_passed = 1;
+    } else if (isRage) {
+        payload.hard_mode_score = finalScore;
+        payload.is_hard_mode = 1;
+        payload.is_rage_mode = 1;
+        payload.mode = 'hard';
+        if (isNormalModePassed) payload.is_hard_mode_passed = 1;
     } else {
-        if (finalScore > normalScore) normalScore = finalScore;
-    }
-
-    let payload = {};
-
-    if (isRage || isAsian) {
-        payload = {
-            beatmap_id: targetBeatmapId,
-            score: finalScore,
-            hard_mode_score: finalScore,
-            is_hard_mode: 1,
-            hard_mode: 1,
-            is_rage_mode: 1,
-            rage_mode: 1,
-            mode: 'hard',
-            is_hard_mode_passed: ragePassed ? 1 : 0,
-            is_rage_mode_passed: ragePassed ? 1 : 0,
-            is_normal_mode_passed: normalPassed ? 1 : 0
-        };
-    } else {
-        payload = {
-            beatmap_id: targetBeatmapId,
-            score: finalScore,
-            hard_mode_score: rageScore,
-            is_hard_mode: 0,
-            hard_mode: 0,
-            mode: 'normal',
-            is_normal_mode_passed: normalPassed ? 1 : 0,
-            is_hard_mode_passed: ragePassed ? 1 : 0
-        };
+        payload.score = finalScore;
+        payload.mode = 'normal';
+        if (isNormalModePassed) payload.is_normal_mode_passed = 1;
     }
 
     if (Array.isArray(beatsInput) && beatsInput.length > 0) {

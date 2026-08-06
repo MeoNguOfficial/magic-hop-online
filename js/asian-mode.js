@@ -182,7 +182,7 @@ window.AsianGameOverFireManager = {
 
         const gameoverTitle = document.querySelector('#gameover-screen-window h2');
         if (gameoverTitle) {
-            gameoverTitle.className = "text-4xl font-black text-red-500 neon-glow-red font-orbitron uppercase mb-6 animate-pulse";
+            gameoverTitle.className = "text-3xl sm:text-5xl md:text-6xl font-black text-red-500 neon-glow-red font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(255,0,0,0.8)]";
             gameoverTitle.style.textShadow = '0 0 16px #ff0000, 0 0 35px #dc143c, 0 0 60px #800000';
             gameoverTitle.style.color = '#ff1a1a';
         }
@@ -218,7 +218,7 @@ window.AsianGameOverFireManager = {
 
         const gameoverTitle = document.querySelector('#gameover-screen-window h2');
         if (gameoverTitle) {
-            gameoverTitle.className = "text-4xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase mb-6";
+            gameoverTitle.className = "text-3xl sm:text-5xl md:text-6xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]";
             gameoverTitle.style.textShadow = '';
             gameoverTitle.style.color = '';
         }
