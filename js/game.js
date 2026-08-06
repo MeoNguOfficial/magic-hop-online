@@ -218,8 +218,8 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
         ((typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay))
     );
 
-    // Nếu đang bật chế độ hỗ trợ VÀ KHÔNG PHẢI LÀ PASS BÀI -> Ngắt lệnh không lưu gì cả
-    if (isHelper && !isNormalModePassed) {
+    // Nếu đang bật chế độ hỗ trợ (Autoplay / Relax / Bot Assist...), ngắt toàn bộ lệnh (không lưu điểm & không update pass status cục bộ)
+    if (isHelper) {
         return false;
     }
 
@@ -268,24 +268,21 @@ async function saveBestScore(songIndex, score, isNormalModePassed = false) {
         }
     }
 
-    // Chỉ cập nhật kỷ lục điểm số cao nhất (High Score) nếu KHÔNG BẬT chế độ hỗ trợ
-    if (!isHelper) {
-        if (isRage || isAsian) {
-            let currentRage = 0;
-            if (oldRecord && oldRecord.rageScore) {
-                try { currentRage = parseInt(atob(oldRecord.rageScore)) || 0; } catch (e) { }
-            }
-            if (score > currentRage) {
-                updatedRecord.rageScore = btoa(score.toString());
-            }
-        } else {
-            let currentNormal = 0;
-            if (oldRecord && oldRecord.score) {
-                try { currentNormal = parseInt(atob(oldRecord.score)) || 0; } catch (e) { }
-            }
-            if (score > currentNormal) {
-                updatedRecord.score = btoa(score.toString());
-            }
+    if (isRage || isAsian) {
+        let currentRage = 0;
+        if (oldRecord && oldRecord.rageScore) {
+            try { currentRage = parseInt(atob(oldRecord.rageScore)) || 0; } catch (e) { }
+        }
+        if (score > currentRage) {
+            updatedRecord.rageScore = btoa(score.toString());
+        }
+    } else {
+        let currentNormal = 0;
+        if (oldRecord && oldRecord.score) {
+            try { currentNormal = parseInt(atob(oldRecord.score)) || 0; } catch (e) { }
+        }
+        if (score > currentNormal) {
+            updatedRecord.score = btoa(score.toString());
         }
     }
 
@@ -3008,7 +3005,7 @@ async function gameVictory() {
             try {
                 // Đồng bộ trạng thái pass bài lên Server & Local (để luôn mở khóa lựa chọn chế độ)
                 if (typeof window.submitScoreToServer === 'function') {
-                    window.submitScoreToServer(score, true, currentBeatHits, typeof activeRoundCount !== 'undefined' ? activeRoundCount : (typeof roundCount !== 'undefined' ? roundCount : 1));
+                    window.submitScoreToServer(score, true, currentBeatHits);
                 }
                 saveBestScore(selectedSongIndex, score, true);
 
@@ -3504,7 +3501,7 @@ async function gameOver() {
                 if (canSave) {
                     // Đồng bộ điểm lên Server và lưu kỷ lục cục bộ (Nếu chơi hợp lệ - không bot/relax/autoplay)
                     if (typeof window.submitScoreToServer === 'function') {
-                        window.submitScoreToServer(score, false, currentBeatHits, typeof activeRoundCount !== 'undefined' ? activeRoundCount : (typeof roundCount !== 'undefined' ? roundCount : 1));
+                        window.submitScoreToServer(score, false, currentBeatHits);
                     }
 
                     saveBestScore(selectedSongIndex, score);

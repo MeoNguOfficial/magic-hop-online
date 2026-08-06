@@ -760,11 +760,11 @@ function isAnyHelperModeActive() {
 window.isAnyHelperModeActive = isAnyHelperModeActive;
 
 // --- XỬ LÝ ĐỒNG BỘ ĐIỂM SỐ & TRẠNG THÁI PASS LÊN SERVER ---
-async function submitScoreToServer(finalScore, isNormalModePassed = false, beatHistory = null, roundEndless = 1) {
+async function submitScoreToServer(finalScore, isNormalModePassed = false, beatHistory = null) {
     const isHelper = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
 
-    // 1. Nếu đang bật chế độ hỗ trợ VÀ KHÔNG PHẢI LÀ PASS BÀI HÁT, ngắt lệnh (không gửi điểm)
-    if (isHelper && !isNormalModePassed) {
+    // 1. Nếu đang bật chế độ hỗ trợ (Autoplay / Relax / Bot Assist...), ngắt toàn bộ lệnh (không gửi điểm & không update pass status lên server)
+    if (isHelper) {
         return;
     }
 
@@ -781,12 +781,19 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
         return;
     }
 
-    // Xử lý dữ liệu nhịp (beat hits) và vòng chơi (round_endless) để xác minh điểm số
+    // Xử lý dữ liệu nhịp (beat hits) để xác minh điểm số (Khớp với UserScoreController.php mới)
     const beatsInput = (Array.isArray(beatHistory) && beatHistory.length > 0) ? beatHistory : (window.currentBeatHits || []);
-    const rounds = Math.max(1, parseInt(roundEndless, 10) || 1);
     const countOnes = Array.isArray(beatsInput) ? beatsInput.filter(v => v == 1 || v === '1' || v === true).length : 0;
 
-    // Log thông tin đếm tile và round endless khi bật Dev mode hoặc tài khoản Admin
+    let theoreticalMaxScore = 0;
+    if (countOnes < 20) {
+        theoreticalMaxScore = Math.floor((countOnes * (countOnes + 3)) / 2);
+    } else {
+        theoreticalMaxScore = 209 + (countOnes - 19) * 21;
+    }
+    const maxAllowedScore = theoreticalMaxScore;
+
+    // Log thông tin đếm tile khi bật Dev mode hoặc tài khoản Admin
     const isDevMode = (typeof window.getDevMode === 'function' && window.getDevMode() === true) || localStorage.getItem('dev_mode') === 'true' || localStorage.getItem('is_dev_mode') === 'true';
     let isAdminUser = false;
     try {
@@ -797,12 +804,11 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
     } catch (e) {}
 
     if (isDevMode || isAdminUser) {
-        console.log(`[Score Debug] Total Tiles Count: ${countOnes} | Round Endless: ${rounds} | Max Allowed Score: ${countOnes * 21 * rounds} | Final Score: ${finalScore}`);
+        console.log(`[Score Debug] Total Tiles Count: ${countOnes} | Theoretical Max: ${theoreticalMaxScore} | Max Allowed Score: ${maxAllowedScore} | Final Score: ${finalScore}`);
     }
 
-    // Xác minh điểm ở Client: Điểm không được vượt quá countOnes * 21 * rounds
+    // Xác minh điểm ở Client: Điểm không được vượt quá maxAllowedScore (theoreticalMaxScore)
     if (countOnes > 0) {
-        const maxAllowedScore = countOnes * 21 * rounds;
         if (finalScore > maxAllowedScore) {
             console.warn(`[Score Verification] Điểm số gửi lên (${finalScore}) vượt quá giới hạn tối đa cho phép từ mảng beat (${maxAllowedScore}). Hủy đồng bộ điểm số khả nghi.`);
             if (typeof showCyberModal === 'function') {
@@ -865,13 +871,10 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
         }
     }
 
-    // Chỉ cập nhật kỷ lục điểm số (High Score) nếu KHÔNG BẬT chế độ hỗ trợ
-    if (!isHelper) {
-        if (isRage || isAsian) {
-            if (finalScore > rageScore) rageScore = finalScore;
-        } else {
-            if (finalScore > normalScore) normalScore = finalScore;
-        }
+    if (isRage || isAsian) {
+        if (finalScore > rageScore) rageScore = finalScore;
+    } else {
+        if (finalScore > normalScore) normalScore = finalScore;
     }
 
     let payload = {};
@@ -906,8 +909,6 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
     if (Array.isArray(beatsInput) && beatsInput.length > 0) {
         payload.beat = beatsInput;
         payload.beats = beatsInput;
-        payload.round_endless = rounds;
-        payload.endless_round = rounds;
     }
 
     // 4. Gọi API gửi điểm số / trạng thái pass bài lên Server
