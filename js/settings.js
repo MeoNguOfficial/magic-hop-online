@@ -648,20 +648,22 @@ function applySettings() {
             localStorage.setItem('graphicsAPI', graphicsAPI);
             if (oldApi !== graphicsAPI) {
                 if (graphicsAPI === 'webgpu' && !navigator.gpu) {
-                    const isSecure = window.isSecureContext;
+                    let msgKey = "webgpu_unsupported_msg";
                     let msg = "Trình duyệt hoặc thiết bị của bạn không hỗ trợ WebGPU. Trò chơi sẽ tự động chuyển sang WebGL 2 làm phương án dự phòng.";
                     if (!isSecure && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                        msgKey = "webgpu_insecure_msg";
                         msg = "WebGPU chỉ được phép hoạt động trên kết nối bảo mật (HTTPS) hoặc localhost. Bạn đang chạy dưới HTTP không bảo mật, do đó WebGPU bị chặn và game sẽ tự động đưa về WebGL 2 làm phương án dự phòng.";
                     } else {
+                        msgKey = "webgpu_disabled_msg";
                         msg = "Trình duyệt hoặc card đồ họa của bạn chưa được bật WebGPU (hoặc tính năng Tăng tốc phần cứng - Hardware Acceleration đang tắt). Game sẽ tự động chuyển sang WebGL 2 làm phương án dự phòng.";
                     }
                     if (typeof showCyberModal === 'function') {
                         showCyberModal({
-                            title: "CẢNH BÁO WEB-GPU",
-                            message: msg + " Bạn vẫn muốn tiếp tục tải lại trang?",
+                            title: typeof t === 'function' ? t('webgpu_warning_title') : "CẢNH BÁO WEB-GPU",
+                            message: (typeof t === 'function' ? t(msgKey) : msg) + " " + (typeof t === 'function' ? t('msg_confirm_reload') : "Bạn vẫn muốn tiếp tục tải lại trang?"),
                             type: 'confirm',
-                            confirmText: "TIẾP TỤC",
-                            cancelText: "HỦY",
+                            confirmText: typeof t === 'function' ? t('btn_confirm') : "TIẾP TỤC",
+                            cancelText: typeof t === 'function' ? t('btn_cancel') : "HỦY",
                             onConfirm: () => {
                                 if (typeof playEndSceneAndReload === 'function') {
                                     playEndSceneAndReload(() => location.reload());
