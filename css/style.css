@@ -31,6 +31,64 @@ html, body {
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
 }
 
+/* --- ANIMATED AUDIO WAVE EQUALIZER BARS --- */
+.audio-wave-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 2.5px;
+    height: 14px;
+    padding: 0 1px;
+    vertical-align: middle;
+}
+
+.audio-wave-bar {
+    width: 2.5px;
+    border-radius: 9999px;
+    background-color: currentColor;
+    transform-origin: bottom;
+    animation: audio-equalizer-bounce 0.7s ease-in-out infinite alternate;
+}
+
+.audio-wave-bar:nth-child(1) { height: 65%; animation-duration: 0.45s; animation-delay: 0.0s; }
+.audio-wave-bar:nth-child(2) { height: 100%; animation-duration: 0.65s; animation-delay: 0.15s; }
+.audio-wave-bar:nth-child(3) { height: 45%; animation-duration: 0.4s; animation-delay: 0.3s; }
+.audio-wave-bar:nth-child(4) { height: 85%; animation-duration: 0.55s; animation-delay: 0.1s; }
+
+@keyframes audio-equalizer-bounce {
+    0% {
+        transform: scaleY(0.2);
+        opacity: 0.4;
+    }
+    100% {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}
+
+.preview-btn {
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
+    will-change: transform;
+}
+
+.preview-btn:hover {
+    transform: scale(1.12);
+}
+
+.preview-btn:active {
+    transform: scale(0.9);
+}
+
+.preview-btn.pop-animate {
+    animation: preview-btn-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes preview-btn-pop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.25); }
+    100% { transform: scale(1); }
+}
+
 /* Tab switching */
 .tab-btn.active { background: rgba(0, 255, 255, 0.1); border-color: #00ffff; color: #00ffff; }
 

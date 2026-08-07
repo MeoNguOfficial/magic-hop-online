@@ -847,9 +847,8 @@ window.FakeBlocksManager = {
                     const targetZ = fTile.userData.targetZ;
                     fTile.position.z += (targetZ - fTile.position.z) * enterSpeed;
 
-                    // Snap sớm giống block chính: nếu bóng gần block hoặc đã vượt qua thì snap ngay
-                    const distToTargetZ = Math.abs(ballZ - targetZ);
-                    if (distToTargetZ < 15 || ballZ < fTile.position.z || Math.abs(fTile.position.z - targetZ) < 0.1) {
+                    // Tạm tắt distToTargetZ < 15 (auto instant) để slide mượt ngay cả khi nhịp dồn dập
+                    if (ballZ < fTile.position.z || Math.abs(fTile.position.z - targetZ) < 0.1) {
                         fTile.position.z = targetZ;
                         fTile.userData.isEntering = false;
                     }

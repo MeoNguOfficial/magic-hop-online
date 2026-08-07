@@ -609,12 +609,15 @@ function spawnTile(isFirst = false) {
     }
 
     let isEntering = !isFirst && spawnAnimationMode !== 'none';
+    // Tạm tắt cơ chế auto instant khi timing block gần (< 0.25s) trong mix mode theo yêu cầu
+    /*
     if (isEntering && spawnAnimationMode === 'mix') {
         // Khoảng cách block gần (timing block gần < 0.25s) sẽ dùng instant (không slide)
         if (timeDiff < 0.25) {
             isEntering = false;
         }
     }
+    */
     if (isEntering) {
         if (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') {
             tile.position.z = tileZ - 40;

@@ -327,16 +327,33 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                     <h3 class="font-bold text-white group-hover:text-cyan-300 font-orbitron text-sm pointer-events-none overflow-hidden whitespace-nowrap flex-1 min-w-0 marquee-container">
                         <span class="marquee-text inline-block">${song.name}</span>
                     </h3>
-                    <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none flex items-center gap-1"></div>
+                    <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none inline-flex items-center justify-center self-center my-auto"></div>
                 </div>
                 <p class="text-[10px] text-gray-400 pointer-events-none">${song.artist || 'Unknown Artist'}</p>
             </div>
             <div class="flex items-center gap-3">
-                <button id="preview-btn-${originalIndex}" class="preview-btn p-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-400 transition-all border border-cyan-500/30 flex items-center justify-center shrink-0" title="${t('preview_btn')}">
-                    <svg class="w-3.5 h-3.5 preview-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
+                <button id="preview-btn-${originalIndex}" class="preview-btn relative p-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-400 transition-all duration-300 border border-cyan-500/30 flex items-center justify-center shrink-0 w-7 h-7 overflow-hidden select-none" title="${t('preview_btn')}">
+                    <!-- Static Wave Icon -->
+                    <div class="wave-icon-static transition-all duration-300 transform flex items-center justify-center pointer-events-none">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 12v1M8 9v6M12 5v14M16 9v6M20 12v1"></path>
+                        </svg>
+                    </div>
+                    <!-- Animated Bouncing Equalizer Bars -->
+                    <div class="wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none">
+                        <div class="audio-wave-bars text-pink-400">
+                            <span class="audio-wave-bar"></span>
+                            <span class="audio-wave-bar"></span>
+                            <span class="audio-wave-bar"></span>
+                            <span class="audio-wave-bar"></span>
+                        </div>
+                    </div>
+                    <!-- Loading Spinner Icon -->
+                    <div class="wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none">
+                        <svg class="w-3.5 h-3.5 animate-spin text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" stroke-dasharray="16 16"></circle>
+                        </svg>
+                    </div>
                 </button>
                 <div id="action-area-${originalIndex}" class="flex items-center">
                     <span class="text-cyan-400 group-hover:neon-glow-cyan text-xs font-bold whitespace-nowrap shrink-0 pointer-events-none">PLAY ▶</span>
@@ -407,6 +424,20 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             }
             const previewBtn = e.target.closest('.preview-btn');
             if (previewBtn) {
+                if (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled) {
+                    if (typeof anime !== 'undefined') {
+                        anime({
+                            targets: previewBtn,
+                            scale: [0.82, 1.2, 1],
+                            duration: 350,
+                            easing: 'easeOutElastic(1, .6)'
+                        });
+                    } else {
+                        previewBtn.classList.remove('pop-animate');
+                        void previewBtn.offsetWidth;
+                        previewBtn.classList.add('pop-animate');
+                    }
+                }
                 if (typeof togglePreview === 'function') togglePreview(originalIndex);
             } else {
                 playlistRenderStartIndex = 0; // Trở về đầu để thấy bài đang chơi khi mở lại Menu
@@ -447,7 +478,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             if (isCached) {
                 const statusDiv = document.getElementById(`cache-status-${originalIndex}`);
                 if (statusDiv) {
-                    statusDiv.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+                    statusDiv.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400 self-center my-auto shrink-0 inline-block align-middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
                 }
             }
         });
@@ -492,31 +523,70 @@ function renderSongList(filterTerm = null, specificIndices = null) {
     }
 }
 
+function updateSongWaveBadge(index) {
+    // Legacy helper kept for safety
+}
+window.updateSongWaveBadge = updateSongWaveBadge;
+
 function updatePreviewUI(index, state) {
+    if (typeof index === 'undefined' || index === null || index === -1) return;
     const btn = document.getElementById(`preview-btn-${index}`);
     if (!btn) return;
-    const icon = btn.querySelector('.preview-icon');
-    
-    btn.classList.remove('playing', 'animate-pulse', 'text-pink-400', 'border-pink-500/50', 'bg-cyan-800/80', 'text-cyan-400');
-    if (icon) icon.classList.remove('animate-spin');
-    
+
+    let iconStatic = btn.querySelector('.wave-icon-static');
+    let iconAnimated = btn.querySelector('.wave-icon-animated');
+    let iconLoading = btn.querySelector('.wave-icon-loading');
+
+    // Fallback nếu DOM cũ chưa có đủ 3 icon con
+    if (!iconStatic || !iconAnimated || !iconLoading) {
+        btn.className = `preview-btn relative p-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-400 transition-all duration-300 border border-cyan-500/30 flex items-center justify-center shrink-0 w-7 h-7 overflow-hidden select-none`;
+        btn.innerHTML = `
+            <div class="wave-icon-static transition-all duration-300 transform flex items-center justify-center pointer-events-none">
+                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12v1M8 9v6M12 5v14M16 9v6M20 12v1"></path>
+                </svg>
+            </div>
+            <div class="wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none">
+                <div class="audio-wave-bars text-pink-400">
+                    <span class="audio-wave-bar"></span>
+                    <span class="audio-wave-bar"></span>
+                    <span class="audio-wave-bar"></span>
+                    <span class="audio-wave-bar"></span>
+                </div>
+            </div>
+            <div class="wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none">
+                <svg class="w-3.5 h-3.5 animate-spin text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10" stroke-dasharray="16 16"></circle>
+                </svg>
+            </div>
+        `;
+        iconStatic = btn.querySelector('.wave-icon-static');
+        iconAnimated = btn.querySelector('.wave-icon-animated');
+        iconLoading = btn.querySelector('.wave-icon-loading');
+    }
+
+    btn.classList.remove('playing', 'loading-state', 'text-pink-400', 'border-pink-500/50', 'border-pink-500/80', 'shadow-[0_0_12px_rgba(236,72,153,0.6)]', 'bg-pink-950/60', 'text-cyan-400', 'text-cyan-300', 'border-cyan-400/60', 'shadow-[0_0_8px_rgba(6,182,212,0.3)]');
+
     if (state === 'loading') {
-        btn.classList.add('animate-pulse', 'text-pink-400');
-        if (icon) {
-            icon.classList.add('animate-spin');
-            icon.innerHTML = '<circle cx="12" cy="12" r="10" stroke-dasharray="16 16"></circle>';
-        }
+        btn.classList.add('loading-state', 'text-pink-400', 'border-pink-500/50', 'bg-pink-950/40');
+        if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-0 scale-50 rotate-45 pointer-events-none';
+        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none';
+        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-100 scale-100 rotate-0 pointer-events-none';
     } else if (state === 'playing') {
-        btn.classList.add('playing', 'text-pink-400', 'border-pink-500/50', 'bg-cyan-800/80');
-        if (icon) {
-            icon.classList.add('animate-spin');
-            icon.innerHTML = '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" stroke-dasharray="6 3"></circle><circle cx="12" cy="12" r="3" fill="currentColor"></circle>';
-        }
+        btn.classList.add('playing', 'text-pink-400', 'border-pink-500/80', 'shadow-[0_0_12px_rgba(236,72,153,0.6)]', 'bg-pink-950/60');
+        if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-0 scale-50 rotate-90 pointer-events-none';
+        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none';
+        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-100 scale-100 rotate-0 pointer-events-none';
     } else {
-        btn.classList.add('text-cyan-400');
-        if (icon) {
-            icon.innerHTML = '<circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle>';
+        const isSelected = (typeof selectedSongIndex !== 'undefined' && selectedSongIndex === index);
+        if (isSelected) {
+            btn.classList.add('text-cyan-300', 'border-cyan-400/60', 'bg-cyan-950/60', 'shadow-[0_0_8px_rgba(6,182,212,0.3)]');
+        } else {
+            btn.classList.add('text-cyan-400');
         }
+        if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-100 scale-100 rotate-0 pointer-events-none';
+        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none';
+        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none';
     }
 }
 
@@ -608,7 +678,7 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
                         <span class="text-xs font-bold text-white truncate max-w-[130px] font-orbitron">${s.user?.realname || s.user?.username || 'Unknown'}</span>
                     </div>
                     <div class="flex flex-col items-end">
-                        <span class="text-cyan-400 font-orbitron font-bold text-xs">${scoreValue}</span>
+                        <span class="text-cyan-400 font-orbitron font-bold text-xs">${formatScoreDisplay(scoreValue)}</span>
                         <span class="text-[9px] text-gray-500 font-orbitron">${new Date(s.created_at).toLocaleDateString()}</span>
                     </div>
                 </div>

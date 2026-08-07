@@ -3,7 +3,16 @@
 //  Chứa: DOM refs, biến trạng thái toàn cục, applySettings,
 //         changeSong, event listeners UI, bootstrap hệ thống.
 //  Phụ thuộc: game.js (phải load sau global.js)
-// ============================================================
+// --- UTILS ---
+// Format điểm số hiển thị dạng dấu chấm phân cách hàng nghìn (VD: 113537 -> 113.537)
+// Chỉ thay đổi chuỗi hiển thị thị giác, giữ nguyên giá trị số (value) thực của điểm số
+function formatScoreDisplay(val) {
+    if (val === null || val === undefined || val === '') return '0';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+window.formatScoreDisplay = formatScoreDisplay;
 
 // --- DOM REFERENCES ---
 const container = document.getElementById('canvas-container');
@@ -478,7 +487,12 @@ async function changeSong(index, autoStart = false) {
 
     const options = document.querySelectorAll('.song-option');
     options.forEach((opt) => {
-        opt.classList.toggle('active', parseInt(opt.dataset.index) === index);
+        const optIdx = parseInt(opt.dataset.index);
+        opt.classList.toggle('active', optIdx === index);
+        if (typeof updatePreviewUI === 'function') {
+            const isPrev = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === optIdx);
+            updatePreviewUI(optIdx, isPrev ? 'playing' : 'stopped');
+        }
     });
 
     // Khi trở lại Menu chính, làm mới danh sách để ép bài hát vừa chơi lên trên cùng

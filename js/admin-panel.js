@@ -752,12 +752,12 @@ async function loadDashboardStats() {
         const userRes = await apiClient.get('/users');
         const usersCount = userRes.data?.data?.length || userRes.data?.length || 0;
         const statUsersEl = document.getElementById('stat-users');
-        if (statUsersEl) statUsersEl.innerText = usersCount;
+        if (statUsersEl) statUsersEl.innerText = formatScoreDisplay(usersCount);
 
         const bmRes = await ApiService.getBeatmaps();
         const bmCount = bmRes.data?.data?.data?.length || bmRes.data?.data?.length || bmRes.data?.length || 0;
         const statBmEl = document.getElementById('stat-beatmaps');
-        if (statBmEl) statBmEl.innerText = bmCount;
+        if (statBmEl) statBmEl.innerText = formatScoreDisplay(bmCount);
 
         const statScoresEl = document.getElementById('stat-scores');
         if (statScoresEl) statScoresEl.innerText = 'N/A';
@@ -1638,13 +1638,13 @@ function renderAdminScoresTable() {
         
         let scoreDisplay;
         if (mode === 'easy') {
-            scoreDisplay = `<span class="text-green-400 font-bold" title="Easy Score">${s.easy_mode_score ?? 0}</span>`;
+            scoreDisplay = `<span class="text-green-400 font-bold" title="Easy Score">${formatScoreDisplay(s.easy_mode_score ?? 0)}</span>`;
         } else if (mode === 'rage') {
-            scoreDisplay = `<span class="text-orange-400 font-bold" title="Rage Score">${s.hard_mode_score ?? 0}</span>`;
+            scoreDisplay = `<span class="text-orange-400 font-bold" title="Rage Score">${formatScoreDisplay(s.hard_mode_score ?? 0)}</span>`;
         } else if (mode === 'asian') {
-            scoreDisplay = `<span class="text-red-400 font-bold" title="Asian Score">${s.asian_mode_score ?? 0}</span>`;
+            scoreDisplay = `<span class="text-red-400 font-bold" title="Asian Score">${formatScoreDisplay(s.asian_mode_score ?? 0)}</span>`;
         } else {
-            scoreDisplay = `<span class="text-pink-400 font-bold" title="Normal Score">${s.score ?? 0}</span>`;
+            scoreDisplay = `<span class="text-pink-400 font-bold" title="Normal Score">${formatScoreDisplay(s.score ?? 0)}</span>`;
         }
 
         tbody.innerHTML += `<tr class="hover:bg-cyan-950/20 transition-colors"><td class="py-3 px-2 text-cyan-400 font-bold w-12">#${absoluteIndex + 1}</td><td class="py-3 px-2 font-bold text-white">${s.user?.realname || s.user?.username || 'Unknown'}</td><td class="py-3 px-2 text-right font-orbitron font-bold">${scoreDisplay}</td><td class="py-3 px-2 text-right text-xs text-gray-500">${new Date(s.created_at).toLocaleDateString()}</td><td class="py-3 px-2 text-right"><button class="text-red-400 hover:text-red-300 btn-delete-score" data-id="${s.id}" title="Delete"><svg class="w-4 h-4 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button></td></tr>`;

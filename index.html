@@ -2435,18 +2435,18 @@
         <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-purple-600/10 blur-[120px] pointer-events-none z-0"></div>
 
         <div id="gameover-screen-window"
-            class="relative z-10 w-full h-full max-w-4xl mx-auto flex flex-col justify-between items-center py-3 sm:py-6 px-4 sm:px-8 border-0 bg-transparent shadow-none overflow-hidden select-none">
+            class="relative z-10 w-full h-full max-w-full mx-auto flex flex-col justify-between items-center py-3 sm:py-6 px-2 sm:px-6 border-0 bg-transparent shadow-none overflow-visible select-none">
             
             <!-- [VỊ TRÍ 1] Khóa Đỉnh Trực Quan: Thẻ bài hát & Tiêu đề chính -->
-            <div class="w-full flex flex-col items-center shrink-0 pt-20 sm:pt-24 md:pt-24">
+            <div class="w-full flex flex-col items-center shrink-0 pt-6 sm:pt-8 md:pt-10">
                 <h2 class="text-3xl sm:text-5xl md:text-6xl font-black text-pink-500 neon-glow-pink font-orbitron uppercase tracking-widest text-center animate-pulse drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]"
                     data-i18n="game_over">GAME OVER</h2>
             </div>
 
             <!-- [VỊ TRÍ 2] Khóa Trung Tâm: Con số Điểm số cực đại -->
-            <div class="w-full max-w-xl mx-auto flex-1 flex flex-col items-center justify-center shrink-0 py-1 my-auto">
-                <div class="w-full flex flex-col items-center justify-center relative overflow-hidden">
-                    <div id="final-score" class="text-7xl sm:text-[9rem] md:text-[11rem] text-cyan-400 font-black font-orbitron tracking-tight leading-none text-shadow-[0_0_60px_rgba(34,211,238,0.9)] relative z-10 my-1 text-center">0</div>
+            <div class="w-full max-w-full mx-auto flex-1 flex flex-col items-center justify-center my-auto overflow-visible py-2 px-2">
+                <div class="w-full flex flex-col items-center justify-center relative overflow-visible text-center">
+                    <div id="final-score" class="w-full max-w-full text-5xl sm:text-7xl md:text-8xl lg:text-[9.5rem] text-cyan-400 font-black font-orbitron tracking-tight leading-normal py-2 text-shadow-[0_0_60px_rgba(34,211,238,0.9)] relative z-10 my-1 text-center overflow-visible break-normal mx-auto block">0</div>
                     
                     <div id="high-score-display"
                         class="text-xs sm:text-sm text-yellow-400 neon-glow-yellow font-black uppercase tracking-widest hidden animate-bounce bg-yellow-500/10 border border-yellow-500/30 px-4 py-1 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.25)] relative z-10 mt-1"

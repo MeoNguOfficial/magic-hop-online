@@ -150,7 +150,7 @@ function renderBestScoreUI(songIndex) {
 
     const setScoreText = (scoreVal) => {
         currentShownScore = scoreVal;
-        bestScoreLabel.innerText = scoreVal;
+        bestScoreLabel.innerText = formatScoreDisplay(scoreVal);
     };
 
     const setLoadingState = () => {
@@ -1911,8 +1911,8 @@ function animate() {
                     const targetZ = tile.userData.targetZ;
                     tile.position.z += (targetZ - tile.position.z) * enterSpeed;
 
-                    const distToTargetZ = Math.abs(ball.position.z - targetZ);
-                    if (distToTargetZ < 15 || ball.position.z < tile.position.z || Math.abs(tile.position.z - targetZ) < 0.1) {
+                    // Tạm tắt distToTargetZ < 15 (auto instant) để slide mượt ngay cả khi nhịp dồn dập
+                    if (ball.position.z < tile.position.z || Math.abs(tile.position.z - targetZ) < 0.1) {
                         tile.position.z = targetZ;
                         tile.userData.isEntering = false;
                     }
@@ -2145,7 +2145,7 @@ function animate() {
                         }
 
                         if (lastDisplayedScore !== score) {
-                            scoreEl.innerText = score;
+                            scoreEl.innerText = formatScoreDisplay(score);
                             lastDisplayedScore = score;
                         }
                         if (perfectStreakHud && lastDisplayedPerfectHUD !== comboCount) {
@@ -2338,7 +2338,7 @@ function animate() {
                     }
 
                     if (lastDisplayedScore !== score) {
-                        scoreEl.innerText = score;
+                        scoreEl.innerText = formatScoreDisplay(score);
                         lastDisplayedScore = score;
                     }
                     if (perfectStreakHud && lastDisplayedPerfectHUD !== comboCount) {
@@ -2682,6 +2682,39 @@ function fadeOutGameAudio(durationSeconds = 1.0) {
     }
 }
 
+// Tự động điều chỉnh kích thước font và màu sắc cho điểm số cuối cùng để luôn căn giữa đẹp mắt và không bị tràn/lệch
+function updateFinalScoreStyle(currentValue, targetValue = currentValue) {
+    if (!finalScoreEl) return;
+    const currentFormatted = formatScoreDisplay(currentValue);
+    const targetFormatted = formatScoreDisplay(targetValue);
+    const actualStr = String(finalScoreEl.innerText || "");
+    const len = Math.max(currentFormatted.length, targetFormatted.length, actualStr.length);
+
+    let sizeClasses = "text-5xl sm:text-7xl md:text-8xl lg:text-[9.5rem]";
+    if (len >= 13) {
+        sizeClasses = "text-lg sm:text-xl md:text-2xl lg:text-3xl";
+    } else if (len >= 11) {
+        sizeClasses = "text-xl sm:text-2xl md:text-3xl lg:text-4xl";
+    } else if (len >= 9) {
+        sizeClasses = "text-2xl sm:text-4xl md:text-5xl lg:text-6xl";
+    } else if (len >= 7) {
+        sizeClasses = "text-3xl sm:text-5xl md:text-6xl lg:text-7xl";
+    } else if (len >= 5) {
+        sizeClasses = "text-4xl sm:text-6xl md:text-7xl lg:text-8xl";
+    }
+
+    let colorClasses = "text-cyan-400 text-shadow-[0_0_60px_rgba(34,211,238,0.9)]";
+    if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
+        colorClasses = "text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_60px_rgba(239,68,68,0.9)]";
+    } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
+        colorClasses = "text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_60px_rgba(249,115,22,0.9)]";
+    } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
+        colorClasses = "text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_60px_rgba(34,197,94,0.9)]";
+    }
+
+    finalScoreEl.className = `${sizeClasses} font-black font-orbitron tracking-tight leading-normal py-2 overflow-visible w-full max-w-full ${colorClasses} my-1 text-center block mx-auto break-all sm:break-normal`;
+}
+
 // --- GAME VICTORY ---
 async function gameVictory() {
     isPlaying = false;
@@ -2762,15 +2795,7 @@ async function gameVictory() {
 
     // Hiển thị UI ban đầu
     finalScoreEl.innerText = "0";
-    if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_60px_rgba(239,68,68,0.9)] my-1 text-center";
-    } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_60px_rgba(249,115,22,0.9)] my-1 text-center";
-    } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_60px_rgba(34,197,94,0.9)] my-1 text-center";
-    } else {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-cyan-400 text-shadow-[0_0_60px_rgba(34,211,238,0.9)] my-1 text-center";
-    }
+    updateFinalScoreStyle(0, score);
     highScoreDisplay.classList.add('hidden');
     if (finalSpeedEl) finalSpeedEl.innerText = ""; // Ẩn tốc độ tối đa cho chế độ Thường
     speedEl.innerText = `${t('speed')} 1.00x`;
@@ -2943,8 +2968,10 @@ async function gameVictory() {
         const progress = Math.min(elapsed / duration, 1);
         currentDisplayScore = Math.floor(progress * score);
 
-        if (finalScoreEl.innerText !== currentDisplayScore.toString()) {
-            finalScoreEl.innerText = currentDisplayScore;
+        const formattedStr = formatScoreDisplay(currentDisplayScore);
+        if (finalScoreEl.innerText !== formattedStr) {
+            finalScoreEl.innerText = formattedStr;
+            updateFinalScoreStyle(currentDisplayScore, score);
             const tickCount = Math.min(score, maxTicks);
             if (tickCount > 0) {
                 const currentTickIndex = Math.floor(progress * (tickCount - 1));
@@ -2989,7 +3016,7 @@ async function gameVictory() {
                 saveBestScore(selectedSongIndex, score, true);
 
                 if (canSave && score > oldBest) {
-                    if (bestScoreLabel) bestScoreLabel.innerText = score;
+                    if (bestScoreLabel) bestScoreLabel.innerText = formatScoreDisplay(score);
                     highScoreDisplay.classList.remove('hidden');
                 }
             } catch (err) {
@@ -3292,15 +3319,7 @@ async function gameOver() {
 
     // Hiển thị UI ban đầu
     finalScoreEl.innerText = "0";
-    if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_60px_rgba(239,68,68,0.9)] my-1 text-center";
-    } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_60px_rgba(249,115,22,0.9)] my-1 text-center";
-    } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_60px_rgba(34,197,94,0.9)] my-1 text-center";
-    } else {
-        finalScoreEl.className = "text-7xl sm:text-[9rem] md:text-[11rem] font-black font-orbitron tracking-tight leading-none text-cyan-400 text-shadow-[0_0_60px_rgba(34,211,238,0.9)] my-1 text-center";
-    }
+    updateFinalScoreStyle(0, score);
     highScoreDisplay.classList.add('hidden');
     if (finalSpeedEl) finalSpeedEl.innerText = `${maxSpeedReached.toFixed(2)}x`;
     speedEl.innerText = `${t('speed')} 1.00x`;
@@ -3436,8 +3455,10 @@ async function gameOver() {
         const progress = Math.min(elapsed / duration, 1);
         currentDisplayScore = Math.floor(progress * score);
 
-        if (finalScoreEl.innerText !== currentDisplayScore.toString()) {
-            finalScoreEl.innerText = currentDisplayScore;
+        const formattedStr = formatScoreDisplay(currentDisplayScore);
+        if (finalScoreEl.innerText !== formattedStr) {
+            finalScoreEl.innerText = formattedStr;
+            updateFinalScoreStyle(currentDisplayScore, score);
             // Cơ chế tick: tối đa 30 tick trong suốt quá trình chạy điểm
             const tickCount = Math.min(score, maxTicks);
             if (tickCount > 0) {
@@ -3486,7 +3507,7 @@ async function gameOver() {
                     saveBestScore(selectedSongIndex, score);
 
                     if (score > oldBest) {
-                        if (bestScoreLabel) bestScoreLabel.innerText = score;
+                        if (bestScoreLabel) bestScoreLabel.innerText = formatScoreDisplay(score);
                         highScoreDisplay.classList.remove('hidden');
                         if (newBestAudio) newBestAudio.play().catch(() => { });
                         setTimeout(showButtons, 1500); // Đợi audio kỷ lục phát xong mới hiện
