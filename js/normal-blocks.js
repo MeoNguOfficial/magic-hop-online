@@ -467,6 +467,8 @@ function getTileFromPool() {
     return tile;
 }
 
+let lastTileWasDelayed = false;
+
 // --- SINH GẠCH (SPAWN TILE) ---
 function spawnTile(isFirst = false) {
     let tileZ, tileX;
@@ -481,6 +483,7 @@ function spawnTile(isFirst = false) {
         tileX = 0;
         currentBeatIndex = 1;
         transitionStep = 0;
+        lastTileWasDelayed = false;
     } else {
         const prevTile = tiles[tiles.length - 1];
         prevX = prevTile ? prevTile.position.x : 0;
@@ -616,8 +619,20 @@ function spawnTile(isFirst = false) {
         }
     }
 
-    // Xác suất (90%) xuất hiện trễ khi khoảng cách time beat > 1.0s (áp dụng cho mọi chế độ spawn)
-    const isDelayedAppearance = !isFirst && (timeDiff > 1.0) && (Math.random() < 0.9);
+    // Điều kiện xuất hiện trễ:
+    // 1. Khoảng cách time beat hiện tại dài (> 1.0s)
+    // 2. Time beat kế tiếp sau nó KHÔNG PHẢI là khoảng dài > 1.0s (nextTimeDiff <= 1.0s) và ngắn hơn nhịp hiện tại (nextTimeDiff < timeDiff)
+    // 3. Không bị liên tiếp với block trễ trước đó (!lastTileWasDelayed)
+    // 4. Xác suất 90% (Math.random() < 0.9)
+    const isNextGapLong = nextTimeDiff > 1.0;
+    const isDelayedAppearance = !isFirst && 
+                                !lastTileWasDelayed && 
+                                (timeDiff > 1.0) && 
+                                !isNextGapLong && 
+                                (nextTimeDiff < timeDiff) && 
+                                (Math.random() < 0.9);
+
+    lastTileWasDelayed = isDelayedAppearance;
 
     if (isDelayedAppearance) {
         tile.visible = false;
