@@ -312,6 +312,10 @@ window.FakeBlocksManager = {
             
             if (fBorderLine) fakeTile.userData.borderLine = fBorderLine;
             
+            if (realTile.userData && realTile.userData.isDelayedAppearance) {
+                fakeTile.visible = false;
+            }
+            
             if (typeof scene !== 'undefined') scene.add(fakeTile);
             this.fakeTiles.push(fakeTile);
         });
@@ -836,6 +840,32 @@ window.FakeBlocksManager = {
                 }
             }
             
+            // Xử lý xuất hiện trễ (đồng bộ thời gian phản xạ theo Round với block thật ở tốc độ 1x chuẩn)
+            if (fTile.userData.isDelayedAppearance) {
+                const tileRound = (fTile.userData && typeof fTile.userData.roundValue !== 'undefined') ? fTile.userData.roundValue : (typeof roundCount !== 'undefined' ? roundCount : 0);
+                let reactionTime = 1.0;
+                if (tileRound > 1) {
+                    reactionTime = Math.max(0.1, 1.0 - (tileRound - 1) * 0.1);
+                }
+
+                const bVelocityZ = typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40;
+                const speedZ = Math.abs(bVelocityZ); // Luôn xử lý khoảng cách ở tốc độ 1x chuẩn
+                const triggerDistance = speedZ * reactionTime;
+                if (ballZ <= fTile.userData.targetZ + triggerDistance) {
+                    fTile.visible = true;
+                    fTile.userData.isDelayedAppearance = false;
+
+                    const animMode = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'slide';
+                    if (animMode === 'slide' || animMode === 'mix') {
+                        fTile.position.z = fTile.userData.targetZ - 40;
+                        fTile.userData.isEntering = true;
+                    } else {
+                        fTile.position.z = fTile.userData.targetZ;
+                        fTile.userData.isEntering = false;
+                    }
+                }
+            }
+
             // Animation lúc spawn (đồng bộ với block chính)
             if (fTile.userData.isEntering) {
                 const animationMultiplier = Math.max(1.0, gameSpeed * 0.8);

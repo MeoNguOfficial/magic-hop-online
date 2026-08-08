@@ -615,7 +615,15 @@ function spawnTile(isFirst = false) {
             isEntering = false;
         }
     }
-    if (isEntering) {
+
+    // Xác suất (90%) xuất hiện trễ khi khoảng cách time beat > 1.0s (áp dụng cho mọi chế độ spawn)
+    const isDelayedAppearance = !isFirst && (timeDiff > 1.0) && (Math.random() < 0.9);
+
+    if (isDelayedAppearance) {
+        tile.visible = false;
+        tile.position.z = tileZ;
+        tile.userData.targetZ = tileZ;
+    } else if (isEntering) {
         if (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') {
             tile.position.z = tileZ - 40;
             tile.userData.targetZ = tileZ;
@@ -645,7 +653,8 @@ function spawnTile(isFirst = false) {
         beatIndex: currentBeatIndex,
         isInitial16Blocks: isInitial16Blocks,
         scale: finalScale,
-        isEntering: isEntering,
+        isEntering: isDelayedAppearance ? false : isEntering,
+        isDelayedAppearance: isDelayedAppearance,
         isExiting: false, // Dọn dẹp rác Object Pooling
         isMoving: false,  // Dọn dẹp rác Object Pooling
         targetZ: tileZ,

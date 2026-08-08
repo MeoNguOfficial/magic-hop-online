@@ -1902,6 +1902,31 @@ function animate() {
                 }
             }
 
+            // Xử lý xuất hiện trễ (giảm dần thời gian phản xạ theo Round ở tốc độ 1x: Warmup & Round 1 = 1.0s, từ Round 2 giảm 0.1s/round xuống 0.1s)
+            if (tile.userData.isDelayedAppearance) {
+                const tileRound = (tile.userData && typeof tile.userData.roundValue !== 'undefined') ? tile.userData.roundValue : (typeof roundCount !== 'undefined' ? roundCount : 0);
+                let reactionTime = 1.0;
+                if (tileRound > 1) {
+                    reactionTime = Math.max(0.1, 1.0 - (tileRound - 1) * 0.1);
+                }
+
+                const bVelocityZ = typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40;
+                const speedZ = Math.abs(bVelocityZ); // Luôn xử lý khoảng cách ở tốc độ 1x chuẩn
+                const triggerDistance = speedZ * reactionTime;
+                if (ball.position.z <= tile.userData.targetZ + triggerDistance) {
+                    tile.visible = true;
+                    tile.userData.isDelayedAppearance = false;
+
+                    if (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') {
+                        tile.position.z = tile.userData.targetZ - 40;
+                        tile.userData.isEntering = true;
+                    } else {
+                        tile.position.z = tile.userData.targetZ;
+                        tile.userData.isEntering = false;
+                    }
+                }
+            }
+
             // Animation spawn
             if (tile.userData.isEntering) {
                 const animationMultiplier = Math.max(1.0, gameSpeed * 0.8);
