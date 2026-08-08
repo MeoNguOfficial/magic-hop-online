@@ -513,5 +513,8 @@
     "msg_confirm_reload": "Do you still want to proceed and reload the page?",
     "score_title": "FINAL SCORE",
     "lbl_best_score": "BEST SCORE",
-    "lbl_final_speed": "SPEED"
+    "lbl_final_speed": "SPEED",
+    "quick_settings_title": "QUICK SETTINGS",
+    "quick_settings_subtitle": "Quick Menu",
+    "show_hitbox_title": "Show Hitbox"
 }

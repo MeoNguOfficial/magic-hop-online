@@ -513,5 +513,8 @@
     "msg_confirm_reload": "それでも続行してページを再読み込みしますか？",
     "score_title": "最終スコア",
     "lbl_best_score": "ハイスコア",
-    "lbl_final_speed": "スピード"
+    "lbl_final_speed": "スピード",
+    "quick_settings_title": "QUICK SETTINGS",
+    "quick_settings_subtitle": "クイックメニュー",
+    "show_hitbox_title": "ヒットボックス表示"
 }

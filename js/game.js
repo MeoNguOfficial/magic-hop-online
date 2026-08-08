@@ -2468,18 +2468,17 @@ function animate() {
 
                 if (audio) {
                     let targetRate = initialFailSpeed * speedRatio;
-                    if (targetRate > 0.0625) {
-                        audio.playbackRate = targetRate;
-                    } else {
-                        audio.playbackRate = 0.0625;
-                    }
-                    if (speedRatio <= 0 && !audio.paused) {
+                    // Giới hạn tốc độ playbackRate tối thiểu là 0.20 để tránh méo âm/rè tiếng của trình duyệt
+                    audio.playbackRate = Math.max(0.20, targetRate);
+                    if (speedRatio <= 0.02 && !audio.paused) {
                         audio.pause();
                     }
                 }
 
                 if (gainNode) {
-                    gainNode.gain.value = Math.max(0.0, (typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume) * speedRatio);
+                    // Giảm dần âm lượng mượt mà theo đường cong mũ khi tape stop
+                    const currentVol = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
+                    gainNode.gain.value = Math.max(0.0, currentVol * Math.pow(speedRatio, 1.5));
                 }
 
                 const totalFailTime = failDuration + (typeof failWaitDuration !== 'undefined' ? failWaitDuration : 0.22);
@@ -4306,33 +4305,89 @@ function showTapToOverlay(type = 'start') {
 
         quickSettingsPanel = document.createElement('div');
         quickSettingsPanel.id = 'tap-quick-settings-panel';
-        quickSettingsPanel.className = "absolute bottom-20 right-6 w-64 rounded-xl border border-cyan-500/40 bg-cyan-950/90 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.2)] p-4 flex flex-col gap-4 hidden z-50 font-rajdhani";
+        quickSettingsPanel.className = "absolute bottom-20 right-6 w-72 max-h-[460px] rounded-xl border border-cyan-500/40 bg-cyan-950/95 backdrop-blur-md shadow-[0_0_25px_rgba(34,211,238,0.25)] p-4 flex flex-col gap-2 hidden z-50 font-rajdhani";
 
         quickSettingsPanel.innerHTML = `
-            <h3 class="text-cyan-400 font-orbitron font-bold text-sm text-center border-b border-cyan-500/30 pb-2">QUICK SETTINGS</h3>
-            <div class="flex flex-col gap-1">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-gray-300 font-bold">${typeof t === 'function' ? t('game_vol') : 'GAME VOLUME'}</span>
-                    <span id="qs-game-vol-val" class="text-cyan-400 font-bold">80%</span>
-                </div>
-                <input type="range" id="qs-game-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+            <div class="border-b border-cyan-500/30 pb-2">
+                <h3 class="text-cyan-400 font-orbitron font-bold text-sm tracking-wider text-center" data-i18n="quick_settings_title">QUICK SETTINGS</h3>
             </div>
-            <div class="flex flex-col gap-1">
-                <div class="flex justify-between items-center text-xs">
-                    <span class="text-gray-300 font-bold">${typeof t === 'function' ? t('sens_title') : 'SENSITIVITY'}</span>
-                    <span id="qs-sens-val" class="text-cyan-400 font-bold">1.0x</span>
+            <div class="max-h-[350px] overflow-y-auto space-y-3 pr-1 text-xs scrollbar-thin scrollbar-thumb-cyan-500/40">
+                <!-- Game Volume -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300 font-bold" data-i18n="game_vol">Âm lượng Nhạc</span>
+                        <span id="qs-game-vol-val" class="text-cyan-400 font-bold">80%</span>
+                    </div>
+                    <input type="range" id="qs-game-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
                 </div>
-                <input type="range" id="qs-sens" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full accent-cyan-400 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer">
-            </div>
-            <div class="flex flex-col gap-1">
-                <span class="text-gray-300 font-bold text-xs mb-1">${typeof t === 'function' ? t('quality_title') : 'GRAPHICS QUALITY'}</span>
-                <select id="qs-quality" class="w-full bg-cyan-950 border border-cyan-500/50 rounded px-2 py-1.5 text-xs text-cyan-300 outline-none font-bold">
-                    <option value="simple">Simple (Low)</option>
-                    <option value="hd">HD (Medium)</option>
-                    <option value="fhd">FHD (High)</option>
-                    <option value="qhd">QHD (Quad HD)</option>
-                    <option value="uhd">UHD (Ultra HD)</option>
-                </select>
+
+                <!-- SFX Volume -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300 font-bold" data-i18n="sfx_vol">Âm lượng Hiệu ứng SFX</span>
+                        <span id="qs-sfx-vol-val" class="text-cyan-400 font-bold">80%</span>
+                    </div>
+                    <input type="range" id="qs-sfx-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Sensitivity -->
+                <div class="flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="text-gray-300 font-bold" data-i18n="sens_title">Độ nhạy bóng</span>
+                        <span id="qs-sens-val" class="text-cyan-400 font-bold">1.0x</span>
+                    </div>
+                    <input type="range" id="qs-sens" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                </div>
+
+                <!-- Spawn Animation Mode -->
+                <div class="flex flex-col gap-1">
+                    <span class="text-gray-300 font-bold mb-0.5" data-i18n="spawn_title">Xuất hiện Block</span>
+                    <select id="qs-spawn-mode" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
+                        <option value="slide" data-i18n="spawn_slide">Hiệu ứng Trượt (Slide)</option>
+                        <option value="mix" data-i18n="spawn_mix">Hỗn hợp (Mix)</option>
+                        <option value="none" data-i18n="spawn_inst">Ngay lập tức (Instant)</option>
+                    </select>
+                </div>
+
+                <!-- Graphics Quality -->
+                <div class="flex flex-col gap-1">
+                    <span class="text-gray-300 font-bold mb-0.5" data-i18n="quality_title">Chất lượng Đồ họa</span>
+                    <select id="qs-quality" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
+                        <option value="simple">Simple (Thấp)</option>
+                        <option value="hd">HD (Trung bình)</option>
+                        <option value="fhd">FHD (Cao)</option>
+                        <option value="qhd">QHD (Quad HD)</option>
+                        <option value="uhd">UHD (Ultra HD)</option>
+                    </select>
+                </div>
+
+                <!-- Toggle Options Grid -->
+                <div class="grid grid-cols-2 gap-1.5 border-t border-cyan-500/20 pt-2">
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="anim_title">Nẩy Gạch</span>
+                        <input type="checkbox" id="qs-tile-bounce" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="block_shatter_title">Vỡ Mảnh</span>
+                        <input type="checkbox" id="qs-block-shatter" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="ball_glow_title">Bóng Phát Sáng</span>
+                        <input type="checkbox" id="qs-ball-glow" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="ball_trail_title">Vệt Đuôi Bóng</span>
+                        <input type="checkbox" id="qs-ball-trail" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="sw_title">Sóng Xung Kích</span>
+                        <input type="checkbox" id="qs-shockwaves" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="boundaries_title">Hiện Đường Biên</span>
+                        <input type="checkbox" id="qs-show-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
+                </div>
             </div>
         `;
         tapToPlayOverlay.appendChild(quickSettingsPanel);
@@ -4341,6 +4396,9 @@ function showTapToOverlay(type = 'start') {
         quickSettingsBtn.addEventListener('click', (e) => {
             stopProp(e);
             quickSettingsPanel.classList.toggle('hidden');
+            if (!quickSettingsPanel.classList.contains('hidden')) {
+                if (typeof applyTranslations === 'function') applyTranslations();
+            }
         });
         ['mousedown', 'touchstart', 'dblclick'].forEach(evt => quickSettingsBtn.addEventListener(evt, stopProp));
         ['click', 'mousedown', 'touchstart', 'dblclick'].forEach(evt => quickSettingsPanel.addEventListener(evt, stopProp));
@@ -4356,6 +4414,22 @@ function showTapToOverlay(type = 'start') {
             }
         });
 
+        const qsSfxVol = document.getElementById('qs-sfx-vol');
+        const qsSfxVolVal = document.getElementById('qs-sfx-vol-val');
+        if (qsSfxVol) {
+            qsSfxVol.addEventListener('input', (e) => {
+                const vol = parseFloat(e.target.value);
+                if (qsSfxVolVal) qsSfxVolVal.innerText = Math.round(vol * 100) + '%';
+                if (typeof playSfxVolumeSlider !== 'undefined' && playSfxVolumeSlider) {
+                    playSfxVolumeSlider.value = vol;
+                    playSfxVolumeSlider.dispatchEvent(new Event('input'));
+                } else if (typeof sfxVolumeSlider !== 'undefined' && sfxVolumeSlider) {
+                    sfxVolumeSlider.value = vol;
+                    sfxVolumeSlider.dispatchEvent(new Event('input'));
+                }
+            });
+        }
+
         const qsSens = document.getElementById('qs-sens');
         const qsSensVal = document.getElementById('qs-sens-val');
         qsSens.addEventListener('input', (e) => {
@@ -4367,6 +4441,19 @@ function showTapToOverlay(type = 'start') {
             }
         });
 
+        const qsSpawnMode = document.getElementById('qs-spawn-mode');
+        if (qsSpawnMode) {
+            qsSpawnMode.addEventListener('change', (e) => {
+                if (typeof spawnAnimationSelect !== 'undefined' && spawnAnimationSelect) {
+                    spawnAnimationSelect.value = e.target.value;
+                    spawnAnimationSelect.dispatchEvent(new Event('change'));
+                } else {
+                    spawnAnimationMode = e.target.value;
+                    localStorage.setItem('spawnAnimationMode', spawnAnimationMode);
+                }
+            });
+        }
+
         const qsQuality = document.getElementById('qs-quality');
         qsQuality.addEventListener('change', (e) => {
             const mainRadio = document.querySelector(`input[name="graphics-quality"][value="${e.target.value}"]`);
@@ -4375,14 +4462,71 @@ function showTapToOverlay(type = 'start') {
                 if (typeof applySettings === 'function') applySettings();
             }
         });
+
+        const bindCb = (qsId, mainToggle, varName, localKey, callback) => {
+            const el = document.getElementById(qsId);
+            if (!el) return;
+            el.addEventListener('change', (e) => {
+                const checked = e.target.checked;
+                if (typeof mainToggle !== 'undefined' && mainToggle) {
+                    mainToggle.checked = checked;
+                    mainToggle.dispatchEvent(new Event('change'));
+                } else {
+                    if (typeof window[varName] !== 'undefined') window[varName] = checked;
+                    localStorage.setItem(localKey, checked);
+                }
+                if (typeof callback === 'function') callback();
+                if (typeof applySettings === 'function') applySettings();
+            });
+        };
+
+        bindCb('qs-tile-bounce', typeof toggleTileBounce !== 'undefined' ? toggleTileBounce : null, 'tileBounceEnabled', 'tileBounceEnabled');
+        bindCb('qs-block-shatter', typeof toggleBlockShatter !== 'undefined' ? toggleBlockShatter : null, 'blockShatterEnabled', 'blockShatterEnabled');
+        bindCb('qs-ball-glow', typeof toggleBallGlow !== 'undefined' ? toggleBallGlow : null, 'ballGlowEnabled', 'ballGlowEnabled');
+        bindCb('qs-ball-trail', typeof toggleBallTrail !== 'undefined' ? toggleBallTrail : null, 'ballTrailEnabled', 'ballTrailEnabled');
+        bindCb('qs-shockwaves', typeof toggleShockwaves !== 'undefined' ? toggleShockwaves : null, 'shockwavesEnabled', 'shockwavesEnabled');
+        bindCb('qs-show-boundaries', typeof toggleShowBoundaries !== 'undefined' ? toggleShowBoundaries : null, 'showBoundariesEnabled', 'showBoundariesEnabled', typeof updateBoundariesVisibility === 'function' ? updateBoundariesVisibility : null);
     }
 
     if (quickSettingsPanel) {
-        document.getElementById('qs-game-vol').value = typeof gameVolume !== 'undefined' ? gameVolume : 0.8;
-        document.getElementById('qs-game-vol-val').innerText = Math.round((typeof gameVolume !== 'undefined' ? gameVolume : 0.8) * 100) + '%';
-        document.getElementById('qs-sens').value = typeof sensitivity !== 'undefined' ? sensitivity : 1.0;
-        document.getElementById('qs-sens-val').innerText = (typeof sensitivity !== 'undefined' ? sensitivity : 1.0).toFixed(1) + 'x';
-        document.getElementById('qs-quality').value = typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd';
+        const gameVol = typeof gameVolume !== 'undefined' ? gameVolume : 0.8;
+        const sfxVol = typeof playSfxVolume !== 'undefined' ? playSfxVolume : (typeof sfxVolume !== 'undefined' ? sfxVolume : 0.8);
+        const sens = typeof sensitivity !== 'undefined' ? sensitivity : 1.0;
+        const quality = typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd';
+        const spawnMode = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'slide';
+
+        document.getElementById('qs-game-vol').value = gameVol;
+        document.getElementById('qs-game-vol-val').innerText = Math.round(gameVol * 100) + '%';
+
+        const sfxEl = document.getElementById('qs-sfx-vol');
+        if (sfxEl) {
+            sfxEl.value = sfxVol;
+            const sfxValEl = document.getElementById('qs-sfx-vol-val');
+            if (sfxValEl) sfxValEl.innerText = Math.round(sfxVol * 100) + '%';
+        }
+
+        document.getElementById('qs-sens').value = sens;
+        document.getElementById('qs-sens-val').innerText = sens.toFixed(1) + 'x';
+
+        const spawnEl = document.getElementById('qs-spawn-mode');
+        if (spawnEl) spawnEl.value = spawnMode;
+
+        document.getElementById('qs-quality').value = quality;
+
+        const setCb = (id, val) => {
+            const cb = document.getElementById(id);
+            if (cb) cb.checked = !!val;
+        };
+
+        setCb('qs-tile-bounce', typeof tileBounceEnabled !== 'undefined' ? tileBounceEnabled : true);
+        setCb('qs-block-shatter', typeof blockShatterEnabled !== 'undefined' ? blockShatterEnabled : true);
+        setCb('qs-ball-glow', typeof ballGlowEnabled !== 'undefined' ? ballGlowEnabled : true);
+        setCb('qs-ball-trail', typeof ballTrailEnabled !== 'undefined' ? ballTrailEnabled : true);
+        setCb('qs-shockwaves', typeof shockwavesEnabled !== 'undefined' ? shockwavesEnabled : true);
+        setCb('qs-show-boundaries', typeof showBoundariesEnabled !== 'undefined' ? showBoundariesEnabled : true);
+
+        if (typeof applyTranslations === 'function') applyTranslations();
+
         quickSettingsPanel.classList.add('hidden');
     }
 

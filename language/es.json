@@ -513,5 +513,8 @@
     "msg_confirm_reload": "¿Aún desea continuar y recargar la página?",
     "score_title": "PUNTUACIÓN FINAL",
     "lbl_best_score": "MEJOR PUNTUACIÓN",
-    "lbl_final_speed": "VELOCIDAD"
+    "lbl_final_speed": "VELOCIDAD",
+    "quick_settings_title": "QUICK SETTINGS",
+    "quick_settings_subtitle": "Menú rápido",
+    "show_hitbox_title": "Mostrar Hitbox"
 }

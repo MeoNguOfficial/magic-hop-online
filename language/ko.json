@@ -513,5 +513,8 @@
     "msg_confirm_reload": "페이지를 다시 로드하시겠습니까?",
     "score_title": "최종 점수",
     "lbl_best_score": "최고 기록",
-    "lbl_final_speed": "속도"
+    "lbl_final_speed": "속도",
+    "quick_settings_title": "QUICK SETTINGS",
+    "quick_settings_subtitle": "빠른 메뉴",
+    "show_hitbox_title": "히트박스 표시"
 }

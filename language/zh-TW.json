@@ -513,5 +513,8 @@
     "msg_confirm_reload": "您確定要繼續重新載入頁面嗎？",
     "score_title": "最終得分",
     "lbl_best_score": "最高紀錄",
-    "lbl_final_speed": "速度"
+    "lbl_final_speed": "速度",
+    "quick_settings_title": "QUICK SETTINGS",
+    "quick_settings_subtitle": "快捷選單",
+    "show_hitbox_title": "顯示碰撞箱"
 }

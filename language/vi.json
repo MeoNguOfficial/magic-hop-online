@@ -513,5 +513,8 @@
     "msg_confirm_reload": "Bạn vẫn muốn tiếp tục tải lại trang?",
     "score_title": "ĐIỂM SỐ CUỐI CÙNG",
     "lbl_best_score": "KỶ LỤC",
-    "lbl_final_speed": "TỐC ĐỘ"
+    "lbl_final_speed": "TỐC ĐỘ",
+    "quick_settings_title": "QUICK SETTINGS",
+    "quick_settings_subtitle": "Cài đặt nhanh",
+    "show_hitbox_title": "Hiện Hitbox"
 }
