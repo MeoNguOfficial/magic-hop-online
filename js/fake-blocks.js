@@ -852,6 +852,11 @@ window.FakeBlocksManager = {
                         fTile.position.z = targetZ;
                         fTile.userData.isEntering = false;
                     }
+                } else {
+                    if (fTile.userData.targetZ !== undefined) {
+                        fTile.position.z = fTile.userData.targetZ;
+                    }
+                    fTile.userData.isEntering = false;
                 }
             }
             

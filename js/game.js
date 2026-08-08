@@ -1916,6 +1916,11 @@ function animate() {
                         tile.position.z = targetZ;
                         tile.userData.isEntering = false;
                     }
+                } else {
+                    if (tile.userData.targetZ !== undefined) {
+                        tile.position.z = tile.userData.targetZ;
+                    }
+                    tile.userData.isEntering = false;
                 }
             }
         });

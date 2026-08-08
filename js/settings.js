@@ -995,8 +995,31 @@ function applySettings() {
         if (typeof updateBoundariesVisibility === 'function') updateBoundariesVisibility();
     }
     if (spawnAnimationSelect) {
+        const oldMode = spawnAnimationMode;
         spawnAnimationMode = spawnAnimationSelect.value;
         localStorage.setItem('spawnAnimationMode', spawnAnimationMode);
+        if (spawnAnimationMode === 'none' && oldMode !== 'none') {
+            if (typeof tiles !== 'undefined' && Array.isArray(tiles)) {
+                tiles.forEach(tile => {
+                    if (tile && tile.userData && tile.userData.isEntering) {
+                        if (tile.userData.targetZ !== undefined) {
+                            tile.position.z = tile.userData.targetZ;
+                        }
+                        tile.userData.isEntering = false;
+                    }
+                });
+            }
+            if (typeof window.FakeBlocksManager !== 'undefined' && window.FakeBlocksManager && window.FakeBlocksManager.fakeTiles) {
+                window.FakeBlocksManager.fakeTiles.forEach(ft => {
+                    if (ft && ft.userData && ft.userData.isEntering) {
+                        if (ft.userData.targetZ !== undefined) {
+                            ft.position.z = ft.userData.targetZ;
+                        }
+                        ft.userData.isEntering = false;
+                    }
+                });
+            }
+        }
     }
     if (typeof limitBeatmapAudioSelect !== 'undefined' && limitBeatmapAudioSelect) {
         limitBeatmapAudioCount = parseInt(limitBeatmapAudioSelect.value);
