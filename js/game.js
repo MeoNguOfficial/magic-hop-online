@@ -435,6 +435,252 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
     }
 }
 
+// --- HỆ THỐNG HIỂN THỊ COMBO PERFECT TỐI ƯU HỆ THỐNG 60/120 FPS ---
+let lastPerfectComboText = "";
+let lastPerfectComboClass = "";
+let lastPerfectAnimTime = 0;
+
+// DOM Element Pools (Tái sử dụng phần tử DOM để tránh rác RAM & khựng lag)
+const MAX_SPARKS_POOL = 16;
+const sparkPool = [];
+let sparkPoolInitialized = false;
+let ghostElement = null;
+
+function initComboUiPools() {
+    const container = typeof comboUiWrapper !== 'undefined' && comboUiWrapper ? comboUiWrapper : (document.getElementById('combo-ui-wrapper') || (comboEl ? comboEl.parentElement : null));
+    if (!container || sparkPoolInitialized) return;
+
+    // 1. Element bóng ma Shockwave (Tái sử dụng 1 phần tử duy nhất)
+    ghostElement = document.createElement('div');
+    ghostElement.className = 'perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none';
+    ghostElement.style.display = 'none';
+    container.appendChild(ghostElement);
+
+    // 2. Element Pool các hạt tia sáng (Sparkles Pool)
+    for (let i = 0; i < MAX_SPARKS_POOL; i++) {
+        const spark = document.createElement('div');
+        spark.className = 'perfect-spark-anime';
+        spark.style.display = 'none';
+        container.appendChild(spark);
+        sparkPool.push(spark);
+    }
+
+    sparkPoolInitialized = true;
+}
+
+function spawnPerfectShockwaveGhost(text, tierClass) {
+    if (!sparkPoolInitialized) initComboUiPools();
+    if (!ghostElement || !text) return;
+
+    if (typeof performanceModeEnabled !== 'undefined' && performanceModeEnabled) return;
+
+    if (typeof anime !== 'undefined') {
+        anime.remove(ghostElement);
+    }
+
+    ghostElement.className = `perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none ${tierClass}`;
+    ghostElement.innerText = text;
+    ghostElement.style.display = 'block';
+
+    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        anime({
+            targets: ghostElement,
+            scale: [1.0, 1.8],
+            opacity: [0.8, 0],
+            duration: 260,
+            easing: 'easeOutQuad',
+            complete: () => {
+                if (ghostElement) ghostElement.style.display = 'none';
+            }
+        });
+    } else {
+        setTimeout(() => {
+            if (ghostElement) ghostElement.style.display = 'none';
+        }, 180);
+    }
+}
+
+// --- HỆ THỐNG HIỂN THỊ COMBO PERFECT TỐI ƯU (THAY THẾ ANIMATION TỨC THÌ & MỜ MƯỢT KHI NGHỈ) ---
+let comboHideTimer = null;
+
+function triggerPerfectComboUI(comboCount) {
+    if (!comboEl) return;
+
+    // Hủy timer ẩn combo nếu có cú nhảy mới
+    if (comboHideTimer) {
+        clearTimeout(comboHideTimer);
+        comboHideTimer = null;
+    }
+
+    // 1. Ngắt NGAY LẬP TỨC animation cũ đang chạy trên comboEl và scoreEl (Thay thế tức thì)
+    if (typeof anime !== 'undefined') {
+        anime.remove(comboEl);
+        if (typeof scoreEl !== 'undefined' && scoreEl) anime.remove(scoreEl);
+    }
+
+    // 2. Nẩy nhẹ Score HUD (Tối ưu độ nẩy vừa phải)
+    if (typeof scoreEl !== 'undefined' && scoreEl) {
+        if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+            anime({
+                targets: scoreEl,
+                scale: [1.08, 1.0],
+                duration: 180,
+                easing: 'easeOutQuad'
+            });
+        } else {
+            scoreEl.classList.remove('score-pulse');
+            void scoreEl.offsetWidth;
+            scoreEl.classList.add('score-pulse');
+        }
+    }
+
+    // 3. Set Text & Tier Class mới tức thì
+    const newText = `PERFECT x${comboCount}`;
+    let newTierClass = 'combo-tier-1';
+    if (comboCount >= 15) newTierClass = 'combo-tier-4';
+    else if (comboCount >= 8) newTierClass = 'combo-tier-3';
+    else if (comboCount >= 5) newTierClass = 'combo-tier-2';
+
+    comboEl.innerText = newText;
+    comboEl.className = `text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none ${newTierClass}`;
+
+    // 4. Khởi chạy animation mới TỨC THÌ đè lên animation cũ (Giảm Scale nẩy vừa mắt, tinh tế)
+    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        comboEl.style.opacity = 1;
+        anime({
+            targets: comboEl,
+            scale: [1.18, 0.98, 1.0],
+            translateY: [-4, 0],
+            rotate: [comboCount % 2 === 0 ? -2.5 : 2.5, 0],
+            duration: 300,
+            easing: 'easeOutBack(1.5)'
+        });
+    } else {
+        comboEl.classList.remove('active');
+        void comboEl.offsetWidth;
+        comboEl.classList.add('active');
+    }
+
+    // 5. Bùng nổ hạt Sparkles với AnimeJS (Batched Pooling)
+    spawnPerfectSparks(comboCount);
+
+    // 6. Tự động mờ dần combo UI mượt mà sau 1.5 giây nếu có quãng nghỉ nhịp nhạc
+    comboHideTimer = setTimeout(() => {
+        clearPerfectComboUI();
+    }, 1500);
+}
+
+function clearPerfectComboUI() {
+    if (!comboEl) return;
+
+    if (comboHideTimer) {
+        clearTimeout(comboHideTimer);
+        comboHideTimer = null;
+    }
+
+    lastPerfectComboText = "";
+    lastPerfectComboClass = "";
+    lastPerfectAnimTime = 0;
+
+    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        anime.remove(comboEl);
+        anime({
+            targets: comboEl,
+            opacity: 0,
+            scale: 0.85,
+            duration: 350,
+            easing: 'easeOutQuad',
+            complete: () => {
+                comboEl.innerText = "";
+                comboEl.className = "text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider opacity-0 select-none";
+            }
+        });
+    } else {
+        comboEl.classList.remove('active');
+        comboEl.innerText = "";
+    }
+}
+
+function spawnPerfectSparks(comboCount) {
+    if (!sparkPoolInitialized) initComboUiPools();
+
+    // Tự động tối ưu số hạt theo thiết bị (Mobile vs PC) & cấu hình chất lượng đồ họa
+    const isMobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+    let maxCount = isMobileCheck ? 2 : 6;
+    if (typeof performanceModeEnabled !== 'undefined' && performanceModeEnabled) {
+        maxCount = 2;
+    } else if (typeof currentGraphicsQuality !== 'undefined') {
+        if (currentGraphicsQuality === 'simple') maxCount = isMobileCheck ? 2 : 3;
+        else if (currentGraphicsQuality === 'hd') maxCount = isMobileCheck ? 3 : 5;
+        else if (currentGraphicsQuality === 'fhd' || currentGraphicsQuality === 'qhd') maxCount = isMobileCheck ? 4 : 8;
+    }
+
+    const count = Math.min(maxCount, 3 + Math.floor(comboCount / 3));
+    const colors = comboCount >= 15
+        ? ['#ff0055', '#ffaa00', '#00ffff', '#ff00ff', '#ffffff']
+        : comboCount >= 8
+            ? ['#ff5500', '#ff0055', '#ffaa00', '#ffffff']
+            : comboCount >= 5
+                ? ['#ffaa00', '#ffee00', '#ffffff']
+                : ['#ffee00', '#00ffff', '#ffffff'];
+
+    const activeSparks = [];
+
+    for (let i = 0; i < count; i++) {
+        const spark = sparkPool[i % sparkPool.length];
+        if (!spark) continue;
+
+        if (typeof anime !== 'undefined') {
+            anime.remove(spark);
+        }
+
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        spark.style.color = color;
+        spark.style.backgroundColor = color;
+        spark.style.left = '50%';
+        spark.style.top = '50%';
+        spark.style.display = 'block';
+
+        const angle = Math.random() * Math.PI * 2;
+        const dist = 25 + Math.random() * 50;
+        const targetX = Math.cos(angle) * dist;
+        const targetY = Math.sin(angle) * dist - 8;
+        const targetScale = 0.1 + Math.random() * 0.2;
+
+        spark._targetX = targetX;
+        spark._targetY = targetY;
+        spark._targetScale = targetScale;
+        spark._targetRot = Math.floor(Math.random() * 360);
+
+        activeSparks.push(spark);
+    }
+
+    if (activeSparks.length === 0) return;
+
+    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        // Gộp tất cả hạt vào 1 tween batch duy nhất của AnimeJS để tối ưu CPU/GPU
+        anime({
+            targets: activeSparks,
+            translateX: (el) => [0, el._targetX],
+            translateY: (el) => [0, el._targetY],
+            scale: (el) => [1.3, el._targetScale],
+            opacity: [1, 0],
+            rotate: (el) => el._targetRot,
+            duration: 380 + Math.random() * 120,
+            easing: 'easeOutExpo',
+            complete: (anim) => {
+                anim.animatables.forEach(a => {
+                    if (a.target) a.target.style.display = 'none';
+                });
+            }
+        });
+    } else {
+        setTimeout(() => {
+            activeSparks.forEach(s => s.style.display = 'none');
+        }, 300);
+    }
+}
+
 // Replaced/Removed perfect ring
 function triggerPerfectRing(position) { }
 
@@ -2152,11 +2398,7 @@ function animate() {
                             score += 1 + Math.min(20, comboCount);
 
 
-                            comboEl.innerText = `PERFECT x${comboCount}`;
-                            comboEl.style.color = comboCount >= 15 ? "#ff00ff" : (comboCount >= 8 ? "#ffaa00" : "#ffff00");
-                            comboEl.classList.remove('active');
-                            void comboEl.offsetWidth;
-                            comboEl.classList.add('active');
+                            triggerPerfectComboUI(comboCount);
 
                             if (targetTile.userData && targetTile.userData.centerMesh) {
                                 targetTile.userData.centerMesh.visible = true;
@@ -2170,8 +2412,7 @@ function animate() {
                             }
                             comboCount = 0;
                             score += 1;
-                            comboEl.classList.remove('active');
-                            comboEl.innerText = "";
+                            clearPerfectComboUI();
                         }
 
                         if (lastDisplayedScore !== score) {
@@ -2345,11 +2586,7 @@ function animate() {
                         }
                         score += 1 + Math.min(20, comboCount);
 
-                        comboEl.innerText = `PERFECT x${comboCount}`;
-                        comboEl.style.color = comboCount >= 15 ? "#ff00ff" : (comboCount >= 8 ? "#ffaa00" : "#ffff00");
-                        comboEl.classList.remove('active');
-                        void comboEl.offsetWidth;
-                        comboEl.classList.add('active');
+                        triggerPerfectComboUI(comboCount);
 
                         if (targetTile.userData && targetTile.userData.centerMesh) {
                             targetTile.userData.centerMesh.visible = true;
@@ -2363,8 +2600,7 @@ function animate() {
                         }
                         comboCount = 0;
                         score += 1;
-                        comboEl.classList.remove('active');
-                        comboEl.innerText = "";
+                        clearPerfectComboUI();
                     }
 
                     if (lastDisplayedScore !== score) {
@@ -2781,8 +3017,7 @@ async function gameVictory() {
     blocksSinceLastRound = 0;
     targetSpeed = 1.0;
     totalTilesJumped = 0;
-    comboEl.classList.remove('active');
-    comboEl.innerText = "";
+    clearPerfectComboUI();
 
     if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
         const now = audioCtx.currentTime;
@@ -3293,8 +3528,7 @@ async function gameOver() {
     blocksSinceLastRound = 0;
     targetSpeed = 1.0;
     totalTilesJumped = 0;
-    comboEl.classList.remove('active');
-    comboEl.innerText = "";
+    clearPerfectComboUI();
 
     if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
         const now = audioCtx.currentTime;
@@ -3602,8 +3836,7 @@ function resetGameScene() {
         scoreEl.classList.remove('text-orange-500', 'neon-glow-orange', 'text-green-400', 'neon-glow-green', 'text-yellow-400', 'neon-glow-yellow', 'text-red-500', 'neon-glow-red');
         scoreEl.classList.add('text-cyan-400', 'neon-glow-cyan');
     }
-    comboEl.innerText = "";
-    comboEl.classList.remove('active');
+    clearPerfectComboUI();
     if (perfectStreakHud) perfectStreakHud.innerText = "0";
     speedEl.innerText = `${t('speed')} 1.00x`;
     lastDisplayedSpeedText = `${t('speed')} 1.00x`;

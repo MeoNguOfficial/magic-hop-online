@@ -18,6 +18,7 @@ window.formatScoreDisplay = formatScoreDisplay;
 const container = document.getElementById('canvas-container');
 const scoreEl = document.getElementById('score');
 const comboEl = document.getElementById('combo-ui');
+const comboUiWrapper = document.getElementById('combo-ui-wrapper');
 const autoplayIndicator = document.getElementById('autoplay-indicator');
 const speedEl = document.getElementById('speed');
 const perfectStreakHud = document.getElementById('perfect-streak-hud');
