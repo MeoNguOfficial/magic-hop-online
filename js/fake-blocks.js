@@ -207,8 +207,7 @@ window.FakeBlocksManager = {
             }
         }
 
-        const rawApiForFake = localStorage.getItem('graphicsAPI') || 'webgl';
-        const isWebGPUForFake = (rawApiForFake === 'd2ViZ3B1' || rawApiForFake === 'webgpu');
+        const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
         positionsToSpawn.forEach(posX => {
             let fakeTile;
@@ -659,24 +658,26 @@ window.FakeBlocksManager = {
         if (!this.fragmentPool) this.fragmentPool = [];
         
         let tileColor;
-        if (fTile.material && fTile.material.color) {
+        if (fTile.userData && fTile.userData.themeColor) {
+            tileColor = new THREE.Color(fTile.userData.themeColor);
+        } else if (fTile.material && fTile.material.color) {
             tileColor = fTile.material.color.clone();
         } else {
             tileColor = new THREE.Color(0x00ffff);
         }
         
-        const count = 6;
+        const count = 8;
         const tWidth = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
         const rTileL = typeof tileLength !== 'undefined' ? tileLength : 4.0;
-        const scaleX = fTile.scale.x || 1.0;
-        const scaleZ = fTile.scale.z || 1.0;
+        const scaleX = (fTile.scale && fTile.scale.x) ? fTile.scale.x : 1.0;
+        const scaleZ = (fTile.scale && fTile.scale.z) ? fTile.scale.z : 1.0;
         const actualWidth = tWidth * scaleX;
         const actualLength = rTileL * scaleZ;
         
         for (let i = 0; i < count; i++) {
-            const w = (Math.random() * 0.4 + 0.2) * scaleX;
-            const h = Math.random() * 0.2 + 0.1;
-            const d = (Math.random() * 0.4 + 0.2) * scaleZ;
+            const w = (Math.random() * 0.4 + 0.25) * scaleX;
+            const h = Math.random() * 0.25 + 0.12;
+            const d = (Math.random() * 0.4 + 0.25) * scaleZ;
             
             let frag;
             if (this.fragmentPool.length > 0) {
@@ -686,18 +687,20 @@ window.FakeBlocksManager = {
                     if (frag.material.emissive) {
                         frag.material.emissive.copy(tileColor).multiplyScalar(0.3);
                     }
-                    frag.material.opacity = 0.8;
+                    frag.material.opacity = 0.95;
+                    frag.material.needsUpdate = true;
                 }
                 frag.visible = true;
             } else {
                 if (!this.sharedFragGeometry) {
                     this.sharedFragGeometry = new THREE.BoxGeometry(1, 1, 1);
                 }
-                // Sử dụng MeshBasicMaterial cực kì nhẹ để tối ưu hóa hiệu năng render mảnh vỡ
+                // Sử dụng MeshBasicMaterial với depthWrite false tương thích 100% WebGPU
                 const mat = new THREE.MeshBasicMaterial({
                     color: tileColor,
                     transparent: true,
-                    opacity: 0.8
+                    opacity: 0.95,
+                    depthWrite: false
                 });
                 frag = new THREE.Mesh(this.sharedFragGeometry, mat);
             }
@@ -823,8 +826,7 @@ window.FakeBlocksManager = {
                     if (fTile.material.emissive) fTile.material.emissive.copy(tempColor).multiplyScalar(0.2);
                 }
                 if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
-                    const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-                    const isWebGPU = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu');
+                    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
                     fTile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
                 }
                 const glowMesh = fTile.getObjectByName("glowMesh");
@@ -956,10 +958,11 @@ window.FakeBlocksManager = {
                 frag.rotation.y += frag.userData.ry * delta;
                 frag.rotation.z += frag.userData.rz * delta;
                 
-                frag.userData.opacity -= 1.5 * delta;
-                frag.material.opacity = frag.userData.opacity;
+                frag.userData.opacity -= 1.2 * delta;
+                const currentOp = Math.max(0, frag.userData.opacity);
+                if (frag.material) frag.material.opacity = currentOp;
                 
-                if (frag.position.y < -20 || frag.userData.opacity <= 0) {
+                if (frag.position.y < -20 || currentOp <= 0) {
                     if (typeof scene !== 'undefined') scene.remove(frag);
                     frag.visible = false;
                     if (!this.fragmentPool) this.fragmentPool = [];

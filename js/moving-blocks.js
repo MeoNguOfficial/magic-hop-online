@@ -181,8 +181,7 @@ window.MovingBlocksManager = {
                         }
                         // Cập nhật màu viền (borderLine)
                         if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                            const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-                            const isWebGPU = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu');
+                            const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
                             tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : tempColor.getHex());
                         }
                         // Cập nhật màu glowMesh

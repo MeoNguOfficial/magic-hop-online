@@ -122,9 +122,8 @@ function initGlowMaterials() {
         capMaterial = new THREE.MeshBasicMaterial({ visible: false });
     }
     if (!baseGlowMaterial) {
-        const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-        const currentApi = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu') ? 'webgpu' : 'webgl';
-        if (currentApi === 'webgpu') {
+        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+        if (isWebGPU) {
             const texture = createGlowTexture();
             baseGlowMaterial = new THREE.MeshBasicMaterial({
                 color: 0x00ffff,
@@ -323,8 +322,7 @@ function pushTileToPool(tile) {
 // --- OBJECT POOL: LẤY / TẠO MESH CHO GẠCH ---
 function getTileFromPool() {
     let tile;
-    const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-    const isWebGPU = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu');
+    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
     if (tilePool.length > 0) {
         tile = tilePool.pop();
@@ -371,8 +369,7 @@ function getTileFromPool() {
             cachedTileGeo.center();
         }
 
-        const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-        const isWebGPU = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu');
+        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
         const tileMat = isWebGPU
             ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.8, depthWrite: false })
@@ -619,8 +616,7 @@ function spawnTile(isFirst = false) {
 
     tile.material.color.setHex(activeColor);
     if (tile.material.emissive) tile.material.emissive.setHex(activeColor === 0xff00ff ? 0x220022 : 0x001122);
-    const rawApiSpawn = localStorage.getItem('graphicsAPI') || 'webgl';
-    const isWebGPUSpawn = (rawApiSpawn === 'd2ViZ3B1' || rawApiSpawn === 'webgpu');
+    const isWebGPUSpawn = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
     tile.material.opacity = isWebGPUSpawn ? 0.8 : (currentGraphicsQuality === 'simple' ? 0.6 : 0.45);
     if (tile.userData.borderLine && tile.userData.borderLine.material) {
         tile.userData.borderLine.material.color.setHex(isWebGPUSpawn ? 0xffffff : activeColor);

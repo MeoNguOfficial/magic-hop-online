@@ -181,6 +181,7 @@ let performanceModeEnabled = JSON.parse(localStorage.getItem('performanceModeEna
 let currentGraphicsQuality = localStorage.getItem('graphicsQuality') || 'fhd';
 let rawAPI = localStorage.getItem('graphicsAPI') || 'webgl';
 let graphicsAPI = (rawAPI === 'd2ViZ3B1' || rawAPI === 'webgpu') ? 'webgpu' : 'webgl';
+window.isWebGPUCache = (graphicsAPI === 'webgpu');
 let isRelativePC = JSON.parse(localStorage.getItem('isRelativePC')) === true;
 let rawInputEnabled = JSON.parse(localStorage.getItem('rawInputEnabled')) === true;
 let bgParticlesEnabled = JSON.parse(localStorage.getItem('bgParticlesEnabled')) !== false;

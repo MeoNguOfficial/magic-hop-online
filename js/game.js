@@ -279,8 +279,7 @@ async function saveBestScore(songIndex, score, isPassed = false) {
 function dimLandedTile(tile) {
     if (!tile || !tile.userData || tile.userData.isDimmed) return;
 
-    const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-    const isWebGPU = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu');
+    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
     // Chỉ áp dụng dim cho WebGPU API, WebGL giữ nguyên không thay đổi
     if (!isWebGPU) return;
@@ -726,11 +725,14 @@ function setupBallTrailInstancedMesh() {
 function initBallTrail() {
     ballTrailSegments = [];
     if (ballTrailInstancedMesh) {
+        const initialColor = new THREE.Color(0x00ffff);
         for (let i = 0; i < MAX_TRAIL_INSTANCES; i++) {
             trailDummyMatrix.makeScale(0, 0, 0);
             ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
+            ballTrailInstancedMesh.setColorAt(i, initialColor);
         }
         ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
+        if (ballTrailInstancedMesh.instanceColor) ballTrailInstancedMesh.instanceColor.needsUpdate = true;
     }
 }
 
@@ -899,9 +901,12 @@ function checkAndApplyFloatingOrigin() {
     if (!ball) return;
     const landedTileVal = tiles[currentTileIndex];
     // Reset tọa độ về 0 khi nhảy đến Round mới, hoặc khi bóng đi quá xa (quá -1000 đơn vị Z)
-    if (landedTileVal && (landedTileVal.userData.isRoundStart || ball.position.z < -1000)) {
+    if (landedTileVal && !landedTileVal.userData.originShifted && (landedTileVal.userData.isRoundStart || ball.position.z < -1000)) {
+        landedTileVal.userData.originShifted = true;
         const offsetZ = -landedTileVal.position.z;
-        shiftCoordinateOrigin(offsetZ);
+        if (Math.abs(offsetZ) > 0.001) {
+            shiftCoordinateOrigin(offsetZ);
+        }
     }
 }
 
@@ -1024,45 +1029,58 @@ function initParticles() {
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particlesGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
 
-    starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 35.0 : 25.0) * (isMobile ? 0.85 : 1.0);
-    starFieldUniforms.uCamZ.value = camZ;
-    starFieldUniforms.uZOffset.value = 0.0;
+    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
-    particlesMat = new THREE.ShaderMaterial({
-        uniforms: starFieldUniforms,
-        vertexShader: `
-            uniform float uZOffset;
-            uniform float uCamZ;
-            uniform float uParticleSize;
-            attribute vec3 color;
-            varying vec3 vColor;
+    if (isWebGPU) {
+        particlesMat = new THREE.PointsMaterial({
+            size: (currentGraphicsQuality === 'simple' ? 2.5 : 1.8) * (isMobile ? 0.85 : 1.0),
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.65,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+    } else {
+        starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 35.0 : 25.0) * (isMobile ? 0.85 : 1.0);
+        starFieldUniforms.uCamZ.value = camZ;
+        starFieldUniforms.uZOffset.value = 0.0;
 
-            void main() {
-                vColor = color;
-                vec3 pos = position;
-                float relZ = pos.z - uCamZ + uZOffset;
-                float rangeZ = 360.0;
-                relZ = mod(relZ + 350.0, rangeZ) - 350.0;
-                vec3 worldPos = vec3(pos.x, pos.y, uCamZ + relZ);
-                vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
-                gl_PointSize = uParticleSize * (10.0 / -mvPosition.z);
-                gl_Position = projectionMatrix * mvPosition;
-            }
-        `,
-        fragmentShader: `
-            varying vec3 vColor;
+        particlesMat = new THREE.ShaderMaterial({
+            uniforms: starFieldUniforms,
+            vertexShader: `
+                uniform float uZOffset;
+                uniform float uCamZ;
+                uniform float uParticleSize;
+                attribute vec3 color;
+                varying vec3 vColor;
 
-            void main() {
-                float dist = length(gl_PointCoord - vec2(0.5));
-                if (dist > 0.5) discard;
-                float alpha = (1.0 - dist * 2.0) * 0.6;
-                gl_FragColor = vec4(vColor, alpha);
-            }
-        `,
-        transparent: true,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false
-    });
+                void main() {
+                    vColor = color;
+                    vec3 pos = position;
+                    float relZ = pos.z - uCamZ + uZOffset;
+                    float rangeZ = 360.0;
+                    relZ = mod(relZ + 350.0, rangeZ) - 350.0;
+                    vec3 worldPos = vec3(pos.x, pos.y, uCamZ + relZ);
+                    vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
+                    gl_PointSize = uParticleSize * (10.0 / -mvPosition.z);
+                    gl_Position = projectionMatrix * mvPosition;
+                }
+            `,
+            fragmentShader: `
+                varying vec3 vColor;
+
+                void main() {
+                    float dist = length(gl_PointCoord - vec2(0.5));
+                    if (dist > 0.5) discard;
+                    float alpha = (1.0 - dist * 2.0) * 0.6;
+                    gl_FragColor = vec4(vColor, alpha);
+                }
+            `,
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+    }
 
     starField = new THREE.Points(particlesGeo, particlesMat);
     starField.frustumCulled = false;
@@ -1842,10 +1860,20 @@ let lastTrailSpawnTime = 0;
 let totalTilesJumped = 0;
 let lastVisTime = 0;
 
-// FPS Counter Variables
+// FPS Counter & Visualizer / Trail Cache Variables
 let fpsLastTime = performance.now();
 let fpsFrameCount = 0;
 let lastFrameTime = performance.now();
+let cachedBarData = [];
+let visualizerWasCleared = false;
+const ballTrailPool = [];
+
+function getTrailSegmentFromPool() {
+    if (ballTrailPool.length > 0) {
+        return ballTrailPool.pop();
+    }
+    return { x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0, life: 1.0, rotSpeed: 0, color: new THREE.Color() };
+}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -1928,6 +1956,7 @@ function animate() {
 
         // --- RENDER VISUALIZER ---
         if (visualizerEnabled && visualizerCtx && analyserNode && isPlaying && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
+            visualizerWasCleared = false;
             const nowTime = clock.getElapsedTime();
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const visThrottle = (isMobile || currentGraphicsQuality === 'simple') ? 0.033 : 0.016;
@@ -1940,10 +1969,10 @@ function animate() {
                 }
                 analyserNode.getByteFrequencyData(visDataArray);
 
-                visualizerCtx.clearRect(0, 0, bgVisualizerCanvas.width, bgVisualizerCanvas.height);
-
                 const width = bgVisualizerCanvas.width;
                 const height = bgVisualizerCanvas.height;
+                visualizerCtx.clearRect(0, 0, width, height);
+
                 const centerY = height * 0.25;
 
                 const numBars = Math.floor(width / 24);
@@ -1954,18 +1983,18 @@ function animate() {
                 const blockHeight = Math.max(4, (height * 0.15) / maxBlocks);
                 const blockGap = 3;
 
-                const barData = [];
+                cachedBarData.length = numBars;
                 for (let i = 0; i < numBars; i++) {
                     let centerDist = Math.abs(i - numBars / 2);
                     let dataIdx = Math.floor((centerDist / (numBars / 2)) * (bufferLength * 0.6));
                     let v = visDataArray[dataIdx] / 255.0;
                     if (v > 0.1) v = v * (0.8 + Math.random() * 0.2);
-                    barData.push(Math.ceil(v * maxBlocks));
+                    cachedBarData[i] = Math.ceil(v * maxBlocks);
                 }
 
                 visualizerCtx.fillStyle = 'rgba(34, 211, 238, 0.85)';
                 for (let i = 0; i < numBars; i++) {
-                    const activeBlocks = barData[i];
+                    const activeBlocks = cachedBarData[i];
                     if (activeBlocks === 0) continue;
                     const x = i * barSpacing + (barSpacing - barWidth) / 2;
                     const totalHeight = activeBlocks * (blockHeight + blockGap) - blockGap;
@@ -1981,8 +2010,9 @@ function animate() {
                 }
                 visualizerCtx.globalCompositeOperation = 'source-over';
             }
-        } else if (visualizerCtx) {
+        } else if (visualizerCtx && !visualizerWasCleared) {
             visualizerCtx.clearRect(0, 0, bgVisualizerCanvas.width, bgVisualizerCanvas.height);
+            visualizerWasCleared = true;
         }
 
         // --- ĐỒNG BỘ ROUND & TỐC ĐỘ ---
@@ -2011,10 +2041,21 @@ function animate() {
             }
         }
 
-        // --- CẬP NHẬT HẠT NỀN (GPU SHADER - MOBILE OPTIMIZED) ---
-        if (starField && starField.visible && typeof starFieldUniforms !== 'undefined' && starFieldUniforms) {
-            starFieldUniforms.uZOffset.value += 50 * gameSpeed * delta;
-            if (camera) starFieldUniforms.uCamZ.value = camera.position.z;
+        // --- CẬP NHẬT MÀU BÓNG (THEO COMBO) ---
+        if (ball && ball.material) {
+            let targetBallColor = 0x00ffff; // Cyan mặc định
+            let targetEmissiveColor = 0x0088cc;
+
+            if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
+            else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
+            else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
+
+            tempColor.setHex(targetBallColor);
+            ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
+            if (ball.material.emissive) {
+                tempColor.setHex(targetEmissiveColor);
+                ball.material.emissive.lerp(tempColor, 15 * delta);
+            }
         }
 
         // --- CẬP NHẬT ĐUÔI BÓNG (INSTANCED MESH - 1 DRAW CALL) ---
@@ -2023,17 +2064,21 @@ function animate() {
             if (now - lastTrailSpawnTime > 0.02) {
                 lastTrailSpawnTime = now;
                 if (ballTrailSegments.length < MAX_TRAIL_INSTANCES) {
-                    ballTrailSegments.push({
-                        x: ball.position.x + (Math.random() - 0.5) * 0.4,
-                        y: ball.position.y + (Math.random() - 0.5) * 0.4,
-                        z: ball.position.z + (Math.random() - 0.5) * 0.4,
-                        rotX: Math.random() * Math.PI,
-                        rotY: Math.random() * Math.PI,
-                        rotZ: Math.random() * Math.PI,
-                        life: 1.0,
-                        rotSpeed: (Math.random() - 0.5) * 10,
-                        color: (ball && ball.material && ball.material.color) ? ball.material.color.clone() : new THREE.Color(0x00ffff)
-                    });
+                    const seg = getTrailSegmentFromPool();
+                    seg.x = ball.position.x + (Math.random() - 0.5) * 0.4;
+                    seg.y = ball.position.y + (Math.random() - 0.5) * 0.4;
+                    seg.z = ball.position.z + (Math.random() - 0.5) * 0.4;
+                    seg.rotX = Math.random() * Math.PI;
+                    seg.rotY = Math.random() * Math.PI;
+                    seg.rotZ = Math.random() * Math.PI;
+                    seg.life = 1.0;
+                    seg.rotSpeed = (Math.random() - 0.5) * 10;
+                    if (ball && ball.material && ball.material.color) {
+                        seg.color.copy(ball.material.color);
+                    } else {
+                        seg.color.setHex(0x00ffff);
+                    }
+                    ballTrailSegments.push(seg);
                 }
             }
         }
@@ -2043,6 +2088,7 @@ function animate() {
                 const seg = ballTrailSegments[i];
                 seg.life -= delta * 2.0;
                 if (seg.life <= 0) {
+                    ballTrailPool.push(seg);
                     ballTrailSegments.splice(i, 1);
                     continue;
                 }
@@ -2109,6 +2155,7 @@ function animate() {
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
         const time = clock.getElapsedTime();
+        const isWebGPUCached = typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu');
         tiles.forEach(tile => {
             if (dynamicColorsEnabled) {
                 const hue = (time * 0.2) % 1;
@@ -2122,9 +2169,7 @@ function animate() {
                 }
 
                 if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                    const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-                    const isWebGPU = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu');
-                    tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
+                    tile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : hex);
                 }
                 const glowMesh = tile.getObjectByName("glowMesh");
                 if (glowMesh && glowMesh.material) {
@@ -2186,14 +2231,20 @@ function animate() {
                 // Cập nhật tỷ lệ scale mượt mà khi gạch thu nhỏ hoặc phóng to
                 let currentScale = tile.userData.scale !== undefined ? tile.userData.scale : 1.0;
                 const targetScale = typeof currentTileScale !== 'undefined' ? currentTileScale : 1.0;
+                let scaleChanged = false;
                 if (Math.abs(currentScale - targetScale) > 0.001) {
                     currentScale += (targetScale - currentScale) * Math.min(1.0, 10 * delta);
                     tile.userData.scale = currentScale;
-                } else {
+                    scaleChanged = true;
+                } else if (tile.userData.scale !== targetScale) {
                     currentScale = targetScale;
                     tile.userData.scale = targetScale;
+                    scaleChanged = true;
                 }
-                tile.scale.set(currentScale, currentScale, 1.0);
+
+                if (scaleChanged || springY !== 0) {
+                    tile.scale.set(currentScale, currentScale, 1.0);
+                }
 
                 // Cập nhật hitbox cho gạch nếu cơ chế Show Hitbox bật
                 if (tile.userData.hitboxMesh) {
