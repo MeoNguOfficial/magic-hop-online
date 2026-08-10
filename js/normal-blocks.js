@@ -152,6 +152,21 @@ function initGlowMaterials() {
     }
 }
 
+function createTileGlowMaterial(activeColor) {
+    initGlowMaterials();
+    const hex = (activeColor !== undefined && activeColor !== null) ? activeColor : 0x00ffff;
+    const mat = baseGlowMaterial.clone();
+    if (mat.uniforms) {
+        mat.uniforms.color.value = new THREE.Color(hex);
+        mat.uniforms.glowHeight.value = getCurrentGlowHeight();
+        mat.uniforms.opacityMultiplier.value = 1.0;
+    } else if (mat.color) {
+        mat.color.setHex(hex);
+        mat.opacity = 0.85;
+    }
+    return mat;
+}
+
 // Tạo nhãn 3D cho Round
 function createRoundLabel(round) {
     const canvas = document.createElement('canvas');
@@ -415,7 +430,7 @@ function getTileFromPool() {
             cachedGlowGeo = new THREE.ExtrudeGeometry(tileShape, glowExtrudeSettings);
             cachedGlowGeo.center();
         }
-        const tileGlowMat = baseGlowMaterial.clone();
+        const tileGlowMat = createTileGlowMaterial(typeof activeColor !== 'undefined' ? activeColor : 0x00ffff);
         const glowMesh = new THREE.Mesh(cachedGlowGeo, [capMaterial, tileGlowMat]);
         glowMesh.name = "glowMesh";
         const bevelOffset = (typeof currentBevelEnabled !== 'undefined' && currentBevelEnabled) ? currentBevelThickness : 0;
@@ -703,7 +718,7 @@ function spawnTile(isFirst = false) {
                     glowMat.uniforms.color.value.setHex(activeColor);
                     glowMat.uniforms.opacityMultiplier.value = 1.0;
                 } else {
-                    glowMat.color.setHex(activeColor);
+                    if (glowMat.color) glowMat.color.setHex(activeColor);
                     glowMat.opacity = 0.85;
                 }
             }

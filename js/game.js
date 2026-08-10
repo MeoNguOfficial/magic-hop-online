@@ -392,18 +392,22 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
             });
         }
 
-        let beatDistance = Math.abs(baseBallVelocityZ) * 1.0;
+        // 1. Khoảng cách chạy tiến về phía các khối xa nhất phía trước
+        let forwardDistance = Math.abs(baseBallVelocityZ) * 1.0;
         if (tiles && tiles.length > 0) {
             const currentTileIdx = tiles.findIndex(t => Math.abs(t.position.z - tile.position.z) < 0.1);
             if (currentTileIdx !== -1 && currentTileIdx + 1 < tiles.length) {
-                // Đường chạy tối đa của pulse dựa trên block xa nhất hiện có phía trước
                 const furthestTile = tiles[tiles.length - 1];
-                beatDistance = Math.abs(tile.position.z - furthestTile.position.z);
+                forwardDistance = Math.abs(tile.position.z - furthestTile.position.z);
             }
         }
-        beatDistance = Math.max(1.0, beatDistance);
+        forwardDistance = Math.max(1.0, forwardDistance);
 
-        const spawnPulse = (x, z, maxDist) => {
+        // 2. Khoảng cách chạy lùi xuống đúng vị trí Camera (tính từ vị trí gạch hiện tại lùi qua Z của Camera)
+        const camZ = camera ? camera.position.z : tile.position.z + 15;
+        const cameraDistance = Math.max(12.0, Math.abs(camZ - tile.position.z) + 15.0);
+
+        const spawnPulse = (x, z, speedZ, maxDist) => {
             let mesh;
             if (boundaryPulsePool.length > 0) {
                 mesh = boundaryPulsePool.pop();
@@ -423,15 +427,23 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
             scene.add(mesh);
             boundaryPulses.push({
                 mesh: mesh,
-                speed: baseBallVelocityZ * 2.8, // Run forward in negative Z direction
+                speed: speedZ,
                 startZ: z,
                 maxDistance: maxDist,
                 opacity: 0.85
             });
         };
 
-        spawnPulse(-6.75, tile.position.z, beatDistance);
-        spawnPulse(6.75, tile.position.z, beatDistance);
+        const speedForward = baseBallVelocityZ * 2.8;            // Vận tốc chạy tiến (Z âm)
+        const speedBackward = Math.abs(baseBallVelocityZ) * 2.8; // Vận tốc chạy lùi xuống vị trí Camera (Z dương)
+
+        // Xung phát sáng biên chạy lùi xuống đúng vị trí Camera (Trái & Phải)
+        spawnPulse(-6.75, tile.position.z, speedBackward, cameraDistance);
+        spawnPulse(6.75, tile.position.z, speedBackward, cameraDistance);
+
+        // Xung phát sáng biên chạy tiến về phía trước (Trái & Phải)
+        spawnPulse(-6.75, tile.position.z, speedForward, forwardDistance);
+        spawnPulse(6.75, tile.position.z, speedForward, forwardDistance);
     }
 }
 
@@ -684,14 +696,41 @@ function spawnPerfectSparks(comboCount) {
 // Replaced/Removed perfect ring
 function triggerPerfectRing(position) { }
 
+let ballTrailInstancedMesh = null;
+const MAX_TRAIL_INSTANCES = 60;
+const trailDummyMatrix = new THREE.Matrix4();
+const trailDummyEuler = new THREE.Euler();
+const trailDummyQuaternion = new THREE.Quaternion();
+const trailDummyScale = new THREE.Vector3();
+const trailDummyPosition = new THREE.Vector3();
+let sharedTrailMat = null;
+
+function setupBallTrailInstancedMesh() {
+    if (!cachedTrailGeo) cachedTrailGeo = new THREE.TetrahedronGeometry(ballRadius * 0.6);
+    if (!sharedTrailMat) {
+        sharedTrailMat = new THREE.MeshBasicMaterial({
+            transparent: true,
+            opacity: 0.7,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false
+        });
+    }
+    if (ballTrailInstancedMesh && scene) scene.remove(ballTrailInstancedMesh);
+    ballTrailInstancedMesh = new THREE.InstancedMesh(cachedTrailGeo, sharedTrailMat, MAX_TRAIL_INSTANCES);
+    ballTrailInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    ballTrailInstancedMesh.frustumCulled = false;
+    if (scene) scene.add(ballTrailInstancedMesh);
+    initBallTrail();
+}
+
 function initBallTrail() {
-    if (ballTrailSegments.length > 0) {
-        for (let i = ballTrailSegments.length - 1; i >= 0; i--) {
-            const segment = ballTrailSegments[i];
-            scene.remove(segment.mesh);
-            trailPool.push(segment.mesh);
+    ballTrailSegments = [];
+    if (ballTrailInstancedMesh) {
+        for (let i = 0; i < MAX_TRAIL_INSTANCES; i++) {
+            trailDummyMatrix.makeScale(0, 0, 0);
+            ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
         }
-        ballTrailSegments = [];
+        ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
     }
 }
 
@@ -813,7 +852,8 @@ function shiftCoordinateOrigin(offsetZ) {
 
     // 5. Dịch chuyển đuôi bóng (trail segments)
     ballTrailSegments.forEach(segment => {
-        segment.mesh.position.z += offsetZ;
+        if (segment.mesh) segment.mesh.position.z += offsetZ;
+        if (segment.z !== undefined) segment.z += offsetZ;
     });
 
     // 6. Dịch chuyển các vòng sóng xung kích (shockwaves)
@@ -840,8 +880,10 @@ function shiftCoordinateOrigin(offsetZ) {
         }
     }
 
-    // 8. Dịch chuyển hệ thống hạt nền (starField)
-    if (starField && starField.geometry && starField.geometry.attributes.position) {
+    // 8. Dịch chuyển hệ thống hạt nền (starField GPU Shader)
+    if (typeof starFieldUniforms !== 'undefined' && starFieldUniforms) {
+        starFieldUniforms.uZOffset.value += offsetZ;
+    } else if (starField && starField.geometry && starField.geometry.attributes.position) {
         const posArr = starField.geometry.attributes.position.array;
         for (let i = 0; i < posArr.length / 3; i++) {
             posArr[i * 3 + 2] += offsetZ;
@@ -944,27 +986,35 @@ function updatePixelRatio() {
     renderer.setPixelRatio(targetRatio);
 }
 
+let starFieldUniforms = {
+    uZOffset: { value: 0.0 },
+    uCamZ: { value: 10.0 },
+    uParticleSize: { value: 25.0 }
+};
+
 function initParticles() {
     if (starField) scene.remove(starField);
     if (particlesGeo) particlesGeo.dispose();
     if (particlesMat) particlesMat.dispose();
 
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
     let particleCount = 400;
-    if (currentGraphicsQuality === 'simple') particleCount = 100;
-    else if (currentGraphicsQuality === 'hd') particleCount = 250;
-    else if (currentGraphicsQuality === 'fhd') particleCount = 400;
-    else if (currentGraphicsQuality === 'qhd') particleCount = 600;
-    else if (currentGraphicsQuality === 'uhd') particleCount = 800;
+    if (currentGraphicsQuality === 'simple') particleCount = isMobile ? 80 : 100;
+    else if (currentGraphicsQuality === 'hd') particleCount = isMobile ? 180 : 250;
+    else if (currentGraphicsQuality === 'fhd') particleCount = isMobile ? 300 : 400;
+    else if (currentGraphicsQuality === 'qhd') particleCount = isMobile ? 450 : 600;
+    else if (currentGraphicsQuality === 'uhd') particleCount = isMobile ? 600 : 800;
+
     particlesGeo = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
     const pColors = new Float32Array(particleCount * 3);
 
+    const camZ = camera ? camera.position.z : 10;
     for (let i = 0; i < particleCount; i++) {
         positions[i * 3] = (Math.random() - 0.5) * 80;
         positions[i * 3 + 1] = Math.random() * 45 - 10;
-
-        const camZ = camera ? camera.position.z : 10;
-        positions[i * 3 + 2] = camZ - Math.random() * 300;
+        positions[i * 3 + 2] = camZ - Math.random() * 350;
 
         const pColor = Math.random() > 0.5 ? new THREE.Color(0x00ffff) : new THREE.Color(0xff00ff);
         pColors[i * 3] = pColor.r;
@@ -974,20 +1024,52 @@ function initParticles() {
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particlesGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
 
-    let pSize = 0.5;
+    starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 35.0 : 25.0) * (isMobile ? 0.85 : 1.0);
+    starFieldUniforms.uCamZ.value = camZ;
+    starFieldUniforms.uZOffset.value = 0.0;
 
-    particlesMat = new THREE.PointsMaterial({
-        size: currentGraphicsQuality === 'simple' ? 0.7 : 0.5,
+    particlesMat = new THREE.ShaderMaterial({
+        uniforms: starFieldUniforms,
+        vertexShader: `
+            uniform float uZOffset;
+            uniform float uCamZ;
+            uniform float uParticleSize;
+            attribute vec3 color;
+            varying vec3 vColor;
+
+            void main() {
+                vColor = color;
+                vec3 pos = position;
+                float relZ = pos.z - uCamZ + uZOffset;
+                float rangeZ = 360.0;
+                relZ = mod(relZ + 350.0, rangeZ) - 350.0;
+                vec3 worldPos = vec3(pos.x, pos.y, uCamZ + relZ);
+                vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
+                gl_PointSize = uParticleSize * (10.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            varying vec3 vColor;
+
+            void main() {
+                float dist = length(gl_PointCoord - vec2(0.5));
+                if (dist > 0.5) discard;
+                float alpha = (1.0 - dist * 2.0) * 0.6;
+                gl_FragColor = vec4(vColor, alpha);
+            }
+        `,
         transparent: true,
-        opacity: 0.6,
         blending: THREE.AdditiveBlending,
-        vertexColors: true,
         depthWrite: false
     });
+
     starField = new THREE.Points(particlesGeo, particlesMat);
-    starField.frustumCulled = false; // Tránh tình trạng Three.js tự ẩn object khi camera di chuyển ra xa
+    starField.frustumCulled = false;
     starField.visible = bgParticlesEnabled;
     scene.add(starField);
+
+    setupBallTrailInstancedMesh();
 }
 
 let leftBoundaryLine, rightBoundaryLine;
@@ -1909,7 +1991,7 @@ function animate() {
                 const isWarmupPhase = (roundCount === 0 && totalTilesJumped < 16);
                 if ((activeRoundCount > 1 || activeEndlessMode) && !isWarmupPhase) {
                     let increment = (SPEED_GAIN_PER_ROUND / BEATMAP_TOTAL_TIME) * delta * gameSpeed;
-                    gameSpeed = Math.min(100.0, gameSpeed + increment);
+                    gameSpeed = Math.min(200.0, gameSpeed + increment);
                 } else {
                     gameSpeed = 1.0;
                 }
@@ -1929,84 +2011,62 @@ function animate() {
             }
         }
 
-        // --- CẬP NHẬT HẠT NỀN ---
-        if (starField && starField.visible) {
-            const posArr = starField.geometry.attributes.position.array;
-            const speedFactor = 50 * gameSpeed * delta;
-            const camZ = camera.position.z;
-            for (let i = 0; i < posArr.length / 3; i++) {
-                posArr[i * 3 + 2] += speedFactor;
-
-                // Nếu hạt bay ra sau camera hoặc bị bỏ lại quá xa vì sự kiện reset game/chuyển cảnh
-                if (posArr[i * 3 + 2] > camZ + 10 || posArr[i * 3 + 2] < camZ - 350) {
-                    posArr[i * 3 + 2] = camZ - 100 - Math.random() * 200;
-                    posArr[i * 3] = (Math.random() - 0.5) * 80;
-                    posArr[i * 3 + 1] = Math.random() * 45 - 10;
-                }
-            }
-            starField.geometry.attributes.position.needsUpdate = true;
+        // --- CẬP NHẬT HẠT NỀN (GPU SHADER - MOBILE OPTIMIZED) ---
+        if (starField && starField.visible && typeof starFieldUniforms !== 'undefined' && starFieldUniforms) {
+            starFieldUniforms.uZOffset.value += 50 * gameSpeed * delta;
+            if (camera) starFieldUniforms.uCamZ.value = camera.position.z;
         }
 
-        // --- CẬP NHẬT ĐUÔI BÓNG ---
-        if (typeof ballTrailEnabled !== 'undefined' && ballTrailEnabled && isPlaying && !isFalling && ball) {
+        // --- CẬP NHẬT ĐUÔI BÓNG (INSTANCED MESH - 1 DRAW CALL) ---
+        if (typeof ballTrailEnabled !== 'undefined' && ballTrailEnabled && isPlaying && !isFalling && ball && ballTrailInstancedMesh) {
             const now = clock.getElapsedTime();
-            if (now - lastTrailSpawnTime > 0.02) { // Tần suất sinh
+            if (now - lastTrailSpawnTime > 0.02) {
                 lastTrailSpawnTime = now;
-
-                let segmentMesh;
-                if (!cachedTrailGeo) cachedTrailGeo = new THREE.TetrahedronGeometry(ballRadius * 0.6);
-                if (trailPool.length > 0) {
-                    segmentMesh = trailPool.pop();
-                    // [FIX] WebGPU disposes GPU index/vertex buffers when mesh is scene.remove()'d.
-                    // Re-assign geometry and mark all attributes needsUpdate so WebGPU re-uploads buffers,
-                    // preventing "setIndexBuffer: parameter 1 is not of type 'GPUBuffer'" error.
-                    segmentMesh.geometry = cachedTrailGeo;
-                    if (cachedTrailGeo.index) cachedTrailGeo.index.needsUpdate = true;
-                    for (const key in cachedTrailGeo.attributes) {
-                        cachedTrailGeo.attributes[key].needsUpdate = true;
-                    }
-                    segmentMesh.material.color.copy(ball.material.color);
-                    segmentMesh.material.opacity = 0.7;
-                    segmentMesh.scale.setScalar(1);
-                } else {
-                    const trailMat = new THREE.MeshBasicMaterial({
-                        color: ball.material.color.clone(),
-                        transparent: true,
-                        opacity: 0.7,
-                        blending: THREE.AdditiveBlending,
-                        depthWrite: false
+                if (ballTrailSegments.length < MAX_TRAIL_INSTANCES) {
+                    ballTrailSegments.push({
+                        x: ball.position.x + (Math.random() - 0.5) * 0.4,
+                        y: ball.position.y + (Math.random() - 0.5) * 0.4,
+                        z: ball.position.z + (Math.random() - 0.5) * 0.4,
+                        rotX: Math.random() * Math.PI,
+                        rotY: Math.random() * Math.PI,
+                        rotZ: Math.random() * Math.PI,
+                        life: 1.0,
+                        rotSpeed: (Math.random() - 0.5) * 10,
+                        color: (ball && ball.material && ball.material.color) ? ball.material.color.clone() : new THREE.Color(0x00ffff)
                     });
-                    segmentMesh = new THREE.Mesh(cachedTrailGeo, trailMat);
                 }
-
-                segmentMesh.position.copy(ball.position);
-
-                // Random vị trí và góc xoay ban đầu để đuôi nhìn như bụi năng lượng
-                segmentMesh.position.x += (Math.random() - 0.5) * 0.4;
-                segmentMesh.position.y += (Math.random() - 0.5) * 0.4;
-                segmentMesh.position.z += (Math.random() - 0.5) * 0.4;
-                segmentMesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
-
-                scene.add(segmentMesh);
-                ballTrailSegments.push({ mesh: segmentMesh, life: 1.0, rotSpeed: (Math.random() - 0.5) * 10 });
             }
         }
 
-        for (let i = ballTrailSegments.length - 1; i >= 0; i--) {
-            const segment = ballTrailSegments[i];
-            segment.life -= delta * 2.0; // Tốc độ mờ dần
-            segment.mesh.material.opacity = Math.max(0, segment.life * 0.7);
+        if (ballTrailInstancedMesh) {
+            for (let i = ballTrailSegments.length - 1; i >= 0; i--) {
+                const seg = ballTrailSegments[i];
+                seg.life -= delta * 2.0;
+                if (seg.life <= 0) {
+                    ballTrailSegments.splice(i, 1);
+                    continue;
+                }
+                seg.rotX += seg.rotSpeed * delta;
+                seg.rotY += seg.rotSpeed * delta;
 
-            // Hiệu ứng thu nhỏ và xoay dần
-            segment.mesh.scale.setScalar(Math.max(0.01, segment.life));
-            segment.mesh.rotation.x += segment.rotSpeed * delta;
-            segment.mesh.rotation.y += segment.rotSpeed * delta;
+                const curScale = Math.max(0.001, seg.life);
+                trailDummyPosition.set(seg.x, seg.y, seg.z);
+                trailDummyEuler.set(seg.rotX, seg.rotY, seg.rotZ);
+                trailDummyQuaternion.setFromEuler(trailDummyEuler);
+                trailDummyScale.set(curScale, curScale, curScale);
+                trailDummyMatrix.compose(trailDummyPosition, trailDummyQuaternion, trailDummyScale);
 
-            if (segment.life <= 0) {
-                scene.remove(segment.mesh);
-                trailPool.push(segment.mesh);
-                ballTrailSegments.splice(i, 1);
+                ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
+                if (ballTrailInstancedMesh.setColorAt && seg.color) {
+                    ballTrailInstancedMesh.setColorAt(i, seg.color);
+                }
             }
+            for (let i = ballTrailSegments.length; i < MAX_TRAIL_INSTANCES; i++) {
+                trailDummyMatrix.makeScale(0, 0, 0);
+                ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
+            }
+            ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
+            if (ballTrailInstancedMesh.instanceColor) ballTrailInstancedMesh.instanceColor.needsUpdate = true;
         }
 
         // --- CẬP NHẬT BIÊN (BOUNDARIES) ---
@@ -2148,12 +2208,12 @@ function animate() {
                 }
             }
 
-            // Xử lý xuất hiện trễ (giảm dần thời gian phản xạ theo Round ở tốc độ 1x: Warmup & Round 1 = 1.0s, từ Round 2 giảm 0.1s/round xuống 0.1s)
+            // Xử lý xuất hiện trễ (giảm dần thời gian phản xạ theo Round ở tốc độ 1x: Warmup & Round 1 = 1.0s, chia đều 10 Round tới min 0.25s ở Round 10)
             if (tile.userData.isDelayedAppearance) {
                 const tileRound = (tile.userData && typeof tile.userData.roundValue !== 'undefined') ? tile.userData.roundValue : (typeof roundCount !== 'undefined' ? roundCount : 0);
                 let reactionTime = 1.0;
                 if (tileRound > 1) {
-                    reactionTime = Math.max(0.1, 1.0 - (tileRound - 1) * 0.1);
+                    reactionTime = Math.max(0.25, 1.0 - (tileRound - 1) * (0.75 / 9));
                 }
 
                 const bVelocityZ = typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40;
@@ -2901,11 +2961,7 @@ function cleanUpOldObjects() {
     });
     perfectRings = [];
 
-    ballTrailSegments.forEach(segment => {
-        scene.remove(segment.mesh);
-        trailPool.push(segment.mesh);
-    });
-    ballTrailSegments = [];
+    initBallTrail();
 
     exitingTiles.forEach(tile => {
         pushTileToPool(tile);

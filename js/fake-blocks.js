@@ -840,12 +840,12 @@ window.FakeBlocksManager = {
                 }
             }
             
-            // Xử lý xuất hiện trễ (đồng bộ thời gian phản xạ theo Round với block thật ở tốc độ 1x chuẩn)
+            // Xử lý xuất hiện trễ (đồng bộ thời gian phản xạ theo Round với block thật ở tốc độ 1x chuẩn: Warmup & Round 1 = 1.0s, chia đều 10 Round tới min 0.25s ở Round 10)
             if (fTile.userData.isDelayedAppearance) {
                 const tileRound = (fTile.userData && typeof fTile.userData.roundValue !== 'undefined') ? fTile.userData.roundValue : (typeof roundCount !== 'undefined' ? roundCount : 0);
                 let reactionTime = 1.0;
                 if (tileRound > 1) {
-                    reactionTime = Math.max(0.1, 1.0 - (tileRound - 1) * 0.1);
+                    reactionTime = Math.max(0.25, 1.0 - (tileRound - 1) * (0.75 / 9));
                 }
 
                 const bVelocityZ = typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40;
