@@ -652,21 +652,41 @@ window.FakeBlocksManager = {
         this.createFakeTile(tile, timeDiff, spawnMode === 'FORCE_3' ? 2 : (spawnMode === 'SNAP_3_ONE_FAKE' ? 'SNAP_3_ONE_FAKE' : null));
     },
 
+    prewarmFragmentPool: function() {
+        if (!this.fragmentPool) this.fragmentPool = [];
+        if (!this.sharedFragGeometry) {
+            this.sharedFragGeometry = new THREE.BoxGeometry(1, 1, 1);
+        }
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const targetSize = isMobile ? 12 : 24;
+        while (this.fragmentPool.length < targetSize) {
+            const mat = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.95,
+                depthWrite: false
+            });
+            const frag = new THREE.Mesh(this.sharedFragGeometry, mat);
+            frag.visible = false;
+            if (typeof scene !== 'undefined') scene.add(frag);
+            this.fragmentPool.push(frag);
+        }
+    },
+
     shatterTile: function(fTile) {
         if (typeof blockShatterEnabled !== 'undefined' && !blockShatterEnabled) return;
         if (!this.fragments) this.fragments = [];
-        if (!this.fragmentPool) this.fragmentPool = [];
+        this.prewarmFragmentPool();
         
-        let tileColor;
+        let hexColor = 0x00ffff;
         if (fTile.userData && fTile.userData.themeColor) {
-            tileColor = new THREE.Color(fTile.userData.themeColor);
+            hexColor = fTile.userData.themeColor;
         } else if (fTile.material && fTile.material.color) {
-            tileColor = fTile.material.color.clone();
-        } else {
-            tileColor = new THREE.Color(0x00ffff);
+            hexColor = fTile.material.color.getHex();
         }
         
-        const count = 8;
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const count = isMobile ? 5 : 6;
         const tWidth = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
         const rTileL = typeof tileLength !== 'undefined' ? tileLength : 4.0;
         const scaleX = (fTile.scale && fTile.scale.x) ? fTile.scale.x : 1.0;
@@ -683,26 +703,19 @@ window.FakeBlocksManager = {
             if (this.fragmentPool.length > 0) {
                 frag = this.fragmentPool.pop();
                 if (frag.material) {
-                    frag.material.color.copy(tileColor);
-                    if (frag.material.emissive) {
-                        frag.material.emissive.copy(tileColor).multiplyScalar(0.3);
-                    }
+                    frag.material.color.setHex(hexColor);
                     frag.material.opacity = 0.95;
-                    frag.material.needsUpdate = true;
                 }
                 frag.visible = true;
             } else {
-                if (!this.sharedFragGeometry) {
-                    this.sharedFragGeometry = new THREE.BoxGeometry(1, 1, 1);
-                }
-                // Sử dụng MeshBasicMaterial với depthWrite false tương thích 100% WebGPU
                 const mat = new THREE.MeshBasicMaterial({
-                    color: tileColor,
+                    color: hexColor,
                     transparent: true,
                     opacity: 0.95,
                     depthWrite: false
                 });
                 frag = new THREE.Mesh(this.sharedFragGeometry, mat);
+                if (typeof scene !== 'undefined') scene.add(frag);
             }
             
             frag.scale.set(w, h, d);
@@ -731,10 +744,9 @@ window.FakeBlocksManager = {
                 rx: rx,
                 ry: ry,
                 rz: rz,
-                opacity: 0.8
+                opacity: 0.95
             };
             
-            if (typeof scene !== 'undefined') scene.add(frag);
             this.fragments.push(frag);
         }
     },
@@ -963,7 +975,6 @@ window.FakeBlocksManager = {
                 if (frag.material) frag.material.opacity = currentOp;
                 
                 if (frag.position.y < -20 || currentOp <= 0) {
-                    if (typeof scene !== 'undefined') scene.remove(frag);
                     frag.visible = false;
                     if (!this.fragmentPool) this.fragmentPool = [];
                     this.fragmentPool.push(frag);
