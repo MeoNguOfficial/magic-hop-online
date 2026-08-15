@@ -334,16 +334,18 @@ async function togglePreview(index) {
                 if (curSong.id) localStorage.setItem('selectedSongId', curSong.id);
                 if (curSong.url) localStorage.setItem('selectedSongUrl', curSong.url);
                 try {
+                    const rawBmUrl = curSong.beatmapUrl || curSong.lazyUrl;
+                    const validBmUrl = (typeof rawBmUrl === 'string' && (rawBmUrl.includes('.json') || rawBmUrl.startsWith('beatmap/')) && !rawBmUrl.endsWith('.mp3')) ? rawBmUrl : null;
                     const cleanSong = {
                         id: curSong.id,
                         name: curSong.name || curSong.title,
                         title: curSong.title || curSong.name,
                         artist: curSong.artist,
                         genre: curSong.genre,
-                        url: curSong.url,
-                        file_url: curSong.file_url || curSong.url,
-                        beatmapUrl: curSong.beatmapUrl || curSong.lazyUrl,
-                        lazyUrl: curSong.lazyUrl || curSong.beatmapUrl,
+                        url: curSong.url || curSong.file_url || '',
+                        beats: curSong.beats,
+                        beatmapUrl: validBmUrl,
+                        lazyUrl: validBmUrl,
                         speed: curSong.speed,
                         bpm: curSong.bpm,
                         copyright_status: curSong.copyright_status,

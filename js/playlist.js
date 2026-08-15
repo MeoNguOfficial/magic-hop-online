@@ -420,13 +420,20 @@ window.mergeIntoPlaylist = function (newMaps) {
     const processedMaps = newMaps.map(item => {
         const normalized = normalizeBeats(item.beats);
         const songId = item.id !== undefined && item.id !== null ? item.id : (typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(item) : null);
+        
+        // Kiểm tra đúng link JSON của beatmap, tuyệt đối không dùng link mp3 của audio (file_url) làm beatmapUrl
+        const beatmapCandidate = item.beatmap_url || item.beatmapUrl;
+        const isJsonBeatmap = typeof beatmapCandidate === 'string' && (beatmapCandidate.includes('.json') || beatmapCandidate.startsWith('beatmap/'));
+        const finalBeatmapUrl = isJsonBeatmap ? beatmapCandidate : (normalized ? null : (songId ? `beatmap/music_${songId}.json` : null));
+
         return {
-            ...item, // Kế thừa toàn bộ dữ liệu từ DB (url nhạc, beats, speed, bpm...)
+            ...item,
             id: songId,
             name: item.title || item.name,
             artist: item.artist || "Unknown",
+            url: item.url || item.file_url || item.audioUrl || item.song || '',
             beats: normalized,
-            beatmapUrl: item.file_url || item.beatmapUrl || (normalized ? null : `beatmap/music_${songId}.json`),
+            beatmapUrl: finalBeatmapUrl,
             date_show: item.date_show || null,
             time_hide: item.time_hide || null,
             is_available: item.is_available ?? true,
@@ -440,11 +447,12 @@ window.mergeIntoPlaylist = function (newMaps) {
         const targetIdStr = getBeatmapIdFromSong(newMap);
         let existingIndex = playlist.findIndex(m => getBeatmapIdFromSong(m) === targetIdStr);
         const hasBeats = newMap.beats && Array.isArray(newMap.beats) && newMap.beats.length > 0;
+        const validLazyUrl = (newMap.beatmapUrl && typeof newMap.beatmapUrl === 'string' && (newMap.beatmapUrl.includes('.json') || newMap.beatmapUrl.startsWith('beatmap/'))) ? newMap.beatmapUrl : null;
 
         if (existingIndex === -1) {
             const newSong = {
                 ...newMap,
-                lazyUrl: newMap.beatmapUrl,
+                lazyUrl: validLazyUrl,
                 loaded: hasBeats, // Nếu có beats từ DB thì coi như đã load
                 isLoading: false,
                 beats: hasBeats ? newMap.beats : [0, 1, 2, 3],
@@ -467,7 +475,7 @@ window.mergeIntoPlaylist = function (newMaps) {
             playlist[existingIndex] = {
                 ...playlist[existingIndex],
                 ...newMap,
-                lazyUrl: newMap.beatmapUrl,
+                lazyUrl: validLazyUrl || (playlist[existingIndex].lazyUrl && !playlist[existingIndex].lazyUrl.endsWith('.mp3') ? playlist[existingIndex].lazyUrl : null),
                 no_fake_block: newMap.no_fake_block === true,
                 // Không cho newMap.beats=null/[] ghi đè dữ liệu cũ đã có sẵn
                 beats: hasBeats ? newMap.beats : prevBeats,
@@ -640,35 +648,60 @@ async function ensureSongLoaded(index, forceCheck = false) {
     if (!song) return song;
 
     // Nếu bài hát đã có sẵn dữ liệu beats hợp lệ thì bỏ qua bước tải JSON.
-    // Lưu ý: kiểm tra trực tiếp song.beats.length > 0 (không chỉ dựa vào cờ
-    // song.loaded), vì cờ loaded có thể bị mắc kẹt ở true trong khi beats đã
-    // bị merge/ghi đè thành null/[] ở mergeIntoPlaylist -> nếu chỉ check loaded
-    // sẽ khiến game không bao giờ tải lại / đọc lại cache JSON, rơi về
-    // beatmapBeats mặc định [0,1,2,3] (length 3s, beat sai).
     if (song.beats && Array.isArray(song.beats) && song.beats.length > 4) {
-        if (!song.loaded) song.loaded = true; // đồng bộ lại cờ nếu lệch
+        if (!song.loaded) song.loaded = true;
         return song;
     }
-
-    if (!song.lazyUrl) return song;
 
     if (song.isLoading) {
         while (song.isLoading) await new Promise(r => setTimeout(r, 50));
         return playlist[index];
     }
 
-    // 1. Kiểm tra Cache địa phương trước
+    // 1. Nếu có song.id từ backend API nhưng chưa có đủ beats, fetch chi tiết từ ApiService.getBeatmapDetails
+    if (song.id && window.ApiService && typeof window.ApiService.getBeatmapDetails === 'function') {
+        try {
+            song.isLoading = true;
+            updateLoadingStatus('msg_checking_map');
+            const res = await window.ApiService.getBeatmapDetails(song.id);
+            const data = res.data?.data || res.data;
+            if (data) {
+                if (data.beats) {
+                    const normalized = normalizeBeats(data.beats);
+                    if (normalized && normalized.length > 0) {
+                        song.beats = normalized;
+                    }
+                }
+                if (data.bpm) song.bpm = data.bpm;
+                if (data.speed) song.speed = data.speed;
+                if (data.url || data.file_url) song.url = data.url || data.file_url;
+                song.loaded = true;
+                if (song.beats && song.beats.length > 4) {
+                    return song;
+                }
+            }
+        } catch (err) {
+            console.warn(`[ensureSongLoaded] Không thể tải chi tiết beatmap #${song.id} từ API:`, err);
+        } finally {
+            song.isLoading = false;
+        }
+    }
+
+    // 2. Kiểm tra lazyUrl JSON (nếu có)
+    const isLazyJson = song.lazyUrl && typeof song.lazyUrl === 'string' && (song.lazyUrl.includes('.json') || song.lazyUrl.startsWith('beatmap/')) && !song.lazyUrl.endsWith('.mp3');
+    if (!isLazyJson) {
+        song.loaded = true;
+        if (!song.beats || song.beats.length === 0) song.beats = [0, 1, 2, 3];
+        return song;
+    }
+
+    // 3. Kiểm tra Cache địa phương trước
     const cachedData = typeof getCachedJson === 'function' ? await getCachedJson(song.lazyUrl) : null;
 
     if (!cachedData) {
-        // TRƯỜNG HỢP 1: CHƯA CÓ FILE LOCAL -> Bắt đầu tải
         updateLoadingStatus('msg_map_downloading');
         return await downloadBeatmap(index);
     } else {
-        // TRƯỜNG HỢP 2: ĐÃ CÓ FILE LOCAL -> Gán dữ liệu để chơi ngay
-        // Bỏ điều kiện !song.loaded ở đây: nếu đã rơi đến nhánh này thì beats
-        // hiện tại của song chưa hợp lệ (xem điều kiện return sớm phía trên),
-        // nên luôn ưu tiên gán lại từ cachedData bất kể cờ loaded đang là gì.
         if (Array.isArray(cachedData)) {
             song.beats = normalizeBeats(cachedData) || [0, 1, 2, 3];
         } else {
@@ -684,7 +717,6 @@ async function ensureSongLoaded(index, forceCheck = false) {
         }
         song.loaded = true;
 
-        // 2. Kiểm tra Version/Hash (ETag) ngầm nếu có mạng
         if (navigator.onLine) {
             if (forceCheck) {
                 updateLoadingStatus('msg_checking_map');
@@ -699,8 +731,12 @@ async function ensureSongLoaded(index, forceCheck = false) {
 
 async function downloadBeatmap(index, forceEtag = null) {
     const song = playlist[index];
-    if (!song || !song.lazyUrl) {
-        if (song) song.loaded = true;
+    const isLazyJson = song && song.lazyUrl && typeof song.lazyUrl === 'string' && (song.lazyUrl.includes('.json') || song.lazyUrl.startsWith('beatmap/')) && !song.lazyUrl.endsWith('.mp3');
+    if (!song || !isLazyJson) {
+        if (song) {
+            song.loaded = true;
+            if (!song.beats || song.beats.length === 0) song.beats = [0, 1, 2, 3];
+        }
         return song;
     }
     song.isLoading = true;
@@ -744,20 +780,10 @@ async function downloadBeatmap(index, forceEtag = null) {
     } catch (error) {
         clearTimeout(timeoutId);
         console.error("[Playlist] Lỗi tải beatmap:", error);
-
-        // Hiển thị thông báo lỗi và dừng loading nếu đang trong màn hình nạp nhạc
-        const loadingOverlay = document.getElementById('loading-overlay');
-        if (loadingOverlay && loadingOverlay.style.display !== 'none') {
-            loadingOverlay.style.display = 'none';
-            isSongLoadingCancelled = true; // Ngăn global.js chạy tiếp vào game
-            if (typeof showCyberModal === 'function') {
-                showCyberModal({
-                    title: t('msg_map_error_title'),
-                    message: t('msg_map_error_desc'),
-                    type: 'alert'
-                });
-            }
+        if (!song.beats || song.beats.length <= 4) {
+            song.beats = [0, 1, 2, 3];
         }
+        song.loaded = true;
     } finally {
         song.isLoading = false;
         if (typeof renderSongList === 'function') renderSongList();

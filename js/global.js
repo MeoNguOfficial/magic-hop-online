@@ -199,7 +199,8 @@ let activePlaylist = [{ name: 'Loading...', url: '', beats: [0, 1, 2, 3] }];
 
 let beatmapBeats = activePlaylist[0].beats;
 let BEATMAP_TOTAL_TIME = 10;
-let SPEED_GAIN_PER_ROUND = 0.2;
+let SPEED_GAIN_PER_ROUND = 0.21;
+window.SPEED_GAIN_PER_ROUND = SPEED_GAIN_PER_ROUND;
 
 let currentBeatIndex = 0;
 let isEndlessMode = false;
@@ -488,16 +489,18 @@ async function changeSong(index, autoStart = false) {
         if (curSong.id) localStorage.setItem('selectedSongId', curSong.id);
         if (curSong.url) localStorage.setItem('selectedSongUrl', curSong.url);
         try {
+            const rawBmUrl = curSong.beatmapUrl || curSong.lazyUrl;
+            const validBmUrl = (typeof rawBmUrl === 'string' && (rawBmUrl.includes('.json') || rawBmUrl.startsWith('beatmap/')) && !rawBmUrl.endsWith('.mp3')) ? rawBmUrl : null;
             const cleanSong = {
                 id: curSong.id,
                 name: curSong.name || curSong.title,
                 title: curSong.title || curSong.name,
                 artist: curSong.artist,
                 genre: curSong.genre,
-                url: curSong.url,
-                file_url: curSong.file_url || curSong.url,
-                beatmapUrl: curSong.beatmapUrl || curSong.lazyUrl,
-                lazyUrl: curSong.lazyUrl || curSong.beatmapUrl,
+                url: curSong.url || curSong.file_url || '',
+                beats: curSong.beats,
+                beatmapUrl: validBmUrl,
+                lazyUrl: validBmUrl,
                 speed: curSong.speed,
                 bpm: curSong.bpm,
                 copyright_status: curSong.copyright_status,
@@ -964,7 +967,7 @@ if (btnOpenAdminModal) {
                 adminDevModeToggle.checked = window.getDevMode();
             }
             if (adminSpeedGainInput) {
-                adminSpeedGainInput.value = typeof SPEED_GAIN_PER_ROUND !== 'undefined' ? SPEED_GAIN_PER_ROUND : 0.2;
+                adminSpeedGainInput.value = typeof SPEED_GAIN_PER_ROUND !== 'undefined' ? SPEED_GAIN_PER_ROUND : 0.21;
             }
         }
     });
@@ -1163,6 +1166,7 @@ if (adminSpeedGainInput) {
     const _sgApply = (val) => {
         val = Math.round(Math.min(4.0, Math.max(0.1, val)) * 100) / 100;
         SPEED_GAIN_PER_ROUND = val;
+        window.SPEED_GAIN_PER_ROUND = val;
         adminSpeedGainInput.value = val;
     };
 
@@ -1170,7 +1174,7 @@ if (adminSpeedGainInput) {
         _sgDragging = true;
         _sgMoved = false;
         _sgStartX = e.clientX;
-        _sgStartVal = parseFloat(adminSpeedGainInput.value) || 0.2;
+        _sgStartVal = parseFloat(adminSpeedGainInput.value) || 0.21;
         adminSpeedGainInput.setPointerCapture(e.pointerId);
         adminSpeedGainInput.style.cursor = 'ew-resize';
         e.preventDefault();
@@ -1205,12 +1209,14 @@ if (adminSpeedGainInput) {
         if (isNaN(val)) return;
         val = Math.min(4.0, Math.max(0.1, val));
         SPEED_GAIN_PER_ROUND = val;
+        window.SPEED_GAIN_PER_ROUND = val;
     });
     adminSpeedGainInput.addEventListener('blur', () => {
         let val = parseFloat(adminSpeedGainInput.value);
-        if (isNaN(val)) val = 0.2;
+        if (isNaN(val)) val = 0.21;
         val = Math.min(4.0, Math.max(0.1, val));
         SPEED_GAIN_PER_ROUND = val;
+        window.SPEED_GAIN_PER_ROUND = val;
         adminSpeedGainInput.value = val;
         adminSpeedGainInput.style.cursor = 'ew-resize';
     });
@@ -1219,8 +1225,9 @@ if (adminSpeedGainInput) {
 
 if (adminSpeedGainReset) {
     adminSpeedGainReset.addEventListener('click', () => {
-        SPEED_GAIN_PER_ROUND = 0.2;
-        if (adminSpeedGainInput) adminSpeedGainInput.value = 0.2;
+        SPEED_GAIN_PER_ROUND = 0.21;
+        window.SPEED_GAIN_PER_ROUND = 0.21;
+        if (adminSpeedGainInput) adminSpeedGainInput.value = 0.21;
     });
 }
 

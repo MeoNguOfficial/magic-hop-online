@@ -2021,13 +2021,34 @@ function animate() {
         // --- ĐỒNG BỘ ROUND & TỐC ĐỘ ---
         if (!isFailTransition) {
             if (audio && audio.duration) {
-                const isWarmupPhase = (roundCount === 0 && totalTilesJumped < 16);
-                if ((activeRoundCount > 1 || activeEndlessMode) && !isWarmupPhase) {
-                    let increment = (SPEED_GAIN_PER_ROUND / BEATMAP_TOTAL_TIME) * delta * gameSpeed;
-                    gameSpeed = Math.min(200.0, gameSpeed + increment);
+                if (activeRoundCount >= 1 || activeEndlessMode || isEndlessMode) {
+                    const totalBeats = (beatmapBeats && beatmapBeats.length > 0) ? beatmapBeats.length : 1;
+                    const firstBeatTime = (beatmapBeats && beatmapBeats.length > 0) ? (beatmapBeats[0] || 0) : 0;
+                    const lastBeatTime = (beatmapBeats && beatmapBeats.length > 0) ? beatmapBeats[totalBeats - 1] : (audio.duration || 10);
+                    const currentSongTime = audio.currentTime || accumulatedSongTime || 0;
+
+                    // Lấy thông tin block hiện tại để đối chiếu chính xác thời điểm bóng chạm block
+                    const currentTile = (typeof tiles !== 'undefined' && typeof currentTileIndex !== 'undefined') ? tiles[currentTileIndex] : null;
+                    const currentTileTime = currentTile?.userData?.time;
+
+                    let roundProgress = 0;
+                    if (lastBeatTime > 0) {
+                        const durationRange = Math.max(0.001, lastBeatTime - firstBeatTime);
+                        const audioProgress = currentSongTime >= lastBeatTime ? 1.0 : (currentSongTime <= firstBeatTime ? 0.0 : (currentSongTime - firstBeatTime) / durationRange);
+                        const tileProgress = (typeof currentTileTime === 'number') ? (currentTileTime >= lastBeatTime ? 1.0 : (currentTileTime <= firstBeatTime ? 0.0 : (currentTileTime - firstBeatTime) / durationRange)) : 0;
+
+                        // Đạt đúng 1.0 khi vừa chạm vào block của beat cuối và tạm dừng tăng cho đến khi chạm block chuyển round
+                        roundProgress = Math.min(1.0, Math.max(0.0, Math.max(audioProgress, tileProgress)));
+                    }
+
+                    const completedRounds = Math.max(0, (activeRoundCount || 1) - 1);
+                    const speedGain = (typeof SPEED_GAIN_PER_ROUND !== 'undefined' ? SPEED_GAIN_PER_ROUND : 0.21);
+
+                    gameSpeed = Math.min(200.0, 1.0 + (completedRounds * speedGain) + (roundProgress * speedGain));
                 } else {
                     gameSpeed = 1.0;
                 }
+                // Tốc độ game speed có thể lên rất cao, nhưng tốc độ phát nhạc audio.playbackRate vẫn giữ trần 3.0x
                 audio.playbackRate = Math.min(3.0, gameSpeed);
             }
 
