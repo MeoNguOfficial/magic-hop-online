@@ -94,28 +94,36 @@ function createHitboxMesh() {
     return mesh;
 }
 
-function createGlowTexture() {
-    const size = 128;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
+let sharedGlowTexture = null;
+function getSharedGlowTexture() {
+    if (!sharedGlowTexture) {
+        const size = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
 
-    // Create a linear gradient from top (darker/transparent) to bottom (bright)
-    const gradient = ctx.createLinearGradient(0, 0, 0, size);
-    gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
-    gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
-    gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.3)');
-    gradient.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
+        // Create a linear gradient from top (darker/transparent) to bottom (bright)
+        const gradient = ctx.createLinearGradient(0, 0, 0, size);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0)');
+        gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.05)');
+        gradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.3)');
+        gradient.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
 
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, size, size);
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, size, size);
 
-    const texture = new THREE.CanvasTexture(canvas);
-    texture.wrapS = THREE.ClampToEdgeWrapping;
-    texture.wrapT = THREE.ClampToEdgeWrapping;
-    return texture;
+        sharedGlowTexture = new THREE.CanvasTexture(canvas);
+        sharedGlowTexture.wrapS = THREE.ClampToEdgeWrapping;
+        sharedGlowTexture.wrapT = THREE.ClampToEdgeWrapping;
+        cachedTexturesSet.add(sharedGlowTexture);
+    }
+    return sharedGlowTexture;
 }
+function createGlowTexture() {
+    return getSharedGlowTexture();
+}
+window.getSharedGlowTexture = getSharedGlowTexture;
 
 function initGlowMaterials() {
     if (!capMaterial) {
@@ -124,7 +132,7 @@ function initGlowMaterials() {
     if (!baseGlowMaterial) {
         const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
         if (isWebGPU) {
-            const texture = createGlowTexture();
+            const texture = getSharedGlowTexture();
             baseGlowMaterial = new THREE.MeshBasicMaterial({
                 color: 0x00ffff,
                 map: texture,
@@ -154,34 +162,62 @@ function initGlowMaterials() {
 function createTileGlowMaterial(activeColor) {
     initGlowMaterials();
     const hex = (activeColor !== undefined && activeColor !== null) ? activeColor : 0x00ffff;
-    const mat = baseGlowMaterial.clone();
-    if (mat.uniforms) {
-        mat.uniforms.color.value = new THREE.Color(hex);
-        mat.uniforms.glowHeight.value = getCurrentGlowHeight();
-        mat.uniforms.opacityMultiplier.value = 1.0;
-    } else if (mat.color) {
-        mat.color.setHex(hex);
-        mat.opacity = 0.85;
+    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+
+    if (isWebGPU) {
+        return new THREE.MeshBasicMaterial({
+            color: hex,
+            map: getSharedGlowTexture(),
+            transparent: true,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            side: THREE.FrontSide
+        });
     }
-    return mat;
+
+    return new THREE.ShaderMaterial({
+        uniforms: {
+            color: { value: new THREE.Color(hex) },
+            opacityMultiplier: { value: 1.0 },
+            glowHeight: { value: getCurrentGlowHeight() }
+        },
+        vertexShader: glowVertexShader,
+        fragmentShader: glowFragmentShader,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.FrontSide
+    });
 }
+
+// --- TEXTURE CACHE FOR LABELS ---
+const roundTextureCache = new Map();
+const percentTextureCache = new Map();
+let starTextureCache = null;
+const cachedTexturesSet = new Set();
 
 // Tạo nhãn 3D cho Round
 function createRoundLabel(round) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 512;
-    canvas.height = 128;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
-    ctx.font = `bold 50px ${fontFamily}, sans-serif`;
-    ctx.fillStyle = '#00ffff';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#00ffff';
-    ctx.shadowBlur = 15;
-    ctx.fillText(`${t('round')} ${round}`, 256, 80);
-    const texture = new THREE.CanvasTexture(canvas);
+    const key = `${round}_${fontFamily}`;
+    let texture = roundTextureCache.get(key);
+    if (!texture) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 512;
+        canvas.height = 128;
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.font = `bold 50px ${fontFamily}, sans-serif`;
+        ctx.fillStyle = '#00ffff';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#00ffff';
+        ctx.shadowBlur = 15;
+        ctx.fillText(`${t('round')} ${round}`, 256, 80);
+        texture = new THREE.CanvasTexture(canvas);
+        roundTextureCache.set(key, texture);
+        cachedTexturesSet.add(texture);
+    }
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(10, 2.5, 1);
@@ -192,21 +228,27 @@ function createRoundLabel(round) {
 
 // Tạo nhãn 3D cho phần trăm tiến độ Warm-up
 function createPercentLabel(percent) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 512;
-    canvas.height = 128;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
-    // Sử dụng màu hồng (Pink) để phân biệt với nhãn Round (Cyan)
-    ctx.font = `bold 80px ${fontFamily}, sans-serif`;
-    ctx.fillStyle = '#ec4899';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#ec4899';
-    ctx.shadowBlur = 15;
-    ctx.fillText(`${percent}%`, 256, 80);
-    const texture = new THREE.CanvasTexture(canvas);
+    const key = `${percent}_${fontFamily}`;
+    let texture = percentTextureCache.get(key);
+    if (!texture) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 512;
+        canvas.height = 128;
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Sử dụng màu hồng (Pink) để phân biệt với nhãn Round (Cyan)
+        ctx.font = `bold 80px ${fontFamily}, sans-serif`;
+        ctx.fillStyle = '#ec4899';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#ec4899';
+        ctx.shadowBlur = 15;
+        ctx.fillText(`${percent}%`, 256, 80);
+        texture = new THREE.CanvasTexture(canvas);
+        percentTextureCache.set(key, texture);
+        cachedTexturesSet.add(texture);
+    }
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     // Kích thước nhỏ hơn nhãn Round một chút để tinh tế hơn
@@ -217,23 +259,26 @@ function createPercentLabel(percent) {
 }
 
 function createStarLabel() {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 128;
-    canvas.height = 128;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (!starTextureCache) {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 128;
+        canvas.height = 128;
+        ctx.fillStyle = 'rgba(0,0,0,0)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.font = 'bold 80px Arial, sans-serif';
-    ctx.fillStyle = '#facc15'; // Bright yellow
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 20;
-    ctx.fillText('⭐', 64, 64);
+        ctx.font = 'bold 80px Arial, sans-serif';
+        ctx.fillStyle = '#facc15'; // Bright yellow
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#facc15';
+        ctx.shadowBlur = 20;
+        ctx.fillText('⭐', 64, 64);
 
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        starTextureCache = new THREE.CanvasTexture(canvas);
+        cachedTexturesSet.add(starTextureCache);
+    }
+    const spriteMat = new THREE.SpriteMaterial({ map: starTextureCache, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(3, 3, 1);
     sprite.position.y = 0;
@@ -294,7 +339,9 @@ function disposeTile(tile) {
         if (child.type === "Sprite") {
             tile.remove(child);
             if (child.material) {
-                if (child.material.map) child.material.map.dispose();
+                if (child.material.map && !cachedTexturesSet.has(child.material.map)) {
+                    child.material.map.dispose();
+                }
                 child.material.dispose();
             }
         }

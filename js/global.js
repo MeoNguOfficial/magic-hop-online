@@ -484,8 +484,27 @@ async function changeSong(index, autoStart = false) {
     selectedSongIndex = index;
     localStorage.setItem('selectedSongIndex', index);
     if (activePlaylist && activePlaylist[index]) {
-        if (activePlaylist[index].id) localStorage.setItem('selectedSongId', activePlaylist[index].id);
-        if (activePlaylist[index].url) localStorage.setItem('selectedSongUrl', activePlaylist[index].url);
+        const curSong = activePlaylist[index];
+        if (curSong.id) localStorage.setItem('selectedSongId', curSong.id);
+        if (curSong.url) localStorage.setItem('selectedSongUrl', curSong.url);
+        try {
+            const cleanSong = {
+                id: curSong.id,
+                name: curSong.name || curSong.title,
+                title: curSong.title || curSong.name,
+                artist: curSong.artist,
+                genre: curSong.genre,
+                url: curSong.url,
+                file_url: curSong.file_url || curSong.url,
+                beatmapUrl: curSong.beatmapUrl || curSong.lazyUrl,
+                lazyUrl: curSong.lazyUrl || curSong.beatmapUrl,
+                speed: curSong.speed,
+                bpm: curSong.bpm,
+                copyright_status: curSong.copyright_status,
+                no_fake_block: curSong.no_fake_block === true
+            };
+            localStorage.setItem('selectedSongData', JSON.stringify(cleanSong));
+        } catch (e) {}
     }
 
     if (!autoStart && typeof stopPreview === 'function') stopPreview(true);
@@ -501,6 +520,9 @@ async function changeSong(index, autoStart = false) {
     });
 
     // Khi trở lại Menu chính, làm mới danh sách để ép bài hát vừa chơi lên trên cùng
+    if (typeof playlistRenderStartIndex !== 'undefined') {
+        playlistRenderStartIndex = 0;
+    }
     if (!autoStart && typeof renderSongList === 'function' && typeof currentFilterTerm !== 'undefined') {
         renderSongList(currentFilterTerm);
         const selector = document.getElementById('song-selector');

@@ -271,15 +271,38 @@ window.FakeBlocksManager = {
                     } else if (child.name === 'centerMesh' || (child.type === 'Mesh' && child.name !== 'borderLine' && child.name !== 'glowMesh')) { 
                         fakeTile.remove(child);
                     } else if (child.name === 'glowMesh') {
+                        fakeTile.userData.glowMesh = child;
                         if (Array.isArray(child.material)) {
-                            const newGlowMat = child.material[1].clone();
-                            if (newGlowMat.uniforms) {
-                                // Quay lại độ mờ glow nguyên bản (0.3)
-                                newGlowMat.uniforms.opacityMultiplier.value = 0.3;
-                            } else {
-                                newGlowMat.opacity = 0.08;
+                            const origGlow = child.material[1];
+                            let newGlowMat;
+                            if (origGlow && origGlow.uniforms) {
+                                newGlowMat = new THREE.ShaderMaterial({
+                                    uniforms: {
+                                        color: { value: new THREE.Color(origGlow.uniforms.color ? origGlow.uniforms.color.value.getHex() : 0x00ffff) },
+                                        opacityMultiplier: { value: 0.3 },
+                                        glowHeight: { value: (origGlow.uniforms.glowHeight && origGlow.uniforms.glowHeight.value) ? origGlow.uniforms.glowHeight.value : 1.5 }
+                                    },
+                                    vertexShader: glowVertexShader,
+                                    fragmentShader: glowFragmentShader,
+                                    transparent: true,
+                                    blending: THREE.AdditiveBlending,
+                                    depthWrite: false,
+                                    side: THREE.FrontSide
+                                });
+                            } else if (origGlow) {
+                                newGlowMat = new THREE.MeshBasicMaterial({
+                                    color: origGlow.color ? origGlow.color.getHex() : 0x00ffff,
+                                    map: (typeof getSharedGlowTexture === 'function') ? getSharedGlowTexture() : origGlow.map,
+                                    transparent: true,
+                                    blending: THREE.AdditiveBlending,
+                                    depthWrite: false,
+                                    side: THREE.FrontSide,
+                                    opacity: 0.08
+                                });
                             }
-                            child.material = [child.material[0], newGlowMat];
+                            if (newGlowMat) {
+                                child.material = [child.material[0], newGlowMat];
+                            }
                         }
                     } else if (child.material) {
                         child.material = child.material.clone();
@@ -298,6 +321,7 @@ window.FakeBlocksManager = {
             fakeTile.rotation.z = realTile.rotation.z;
             
             const fBorderLine = fakeTile.userData.borderLine;
+            const fGlowMesh = fakeTile.userData.glowMesh || fakeTile.getObjectByName('glowMesh');
  
             fakeTile.userData = {
                 ...realTile.userData,
@@ -310,6 +334,7 @@ window.FakeBlocksManager = {
             };
             
             if (fBorderLine) fakeTile.userData.borderLine = fBorderLine;
+            if (fGlowMesh) fakeTile.userData.glowMesh = fGlowMesh;
             
             if (realTile.userData && realTile.userData.isDelayedAppearance) {
                 fakeTile.visible = false;
@@ -657,7 +682,7 @@ window.FakeBlocksManager = {
         if (!this.sharedFragGeometry) {
             this.sharedFragGeometry = new THREE.BoxGeometry(1, 1, 1);
         }
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const targetSize = isMobile ? 12 : 24;
         while (this.fragmentPool.length < targetSize) {
             const mat = new THREE.MeshBasicMaterial({
@@ -685,7 +710,7 @@ window.FakeBlocksManager = {
             hexColor = fTile.material.color.getHex();
         }
         
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const count = isMobile ? 5 : 6;
         const tWidth = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
         const rTileL = typeof tileLength !== 'undefined' ? tileLength : 4.0;
@@ -751,7 +776,7 @@ window.FakeBlocksManager = {
         }
     },
     
-    update: function(delta, gameSpeed, ball, currentTileIndex) {
+    update: function(delta, gameSpeed, ball, currentTileIndex, frameHex) {
         const ballZ = ball.position.z;
         const ballX = ball.position.x;
         const ballY = ball.position.y;
@@ -792,7 +817,7 @@ window.FakeBlocksManager = {
                 }
 
                 // Glow
-                const glowMesh = fTile.getObjectByName("glowMesh");
+                const glowMesh = fTile.userData.glowMesh || fTile.getObjectByName("glowMesh");
                 if (glowMesh && glowMesh.material) {
                     const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                     if (glowMat) {
@@ -827,28 +852,34 @@ window.FakeBlocksManager = {
             }
             
             // --- ĐỒNG BỘ MÀU SẮC ĐỘNG NHƯ KHỐI THẬT ---
-            if (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
-                const hue = (clock.getElapsedTime() * 0.2) % 1;
-                tempColor.setHSL(hue, 0.8, 0.5);
-                const hex = tempColor.getHex();
-                
-                fTile.userData.themeColor = hex;
-                if (fTile.material) {
-                    fTile.material.color.setHex(hex);
-                    if (fTile.material.emissive) fTile.material.emissive.copy(tempColor).multiplyScalar(0.2);
+            if (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled) {
+                let hex = frameHex;
+                if (hex === undefined && typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
+                    const hue = (clock.getElapsedTime() * 0.2) % 1;
+                    tempColor.setHSL(hue, 0.8, 0.5);
+                    hex = tempColor.getHex();
                 }
-                if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
-                    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-                    fTile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
-                }
-                const glowMesh = fTile.getObjectByName("glowMesh");
-                if (glowMesh && glowMesh.material) {
-                    const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                    if (glowMat) {
-                        if (glowMat.uniforms) {
-                            glowMat.uniforms.color.value.setHex(hex);
-                        } else {
-                            glowMat.color.setHex(hex);
+                if (hex !== undefined) {
+                    fTile.userData.themeColor = hex;
+                    if (fTile.material) {
+                        fTile.material.color.setHex(hex);
+                        if (fTile.material.emissive && typeof tempColor !== 'undefined') {
+                            fTile.material.emissive.copy(tempColor).multiplyScalar(0.2);
+                        }
+                    }
+                    if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
+                        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+                        fTile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
+                    }
+                    const glowMesh = fTile.userData.glowMesh || fTile.getObjectByName("glowMesh");
+                    if (glowMesh && glowMesh.material) {
+                        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
+                        if (glowMat) {
+                            if (glowMat.uniforms) {
+                                glowMat.uniforms.color.value.setHex(hex);
+                            } else {
+                                glowMat.color.setHex(hex);
+                            }
                         }
                     }
                 }

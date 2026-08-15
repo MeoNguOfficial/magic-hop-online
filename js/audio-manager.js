@@ -330,8 +330,27 @@ async function togglePreview(index) {
         try {
             localStorage.setItem('selectedSongIndex', index);
             if (typeof activePlaylist !== 'undefined' && activePlaylist[index]) {
-                if (activePlaylist[index].id) localStorage.setItem('selectedSongId', activePlaylist[index].id);
-                if (activePlaylist[index].url) localStorage.setItem('selectedSongUrl', activePlaylist[index].url);
+                const curSong = activePlaylist[index];
+                if (curSong.id) localStorage.setItem('selectedSongId', curSong.id);
+                if (curSong.url) localStorage.setItem('selectedSongUrl', curSong.url);
+                try {
+                    const cleanSong = {
+                        id: curSong.id,
+                        name: curSong.name || curSong.title,
+                        title: curSong.title || curSong.name,
+                        artist: curSong.artist,
+                        genre: curSong.genre,
+                        url: curSong.url,
+                        file_url: curSong.file_url || curSong.url,
+                        beatmapUrl: curSong.beatmapUrl || curSong.lazyUrl,
+                        lazyUrl: curSong.lazyUrl || curSong.beatmapUrl,
+                        speed: curSong.speed,
+                        bpm: curSong.bpm,
+                        copyright_status: curSong.copyright_status,
+                        no_fake_block: curSong.no_fake_block === true
+                    };
+                    localStorage.setItem('selectedSongData', JSON.stringify(cleanSong));
+                } catch (e) {}
             }
         } catch (e) { }
         const options = document.querySelectorAll('.song-option');

@@ -78,6 +78,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'selectedSongId',
     'selectedSongIndex',
     'selectedSongUrl',
+    'selectedSongData',
     'adminSidebarCollapsed',
     'MeoTNDevModeExp',
     'music_cache_metadata',
@@ -897,12 +898,11 @@ function applySettings() {
                     if (!glow) {
                         initGlowMaterials();
                         const isFake = (t.userData && t.userData.isFake === true);
-                        const tileGlowMat = baseGlowMaterial.clone();
+                        const tileGlowMat = createTileGlowMaterial(t.userData.themeColor || 0x00ffff);
                         if (tileGlowMat.uniforms) {
                             tileGlowMat.uniforms.opacityMultiplier.value = isFake ? 0.3 : 1.0;
-                            tileGlowMat.uniforms.color.value.setHex(t.userData.themeColor || 0x00ffff);
                             tileGlowMat.uniforms.glowHeight.value = glowHeight;
-                            tileGlowMat.color.setHex(t.userData.themeColor || 0x00ffff);
+                        } else {
                             tileGlowMat.opacity = isFake ? 0.08 : 0.85;
                         }
                         glow = new THREE.Mesh(cachedGlowGeo, [capMaterial, tileGlowMat]);

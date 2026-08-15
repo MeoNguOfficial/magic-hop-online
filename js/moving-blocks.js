@@ -142,8 +142,9 @@ window.MovingBlocksManager = {
      * @param {number} delta - Khoảng thời gian giữa các khung hình (Clock Delta)
      * @param {number} gameSpeed - Tốc độ hiện tại của game (tốc độ khối tỉ lệ thuận trực tiếp với biến này)
      * @param {number} ballZ - Vị trí Z của quả bóng để lọc các khối đã vượt qua
+     * @param {number} [frameHex] - Màu động đã được tính trước ở khung hình (tùy chọn)
      */
-    update: function (delta, gameSpeed, ballZ) {
+    update: function (delta, gameSpeed, ballZ, frameHex) {
         // TỐC ĐỘ DI CHUYỂN NGANG QUA LẠI: Tỉ lệ thuận với tốc độ game
         const speedFactor = gameSpeed; 
 
@@ -171,29 +172,37 @@ window.MovingBlocksManager = {
 
                 // Đồng bộ màu sắc động đổi màu liên tục (nếu cấu hình dynamic colors bật)
                 if (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled) {
-                    if (typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
-                        const hue = (clock.getElapsedTime() * 0.2) % 1;
-                        tempColor.setHSL(hue, 0.8, 0.5);
-                        
-                        // Cập nhật màu mesh chính
-                        if (tile.material) {
-                            tile.material.color.setHex(tempColor.getHex());
+                    let hex = frameHex;
+                    if (hex === undefined) {
+                        if (tile.userData.themeColor !== undefined) {
+                            hex = tile.userData.themeColor;
+                        } else if (typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
+                            const hue = (clock.getElapsedTime() * 0.2) % 1;
+                            tempColor.setHSL(hue, 0.8, 0.5);
+                            hex = tempColor.getHex();
+                        } else {
+                            hex = 0x00ffff;
                         }
-                        // Cập nhật màu viền (borderLine)
-                        if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                            const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-                            tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : tempColor.getHex());
-                        }
-                        // Cập nhật màu glowMesh
-                        const glowMesh = tile.getObjectByName("glowMesh");
-                        if (glowMesh && glowMesh.material) {
-                            const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                            if (glowMat) {
-                                if (glowMat.uniforms) {
-                                    glowMat.uniforms.color.value.setHex(tempColor.getHex());
-                                } else {
-                                    glowMat.color.setHex(tempColor.getHex());
-                                }
+                    }
+                    
+                    // Cập nhật màu mesh chính
+                    if (tile.material) {
+                        tile.material.color.setHex(hex);
+                    }
+                    // Cập nhật màu viền (borderLine)
+                    if (tile.userData.borderLine && tile.userData.borderLine.material) {
+                        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+                        tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
+                    }
+                    // Cập nhật màu glowMesh
+                    const glowMesh = tile.userData.glowMesh || tile.getObjectByName("glowMesh");
+                    if (glowMesh && glowMesh.material) {
+                        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
+                        if (glowMat) {
+                            if (glowMat.uniforms) {
+                                glowMat.uniforms.color.value.setHex(hex);
+                            } else {
+                                glowMat.color.setHex(hex);
                             }
                         }
                     }

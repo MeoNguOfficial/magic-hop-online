@@ -1866,6 +1866,9 @@ let fpsFrameCount = 0;
 let lastFrameTime = performance.now();
 let cachedBarData = [];
 let visualizerWasCleared = false;
+let fpsHudEl = null;
+const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+window.IS_MOBILE = IS_MOBILE;
 const ballTrailPool = [];
 
 function getTrailSegmentFromPool() {
@@ -1902,8 +1905,8 @@ function animate() {
             const fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
             fpsFrameCount = 0;
             fpsLastTime = now;
-            const fpsHud = document.getElementById('fps-hud');
-            if (fpsHud) fpsHud.innerText = `FPS: ${fpsValue}`;
+            if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
+            if (fpsHudEl) fpsHudEl.innerText = `FPS: ${fpsValue}`;
         }
     }
 
@@ -1958,7 +1961,7 @@ function animate() {
         if (visualizerEnabled && visualizerCtx && analyserNode && isPlaying && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
             visualizerWasCleared = false;
             const nowTime = clock.getElapsedTime();
-            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isMobile = IS_MOBILE;
             const visThrottle = (isMobile || currentGraphicsQuality === 'simple') ? 0.033 : 0.016;
 
             if (nowTime - lastVisTime >= visThrottle) {
@@ -2156,29 +2159,33 @@ function animate() {
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
         const time = clock.getElapsedTime();
         const isWebGPUCached = typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu');
-        tiles.forEach(tile => {
-            if (dynamicColorsEnabled) {
-                const hue = (time * 0.2) % 1;
-                tempColor.setHSL(hue, 0.8, 0.5);
-                const hex = tempColor.getHex();
+        
+        let currentFrameHex = undefined;
+        if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
+            const hue = (time * 0.2) % 1;
+            tempColor.setHSL(hue, 0.8, 0.5);
+            currentFrameHex = tempColor.getHex();
+        }
 
-                tile.userData.themeColor = hex;
+        tiles.forEach(tile => {
+            if (dynamicColorsEnabled && currentFrameHex !== undefined) {
+                tile.userData.themeColor = currentFrameHex;
                 if (tile.material) {
-                    tile.material.color.setHex(hex);
+                    tile.material.color.setHex(currentFrameHex);
                     if (tile.material.emissive) tile.material.emissive.copy(tempColor).multiplyScalar(0.2);
                 }
 
                 if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                    tile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : hex);
+                    tile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
                 }
-                const glowMesh = tile.getObjectByName("glowMesh");
+                const glowMesh = tile.userData.glowMesh || tile.getObjectByName("glowMesh");
                 if (glowMesh && glowMesh.material) {
                     const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                     if (glowMat) {
                         if (glowMat.uniforms) {
-                            glowMat.uniforms.color.value.setHex(hex);
+                            glowMat.uniforms.color.value.setHex(currentFrameHex);
                         } else {
-                            glowMat.color.setHex(hex);
+                            glowMat.color.setHex(currentFrameHex);
                         }
                     }
                 }
@@ -2309,12 +2316,12 @@ function animate() {
 
         // --- CẬP NHẬT KHỐI DI CHUYỂN (TỪ MANAGER) ---
         if (typeof window.MovingBlocksManager !== 'undefined') {
-            window.MovingBlocksManager.update(delta, gameSpeed, ball.position.z);
+            window.MovingBlocksManager.update(delta, gameSpeed, ball.position.z, currentFrameHex);
         }
 
         // --- CẬP NHẬT FAKE BLOCKS ---
         if (typeof window.FakeBlocksManager !== 'undefined') {
-            window.FakeBlocksManager.update(delta, gameSpeed, ball, currentTileIndex);
+            window.FakeBlocksManager.update(delta, gameSpeed, ball, currentTileIndex, currentFrameHex);
         }
 
         // --- POOLING & LAZY SPAWN ---
@@ -2364,7 +2371,7 @@ function animate() {
             }
 
             // Glow
-            const glowMesh = et.getObjectByName("glowMesh");
+            const glowMesh = et.userData.glowMesh || et.getObjectByName("glowMesh");
             if (glowMesh && glowMesh.material) {
                 const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                 if (glowMat) {
@@ -4148,6 +4155,9 @@ async function handleIntro() {
     beatmapBeats = bootBeats;
     BEATMAP_TOTAL_TIME = beatmapBeats[beatmapBeats.length - 1] || 10;
 
+    if (typeof playlistRenderStartIndex !== 'undefined') {
+        playlistRenderStartIndex = 0;
+    }
     if (typeof renderSongList === 'function') {
         renderSongList(null);
     }
@@ -4947,18 +4957,56 @@ async function bootGame() {
             activePlaylist = [{ name: 'Default Song', url: '', beats: [0, 1, 2, 3, 4] }];
         }
 
-        // --- KHÔI PHỤC BÀI HÁT CHƠI LẦN CUỐI THEO ID/URL ---
+        // --- KHÔI PHỤC BÀI HÁT CHƠI LẦN CUỐI THEO ID/URL/METADATA ---
         const savedId = localStorage.getItem('selectedSongId');
         const savedUrl = localStorage.getItem('selectedSongUrl');
         const savedIndex = parseInt(localStorage.getItem('selectedSongIndex'));
+        const savedSongDataStr = localStorage.getItem('selectedSongData');
 
         let foundIndex = -1;
         if (savedId) {
             foundIndex = activePlaylist.findIndex(s => String(s.id) === String(savedId));
         }
         if (foundIndex === -1 && savedUrl) {
-            foundIndex = activePlaylist.findIndex(s => s.url === savedUrl);
+            foundIndex = activePlaylist.findIndex(s => s.url === savedUrl || s.file_url === savedUrl);
         }
+
+        // Nếu bài hát đã lưu chưa có trong page 1 API tải về (lazy load), khôi phục từ savedSongData / DB Offline / playlistSource
+        if (foundIndex === -1 && (savedId || savedUrl || savedSongDataStr)) {
+            let matchedSong = null;
+            if (savedSongDataStr) {
+                try {
+                    const parsed = JSON.parse(savedSongDataStr);
+                    if (parsed && (parsed.id || parsed.url || parsed.name)) {
+                        matchedSong = parsed;
+                    }
+                } catch (e) {}
+            }
+            if (!matchedSong && typeof getCachedPlaylistFromDB === 'function') {
+                try {
+                    const cachedMaps = await getCachedPlaylistFromDB();
+                    if (cachedMaps && Array.isArray(cachedMaps)) {
+                        matchedSong = cachedMaps.find(s => (savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl)));
+                    }
+                } catch (e) {}
+            }
+            if (!matchedSong && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
+                matchedSong = playlistSource.find(s => (savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl)));
+            }
+
+            if (matchedSong && typeof window.mergeIntoPlaylist === 'function') {
+                const newIndices = window.mergeIntoPlaylist([matchedSong]);
+                if (newIndices && newIndices.length > 0) {
+                    foundIndex = newIndices[0];
+                    if (typeof currentPlaylistIndices !== 'undefined' && Array.isArray(currentPlaylistIndices)) {
+                        if (!currentPlaylistIndices.includes(foundIndex)) {
+                            currentPlaylistIndices.unshift(foundIndex);
+                        }
+                    }
+                }
+            }
+        }
+
         if (foundIndex === -1 && !isNaN(savedIndex) && savedIndex >= 0 && savedIndex < activePlaylist.length) {
             foundIndex = savedIndex;
         }
