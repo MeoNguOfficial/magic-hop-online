@@ -307,6 +307,84 @@ function dimLandedTile(tile) {
 
 // --- HIỆU ỨNG SÓNG XUNG KÍCH ---
 
+function createDiamondShockwaveGeometry() {
+    const positions = [];
+    const uvs = [];
+    const indices = [];
+
+    const addDiamond = (cx, cy, angle, length, width) => {
+        const baseIndex = positions.length / 3;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const perpCos = -sin;
+        const perpSin = cos;
+
+        const halfL = length * 0.5;
+        const halfW = width * 0.5;
+
+        // 0: Điểm nhọn bên trong (hướng về tâm)
+        const p0x = cx - cos * halfL;
+        const p0y = cy - sin * halfL;
+        // 1: Góc bên phải
+        const p1x = cx + perpCos * halfW;
+        const p1y = cy + perpSin * halfW;
+        // 2: Điểm nhọn bên ngoài (hướng ra ngoài)
+        const p2x = cx + cos * halfL;
+        const p2y = cy + sin * halfL;
+        // 3: Góc bên trái
+        const p3x = cx - perpCos * halfW;
+        const p3y = cy - perpSin * halfW;
+
+        positions.push(
+            p0x, p0y, 0,
+            p1x, p1y, 0,
+            p2x, p2y, 0,
+            p3x, p3y, 0
+        );
+
+        uvs.push(
+            0.5, 0.0,
+            1.0, 0.5,
+            0.5, 1.0,
+            0.0, 0.5
+        );
+
+        indices.push(
+            baseIndex, baseIndex + 1, baseIndex + 2,
+            baseIndex, baseIndex + 2, baseIndex + 3
+        );
+    };
+
+    const count = 24;
+    for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+
+        // Vành 1: Tia kim cương chính (Outer large diamonds)
+        const r1 = 1.62;
+        const isMajor = (i % 3 === 0);
+        const l1 = isMajor ? 0.70 : 0.55;
+        const w1 = isMajor ? 0.18 : 0.14;
+        addDiamond(Math.cos(angle) * r1, Math.sin(angle) * r1, angle, l1, w1);
+
+        // Vành 2: Tia kim cương so le giữa (Mid staggered diamonds)
+        const angleMid = angle + (Math.PI / count);
+        const r2 = 1.24;
+        addDiamond(Math.cos(angleMid) * r2, Math.sin(angleMid) * r2, angleMid, 0.42, 0.12);
+
+        // Vành 3: Hạt lấp lánh bên trong (Inner spark diamonds)
+        const angleIn = angle + (Math.PI / (count * 2));
+        const r3 = 0.92;
+        addDiamond(Math.cos(angleIn) * r3, Math.sin(angleIn) * r3, angleIn, 0.25, 0.08);
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.setIndex(indices);
+    geo.computeVertexNormals();
+    return geo;
+}
+
 function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale = 1.0) {
     if (!shockwavesEnabled || !tile) return;
 
@@ -350,13 +428,14 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
         }
 
         waveLine.position.copy(tile.position);
-        waveLine.position.y = surfaceY + 0.03;
+        waveLine.position.y = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) + 0.03;
         waveLine.rotation.x = -Math.PI / 2;
         waveLine.scale.set(tileScale * scaleMultiplier, tileScale * scaleMultiplier, 1);
 
         const baseScale = tileScale * scaleMultiplier;
         shockwaves.push({
             mesh: waveLine,
+            isDiamondBurst: false,
             targetTile: tile, // Lưu tham chiếu để dịch chuyển theo tile
             scale: baseScale,
             startScale: baseScale,
@@ -366,16 +445,54 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
         });
     };
 
-    // Primary shockwave
-    spawnRing(1.0);
-
-    // Double shockwave (shockwave kép) from combo 6 onwards
-    if (comboCount >= 6) {
-        setTimeout(() => {
-            if (isPlaying && scene && shockwavesEnabled) {
-                spawnRing(0.85); // concentric second ring inside the first
+    const spawnDiamondBurst = (scaleMultiplier) => {
+        let waveMesh;
+        if (diamondShockwavePool.length > 0) {
+            waveMesh = diamondShockwavePool.pop();
+            waveMesh.visible = true;
+            waveMesh.material.color.setHex(themeColor);
+            waveMesh.material.opacity = 1.0;
+        } else {
+            if (!cachedDiamondShockwaveGeo) {
+                cachedDiamondShockwaveGeo = createDiamondShockwaveGeometry();
             }
-        }, 100);
+            const waveMat = new THREE.MeshBasicMaterial({
+                color: themeColor,
+                transparent: true,
+                opacity: 1.0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+            waveMesh = new THREE.Mesh(cachedDiamondShockwaveGeo, waveMat);
+            scene.add(waveMesh);
+        }
+
+        waveMesh.position.copy(tile.position);
+        waveMesh.position.y = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) + 0.032;
+        waveMesh.rotation.x = -Math.PI / 2;
+        waveMesh.rotation.z = 0;
+        waveMesh.scale.set(tileScale * scaleMultiplier, tileScale * scaleMultiplier, 1);
+
+        const baseScale = tileScale * scaleMultiplier;
+        shockwaves.push({
+            mesh: waveMesh,
+            isDiamondBurst: true,
+            targetTile: tile,
+            scale: baseScale,
+            startScale: baseScale,
+            opacity: 1.0,
+            speed: 4.8 * customOffsetScale,
+            maxScale: 2.6 * customOffsetScale * baseScale
+        });
+    };
+
+    // Khi đạt Perfect combo >= 6: Thay thế hoàn toàn bằng vành hoa kim cương lan tỏa (Diamond Starburst)
+    // Khi dưới combo 6 hoặc mất Perfect combo: Dùng sóng viền mặc định (Default Shockwave Ring)
+    if (comboCount >= 6) {
+        spawnDiamondBurst(1.0);
+    } else {
+        spawnRing(1.0);
     }
 
     // --- SINH CÁC ĐƯỜNG SÁNG CHẠY THEO BIÊN THEO NHỊP BEAT (NEON BOUNDARY PULSES) ---
@@ -391,20 +508,15 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
             });
         }
 
-        // 1. Khoảng cách chạy tiến về phía các khối xa nhất phía trước
-        let forwardDistance = Math.abs(baseBallVelocityZ) * 1.0;
-        if (tiles && tiles.length > 0) {
-            const currentTileIdx = tiles.findIndex(t => Math.abs(t.position.z - tile.position.z) < 0.1);
-            if (currentTileIdx !== -1 && currentTileIdx + 1 < tiles.length) {
-                const furthestTile = tiles[tiles.length - 1];
-                forwardDistance = Math.abs(tile.position.z - furthestTile.position.z);
-            }
-        }
-        forwardDistance = Math.max(1.0, forwardDistance);
+        // 1. Điểm xuất phát: Kéo trùng đúng với vị trí hiện tại của Camera (Z)
+        const camZ = camera ? camera.position.z : (tile ? tile.position.z + 13.2 : 0);
 
-        // 2. Khoảng cách chạy lùi xuống đúng vị trí Camera (tính từ vị trí gạch hiện tại lùi qua Z của Camera)
-        const camZ = camera ? camera.position.z : tile.position.z + 15;
-        const cameraDistance = Math.max(12.0, Math.abs(camZ - tile.position.z) + 15.0);
+        // 2. Khoảng cách chạy tiến về phía các khối xa nhất phía trước (Z âm)
+        let forwardDistance = 80.0;
+        if (tiles && tiles.length > 0) {
+            const furthestTile = tiles[tiles.length - 1];
+            forwardDistance = Math.max(60.0, Math.abs(camZ - furthestTile.position.z) + 30.0);
+        }
 
         const spawnPulse = (x, z, speedZ, maxDist) => {
             let mesh;
@@ -433,16 +545,12 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
             });
         };
 
-        const speedForward = baseBallVelocityZ * 2.8;            // Vận tốc chạy tiến (Z âm)
-        const speedBackward = Math.abs(baseBallVelocityZ) * 2.8; // Vận tốc chạy lùi xuống vị trí Camera (Z dương)
+        // Vận tốc chạy tiến về trục âm (Z âm, bắn ra phía trước màn hình)
+        const speedForward = (typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40) * 2.8;
 
-        // Xung phát sáng biên chạy lùi xuống đúng vị trí Camera (Trái & Phải)
-        spawnPulse(-6.75, tile.position.z, speedBackward, cameraDistance);
-        spawnPulse(6.75, tile.position.z, speedBackward, cameraDistance);
-
-        // Xung phát sáng biên chạy tiến về phía trước (Trái & Phải)
-        spawnPulse(-6.75, tile.position.z, speedForward, forwardDistance);
-        spawnPulse(6.75, tile.position.z, speedForward, forwardDistance);
+        // Chỉ sinh 1 chiều duy nhất chạy từ vị trí Camera hướng về phía trước (Trái & Phải)
+        spawnPulse(-6.75, camZ, speedForward, forwardDistance);
+        spawnPulse(6.75, camZ, speedForward, forwardDistance);
     }
 }
 
@@ -881,7 +989,15 @@ function shiftCoordinateOrigin(offsetZ) {
         }
     }
 
-    // 8. Dịch chuyển hệ thống hạt nền (starField GPU Shader)
+    // 8. Dịch chuyển các xung phát sáng biên chạy theo nhịp nhạc (Boundary pulses)
+    if (typeof boundaryPulses !== 'undefined' && boundaryPulses.length > 0) {
+        boundaryPulses.forEach(pulse => {
+            if (pulse.mesh) pulse.mesh.position.z += offsetZ;
+            if (pulse.startZ !== undefined) pulse.startZ += offsetZ;
+        });
+    }
+
+    // 9. Dịch chuyển hệ thống hạt nền (starField GPU Shader)
     if (typeof starFieldUniforms !== 'undefined' && starFieldUniforms) {
         starFieldUniforms.uZOffset.value += offsetZ;
     } else if (starField && starField.geometry && starField.geometry.attributes.position) {
@@ -892,8 +1008,8 @@ function shiftCoordinateOrigin(offsetZ) {
         starField.geometry.attributes.position.needsUpdate = true;
     }
 
-    // 9. Cập nhật lại hướng nhìn camera theo tọa độ mới
-    camera.lookAt(camera.position.x, 1.6, camera.position.z - 18);
+    // 10. Cập nhật lại hướng nhìn camera theo tọa độ mới
+    camera.lookAt(camera.position.x, 1.6, camera.position.z - 20);
 }
 
 function checkAndApplyFloatingOrigin() {
@@ -1183,7 +1299,7 @@ async function initThree() {
 
     const aspect = window.innerWidth / window.innerHeight;
     camera = new THREE.PerspectiveCamera(aspect < 1 ? 75 : 60, aspect, 0.1, 1000);
-    camera.position.set(0, 6, 9.5);
+    camera.position.set(0, 6.8, 13.2);
 
     const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
     const currentApi = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu') ? 'webgpu' : 'webgl';
@@ -2446,7 +2562,11 @@ function animate() {
 
             if (isTileInactive || isBehindCam) {
                 sw.mesh.visible = false;
-                shockwavePool.push(sw.mesh);
+                if (sw.isDiamondBurst) {
+                    diamondShockwavePool.push(sw.mesh);
+                } else {
+                    shockwavePool.push(sw.mesh);
+                }
                 shockwaves.splice(i, 1);
                 continue;
             }
@@ -2474,7 +2594,11 @@ function animate() {
 
             if (progress >= 1.0 || fadeFactor <= 0.001) {
                 sw.mesh.visible = false;
-                shockwavePool.push(sw.mesh);
+                if (sw.isDiamondBurst) {
+                    diamondShockwavePool.push(sw.mesh);
+                } else {
+                    shockwavePool.push(sw.mesh);
+                }
                 shockwaves.splice(i, 1);
             }
         }
@@ -2927,59 +3051,47 @@ function animate() {
 
         // --- CAMERA ---
         if (ball && gameStarted) {
-            const targetCamZ = ball.position.z + 10;
-            const targetCamY = 6.0;
+            const targetCamZ = ball.position.z + 13.2;
+            const targetCamY = 6.8;
             const sideLimit = 4.5;
             let targetCamX = Math.max(-sideLimit, Math.min(sideLimit, ball.position.x));
 
-            const decayFactor = (typeof victoryCameraDecay !== 'undefined' ? victoryCameraDecay : 1.0);
-
-            if (Math.abs(camera.position.z - targetCamZ) > 50 && !(typeof isVictoryTransition !== 'undefined' && isVictoryTransition)) {
-                // Teleport nếu bị lạc quá xa (reset scene)
-                camera.position.set(targetCamX, targetCamY, targetCamZ);
-                camVelX = 0; camVelY = 0; camVelZ = 0;
-            } else {
-                // --- SMOOTH DAMP (Critically-Damped Spring) ---
-                // Công thức: giống Unity SmoothDamp — tạo quán tính ease-in-out
-                // mà không thay đổi tốc độ hội tụ tổng thể.
-                // smoothTime nhỏ = bám nhanh hơn. Công thức: omega = 2/smoothTime
-                const smoothTimeX = 0.5;                              // Trục X: mượt hơn (ít bám sát X hơn)
-                const smoothTimeZ = 0.333 / (gameSpeed * decayFactor + 0.001); // Trục Z: bám theo speed
-
-                // Clamp smoothTime để tránh phân kỳ
-                const dtX = Math.min(delta, 0.1);
+            if (typeof isVictoryTransition !== 'undefined' && isVictoryTransition) {
+                // Trong hiệu ứng kết thúc chiến thắng: Giảm dần độ bám đuôi để bóng bay vút xa dần
+                const decayFactor = (typeof victoryCameraDecay !== 'undefined' ? victoryCameraDecay : 1.0);
+                const smoothTimeZ = 0.333 / Math.max(0.01, decayFactor);
                 const dtZ = Math.min(delta, 0.1);
-
-                const omegaX = 2.0 / smoothTimeX;
                 const omegaZ = 2.0 / Math.max(0.05, smoothTimeZ);
-
-                // SmoothDamp axis X
-                const xX = omegaX * dtX;
-                const expX = 1.0 / (1.0 + xX + 0.48 * xX * xX + 0.235 * xX * xX * xX);
-                const deltaX = camera.position.x - targetCamX;
-                const tempVX = (camVelX + omegaX * deltaX) * dtX;
-                camVelX = (camVelX - omegaX * tempVX) * expX;
-                camera.position.x = targetCamX + (deltaX + tempVX) * expX;
-
-                // SmoothDamp axis Y
-                const xY = omegaZ * dtZ;
-                const expY = 1.0 / (1.0 + xY + 0.48 * xY * xY + 0.235 * xY * xY * xY);
-                const deltaY = camera.position.y - targetCamY;
-                const tempVY = (camVelY + omegaZ * deltaY) * dtZ;
-                camVelY = (camVelY - omegaZ * tempVY) * expY;
-                camera.position.y = targetCamY + (deltaY + tempVY) * expY;
-
-                // SmoothDamp axis Z
                 const xZ = omegaZ * dtZ;
                 const expZ = 1.0 / (1.0 + xZ + 0.48 * xZ * xZ + 0.235 * xZ * xZ * xZ);
                 const deltaZ = camera.position.z - targetCamZ;
                 const tempVZ = (camVelZ + omegaZ * deltaZ) * dtZ;
                 camVelZ = (camVelZ - omegaZ * tempVZ) * expZ;
                 camera.position.z = targetCamZ + (deltaZ + tempVZ) * expZ;
+            } else {
+                // Trong khi chơi: Khóa cự ly cố định trên trục Z (+13.2 so với bóng)
+                // Loại bỏ độ trễ vận tốc (velocity lag) khi tốc độ game (speed) tăng cao
+                camera.position.z = targetCamZ;
+                camVelZ = 0;
             }
 
-            // Dùng camera.position.z - 18 thay vì ball.position.z - 8 để tránh hiện tượng camera giật/dịch chuyển đột ngột khi bóng giải cứu (teleport Z)
-            camera.lookAt(camera.position.x, 1.6, camera.position.z - 18);
+            // Trục Y: Cố định độ cao 6.8
+            camera.position.y = targetCamY;
+            camVelY = 0;
+
+            // Trục X: Giữ độ mượt (SmoothDamp) khi bóng di chuyển ngang
+            const smoothTimeX = 0.5;
+            const dtX = Math.min(delta, 0.1);
+            const omegaX = 2.0 / smoothTimeX;
+            const xX = omegaX * dtX;
+            const expX = 1.0 / (1.0 + xX + 0.48 * xX * xX + 0.235 * xX * xX * xX);
+            const deltaX = camera.position.x - targetCamX;
+            const tempVX = (camVelX + omegaX * deltaX) * dtX;
+            camVelX = (camVelX - omegaX * tempVX) * expX;
+            camera.position.x = targetCamX + (deltaX + tempVX) * expX;
+
+            // Hướng nhìn của camera luôn ổn định theo cự ly cố định phía trước
+            camera.lookAt(camera.position.x, 1.6, camera.position.z - 20);
         }
 
         // --- FLOATING ORIGIN DETECT & RESET ---
@@ -3033,7 +3145,11 @@ function animate() {
 function cleanUpOldObjects() {
     shockwaves.forEach(sw => {
         sw.mesh.visible = false;
-        shockwavePool.push(sw.mesh);
+        if (sw.isDiamondBurst) {
+            diamondShockwavePool.push(sw.mesh);
+        } else {
+            shockwavePool.push(sw.mesh);
+        }
     });
     shockwaves = [];
 
@@ -4057,8 +4173,8 @@ function resetGameScene() {
     }
 
     if (camera) {
-        camera.position.set(0, 6, 10);
-        camera.lookAt(0, 1.6, -8);
+        camera.position.set(0, 6.8, 13.2);
+        camera.lookAt(0, 1.6, -6.8);
     }
 
     gameStarted = false;
@@ -4276,8 +4392,8 @@ async function handleIntro() {
                     if (typeof camera !== 'undefined' && camera) {
                         anime({
                             targets: camera.position,
-                            y: 6,
-                            z: 9.5,
+                            y: 6.8,
+                            z: 13.2,
                             duration: 1500,
                             easing: 'easeInOutCubic',
                             complete: () => {
@@ -4316,7 +4432,7 @@ async function handleIntro() {
         } else {
             // Fallback nếu animation bị tắt
             if (typeof camera !== 'undefined' && camera) {
-                camera.position.set(0, 6, 9.5);
+                camera.position.set(0, 6.8, 13.2);
             }
             introOverlay.style.opacity = 0;
             introOverlay.style.display = 'none';

@@ -168,8 +168,8 @@ const currentBgColor = new THREE.Color(0x00ffff);
 
 // --- OBJECT POOLING ---
 const tilePool = [];
-let maxTilePoolSize = 15; // Cập nhật động dựa trên blocksAheadLimit và blocksBehindLimit
 const shockwavePool = [];
+const diamondShockwavePool = [];
 const perfectRingPool = [];
 let cachedTileGeo = null;
 let cachedCenterGeo = null;
@@ -177,6 +177,7 @@ let cachedBorderGeo = null;
 
 let cachedTrailGeo = null;
 let cachedShockwaveGeo = null;
+let cachedDiamondShockwaveGeo = null;
 let cachedPerfectRingGeo = null;
 let cachedGlowGeo = null;
 let currentGlowHeight = 1.0;
@@ -1160,7 +1161,7 @@ if (adminSpeedGainInput) {
 
     let _sgDragging = false;
     let _sgStartX = 0;
-    let _sgStartVal = 0.2;
+    let _sgStartVal = 0.21;
     let _sgMoved = false;
 
     const _sgApply = (val) => {

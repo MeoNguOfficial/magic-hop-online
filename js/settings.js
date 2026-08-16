@@ -794,12 +794,23 @@ function applySettings() {
             cachedShockwaveGeo.dispose();
             cachedShockwaveGeo = null;
         }
+        if (typeof cachedDiamondShockwaveGeo !== 'undefined' && cachedDiamondShockwaveGeo) {
+            cachedDiamondShockwaveGeo.dispose();
+            cachedDiamondShockwaveGeo = null;
+        }
         if (typeof shockwavePool !== 'undefined') {
             shockwavePool.forEach(mesh => {
                 if (mesh.geometry) mesh.geometry.dispose();
                 if (mesh.material) mesh.material.dispose();
             });
             shockwavePool.length = 0;
+        }
+        if (typeof diamondShockwavePool !== 'undefined') {
+            diamondShockwavePool.forEach(mesh => {
+                if (mesh.geometry) mesh.geometry.dispose();
+                if (mesh.material) mesh.material.dispose();
+            });
+            diamondShockwavePool.length = 0;
         }
 
         const initialDetailScale = typeof tileDetailScale !== 'undefined' ? parseFloat(tileDetailScale) : 1.0;
