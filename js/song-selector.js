@@ -590,7 +590,7 @@ function updatePreviewUI(index, state) {
     }
 }
 
-async function showLeaderboard(songIndex, forceRefresh = false) {
+async function showLeaderboard(songIndex, forceRefresh = false, targetMode = null) {
     const song = playlist[songIndex];
     if (!song || !song.id) {
         if (typeof showCyberModal === 'function') {
@@ -599,13 +599,42 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
         return;
     }
 
-    const isRage = (window.HardModeManager && window.HardModeManager.isEnabled) || (window.AsianModeManager && window.AsianModeManager.isEnabled);
-    const titleMode = isRage ? ((window.AsianModeManager && window.AsianModeManager.isEnabled) ? " (ASIAN MODE)" : " (RAGE MODE)") : "";
-    const modalTitle = `TOP 10 - ${song.name}${titleMode}`;
+    // Xác định chế độ mặc định ban đầu nếu không chỉ định targetMode
+    let activeMode = targetMode;
+    if (!activeMode) {
+        if (window.EasyModeManager && window.EasyModeManager.isEnabled) activeMode = 'easy';
+        else if (window.AsianModeManager && window.AsianModeManager.isEnabled) activeMode = 'asian';
+        else if (window.HardModeManager && window.HardModeManager.isEnabled) activeMode = 'hard';
+        else activeMode = 'normal';
+    }
+
+    const modeLabels = {
+        easy: { name: 'EASY', color: 'text-emerald-400', border: 'border-emerald-500', bgActive: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50' },
+        normal: { name: 'NORMAL', color: 'text-cyan-400', border: 'border-cyan-500', bgActive: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50' },
+        hard: { name: 'HARD', color: 'text-yellow-400', border: 'border-yellow-500', bgActive: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/50' },
+        asian: { name: 'ASIAN', color: 'text-rose-500', border: 'border-rose-500', bgActive: 'bg-rose-500/20 text-rose-300 border-rose-500/50' }
+    };
+
+    const currentModeInfo = modeLabels[activeMode] || modeLabels.normal;
+    const modalTitle = `TOP 10 - ${song.name}`;
+
+    const tabsHtml = `
+        <div class="grid grid-cols-4 gap-1.5 mb-3 p-1 bg-black/40 rounded-lg border border-cyan-500/20 text-[11px] font-orbitron font-bold">
+            ${['easy', 'normal', 'hard', 'asian'].map(m => {
+                const info = modeLabels[m];
+                const isActive = (m === activeMode);
+                const activeClass = isActive 
+                    ? `${info.bgActive} shadow-[0_0_8px_rgba(6,182,212,0.2)]` 
+                    : 'text-gray-400 hover:text-gray-200 border-transparent hover:bg-cyan-950/20';
+                return `<button type="button" class="lb-diff-tab py-1.5 px-1 rounded-md border text-center transition-all ${activeClass}" data-mode="${m}">${info.name}</button>`;
+            }).join('')}
+        </div>
+    `;
 
     const skeletonHtml = `
         <div id="lb-modal-container" class="w-full text-left space-y-2">
-            <div id="lb-modal-list" class="w-full h-[260px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
+            ${tabsHtml}
+            <div id="lb-modal-list" class="w-full h-[240px] space-y-2 overflow-y-auto pr-1 custom-scrollbar">
                 <div class="animate-pulse space-y-2">
                     ${[1, 2, 3, 4, 5].map(i => `
                         <div class="flex justify-between items-center bg-cyan-950/20 border border-cyan-500/10 p-2.5 rounded-lg h-[44px]">
@@ -621,7 +650,10 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
                     `).join('')}
                 </div>
             </div>
-            <div class="mt-3 flex justify-end h-8 items-center">
+            <div class="mt-3 flex justify-between h-8 items-center text-[10px] text-gray-400 font-orbitron">
+                <span id="lb-current-mode-indicator" class="flex items-center gap-1.5">
+                    Chế độ: <strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>
+                </span>
                 <button id="btn-refresh-lb-${song.id}" class="px-3 py-1.5 bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 text-[11px] text-cyan-400 rounded-lg font-orbitron flex items-center gap-1.5 transition-all opacity-50 cursor-not-allowed" disabled>
                     <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     Đang tải...
@@ -646,31 +678,50 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
             type: 'alert'
         });
     } else {
-        // Cửa sổ đang mở sẵn -> giữ nguyên khung modal & danh sách, chỉ cập nhật nút refresh thành đang xoay icon
-        const btnRef = document.getElementById(`btn-refresh-lb-${song.id}`);
-        if (btnRef) {
-            btnRef.disabled = true;
-            btnRef.classList.add('opacity-50', 'cursor-not-allowed');
-            btnRef.innerHTML = `
-                <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                Đang tải...
-            `;
+        // Cửa sổ đang mở sẵn -> Render lại bộ tab & khung skeleton list
+        if (container) {
+            container.innerHTML = skeletonHtml;
         }
     }
 
+    // Gắn sự kiện chuyển tab 4 độ khó
+    setTimeout(() => {
+        const tabBtns = document.querySelectorAll('.lb-diff-tab');
+        tabBtns.forEach(btn => {
+            btn.onclick = () => {
+                const mode = btn.dataset.mode;
+                if (mode && mode !== activeMode) {
+                    showLeaderboard(songIndex, false, mode);
+                }
+            };
+        });
+    }, 0);
+
     try {
-        const params = isRage ? { mode: 'hard' } : {};
+        const params = { mode: activeMode };
         const options = forceRefresh ? { forceRefresh: true } : {};
         const response = await window.ApiService.getLeaderboard(song.id, params, options);
         const scores = response.data?.data || response.data || [];
 
         let listHtml = '';
         if (scores.length === 0) {
-            listHtml = `<div class="h-full flex items-center justify-center text-gray-400 text-xs font-orbitron">Chưa có ai đạt điểm trên bài hát này.</div>`;
+            listHtml = `<div class="h-full flex flex-col items-center justify-center text-gray-400 text-xs font-orbitron py-10"><p>Chưa có ai đạt điểm trên chế độ <strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>.</p></div>`;
         } else {
             scores.forEach((s, idx) => {
                 let colorClass = idx === 0 ? "text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]" : (idx === 1 ? "text-gray-200 font-bold" : (idx === 2 ? "text-orange-400 font-bold" : "text-gray-300"));
-                const scoreValue = isRage ? (s.hard_mode_score ?? s.rage_score ?? s.score ?? 0) : (s.score ?? 0);
+                
+                // Lấy chính xác điểm số theo đúng chế độ đang chọn
+                let scoreValue = 0;
+                if (activeMode === 'easy') {
+                    scoreValue = s.easy_mode_score ?? 0;
+                } else if (activeMode === 'hard') {
+                    scoreValue = s.hard_mode_score ?? s.rage_score ?? 0;
+                } else if (activeMode === 'asian') {
+                    scoreValue = s.asian_mode_score ?? 0;
+                } else {
+                    scoreValue = s.score ?? 0;
+                }
+
                 listHtml += `
                 <div class="flex justify-between items-center bg-cyan-950/30 border border-cyan-500/20 p-2.5 rounded-lg hover:border-cyan-400/50 transition-all h-[44px]">
                     <div class="flex items-center gap-3">
@@ -678,15 +729,15 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
                         <span class="text-xs font-bold text-white truncate max-w-[130px] font-orbitron">${s.user?.realname || s.user?.username || 'Unknown'}</span>
                     </div>
                     <div class="flex flex-col items-end">
-                        <span class="text-cyan-400 font-orbitron font-bold text-xs">${formatScoreDisplay(scoreValue)}</span>
-                        <span class="text-[9px] text-gray-500 font-orbitron">${new Date(s.created_at).toLocaleDateString()}</span>
+                        <span class="${currentModeInfo.color} font-orbitron font-bold text-xs">${formatScoreDisplay(scoreValue)}</span>
+                        <span class="text-[9px] text-gray-500 font-orbitron">${s.created_at ? new Date(s.created_at).toLocaleDateString() : ''}</span>
                     </div>
                 </div>
                 `;
             });
         }
 
-        // Cập nhật dữ liệu thật vào đúng khung danh sách trong cửa sổ hiện tại
+        // Cập nhật danh sách điểm thực tế
         const listEl = document.getElementById('lb-modal-list');
         if (listEl) {
             listEl.innerHTML = listHtml;
@@ -698,15 +749,15 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
             btnRef.classList.remove('opacity-50', 'cursor-not-allowed');
             btnRef.innerHTML = `
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                Làm mới Bảng xếp hạng
+                Làm mới
             `;
-            btnRef.onclick = () => showLeaderboard(songIndex, true);
+            btnRef.onclick = () => showLeaderboard(songIndex, true, activeMode);
         }
 
     } catch (e) {
         const listEl = document.getElementById('lb-modal-list');
         if (listEl) {
-            listEl.innerHTML = `<div class="h-full flex items-center justify-center text-red-400 text-xs font-orbitron">Không thể lấy dữ liệu bảng xếp hạng lúc này.</div>`;
+            listEl.innerHTML = `<div class="h-full flex items-center justify-center text-red-400 text-xs font-orbitron py-10">Không thể lấy dữ liệu bảng xếp hạng lúc này.</div>`;
         }
         const btnRef = document.getElementById(`btn-refresh-lb-${song.id}`);
         if (btnRef) {
@@ -716,7 +767,7 @@ async function showLeaderboard(songIndex, forceRefresh = false) {
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
                 Thử lại
             `;
-            btnRef.onclick = () => showLeaderboard(songIndex, true);
+            btnRef.onclick = () => showLeaderboard(songIndex, true, activeMode);
         }
     }
 }
