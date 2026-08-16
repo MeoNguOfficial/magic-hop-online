@@ -562,7 +562,6 @@ function triggerPerfectComboUI(comboCount) {
             targets: comboEl,
             scale: [1.18, 0.98, 1.0],
             translateY: [-4, 0],
-            rotate: [comboCount % 2 === 0 ? -2.5 : 2.5, 0],
             duration: 300,
             easing: 'easeOutBack(1.5)'
         });
