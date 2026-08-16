@@ -356,6 +356,21 @@ function pushTileToPool(tile) {
         scene.remove(tile);
     }
 
+    if (typeof window.MovingBlocksManager !== 'undefined' && typeof window.MovingBlocksManager.removeTile === 'function') {
+        window.MovingBlocksManager.removeTile(tile);
+    }
+
+    if (tile.userData) {
+        tile.userData.isMoving = false;
+        tile.userData.isExiting = false;
+        tile.userData.isEntering = false;
+        delete tile.userData.moveSpeed;
+        delete tile.userData.moveTime;
+        delete tile.userData.amplitude;
+        delete tile.userData.baseX;
+        delete tile.userData.moveType;
+    }
+
     const limit = (typeof maxTilePoolSize !== 'undefined') ? maxTilePoolSize : 15;
     if (tilePool.length < limit) {
         tilePool.push(tile);

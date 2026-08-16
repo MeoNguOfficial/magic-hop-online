@@ -322,27 +322,104 @@ window.FakeBlocksManager = {
             
             const fBorderLine = fakeTile.userData.borderLine;
             const fGlowMesh = fakeTile.userData.glowMesh || fakeTile.getObjectByName('glowMesh');
+            const targetZVal = realTile.userData.targetZ !== undefined ? realTile.userData.targetZ : realTile.position.z;
  
             fakeTile.userData = {
                 ...realTile.userData,
                 bodyMesh: fakeTile.userData.bodyMesh || null,
                 edgeMesh: fakeTile.userData.edgeMesh || null,
                 centerMesh: null,
+                borderLine: fBorderLine,
+                glowMesh: fGlowMesh,
                 isFake: true,
                 isBroken: false,
-                fallSpeed: 0
+                isExiting: false,
+                isMoving: false, // Fake blocks tuyệt đối không kế thừa logic Moving Block
+                fallSpeed: 0,
+                targetZ: targetZVal,
+                isEntering: realTile.userData.isEntering || false,
+                isDelayedAppearance: realTile.userData.isDelayedAppearance || false
             };
             
-            if (fBorderLine) fakeTile.userData.borderLine = fBorderLine;
-            if (fGlowMesh) fakeTile.userData.glowMesh = fGlowMesh;
+            // Xóa sạch các cờ động vận tốc của chu kỳ sống trước
+            delete fakeTile.userData.exitVelZ;
+            delete fakeTile.userData.exitStartZ;
+            delete fakeTile.userData.exitOpacity;
+            delete fakeTile.userData.moveSpeed;
+            delete fakeTile.userData.movePattern;
+            delete fakeTile.userData.moveTime;
+            delete fakeTile.userData.amplitude;
+            delete fakeTile.userData.baseX;
+            delete fakeTile.userData.originX;
             
-            if (realTile.userData && realTile.userData.isDelayedAppearance) {
+            if (fakeTile.userData.isDelayedAppearance) {
                 fakeTile.visible = false;
             }
             
             if (typeof scene !== 'undefined') scene.add(fakeTile);
             this.fakeTiles.push(fakeTile);
         });
+    },
+
+    _recycleTile: function(t) {
+        if (!t) return;
+        if (typeof scene !== 'undefined' && scene) scene.remove(t);
+        t.visible = false;
+        t.position.set(0, 0, 0);
+        t.rotation.set(0, 0, 0);
+        t.scale.set(1, 1, 1);
+
+        const bLine = t.userData ? t.userData.borderLine : null;
+        const gMesh = t.userData ? (t.userData.glowMesh || t.getObjectByName('glowMesh')) : null;
+        const bMesh = t.userData ? t.userData.bodyMesh : null;
+        const eMesh = t.userData ? t.userData.edgeMesh : null;
+
+        // Reset toàn bộ cờ trạng thái di động, trượt thoát, rơi vỡ
+        t.userData = {
+            borderLine: bLine || null,
+            glowMesh: gMesh || null,
+            bodyMesh: bMesh || null,
+            edgeMesh: eMesh || null,
+            centerMesh: null,
+            isFake: true,
+            isBroken: false,
+            isExiting: false,
+            isEntering: false,
+            isDelayedAppearance: false,
+            isMoving: false,
+            fallSpeed: 0,
+            springY: 0,
+            springVelocityY: 0,
+            baseY: 0
+        };
+
+        const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+        if (t.material) {
+            t.material.opacity = isWebGPUForFake ? 0.3 : 0.25;
+            t.material.transparent = true;
+            t.material.depthWrite = false;
+        }
+        if (bLine && bLine.material) {
+            bLine.material.opacity = 0.15;
+            bLine.material.transparent = true;
+        }
+        if (gMesh && gMesh.material) {
+            const glowMat = Array.isArray(gMesh.material) ? gMesh.material[1] : gMesh.material;
+            if (glowMat) {
+                if (glowMat.uniforms && glowMat.uniforms.opacityMultiplier) {
+                    glowMat.uniforms.opacityMultiplier.value = 0.3;
+                } else {
+                    glowMat.opacity = 0.08;
+                }
+            }
+        }
+
+        if (this.fakeTilePool.length < this.maxPoolSize) {
+            this.fakeTilePool.push(t);
+        } else {
+            this._disposeMaterial(t.material);
+            t.children.forEach(c => { this._disposeMaterial(c.material); });
+        }
     },
 
     // Ghi lại vị trí X của khối thật vừa spawn (giữ tối đa 3 entries)
@@ -596,15 +673,7 @@ window.FakeBlocksManager = {
                 if (Math.abs(fTile.position.z - tile.position.z) < zTolerance && 
                     Math.abs(fTile.position.x - tile.position.x) < xTolerance) {
                     
-                    if (typeof scene !== 'undefined') scene.remove(fTile);
-                    fTile.visible = false;
-                    
-                    if (this.fakeTilePool.length < this.maxPoolSize) {
-                        this.fakeTilePool.push(fTile);
-                    } else {
-                        this._disposeMaterial(fTile.material);
-                        fTile.children.forEach(c => { this._disposeMaterial(c.material); });
-                    }
+                    this._recycleTile(fTile);
                     this.fakeTiles.splice(i, 1);
                 }
             }
@@ -832,20 +901,7 @@ window.FakeBlocksManager = {
                 // Thu hồi khi viền đã fade hết hoặc đã trượt ra quá xa
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : fTile.userData.exitStartZ + 20;
                 if (op <= 0 || fTile.position.z > camZ + 5) {
-                    if (typeof scene !== 'undefined') scene.remove(fTile);
-                    fTile.visible = false;
-                    
-                    delete fTile.userData.exitVelZ;
-                    delete fTile.userData.exitStartZ;
-                    delete fTile.userData.exitOpacity;
-                    delete fTile.userData.isExiting;
-
-                    if (this.fakeTilePool.length < this.maxPoolSize) {
-                        this.fakeTilePool.push(fTile);
-                    } else {
-                        this._disposeMaterial(fTile.material);
-                        fTile.children.forEach(c => { this._disposeMaterial(c.material); });
-                    }
+                    this._recycleTile(fTile);
                     this.fakeTiles.splice(i, 1);
                 }
                 continue;
@@ -950,16 +1006,7 @@ window.FakeBlocksManager = {
                             this.shatterTile(fTile);
                             
                             // Dọn dẹp & thu hồi khối fake lập tức
-                            if (typeof scene !== 'undefined') scene.remove(fTile);
-                            fTile.visible = false;
-                            
-                            if (this.fakeTilePool.length < this.maxPoolSize) {
-                                this.fakeTilePool.push(fTile);
-                            } else {
-                                this._disposeMaterial(fTile.material);
-                                fTile.children.forEach(c => { this._disposeMaterial(c.material); });
-                            }
-                            
+                            this._recycleTile(fTile);
                             this.fakeTiles.splice(i, 1);
                             continue;
                         }
@@ -972,16 +1019,7 @@ window.FakeBlocksManager = {
                 if (typeof spawnAnimationMode !== 'undefined' && spawnAnimationMode !== 'none') {
                     fTile.userData.isExiting = true;
                 } else {
-                    if (typeof scene !== 'undefined') scene.remove(fTile);
-                    fTile.visible = false;
-                    
-                    if (this.fakeTilePool.length < this.maxPoolSize) {
-                        this.fakeTilePool.push(fTile);
-                    } else {
-                        this._disposeMaterial(fTile.material);
-                        fTile.children.forEach(c => { this._disposeMaterial(c.material); });
-                    }
-                    
+                    this._recycleTile(fTile);
                     this.fakeTiles.splice(i, 1);
                 }
             }
@@ -1017,15 +1055,7 @@ window.FakeBlocksManager = {
     
     reset: function() {
         this.fakeTiles.forEach(t => {
-            if (typeof scene !== 'undefined') scene.remove(t);
-            t.visible = false;
-            
-            if (this.fakeTilePool.length < this.maxPoolSize) {
-                this.fakeTilePool.push(t);
-            } else {
-                this._disposeMaterial(t.material);
-                t.children.forEach(c => { this._disposeMaterial(c.material); });
-            }
+            this._recycleTile(t);
         });
         this.fakeTiles = [];
 

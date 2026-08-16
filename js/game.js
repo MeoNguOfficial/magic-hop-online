@@ -2018,33 +2018,37 @@ function animate() {
             visualizerWasCleared = true;
         }
 
-        // --- ĐỒNG BỘ ROUND & TỐC ĐỘ ---
+        // --- ĐỒNG BỘ ROUND & TỐC ĐỘ (ĐỒ THỊ TUYẾN TÍNH y = ax + b) ---
         if (!isFailTransition) {
             if (audio && audio.duration) {
                 if (activeRoundCount >= 1 || activeEndlessMode || isEndlessMode) {
-                    const totalBeats = (beatmapBeats && beatmapBeats.length > 0) ? beatmapBeats.length : 1;
-                    const firstBeatTime = (beatmapBeats && beatmapBeats.length > 0) ? (beatmapBeats[0] || 0) : 0;
-                    const lastBeatTime = (beatmapBeats && beatmapBeats.length > 0) ? beatmapBeats[totalBeats - 1] : (audio.duration || 10);
-                    const currentSongTime = audio.currentTime || accumulatedSongTime || 0;
-
-                    // Lấy thông tin block hiện tại để đối chiếu chính xác thời điểm bóng chạm block
                     const currentTile = (typeof tiles !== 'undefined' && typeof currentTileIndex !== 'undefined') ? tiles[currentTileIndex] : null;
-                    const currentTileTime = currentTile?.userData?.time;
-
-                    let roundProgress = 0;
-                    if (lastBeatTime > 0) {
-                        const durationRange = Math.max(0.001, lastBeatTime - firstBeatTime);
-                        const audioProgress = currentSongTime >= lastBeatTime ? 1.0 : (currentSongTime <= firstBeatTime ? 0.0 : (currentSongTime - firstBeatTime) / durationRange);
-                        const tileProgress = (typeof currentTileTime === 'number') ? (currentTileTime >= lastBeatTime ? 1.0 : (currentTileTime <= firstBeatTime ? 0.0 : (currentTileTime - firstBeatTime) / durationRange)) : 0;
-
-                        // Đạt đúng 1.0 khi vừa chạm vào block của beat cuối và tạm dừng tăng cho đến khi chạm block chuyển round
-                        roundProgress = Math.min(1.0, Math.max(0.0, Math.max(audioProgress, tileProgress)));
+                    const totalBeatsCount = (beatmapBeats && beatmapBeats.length > 1) ? (beatmapBeats.length - 1) : 1;
+                    
+                    // x: Biến tiến trình tuyến tính từ 0.0 (block đầu) -> 1.0 (vừa chạm block cuối)
+                    let x = 0;
+                    if (currentTile && currentTile.userData && typeof currentTile.userData.beatIndex === 'number') {
+                        const k = currentTile.userData.beatIndex; // 1-based beat index
+                        const alpha = (typeof flightTime !== 'undefined' && flightTime > 0) ? Math.min(1.0, Math.max(0.0, jumpElapsedTime / flightTime)) : 0;
+                        x = Math.min(1.0, Math.max(0.0, ((k - 1) + alpha) / totalBeatsCount));
+                    } else if (beatmapBeats && beatmapBeats.length > 1) {
+                        const firstBeat = beatmapBeats[0] || 0;
+                        const lastBeat = beatmapBeats[beatmapBeats.length - 1];
+                        const curTime = audio.currentTime || accumulatedSongTime || 0;
+                        x = Math.min(1.0, Math.max(0.0, (curTime - firstBeat) / Math.max(0.001, lastBeat - firstBeat)));
                     }
 
                     const completedRounds = Math.max(0, (activeRoundCount || 1) - 1);
                     const speedGain = (typeof SPEED_GAIN_PER_ROUND !== 'undefined' ? SPEED_GAIN_PER_ROUND : 0.21);
 
-                    gameSpeed = Math.min(200.0, 1.0 + (completedRounds * speedGain) + (roundProgress * speedGain));
+                    // Đồ thị y = ax + b:
+                    // b = 1.0 + (Round - 1) * speedGain (Tốc độ khởi đầu round)
+                    // a = speedGain (Độ dốc tăng tốc)
+                    // x = [0.0 -> 1.0]
+                    // Khi x = 1.0 (vừa chạm block cuối): y = 1.0 + Round * speedGain
+                    const b = 1.0 + (completedRounds * speedGain);
+                    const a = speedGain;
+                    gameSpeed = Math.min(200.0, b + a * x);
                 } else {
                     gameSpeed = 1.0;
                 }

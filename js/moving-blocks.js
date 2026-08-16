@@ -11,6 +11,19 @@ window.MovingBlocksManager = {
     groupSpeed: (Math.PI * 2) / 3,   // Tốc độ chung của cả nhóm (Chu kỳ 3s ở 1x)
     cooldownCount: 0,      // Thời gian nghỉ (số khối) giữa các nhóm di chuyển
 
+    removeTile: function (tile) {
+        if (!tile) return;
+        if (tile.userData) {
+            tile.userData.isMoving = false;
+            tile.userData.moveType = null;
+            delete tile.userData.moveSpeed;
+            delete tile.userData.moveTime;
+            delete tile.userData.amplitude;
+            delete tile.userData.baseX;
+        }
+        this.allMovingTiles = this.allMovingTiles.filter(t => t !== tile);
+    },
+
     /**
      * Xử lý thiết lập trạng thái di chuyển cho một Tile (khối)
      * @param {THREE.Mesh} tile - Đối tượng Mesh của khối 
@@ -19,16 +32,17 @@ window.MovingBlocksManager = {
      * @param {number} timeDiff - Khoảng thời gian so với block trước
      */
     processTile: function (tile, canBeMoving, roundCount, timeDiff = 1.0) {
-        // Xóa sạch tham chiếu cũ của tile trong allMovingTiles nếu có để tránh lỗi tích tụ và cập nhật double-speed
-        const existingIdx = this.allMovingTiles.indexOf(tile);
-        if (existingIdx !== -1) {
-            this.allMovingTiles.splice(existingIdx, 1);
-        }
+        // Xóa sạch TOÀN BỘ tham chiếu cũ của tile trong allMovingTiles để tránh lỗi cập nhật lặp (multi-update speedup)
+        this.allMovingTiles = this.allMovingTiles.filter(t => t !== tile);
 
-        // Đảm bảo xóa trạng thái cũ từ Object Pool để tránh lỗi tái sử dụng
+        // Đảm bảo xóa sạch trạng thái cũ từ Object Pool để tránh lỗi tái sử dụng
         if (tile.userData) {
             tile.userData.isMoving = false;
             tile.userData.moveType = null;
+            delete tile.userData.moveSpeed;
+            delete tile.userData.moveTime;
+            delete tile.userData.amplitude;
+            delete tile.userData.baseX;
         } else {
             tile.userData = {};
         }
@@ -147,14 +161,14 @@ window.MovingBlocksManager = {
     update: function (delta, gameSpeed, ballZ, frameHex) {
         // TỐC ĐỘ DI CHUYỂN NGANG QUA LẠI: Tỉ lệ thuận với tốc độ game
         const speedFactor = gameSpeed; 
+        const processedTiles = new Set();
 
         for (let i = this.allMovingTiles.length - 1; i >= 0; i--) {
             const tile = this.allMovingTiles[i];
 
-            // Loại khỏi danh sách khi block đã bị thu hồi về pool (parent = null)
-            // hoặc bị bỏ lại quá xa phía sau (đề phòng edge case)
-            if (!tile.userData || !tile.parent || tile.position.z > ballZ + 30) {
-                if (tile.userData && tile.userData.isClone) {
+            // Loại khỏi danh sách khi block đã bị thu hồi về pool (parent = null), không phải khối di chuyển hoặc đã cập nhật trong frame
+            if (!tile || !tile.userData || !tile.userData.isMoving || !tile.parent || tile.position.z > ballZ + 30 || processedTiles.has(tile)) {
+                if (tile && tile.userData && tile.userData.isClone) {
                     if (typeof scene !== 'undefined' && scene) {
                         scene.remove(tile);
                     }
@@ -163,6 +177,8 @@ window.MovingBlocksManager = {
                 this.allMovingTiles.splice(i, 1);
                 continue;
             }
+
+            processedTiles.add(tile);
 
             // Thực hiện tính toán di chuyển hình Sin tuần hoàn dựa trên moveTime riêng biệt của từng khối
             if (tile.userData.isMoving) {
