@@ -2052,7 +2052,16 @@ function animate() {
     if (isPlaying) {
         // --- AUTOPLAY UPDATE ---
         if (window.AutoplayManager) {
-            const autoResult = window.AutoplayManager.update(delta, tiles, currentTileIndex, isFalling, isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition));
+            const autoResult = window.AutoplayManager.update(
+                delta,
+                tiles,
+                currentTileIndex,
+                isFalling,
+                isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition),
+                jumpElapsedTime,
+                flightTime,
+                ball
+            );
             if (autoResult.holdExited && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) && !isFailTransition) {
                 isFalling = true;
                 fallVelocityY = 0; // Bóng rơi xuống luôn
@@ -2998,11 +3007,11 @@ function animate() {
         }
 
         if (!isFalling) {
-            const bypassRawInput = window.AutoplayManager ? window.AutoplayManager.shouldBypassInput() : false;
-            if (typeof rawInputEnabled !== 'undefined' && rawInputEnabled && !bypassRawInput) {
-                ball.position.x = ballTargetX; // Cập nhật bóng vị trí 1:1 tức thời (0 độ trễ)
+            const isAutoBypass = window.AutoplayManager ? window.AutoplayManager.shouldBypassInput() : false;
+            if (isAutoBypass || (typeof rawInputEnabled !== 'undefined' && rawInputEnabled)) {
+                ball.position.x = ballTargetX; // Chuyển động thẳng đều 1:1 theo thời gian (Linear), chuẩn xác và không bị trễ/ảo bởi lerp
             } else {
-                const lerpSpeed = window.AutoplayManager ? window.AutoplayManager.getLerpSpeed(gameSpeed, sensitivity) : 15 * sensitivity * Math.max(1.0, gameSpeed * 0.8);
+                const lerpSpeed = 15 * sensitivity * Math.max(1.0, gameSpeed * 0.8);
                 const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
                 ball.position.x += (ballTargetX - ball.position.x) * lerpFactor;
             }
