@@ -1211,6 +1211,183 @@ const boundaryPulsePool = [];
 let pulseGeometry = null;
 let pulseMaterialTemplate = null;
 
+// --- HỆ THỐNG BOUNDARY NÂNG CAO (HẠT BỤI PHÁT SÁNG BAY LÊN THEO ĐỘ KHÓ - SIÊU TỐI ƯU HIỆU SUẤT DIRECT TYPED ARRAY) ---
+let boundaryDustMesh = null;
+let boundaryDustData = [];
+const MAX_BOUNDARY_DUST = 70; // 35 hạt bên trái, 35 hạt bên phải (Tối ưu tuyệt đối GPU & CPU)
+const dustColorAsian = new THREE.Color(0xff1838);   // Crimson Red
+const dustColorHard = new THREE.Color(0xff5500);    // Flame Orange
+const dustColorEasy = new THREE.Color(0x10b981);    // Emerald Green
+const dustColorNormal = new THREE.Color(0x00f0ff);  // Neon Cyan
+const dustCurrentColor = new THREE.Color();
+let cachedBoundaryParticleTexture = null;
+
+function createBoundaryParticleTexture() {
+    if (cachedBoundaryParticleTexture) return cachedBoundaryParticleTexture;
+    const canvas = document.createElement('canvas');
+    canvas.width = 32;
+    canvas.height = 32;
+    const ctx = canvas.getContext('2d');
+    
+    // Gradient hạt bụi phát sáng mềm mại 32x32 siêu nhẹ
+    const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
+    grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.85)');
+    grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
+    grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
+    
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(16, 16, 15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    cachedBoundaryParticleTexture = new THREE.CanvasTexture(canvas);
+    cachedBoundaryParticleTexture.generateMipmaps = false;
+    cachedBoundaryParticleTexture.minFilter = THREE.LinearFilter;
+    return cachedBoundaryParticleTexture;
+}
+
+function initBoundaryFlames() {
+    if (boundaryDustMesh && scene) {
+        scene.remove(boundaryDustMesh);
+        if (boundaryDustMesh.geometry) boundaryDustMesh.geometry.dispose();
+    }
+    
+    const dustGeo = new THREE.PlaneGeometry(0.35, 0.35);
+    const dustTex = createBoundaryParticleTexture();
+    const dustMat = new THREE.MeshBasicMaterial({
+        map: dustTex,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide
+    });
+    
+    boundaryDustMesh = new THREE.InstancedMesh(dustGeo, dustMat, MAX_BOUNDARY_DUST);
+    boundaryDustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    boundaryDustMesh.frustumCulled = false;
+    
+    boundaryDustData = [];
+    const rangeZ = 140.0;
+    const countPerSide = MAX_BOUNDARY_DUST / 2;
+    
+    for (let i = 0; i < MAX_BOUNDARY_DUST; i++) {
+        const isRight = i >= countPerSide;
+        const idxInSide = isRight ? (i - countPerSide) : i;
+        const relZ = -((idxInSide / countPerSide) * rangeZ) + 6.0;
+        
+        boundaryDustData.push({
+            side: isRight ? 1 : -1,
+            relZ: relZ,
+            offsetX: (Math.random() - 0.5) * 0.4,
+            phase: Math.random(),
+            speed: 0.32 + Math.random() * 0.4,
+            maxHeight: 1.2 + Math.random() * 1.8,
+            baseScale: 0.55 + Math.random() * 0.65,
+            swaySpeed: 1.5 + Math.random() * 2.0,
+            swayOffset: Math.random() * Math.PI * 2,
+            swayAmp: 0.08 + Math.random() * 0.12,
+            twinkleSpeed: 4.0 + Math.random() * 4.0
+        });
+    }
+    
+    const mArray = boundaryDustMesh.instanceMatrix.array;
+    for (let i = 0; i < MAX_BOUNDARY_DUST * 16; i += 16) {
+        mArray[i + 0] = 0;
+        mArray[i + 5] = 0;
+        mArray[i + 10] = 0;
+        mArray[i + 15] = 1;
+    }
+    boundaryDustMesh.instanceMatrix.needsUpdate = true;
+    
+    scene.add(boundaryDustMesh);
+}
+
+function getDifficultyBoundaryColor(time) {
+    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+    const isHard = window.HardModeManager && window.HardModeManager.isEnabled;
+    const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
+    
+    if (isAsian) {
+        return dustColorAsian;
+    } else if (isHard) {
+        return dustColorHard;
+    } else if (isEasy) {
+        return dustColorEasy;
+    } else {
+        if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
+            const hue = (time * 0.2) % 1;
+            dustCurrentColor.setHSL(hue, 0.9, 0.55);
+            return dustCurrentColor;
+        }
+        return dustColorNormal;
+    }
+}
+
+function updateBoundaryFlames(delta, time) {
+    const boundariesOn = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
+    const advancedOn = boundariesOn && (typeof advancedBoundariesEnabled !== 'undefined' && advancedBoundariesEnabled);
+    
+    if (!boundariesOn || !advancedOn || !boundaryDustMesh || !camera) {
+        if (boundaryDustMesh && boundaryDustMesh.visible) boundaryDustMesh.visible = false;
+        return;
+    }
+    
+    if (!boundaryDustMesh.visible) boundaryDustMesh.visible = true;
+    
+    // Gán trực tiếp màu vào vật liệu một lần duy nhất mỗi khung hình (Cực nhẹ, 0 CPU buffer copy)
+    const activeColor = getDifficultyBoundaryColor(time);
+    boundaryDustMesh.material.color.copy(activeColor);
+    
+    const camZ = camera.position.z;
+    const surface = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02;
+    const rangeZ = 140.0;
+    const mArray = boundaryDustMesh.instanceMatrix.array;
+    
+    for (let i = 0; i < MAX_BOUNDARY_DUST; i++) {
+        const d = boundaryDustData[i];
+        d.phase = (d.phase + delta * d.speed) % 1.0;
+        
+        let worldZ = camZ + d.relZ;
+        const diffZ = worldZ - camZ;
+        const wrappedRelZ = (((diffZ - 6.0) % rangeZ) + rangeZ) % rangeZ - rangeZ + 6.0;
+        worldZ = camZ + wrappedRelZ;
+        
+        const baseX = d.side === -1 ? -6.75 : 6.75;
+        const posX = baseX + d.offsetX + Math.sin(time * d.swaySpeed + d.swayOffset) * d.swayAmp;
+        const posY = surface + (d.phase * d.maxHeight);
+        
+        const lifeFade = Math.sin(d.phase * Math.PI);
+        const twinkle = 0.85 + 0.15 * Math.sin(time * d.twinkleSpeed + i);
+        const currentScale = d.baseScale * lifeFade * twinkle;
+        
+        // Ghi trực tiếp vào mảng 16 phần tử của instance matrix (Zero Object Creation, Zero LookAt math)
+        const offset = i << 4;
+        mArray[offset + 0] = currentScale;
+        mArray[offset + 1] = 0;
+        mArray[offset + 2] = 0;
+        mArray[offset + 3] = 0;
+
+        mArray[offset + 4] = 0;
+        mArray[offset + 5] = currentScale;
+        mArray[offset + 6] = 0;
+        mArray[offset + 7] = 0;
+
+        mArray[offset + 8] = 0;
+        mArray[offset + 9] = 0;
+        mArray[offset + 10] = currentScale;
+        mArray[offset + 11] = 0;
+
+        mArray[offset + 12] = posX;
+        mArray[offset + 13] = posY;
+        mArray[offset + 14] = worldZ;
+        mArray[offset + 15] = 1;
+    }
+    
+    boundaryDustMesh.instanceMatrix.needsUpdate = true;
+}
+
 function initBoundaries() {
     if (leftBoundaryLine) scene.remove(leftBoundaryLine);
     if (rightBoundaryLine) scene.remove(rightBoundaryLine);
@@ -1234,12 +1411,32 @@ function initBoundaries() {
     scene.add(leftBoundaryLine);
     scene.add(rightBoundaryLine);
 
+    initBoundaryFlames();
     updateBoundariesVisibility();
 }
 
 function updateBoundariesVisibility() {
-    if (leftBoundaryLine) leftBoundaryLine.visible = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
-    if (rightBoundaryLine) rightBoundaryLine.visible = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
+    const boundariesOn = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
+    const advancedOn = boundariesOn && (typeof advancedBoundariesEnabled !== 'undefined' && advancedBoundariesEnabled);
+
+    if (leftBoundaryLine) leftBoundaryLine.visible = boundariesOn;
+    if (rightBoundaryLine) rightBoundaryLine.visible = boundariesOn;
+
+    if (!boundariesOn) {
+        if (typeof boundaryPulses !== 'undefined' && boundaryPulses.length > 0) {
+            boundaryPulses.forEach(pulse => {
+                if (pulse.mesh) {
+                    scene.remove(pulse.mesh);
+                    boundaryPulsePool.push(pulse.mesh);
+                }
+            });
+            boundaryPulses = [];
+        }
+    }
+
+    if (boundaryDustMesh) {
+        boundaryDustMesh.visible = advancedOn;
+    }
 }
 
 function createBall() {
@@ -1789,6 +1986,7 @@ async function initThree() {
     if (toggleBallGlow) toggleBallGlow.checked = ballGlowEnabled;
     if (toggleBallTrail) toggleBallTrail.checked = ballTrailEnabled;
     if (toggleShowBoundaries) toggleShowBoundaries.checked = showBoundariesEnabled;
+    if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) toggleAdvancedBoundaries.checked = advancedBoundariesEnabled;
     if (togglePreservePitch) togglePreservePitch.checked = preservePitchEnabled;
     if (sensitivitySlider) sensitivitySlider.value = sensitivity;
     if (typeof tileDetailSlider !== 'undefined' && tileDetailSlider) tileDetailSlider.value = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
@@ -2286,6 +2484,9 @@ function animate() {
             }
         }
 
+        // --- CẬP NHẬT BOUNDARY NÂNG CAO (LỬA THEO ĐỘ KHÓ) ---
+        updateBoundaryFlames(delta, clock.getElapsedTime());
+
         // --- CẬP NHẬT ĐƯỜNG SÁNG CHẠY THEO NHỊP (NEON BOUNDARY PULSES) ---
         for (let i = boundaryPulses.length - 1; i >= 0; i--) {
             const pulse = boundaryPulses[i];
@@ -2408,7 +2609,7 @@ function animate() {
                     const isHitboxVisible = typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled;
                     hitboxMesh.visible = isHitboxVisible;
                     if (isHitboxVisible) {
-                        const scaleX = tileWidth + (ballRadius * 1.64 / currentScale);
+                        const scaleX = tileWidth + (ballRadius * 2.5 / currentScale);
                         const scaleY = tileLength + (ballRadius * 1.64 / currentScale);
                         hitboxMesh.scale.set(scaleX, scaleY, 0.4);
                     }
@@ -2653,7 +2854,8 @@ function animate() {
                     }
 
                     const activeScale = targetTile.userData.scale || 1.0; // Đã bao gồm cả base scale và dynamic scale
-                    const maxAllowedOffset = (tileWidth * activeScale / 2) + (ballRadius * 0.82);
+                    // Chạm vào bất kỳ phần nào của Glow Mesh (trái/phải) sẽ tính ngay 1 cú nhảy hợp lệ thật sự, không làm khựng tốc độ
+                    const maxAllowedOffset = (tileWidth * activeScale / 2) + (ballRadius * 1.25);
 
                     if (diffX < maxAllowedOffset) {
                         const isPerfect = diffX < 0.6;
@@ -2671,7 +2873,6 @@ function animate() {
                                 currentTileScale = Math.min(1.0, currentTileScale + 0.02);
                             }
                             score += 1 + Math.min(20, comboCount);
-
 
                             triggerPerfectComboUI(comboCount);
 
@@ -2767,7 +2968,6 @@ function animate() {
                         isFalling = true;
                         // Cắt giảm vận tốc rơi tự do ban đầu để người chơi có thêm thời gian phản xạ cứu bóng
                         fallVelocityY = Math.max(-22, currentBounceVelocityY + currentGravity * flightTime);
-                        // fallVelocityY = currentBounceVelocityY + currentGravity * flightTime;
                         fallVelocityZ = ballVelocityZ;
                         fallVelocityX = (ballTargetX - ball.position.x) * 15;
                     }
@@ -2831,14 +3031,14 @@ function animate() {
                 const isYCol = ball.position.y >= bottomY && ball.position.y <= topY + 0.1;
 
                 if (isXCol && isZCol && isYCol && !isFailTransition) {
-                    // Cứu bóng thành công (Hitbox Glow Mesh) — Nhảy TRỰC TIẾP tiếp sang gạch tiếp theo (Tiles Hop style)
+                    // Cứu bóng thành công (Hitbox Glow Mesh) — Nhảy TRỰC TIẾP tiếp sang gạch tiếp theo chuẩn tốc độ
                     isFalling = false;
                     isFailTransition = false;
                     failTimeElapsed = 0;
 
                     if (audio) {
                         const targetRescueAudioSpeed = Math.min(3.0, gameSpeed);
-                        audio.playbackRate += (targetRescueAudioSpeed - audio.playbackRate) * Math.min(1.0, 4.0 * delta);
+                        audio.playbackRate = targetRescueAudioSpeed;
                     }
                     if (gainNode) {
                         gainNode.gain.value = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
@@ -2939,8 +3139,8 @@ function animate() {
                             }
                         }
 
-                        jumpElapsedTime -= flightTime;
-                        calculateRescueParabola(currentTileIndex);
+                        jumpElapsedTime = 0;
+                        calculateNextParabola(currentTileIndex);
                     }
 
                     if (targetTile.material && targetTile.material.emissive) targetTile.material.emissive.setHex(0x00ffff);
@@ -4886,6 +5086,10 @@ function showTapToOverlay(type = 'start') {
                         <span data-i18n="boundaries_title">Hiện Đường Biên</span>
                         <input type="checkbox" id="qs-show-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
                     </label>
+                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
+                        <span data-i18n="advanced_boundaries_title">Boundary nâng cao</span>
+                        <input type="checkbox" id="qs-advanced-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                    </label>
                 </div>
             </div>
         `;
@@ -4985,6 +5189,7 @@ function showTapToOverlay(type = 'start') {
         bindCb('qs-ball-trail', typeof toggleBallTrail !== 'undefined' ? toggleBallTrail : null, 'ballTrailEnabled', 'ballTrailEnabled');
         bindCb('qs-shockwaves', typeof toggleShockwaves !== 'undefined' ? toggleShockwaves : null, 'shockwavesEnabled', 'shockwavesEnabled');
         bindCb('qs-show-boundaries', typeof toggleShowBoundaries !== 'undefined' ? toggleShowBoundaries : null, 'showBoundariesEnabled', 'showBoundariesEnabled', typeof updateBoundariesVisibility === 'function' ? updateBoundariesVisibility : null);
+        bindCb('qs-advanced-boundaries', typeof toggleAdvancedBoundaries !== 'undefined' ? toggleAdvancedBoundaries : null, 'advancedBoundariesEnabled', 'advancedBoundariesEnabled', typeof updateBoundariesVisibility === 'function' ? updateBoundariesVisibility : null);
     }
 
     if (quickSettingsPanel) {
@@ -5023,6 +5228,7 @@ function showTapToOverlay(type = 'start') {
         setCb('qs-ball-trail', typeof ballTrailEnabled !== 'undefined' ? ballTrailEnabled : true);
         setCb('qs-shockwaves', typeof shockwavesEnabled !== 'undefined' ? shockwavesEnabled : true);
         setCb('qs-show-boundaries', typeof showBoundariesEnabled !== 'undefined' ? showBoundariesEnabled : true);
+        setCb('qs-advanced-boundaries', typeof advancedBoundariesEnabled !== 'undefined' ? advancedBoundariesEnabled : true);
 
         if (typeof applyTranslations === 'function') applyTranslations();
 

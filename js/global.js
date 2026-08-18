@@ -51,6 +51,7 @@ const spawnAnimationSelect = document.getElementById('spawn-animation-mode');
 const toggleBallGlow = document.getElementById('toggle-ball-glow');
 const toggleBallTrail = document.getElementById('toggle-ball-trail');
 const toggleShowBoundaries = document.getElementById('toggle-show-boundaries');
+const toggleAdvancedBoundaries = document.getElementById('toggle-advanced-boundaries');
 const sensitivitySlider = document.getElementById('sensitivity-slider');
 const tileDetailSlider = document.getElementById('tile-detail-slider');
 const tileDetailValue = document.getElementById('tile-detail-value');

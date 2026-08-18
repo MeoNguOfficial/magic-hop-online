@@ -20,6 +20,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'ballGlowEnabled',
     'ballTrailEnabled',
     'showBoundariesEnabled',
+    'advancedBoundariesEnabled',
     'showHitboxEnabled',
     'showFpsEnabled',
     'uiAnimationsEnabled',
@@ -195,6 +196,7 @@ let blockShatterEnabled = JSON.parse(localStorage.getItem('blockShatterEnabled')
 let ballGlowEnabled = JSON.parse(localStorage.getItem('ballGlowEnabled') !== null ? localStorage.getItem('ballGlowEnabled') : (localStorage.getItem('ballAuraEnabled') !== null ? localStorage.getItem('ballAuraEnabled') : 'true')) !== false;
 let ballTrailEnabled = JSON.parse(localStorage.getItem('ballTrailEnabled')) !== false;
 let showBoundariesEnabled = JSON.parse(localStorage.getItem('showBoundariesEnabled')) !== false;
+let advancedBoundariesEnabled = JSON.parse(localStorage.getItem('advancedBoundariesEnabled')) !== false;
 let showHitboxEnabled = JSON.parse(localStorage.getItem('showHitboxEnabled')) === true;
 let showFpsEnabled = JSON.parse(localStorage.getItem('showFpsEnabled')) === true;
 let uiAnimationsEnabled = JSON.parse(localStorage.getItem('uiAnimationsEnabled')) !== false;
@@ -228,6 +230,7 @@ if (performanceModeEnabled) {
     blockShatterEnabled = false;
     ballGlowEnabled = false;
     ballTrailEnabled = false;
+    advancedBoundariesEnabled = false;
     tileDetailScale = 0.2;
 }
 
@@ -486,6 +489,7 @@ function applySettings() {
                     blockShatterEnabled: localStorage.getItem('blockShatterEnabled') !== 'false',
                     ballGlowEnabled: localStorage.getItem('ballGlowEnabled') !== 'false',
                     ballTrailEnabled: localStorage.getItem('ballTrailEnabled') !== 'false',
+                    advancedBoundariesEnabled: localStorage.getItem('advancedBoundariesEnabled') !== 'false',
                     tileDetailScale: localStorage.getItem('tileDetailScale') !== null ? parseFloat(localStorage.getItem('tileDetailScale')) : 1.0
                 };
                 localStorage.setItem('perfModeBackup', JSON.stringify(backup));
@@ -543,6 +547,11 @@ function applySettings() {
                             localStorage.setItem('ballTrailEnabled', val);
                             if (toggleBallTrail) toggleBallTrail.checked = val;
                         }
+                        if (backup.advancedBoundariesEnabled !== undefined) {
+                            const val = backup.advancedBoundariesEnabled === true || backup.advancedBoundariesEnabled === 'true';
+                            localStorage.setItem('advancedBoundariesEnabled', val);
+                            if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) toggleAdvancedBoundaries.checked = val;
+                        }
                         if (backup.tileDetailScale !== undefined) {
                             const val = parseFloat(backup.tileDetailScale);
                             localStorage.setItem('tileDetailScale', val);
@@ -568,6 +577,7 @@ function applySettings() {
         tileBounceEnabled = false;
         ballGlowEnabled = false;
         ballTrailEnabled = false;
+        advancedBoundariesEnabled = false;
         tileDetailScale = 0.2;
 
         // Force UI elements to show the disabled/low states
@@ -583,6 +593,7 @@ function applySettings() {
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.checked = false;
         if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.checked = false;
         if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.checked = false;
+        if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) toggleAdvancedBoundaries.checked = false;
         if (typeof tileDetailSlider !== 'undefined' && tileDetailSlider) {
             tileDetailSlider.value = 0.2;
             if (typeof tileDetailValue !== 'undefined' && tileDetailValue) {
@@ -600,6 +611,7 @@ function applySettings() {
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.disabled = true;
         if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.disabled = true;
         if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.disabled = true;
+        if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) toggleAdvancedBoundaries.disabled = true;
         if (typeof tileDetailSlider !== 'undefined' && tileDetailSlider) tileDetailSlider.disabled = true;
 
         // Apply visual styling (dim look) to labels except the Performance Mode label and Boundaries label
@@ -626,6 +638,7 @@ function applySettings() {
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.disabled = false;
         if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.disabled = false;
         if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.disabled = false;
+        if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) toggleAdvancedBoundaries.disabled = !showBoundariesEnabled;
         if (typeof tileDetailSlider !== 'undefined' && tileDetailSlider) tileDetailSlider.disabled = false;
 
         // Remove visual styling (opacity/disabled look)
@@ -1004,8 +1017,24 @@ function applySettings() {
     if (typeof toggleShowBoundaries !== 'undefined' && toggleShowBoundaries) {
         showBoundariesEnabled = toggleShowBoundaries.checked;
         localStorage.setItem('showBoundariesEnabled', showBoundariesEnabled);
-        if (typeof updateBoundariesVisibility === 'function') updateBoundariesVisibility();
+
+        // Khi tắt Track Boundary -> Tự động vô hiệu hóa và làm mờ Boundary nâng cao
+        const labelAdv = document.getElementById('label-advanced-boundaries');
+        if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) {
+            if (!showBoundariesEnabled) {
+                toggleAdvancedBoundaries.disabled = true;
+                if (labelAdv) labelAdv.classList.add('opacity-40', 'pointer-events-none');
+            } else if (!performanceModeEnabled) {
+                toggleAdvancedBoundaries.disabled = false;
+                if (labelAdv) labelAdv.classList.remove('opacity-40', 'pointer-events-none');
+            }
+        }
     }
+    if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries && !performanceModeEnabled) {
+        advancedBoundariesEnabled = toggleAdvancedBoundaries.checked;
+        localStorage.setItem('advancedBoundariesEnabled', advancedBoundariesEnabled);
+    }
+    if (typeof updateBoundariesVisibility === 'function') updateBoundariesVisibility();
     if (spawnAnimationSelect) {
         const oldMode = spawnAnimationMode;
         spawnAnimationMode = spawnAnimationSelect.value;
@@ -1497,6 +1526,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof limitBeatmapAudioSelect !== 'undefined' && limitBeatmapAudioSelect) limitBeatmapAudioSelect.addEventListener('change', applySettings);
     if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.addEventListener('change', applySettings);
     if (typeof toggleShowBoundaries !== 'undefined' && toggleShowBoundaries) toggleShowBoundaries.addEventListener('change', applySettings);
+    if (typeof toggleAdvancedBoundaries !== 'undefined' && toggleAdvancedBoundaries) toggleAdvancedBoundaries.addEventListener('change', applySettings);
     if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.addEventListener('change', applySettings);
     if (toggleBgParticles) toggleBgParticles.addEventListener('change', applySettings);
     if (sensitivitySlider) sensitivitySlider.addEventListener('input', applySettings);

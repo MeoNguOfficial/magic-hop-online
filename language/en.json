@@ -175,6 +175,8 @@
     "ball_trail_desc": "Renders a 3D luminous trail behind the ball (GPU intensive).",
     "boundaries_title": "Track Boundaries",
     "boundaries_desc": "Display limit lines on both sides of the track.",
+    "advanced_boundaries_title": "Enhanced Boundaries",
+    "advanced_boundaries_desc": "Emits 3D luminous dust particles rising along both track boundaries colored by difficulty.",
     "ui_anim_title": "UI Animations",
     "ui_anim_desc": "Scene transitions, tab opening/closing animations.",
     "aa_title": "Anti-Aliasing",

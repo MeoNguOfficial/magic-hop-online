@@ -175,6 +175,8 @@
     "ball_trail_desc": "Vẽ một vệt sáng 3D phía sau quả bóng (có thể tốn GPU).",
     "boundaries_title": "Đường biên (Boundaries)",
     "boundaries_desc": "Hiển thị vạch kẻ giới hạn 2 bên đường chạy.",
+    "advanced_boundaries_title": "Boundary nâng cao",
+    "advanced_boundaries_desc": "Tỏa ra các hạt bụi phát sáng 3D bay lên dọc 2 bên biên theo màu độ khó.",
     "ui_anim_title": "Hiệu ứng giao diện (UI Anim)",
     "ui_anim_desc": "Hoạt ảnh chuyển đổi cảnh, đóng mở tab.",
     "aa_title": "Khử răng cưa (Anti-Aliasing)",

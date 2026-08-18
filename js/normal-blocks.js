@@ -670,7 +670,7 @@ function spawnTile(isFirst = false) {
     if (tile.userData.hitboxMesh) {
         const hitboxMesh = tile.userData.hitboxMesh;
         if (hitboxMesh) {
-            const scaleX = tileWidth + (ballRadius * 1.64 / finalScale);
+            const scaleX = tileWidth + (ballRadius * 2.5 / finalScale);
             const scaleY = tileLength + (ballRadius * 1.64 / finalScale);
             hitboxMesh.scale.set(scaleX, scaleY, 0.4);
         }
