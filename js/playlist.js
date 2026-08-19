@@ -25,12 +25,22 @@ window.normalizeBeats = normalizeBeats;
 
 function getBeatmapIdFromSong(song) {
     if (!song) return null;
-    if (song.id !== undefined && song.id !== null && song.id !== '') return String(song.id);
-    const url = song.file_url || song.beatmapUrl;
-    if (url && typeof url === 'string') {
-        const match = url.match(/music_(\d+)\.json/) || url.match(/(\d+)/);
-        if (match) return match[1];
+    if (song.id !== undefined && song.id !== null && song.id !== '') return `id_${song.id}`;
+    if (song.beatmap_id !== undefined && song.beatmap_id !== null && song.beatmap_id !== '') return `id_${song.beatmap_id}`;
+    
+    // Chỉ trích xuất số nếu đúng mẫu music_X.json của beatmap
+    const beatmapUrl = song.beatmapUrl || song.lazyUrl;
+    if (beatmapUrl && typeof beatmapUrl === 'string') {
+        const match = beatmapUrl.match(/music_(\d+)\.json/i);
+        if (match) return `music_${match[1]}`;
+        return `bm_${beatmapUrl}`;
     }
+    if (song.url && typeof song.url === 'string') {
+        return `url_${song.url}`;
+    }
+    const name = song.name || song.title || '';
+    const artist = song.artist || '';
+    if (name) return `name_${name}_${artist}`;
     return null;
 }
 window.getBeatmapIdFromSong = getBeatmapIdFromSong;
@@ -395,15 +405,18 @@ let nextCursor = null;
 let hasMore = true;
 let isLoadingMore = false;
 let currentSearchTerm = '';
-let currentPlaylistIndices = [];
-
 async function refreshPlaylist(search = '', forceRefresh = true) {
     nextCursor = null;
     hasMore = true;
     isLoadingMore = false;
-    currentSearchTerm = search;
+    currentSearchTerm = search || '';
     if (typeof playlistRenderStartIndex !== 'undefined') {
         playlistRenderStartIndex = 0;
+    }
+
+    // Xóa sạch cache API của beatmaps và playlist khi làm mới thủ công
+    if (forceRefresh && typeof window.deleteApiCache === 'function') {
+        await window.deleteApiCache('/beatmaps');
     }
 
     await loadPlaylistData(search, forceRefresh);
@@ -417,6 +430,8 @@ window.refreshPlaylist = refreshPlaylist;
 
 
 window.mergeIntoPlaylist = function (newMaps) {
+    if (!Array.isArray(newMaps) || newMaps.length === 0) return [];
+
     const processedMaps = newMaps.map(item => {
         const normalized = normalizeBeats(item.beats);
         const songId = item.id !== undefined && item.id !== null ? item.id : (typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(item) : null);
@@ -426,6 +441,9 @@ window.mergeIntoPlaylist = function (newMaps) {
         const isJsonBeatmap = typeof beatmapCandidate === 'string' && (beatmapCandidate.includes('.json') || beatmapCandidate.startsWith('beatmap/'));
         const finalBeatmapUrl = isJsonBeatmap ? beatmapCandidate : (normalized ? null : (songId ? `beatmap/music_${songId}.json` : null));
 
+        const dayShow = item.day_show ?? item.date_show ?? null;
+        const dayHide = item.day_hide ?? item.time_hide ?? null;
+
         return {
             ...item,
             id: songId,
@@ -434,8 +452,10 @@ window.mergeIntoPlaylist = function (newMaps) {
             url: item.url || item.file_url || item.audioUrl || item.song || '',
             beats: normalized,
             beatmapUrl: finalBeatmapUrl,
-            date_show: item.date_show || null,
-            time_hide: item.time_hide || null,
+            day_show: dayShow,
+            day_hide: dayHide,
+            date_show: dayShow,
+            time_hide: dayHide,
             is_available: item.is_available ?? true,
             warning_alert: item.warning_alert || null
         };
@@ -461,29 +481,45 @@ window.mergeIntoPlaylist = function (newMaps) {
             playlist.push(newSong);
             existingIndex = playlist.length - 1;
         } else {
-            // QUAN TRỌNG: Giữ lại beats/loaded cũ trước khi spread, vì newMap.beats
-            // có thể là null (API danh sách không trả full beats) -> nếu để spread
-            // ghi đè trực tiếp sẽ làm mất beats đã tải đúng trước đó, khiến game
-            // rơi về beatmapBeats mặc định [0,1,2,3] (length 3s, beat sai) khi
-            // thoát ra vào lại hoặc gọi refreshPlaylist/loadPlaylistData lần 2+.
-            const prevBeats = playlist[existingIndex].beats;
-            const prevLoaded = playlist[existingIndex].loaded;
-            const prevNormalPassed = playlist[existingIndex].is_normal_mode_passed;
-            const prevHardPassed = playlist[existingIndex].is_hard_mode_passed;
-            const prevPassed = playlist[existingIndex].is_passed;
+            // TỐI ƯU: Chỉ cập nhật các trường thay đổi từ DB, giữ nguyên beats/loaded/audio/scores đã cache
+            const existing = playlist[existingIndex];
+            const updatedFields = {};
+            let hasChanged = false;
 
-            playlist[existingIndex] = {
-                ...playlist[existingIndex],
-                ...newMap,
-                lazyUrl: validLazyUrl || (playlist[existingIndex].lazyUrl && !playlist[existingIndex].lazyUrl.endsWith('.mp3') ? playlist[existingIndex].lazyUrl : null),
-                no_fake_block: newMap.no_fake_block === true,
-                // Không cho newMap.beats=null/[] ghi đè dữ liệu cũ đã có sẵn
-                beats: hasBeats ? newMap.beats : prevBeats,
-                loaded: hasBeats ? true : prevLoaded,
-                is_normal_mode_passed: newMap.is_normal_mode_passed ?? prevNormalPassed,
-                is_hard_mode_passed: newMap.is_hard_mode_passed ?? prevHardPassed,
-                is_passed: newMap.is_passed ?? prevPassed
-            };
+            const dbFields = [
+                'name', 'title', 'artist', 'url', 'genre', 'bpm', 'speed',
+                'copyright_status', 'warning_alert', 'is_available', 'no_fake_block',
+                'day_show', 'day_hide', 'date_show', 'time_hide'
+            ];
+
+            dbFields.forEach(field => {
+                if (newMap[field] !== undefined && newMap[field] !== existing[field]) {
+                    updatedFields[field] = newMap[field];
+                    hasChanged = true;
+                }
+            });
+
+            if (validLazyUrl && validLazyUrl !== existing.lazyUrl) {
+                updatedFields.lazyUrl = validLazyUrl;
+                hasChanged = true;
+            }
+
+            if (hasBeats && JSON.stringify(newMap.beats) !== JSON.stringify(existing.beats)) {
+                updatedFields.beats = newMap.beats;
+                updatedFields.loaded = true;
+                hasChanged = true;
+            }
+
+            ['is_normal_mode_passed', 'is_hard_mode_passed', 'is_passed'].forEach(field => {
+                if (newMap[field] !== undefined && newMap[field] !== existing[field]) {
+                    updatedFields[field] = newMap[field];
+                    hasChanged = true;
+                }
+            });
+
+            if (hasChanged) {
+                Object.assign(existing, updatedFields);
+            }
         }
         resultIndices.push(existingIndex);
     });
@@ -491,18 +527,46 @@ window.mergeIntoPlaylist = function (newMaps) {
     return resultIndices;
 };
 
+function isCurrentUserAdmin() {
+    try {
+        if (typeof getAuthUser === 'function') {
+            const u = getAuthUser();
+            return !!(u && (u.role === 'admin' || u.is_admin === 1 || u.is_admin === true || u.is_admin === '1' || u.id === 1));
+        }
+    } catch (e) {}
+    return false;
+}
+window.isCurrentUserAdmin = isCurrentUserAdmin;
+
 async function loadPlaylistData(search = '', forceRefresh = false) {
     let indices = [];
     currentSearchTerm = search;
+    const isAdmin = isCurrentUserAdmin();
+
+    // 1. Khởi động tức thì (0ms): Nạp trước từ Cache Offline nếu bộ nhớ RAM chưa có dữ liệu và không phải đang tìm kiếm
+    if (!search && playlist.length === 0 && typeof getCachedPlaylistFromDB === 'function' && !forceRefresh) {
+        try {
+            const initialCached = await getCachedPlaylistFromDB();
+            if (initialCached && Array.isArray(initialCached) && initialCached.length > 0) {
+                indices = window.mergeIntoPlaylist(initialCached);
+                console.log("[Playlist] Đã nạp nhanh từ Offline Cache (" + initialCached.length + " bài).");
+            }
+        } catch (e) {}
+    }
+
+    // 2. Đồng bộ dữ liệu qua API (sử dụng ApiCache nếu còn hạn trong ngày, gọi Server nếu hết hạn hoặc forceRefresh)
     try {
         if (window.ApiService) {
             const params = {};
+            if (isAdmin) {
+                params.mode = 'admin';
+            }
             if (search) params.search = search;
             if (window.selectedArtistFilter) params.artist = window.selectedArtistFilter;
             if (window.selectedGenreFilter) params.genre = window.selectedGenreFilter;
             if (window.selectedCopyrightFilter) params.copyright_status = window.selectedCopyrightFilter;
 
-            const options = forceRefresh ? { forceRefresh: true } : {};
+            const options = forceRefresh ? { forceRefresh: true, headers: { 'X-Force-Refresh': 'true' } } : {};
             const apiResponse = await ApiService.getPublicBeatmaps(params, options);
             if (apiResponse.data?.meta) {
                 nextCursor = apiResponse.data.meta.next_cursor;
@@ -510,8 +574,6 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
             }
 
             // Lưu filter_options từ API vào biến toàn cục để dropdown dùng
-            // Chỉ cập nhật khi không có bộ lọc nào đang active, đảm bảo luôn
-            // có danh sách đầy đủ từ DB (không bị thu hẹp bởi query đã lọc).
             if (
                 apiResponse.data?.filter_options &&
                 !search &&
@@ -525,9 +587,10 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
             const newMaps = apiResponse.data?.data || apiResponse.data || [];
             if (newMaps.length > 0) {
                 indices = window.mergeIntoPlaylist(newMaps);
-                console.log("[Playlist] Đã tải playlist từ API.");
+                const sourceText = apiResponse.isCached ? "Cache/IndexedDB" : "Server API";
+                console.log(`[Playlist] Đã đồng bộ playlist từ ${sourceText}.` + (isAdmin ? " (Mode Admin)" : ""));
 
-                // Lưu vào IndexedDB để dùng khi offline
+                // Lưu/cập nhật vào IndexedDB & OPFS để dùng khi offline
                 if (typeof cachePlaylistToDB === 'function' && !search) {
                     cachePlaylistToDB(newMaps);
                 }
@@ -537,12 +600,10 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
                     window.preloadBackendAndPassedStatusOnStartup();
                 }
             }
-
-
         }
     } catch (e) {
         console.warn("[Playlist] Không thể tải playlist từ API, thử tải từ DB Offline:", e);
-        if (typeof getCachedPlaylistFromDB === 'function' && !search) {
+        if (typeof getCachedPlaylistFromDB === 'function' && !search && indices.length === 0) {
             const cachedMaps = await getCachedPlaylistFromDB();
             if (cachedMaps && cachedMaps.length > 0) {
                 indices = window.mergeIntoPlaylist(cachedMaps);
@@ -551,12 +612,12 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
         }
     }
 
-    if (indices.length === 0 && !search) {
+    if (indices.length === 0 && !search && playlist.length === 0) {
         indices = window.mergeIntoPlaylist(playlistSource);
     }
 
-    currentPlaylistIndices = indices;
-    return indices;
+    currentPlaylistIndices = indices.length > 0 ? indices : currentPlaylistIndices;
+    return currentPlaylistIndices;
 }
 
 
@@ -573,8 +634,12 @@ async function loadMoreSongs() {
         loadMoreBtn.innerText = typeof t === 'function' ? t('msg_loading') : 'Đang tải...';
     }
 
+    const isAdmin = isCurrentUserAdmin();
     try {
         const params = { cursor: nextCursor };
+        if (isAdmin) {
+            params.mode = 'admin';
+        }
         if (currentSearchTerm) params.search = currentSearchTerm;
         if (window.selectedArtistFilter) params.artist = window.selectedArtistFilter;
         if (window.selectedGenreFilter) params.genre = window.selectedGenreFilter;
@@ -597,8 +662,8 @@ async function loadMoreSongs() {
             window.preloadBackendAndPassedStatusOnStartup();
         }
 
-        // Cập nhật thêm vào cache offline để tránh mất dữ liệu mới kéo
-        if (typeof cachePlaylistToDB === 'function' && !currentSearchTerm && typeof getCachedPlaylistFromDB === 'function') {
+        // Cập nhật thêm vào cache offline để tránh mất dữ liệu mới kéo (chỉ lưu cho người chơi thường)
+        if (typeof cachePlaylistToDB === 'function' && !currentSearchTerm && !isAdmin && typeof getCachedPlaylistFromDB === 'function') {
             const existingMaps = await getCachedPlaylistFromDB() || [];
             const existingIds = new Set(existingMaps.map(m => m.id));
             const mapsToCache = [...existingMaps, ...newMaps.filter(m => !existingIds.has(m.id))];
@@ -704,16 +769,15 @@ async function ensureSongLoaded(index, forceCheck = false) {
     } else {
         if (Array.isArray(cachedData)) {
             song.beats = normalizeBeats(cachedData) || [0, 1, 2, 3];
-        } else {
-            Object.assign(song, cachedData);
+        } else if (cachedData && typeof cachedData === 'object') {
             if (cachedData.beats) {
                 song.beats = normalizeBeats(cachedData.beats) || [0, 1, 2, 3];
             } else if (!song.beats || song.beats.length <= 4) {
                 song.beats = [0, 1, 2, 3];
             }
-            song.date_show = song.date_show ?? null;
-            song.time_hide = song.time_hide ?? null;
-            song.is_available = song.is_available ?? true;
+            if (cachedData.bpm && !song.bpm) song.bpm = cachedData.bpm;
+            if (cachedData.speed && !song.speed) song.speed = cachedData.speed;
+            if (cachedData.no_fake_block !== undefined) song.no_fake_block = cachedData.no_fake_block;
         }
         song.loaded = true;
 
@@ -761,16 +825,15 @@ async function downloadBeatmap(index, forceEtag = null) {
 
         if (Array.isArray(data)) {
             song.beats = normalizeBeats(data) || [0, 1, 2, 3];
-        } else {
-            Object.assign(song, data);
+        } else if (data && typeof data === 'object') {
             if (data.beats) {
                 song.beats = normalizeBeats(data.beats) || [0, 1, 2, 3];
             } else if (!song.beats || song.beats.length <= 4) {
                 song.beats = [0, 1, 2, 3];
             }
-            song.date_show = song.date_show ?? null;
-            song.time_hide = song.time_hide ?? null;
-            song.is_available = song.is_available ?? true;
+            if (data.bpm && !song.bpm) song.bpm = data.bpm;
+            if (data.speed && !song.speed) song.speed = data.speed;
+            if (data.no_fake_block !== undefined) song.no_fake_block = data.no_fake_block;
         }
 
         song.loaded = true;

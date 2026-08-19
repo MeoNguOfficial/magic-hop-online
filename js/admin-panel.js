@@ -1735,34 +1735,8 @@ function renderAdminBeatmapsTable() {
     document.querySelectorAll('.btn-edit-beatmap').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
-            const map = globalBeatmapsList.find(m => m.id == id);
-            if (map) {
-                const editBmIdEl = document.getElementById('edit-bm-id');
-                const editBmNameEl = document.getElementById('edit-bm-name');
-                const editBmArtistEl = document.getElementById('edit-bm-artist');
-                const editBmUrlEl = document.getElementById('edit-bm-url');
-                const editBmGenreEl = document.getElementById('edit-bm-genre');
-                const editBmBpmEl = document.getElementById('edit-bm-bpm');
-                const editBmSpeedEl = document.getElementById('edit-bm-speed');
-                const editBmCopyrightEl = document.getElementById('edit-bm-copyright');
-                const editBmWarningEl = document.getElementById('edit-bm-warning');
-                const editBmAvailableEl = document.getElementById('edit-bm-available');
-                const editBmNofakeEl = document.getElementById('edit-bm-nofake');
-                const editBmBeatsEl = document.getElementById('edit-bm-beats');
-
-                if (editBmIdEl) editBmIdEl.value = map.id;
-                if (editBmNameEl) editBmNameEl.value = map.title || map.name || '';
-                if (editBmArtistEl) editBmArtistEl.value = map.artist || '';
-                if (editBmUrlEl) editBmUrlEl.value = map.url || map.file_url || '';
-                if (editBmGenreEl) editBmGenreEl.value = map.genre || '';
-                if (editBmBpmEl) editBmBpmEl.value = map.bpm || 120;
-                if (editBmSpeedEl) editBmSpeedEl.value = map.speed || 0;
-                if (editBmCopyrightEl) editBmCopyrightEl.value = map.copyright_status || '';
-                if (editBmWarningEl) editBmWarningEl.value = map.warning_alert || '';
-                if (editBmAvailableEl) editBmAvailableEl.checked = map.is_available !== false;
-                if (editBmNofakeEl) editBmNofakeEl.checked = !!map.no_fake_block;
-                if (editBmBeatsEl) editBmBeatsEl.value = JSON.stringify(map.beats || []);
-                openModal(editBmModal);
+            if (id) {
+                openEditBeatmapModal(id);
             }
         });
     });
@@ -2178,8 +2152,8 @@ function openEditBeatmapModal(id) {
     if (editBmBeatsEl) editBmBeatsEl.value = JSON.stringify(bm.beats || []);
     const editBmDayShowEl = document.getElementById('edit-bm-day-show');
     const editBmDayHideEl = document.getElementById('edit-bm-day-hide');
-    if (editBmDayShowEl) editBmDayShowEl.value = bm.day_show || '';
-    if (editBmDayHideEl) editBmDayHideEl.value = bm.day_hide || '';
+    if (editBmDayShowEl) editBmDayShowEl.value = bm.day_show || bm.date_show || '';
+    if (editBmDayHideEl) editBmDayHideEl.value = bm.day_hide || bm.time_hide || '';
     
     document.getElementById('edit-bm-error')?.classList.add('hidden');
     openModal(editBmModal);

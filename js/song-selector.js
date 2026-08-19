@@ -224,6 +224,31 @@ function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
         filteredIndices = typeof currentPlaylistIndices !== 'undefined' ? [...currentPlaylistIndices] : [];
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
+
+    // Nếu KHÔNG PHẢI ADMIN: Lọc bỏ các bài hát bị ẩn/tắt hoặc chưa đến ngày hiện / đã qua ngày ẩn
+    // Nếu LÀ ADMIN: Vẫn giữ lại toàn bộ bài hát để admin quản lý, xem và chơi thử
+    if (!isAdmin) {
+        filteredIndices = filteredIndices.filter(i => {
+            const song = playlist[i];
+            if (!song) return false;
+
+            // Trạng thái khả dụng
+            if (song.is_available === false || song.is_available === 0) return false;
+
+            // Ngày hiện (day_show)
+            const dayShow = song.day_show || song.date_show;
+            if (dayShow && dayShow > todayStr) return false;
+
+            // Ngày ẩn (day_hide)
+            const dayHide = song.day_hide || song.time_hide;
+            if (dayHide && dayHide < todayStr) return false;
+
+            return true;
+        });
+    }
+
     // Áp dụng bộ lọc ca sĩ, thể loại và bản quyền phía Client
     if (window.selectedArtistFilter) {
         filteredIndices = filteredIndices.filter(i => playlist[i] && playlist[i].artist && playlist[i].artist.toLowerCase() === window.selectedArtistFilter.toLowerCase());
@@ -246,11 +271,19 @@ function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
     }
     
     if (!currentFilterTerm && !window.selectedArtistFilter && !window.selectedGenreFilter && !window.selectedCopyrightFilter && playlist[selectedSongIndex]) {
-        if (!filteredIndices.includes(selectedSongIndex)) {
-            filteredIndices.unshift(selectedSongIndex);
-        } else {
-            filteredIndices = filteredIndices.filter(i => i !== selectedSongIndex);
-            filteredIndices.unshift(selectedSongIndex);
+        const selectedSong = playlist[selectedSongIndex];
+        const isSelAvail = selectedSong && selectedSong.is_available !== false && selectedSong.is_available !== 0;
+        const selDayShow = selectedSong ? (selectedSong.day_show || selectedSong.date_show) : null;
+        const selDayHide = selectedSong ? (selectedSong.day_hide || selectedSong.time_hide) : null;
+        const isSelValidDate = (!selDayShow || selDayShow <= todayStr) && (!selDayHide || selDayHide >= todayStr);
+
+        if (isAdmin || (isSelAvail && isSelValidDate)) {
+            if (!filteredIndices.includes(selectedSongIndex)) {
+                filteredIndices.unshift(selectedSongIndex);
+            } else {
+                filteredIndices = filteredIndices.filter(i => i !== selectedSongIndex);
+                filteredIndices.unshift(selectedSongIndex);
+            }
         }
     }
 }
@@ -290,12 +323,16 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             refreshBtn.disabled = true;
             refreshBtn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${(typeof t === 'function' ? t('msg_loading_data') : 'ĐANG TẢI DỮ LIỆU...')}`;
             
-            if (typeof window.refreshPlaylist === 'function') {
-                await window.refreshPlaylist(currentFilterTerm);
-            }
-            
-            if (typeof showCyberModal === 'function') {
-                showCyberModal({ title: (typeof t === 'function' ? t('success_title') : 'THÀNH CÔNG'), message: (typeof t === 'function' ? t('msg_sync_success') : 'Đã đồng bộ danh sách nhạc mới nhất từ máy chủ!'), type: 'alert' });
+            try {
+                if (typeof window.refreshPlaylist === 'function') {
+                    await window.refreshPlaylist(currentFilterTerm || '', true);
+                }
+                
+                if (typeof showCyberModal === 'function') {
+                    showCyberModal({ title: (typeof t === 'function' ? t('success_title') : 'THÀNH CÔNG'), message: (typeof t === 'function' ? t('msg_sync_success') : 'Đã đồng bộ danh sách nhạc mới nhất từ máy chủ!'), type: 'alert' });
+                }
+            } catch (err) {
+                console.error("[SongSelector] Lỗi làm mới playlist:", err);
             }
         };
         selector.appendChild(refreshBtn);
@@ -316,10 +353,46 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         selector.appendChild(loadPrevBtn);
     }
 
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
+
     displayIndices.forEach((originalIndex, i) => {
         const song = playlist[originalIndex];
+
+        // Kiểm tra trạng thái ẩn / ngoài khung ngày (dành cho Admin)
+        const isHiddenStatus = song.is_available === false || song.is_available === 0;
+        const dayShow = song.day_show || song.date_show;
+        const isFutureShow = dayShow && dayShow > todayStr;
+        const dayHide = song.day_hide || song.time_hide;
+        const isExpiredHide = dayHide && dayHide < todayStr;
+        const isOutOrHidden = isHiddenStatus || isFutureShow || isExpiredHide;
+
+        let adminEyeBadgeHtml = '';
+        if (isAdmin && isOutOrHidden) {
+            if (isHiddenStatus) {
+                adminEyeBadgeHtml = `
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold font-orbitron bg-red-950/80 text-red-400 border border-red-500/40 shrink-0 select-none shadow-[0_0_8px_rgba(239,68,68,0.25)]" title="${typeof t === 'function' ? t('admin_status_hidden') : 'Admin: Bài hát đã ẩn (is_available = false)'}">
+                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                        <span>ẨN</span>
+                    </span>`;
+            } else if (isFutureShow) {
+                adminEyeBadgeHtml = `
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold font-orbitron bg-amber-950/80 text-amber-300 border border-amber-500/40 shrink-0 select-none shadow-[0_0_8px_rgba(245,158,11,0.25)]" title="Admin: Chưa đến ngày hiển thị (${dayShow})">
+                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        <span>${dayShow}</span>
+                    </span>`;
+            } else if (isExpiredHide) {
+                adminEyeBadgeHtml = `
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold font-orbitron bg-orange-950/80 text-orange-400 border border-orange-500/40 shrink-0 select-none shadow-[0_0_8px_rgba(249,115,22,0.25)]" title="Admin: Đã hết hạn ngày hiển thị (${dayHide})">
+                        <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+                        <span>HẾT HẠN</span>
+                    </span>`;
+            }
+        }
+
         const opt = document.createElement('div');
-        opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} group cursor-pointer p-2.5 rounded-lg border border-cyan-500/10 bg-cyan-950/5 hover:border-cyan-400/40 flex justify-between items-center transition-all duration-200`;
+        const extraOptClasses = (isAdmin && isOutOrHidden) ? 'border-dashed border-red-500/30 bg-red-950/10' : 'border-cyan-500/10 bg-cyan-950/5';
+        opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-lg border hover:border-cyan-400/40 flex justify-between items-center transition-all duration-200`;
         opt.dataset.index = originalIndex;
         opt.innerHTML = `
             <div class="flex-1 min-w-0 pr-2 overflow-hidden">
@@ -327,6 +400,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                     <h3 class="font-bold text-white group-hover:text-cyan-300 font-orbitron text-sm pointer-events-none overflow-hidden whitespace-nowrap flex-1 min-w-0 marquee-container">
                         <span class="marquee-text inline-block">${song.name}</span>
                     </h3>
+                    ${adminEyeBadgeHtml}
                     <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none inline-flex items-center justify-center self-center my-auto"></div>
                 </div>
                 <p class="text-[10px] text-gray-400 pointer-events-none">${song.artist || 'Unknown Artist'}</p>

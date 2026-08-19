@@ -93,7 +93,7 @@ apiClient.get = async function (url, config = {}) {
     } catch (error) {
         // Fallback: Nếu mạng lỗi nhưng có cache cũ, trả về cache cũ kèm cảnh báo
         if (typeof window.getApiCache === 'function') {
-            const staleCache = await window.getApiCache(cacheKey);
+            const staleCache = await window.getApiCache(cacheKey, { allowExpired: true });
             if (staleCache !== null && staleCache !== undefined) {
                 console.warn('[ApiCache] Request tới Backend thất bại, tự động fallback dùng cache cũ:', cacheKey, error);
                 return {
