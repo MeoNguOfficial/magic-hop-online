@@ -3,6 +3,7 @@
 
 const apiClient = axios.create({
     baseURL: API_BASE_URL,
+    timeout: 60000, // Chờ tối đa 60 giây (cho Render free tier khởi động/spin-up)
     withCredentials: true,
     crossDomain: true,
     headers: {
@@ -151,28 +152,17 @@ apiClient.interceptors.request.use((config) => {
     return config;
 }, (error) => Promise.reject(error));
 
-// Tự động fallback sang Local API nếu chạy môi trường Local và Online API bị sập/không kết nối được
-let isFallingBackToLocal = false;
-const LOCAL_API_URL = 'http://magic-hop-api.test/api';
-
-// Xử lý lỗi HTTP global (Đặc biệt là 401 Unauthorized - Hết hạn/Sai Token)
+// Xử lý lỗi HTTP global & Tự động thử lại khi Render đang khởi động (spin-up)
 apiClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const config = error.config;
-        const isLocalEnv = window.location.hostname === 'localhost' || 
-                           window.location.hostname === '127.0.0.1' || 
-                           window.location.hostname.startsWith('192.168.');
 
-        // Nếu đang chạy local mà không kết nối được tới Online API thì chuyển qua dùng Local API dự phòng
-        if (isLocalEnv && !isFallingBackToLocal && (!error.response || error.code === 'ECONNABORTED')) {
-            isFallingBackToLocal = true;
-            console.warn(`[API Fallback] Không kết nối được với Online API (${apiClient.defaults.baseURL}). Tự động chuyển sang Local API dự phòng (${LOCAL_API_URL}).`);
-            
-            apiClient.defaults.baseURL = LOCAL_API_URL;
-            config.baseURL = LOCAL_API_URL;
-            
-            // Thử gửi lại request bị lỗi bằng config mới
+        // Nếu request gặp lỗi mạng/timeout/503 (thường xảy ra khi Render Free đang spin-up), tự động retry 1 lần sau 3s
+        if (config && !config._retry && (!error.response || error.response.status === 503 || error.code === 'ECONNABORTED')) {
+            config._retry = true;
+            console.warn('[API] Render API có thể đang khởi động (spin-up). Đang tự động thử lại sau 3 giây...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
             return apiClient(config);
         }
 
