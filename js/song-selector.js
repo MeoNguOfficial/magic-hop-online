@@ -316,23 +316,80 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
     // Thêm nút Làm mới danh sách ở đầu
     if (playlistRenderStartIndex === 0) {
+        const setRefreshBtnDefault = (btn) => {
+            if (!btn) return;
+            btn.disabled = false;
+            btn.className = "w-full mb-3 py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-900/40 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.15)]";
+            btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> ${(typeof t === 'function' ? t('btn_refresh_playlist') : 'LÀM MỚI DANH SÁCH NHẠC')}`;
+        };
+
+        const setRefreshBtnLoading = (btn) => {
+            if (!btn) return;
+            btn.disabled = true;
+            btn.className = "w-full mb-3 py-2.5 text-xs font-bold text-cyan-300 border border-cyan-500/50 bg-cyan-950/50 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.25)] cursor-not-allowed opacity-80";
+            btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-cyan-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${(typeof t === 'function' ? t('msg_loading_data') : 'ĐANG TẢI DỮ LIỆU...')}`;
+        };
+
+        const setRefreshBtnSuccess = (btn) => {
+            if (!btn) return;
+            btn.disabled = true;
+            btn.className = "w-full mb-3 py-2.5 text-xs font-bold text-emerald-400 border border-emerald-500/60 bg-emerald-950/40 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(16,185,129,0.35)]";
+            btn.innerHTML = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg> ${(typeof t === 'function' ? (t('msg_sync_success_btn') || 'ĐÃ LÀM MỚI') : 'ĐÃ LÀM MỚI')}`;
+        };
+
+        const setRefreshBtnError = (btn) => {
+            if (!btn) return;
+            btn.disabled = true;
+            btn.className = "w-full mb-3 py-2.5 text-xs font-bold text-rose-400 border border-rose-500/60 bg-rose-950/40 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.35)]";
+            btn.innerHTML = `<svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg> ${(typeof t === 'function' ? (t('msg_sync_failed_btn') || 'LÀM MỚI THẤT BẠI') : 'LÀM MỚI THẤT BẠI')}`;
+        };
+
         const refreshBtn = document.createElement('button');
-        refreshBtn.className = "w-full mb-3 py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-900/40 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.15)]";
-        refreshBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> ${(typeof t === 'function' ? t('btn_refresh_playlist') : 'LÀM MỚI DANH SÁCH NHẠC')}`;
+        refreshBtn.id = 'refresh-playlist-btn';
+        setRefreshBtnDefault(refreshBtn);
+
         refreshBtn.onclick = async () => {
-            refreshBtn.disabled = true;
-            refreshBtn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${(typeof t === 'function' ? t('msg_loading_data') : 'ĐANG TẢI DỮ LIỆU...')}`;
+            setRefreshBtnLoading(refreshBtn);
             
             try {
                 if (typeof window.refreshPlaylist === 'function') {
-                    await window.refreshPlaylist(currentFilterTerm || '', true);
+                    await window.refreshPlaylist(currentFilterTerm || '', true, { skipRender: true });
                 }
                 
-                if (typeof showCyberModal === 'function') {
-                    showCyberModal({ title: (typeof t === 'function' ? t('success_title') : 'THÀNH CÔNG'), message: (typeof t === 'function' ? t('msg_sync_success') : 'Đã đồng bộ danh sách nhạc mới nhất từ máy chủ!'), type: 'alert' });
+                // Re-render danh sách bài hát mới
+                renderSongList(currentFilterTerm || '', currentPlaylistIndices);
+
+                const currentBtn = document.getElementById('refresh-playlist-btn');
+                if (currentBtn) {
+                    setRefreshBtnSuccess(currentBtn);
+                    setTimeout(() => {
+                        const targetBtn = document.getElementById('refresh-playlist-btn');
+                        if (targetBtn) setRefreshBtnDefault(targetBtn);
+                    }, 2500);
                 }
             } catch (err) {
                 console.error("[SongSelector] Lỗi làm mới playlist:", err);
+                
+                renderSongList(currentFilterTerm || '', currentPlaylistIndices);
+
+                const currentBtn = document.getElementById('refresh-playlist-btn');
+                if (currentBtn) {
+                    setRefreshBtnError(currentBtn);
+                    setTimeout(() => {
+                        const targetBtn = document.getElementById('refresh-playlist-btn');
+                        if (targetBtn) setRefreshBtnDefault(targetBtn);
+                    }, 2500);
+                }
+
+                // Thông báo lỗi chung
+                const errorMsg = err?.response?.data?.message || err?.message || (typeof t === 'function' ? t('msg_sync_failed') : 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra lại kết nối!');
+                if (typeof showCyberModal === 'function') {
+                    showCyberModal({ 
+                        title: (typeof t === 'function' ? t('error_title') : 'LỖI ĐỒNG BỘ'), 
+                        message: errorMsg, 
+                        type: 'alert' 
+                    });
+                }
             }
         };
         selector.appendChild(refreshBtn);

@@ -405,7 +405,7 @@ let nextCursor = null;
 let hasMore = true;
 let isLoadingMore = false;
 let currentSearchTerm = '';
-async function refreshPlaylist(search = '', forceRefresh = true) {
+async function refreshPlaylist(search = '', forceRefresh = true, options = {}) {
     nextCursor = null;
     hasMore = true;
     isLoadingMore = false;
@@ -421,7 +421,7 @@ async function refreshPlaylist(search = '', forceRefresh = true) {
 
     await loadPlaylistData(search, forceRefresh);
 
-    if (typeof renderSongList === 'function') {
+    if (!options.skipRender && typeof renderSongList === 'function') {
         renderSongList(search, currentPlaylistIndices);
     }
 }
@@ -540,6 +540,7 @@ window.isCurrentUserAdmin = isCurrentUserAdmin;
 
 async function loadPlaylistData(search = '', forceRefresh = false) {
     let indices = [];
+    let syncError = null;
     currentSearchTerm = search;
     const isAdmin = isCurrentUserAdmin();
 
@@ -602,6 +603,7 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
             }
         }
     } catch (e) {
+        syncError = e;
         console.warn("[Playlist] Không thể tải playlist từ API, thử tải từ DB Offline:", e);
         if (typeof getCachedPlaylistFromDB === 'function' && !search && indices.length === 0) {
             const cachedMaps = await getCachedPlaylistFromDB();
@@ -617,6 +619,11 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
     }
 
     currentPlaylistIndices = indices.length > 0 ? indices : currentPlaylistIndices;
+
+    if (forceRefresh && syncError) {
+        throw syncError;
+    }
+
     return currentPlaylistIndices;
 }
 
