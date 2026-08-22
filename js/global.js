@@ -35,6 +35,9 @@ const menuBtn = document.getElementById('menu-btn');
 const countdownNumber = document.getElementById('countdown-number');
 const graphicsQualityOptions = document.getElementById('graphics-quality-options');
 const graphicsApiOptions = document.getElementById('graphics-api-options');
+const toggleDiscreteGpu = document.getElementById('toggle-discrete-gpu');
+const detectedGpuNameEl = document.getElementById('detected-gpu-name');
+const dedicatedGpuNoteEl = document.getElementById('dedicated-gpu-note');
 const togglePerfMode = document.getElementById('toggle-perf-mode');
 const toggleShockwaves = document.getElementById('toggle-shockwaves');
 const toggleRelativePC = document.getElementById('toggle-relative-pc');
@@ -192,6 +195,10 @@ window.isWebGPUCache = (_rawApiGlobal === 'd2ViZ3B1' || _rawApiGlobal === 'webgp
 const tempColor = new THREE.Color();
 const tempVec3 = new THREE.Vector3();
 let lastDisplayedSpeedText = "";
+let lastDisplayedSpeedValue = -1;
+let lastDisplayedModeText = "";
+let lastDisplayedProgress = -1;
+let lastDisplayedRound = -1;
 let lastDisplayedScore = -1;
 let lastDisplayedPerfectHUD = -1;
 
@@ -985,7 +992,6 @@ function checkAdminVisibility() {
 
 // Kiểm tra định kỳ để ẩn/hiện nút Admin (Hữu ích khi tài khoản Logout / Login)
 checkAdminVisibility();
-setInterval(checkAdminVisibility, 1000);
 
 // --- CREDITS & INFO MODAL ---
 if (secretCreditBtn) {
@@ -1045,6 +1051,12 @@ if (typeof cacheStaticResources === 'function') {
         'js/global.js',
         'js/settings.js',
         'js/audio-manager.js',
+        'js/normal-blocks.js',
+        'js/moving-blocks.js',
+        'js/personalize.js',
+        'js/game-effects.js',
+        'js/game-camera.js',
+        'js/visualizer.js',
         'js/game.js',
         'js/autoplay.js',
         'js/music-player.js',

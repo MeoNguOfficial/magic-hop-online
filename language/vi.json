@@ -520,5 +520,12 @@
     "lbl_final_speed": "TỐC ĐỘ",
     "quick_settings_title": "QUICK SETTINGS",
     "quick_settings_subtitle": "Cài đặt nhanh",
-    "show_hitbox_title": "Hiện Hitbox"
+    "show_hitbox_title": "Hiện Hitbox",
+    "discrete_gpu_title": "DÙNG CARD RỜI (GPU CHUYÊN DỤNG)",
+    "discrete_gpu_desc": "Yêu cầu trình duyệt ưu tiên chạy Card đồ họa rời (NVIDIA, AMD Radeon, Intel Arc) thay vì GPU tích hợp nếu máy tính có nhiều card đồ họa.",
+    "detected_gpu_label": "GPU hiện tại:",
+    "dedicated_gpu_detected_note": "Thiết bị có Card đồ họa chuyên dụng (Dedicated GPU).",
+    "discrete_gpu_change_title": "CÀI ĐẶT GPU CHUYÊN DỤNG",
+    "discrete_gpu_change_desc": "Thay đổi cài đặt GPU yêu cầu tải lại trang để trình duyệt áp dụng GPU mới. Tải lại ngay?",
+    "discrete_gpu_windows_hint": "Mẹo: Trên Windows laptop, nếu trình duyệt vẫn chưa chuyển GPU rời, hãy mở Windows Settings > Display > Graphics và đặt trình duyệt thành 'High Performance'."
 }

@@ -518,5 +518,11 @@
     "lbl_final_speed": "VELOCIDAD",
     "quick_settings_title": "QUICK SETTINGS",
     "quick_settings_subtitle": "Menú rápido",
-    "show_hitbox_title": "Mostrar Hitbox"
+    "show_hitbox_title": "Mostrar Hitbox",
+    "discrete_gpu_title": "USAR GPU DEDICADA (ALTO RENDIMIENTO)",
+    "discrete_gpu_desc": "Solicita al navegador priorizar la tarjeta gráfica dedicada de alto rendimiento (NVIDIA, AMD Radeon) si está disponible.",
+    "detected_gpu_label": "GPU activa:",
+    "dedicated_gpu_detected_note": "El dispositivo cuenta con tarjeta gráfica dedicada (GPU dedicada).",
+    "discrete_gpu_change_title": "CONFIGURACIÓN DE GPU DEDICADA",
+    "discrete_gpu_change_desc": "Cambiar la configuración de GPU requiere recargar la página. ¿Recargar ahora?"
 }

@@ -518,5 +518,11 @@
     "lbl_final_speed": "СКОРОСТЬ",
     "quick_settings_title": "QUICK SETTINGS",
     "quick_settings_subtitle": "Быстрое меню",
-    "show_hitbox_title": "Показать хитбокс"
+    "show_hitbox_title": "Показать хитбокс",
+    "discrete_gpu_title": "ИСПОЛЬЗОВАТЬ ДИСКРЕТНУЮ GPU (ВЫСОКАЯ ПРОИЗВОДИТЕЛЬНОСТЬ)",
+    "discrete_gpu_desc": "Запросить браузер отдавать приоритет высокопроизводительной дискретной видеокарте (NVIDIA, AMD Radeon) при наличии.",
+    "detected_gpu_label": "Текущая GPU:",
+    "dedicated_gpu_detected_note": "Устройство оснащено дискретной видеокартой (Dedicated GPU).",
+    "discrete_gpu_change_title": "НАСТРОЙКА ДИСКРЕТНОЙ GPU",
+    "discrete_gpu_change_desc": "Для применения настроек GPU требуется перезагрузка страницы. Перезагрузить сейчас?"
 }

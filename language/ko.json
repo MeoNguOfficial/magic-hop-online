@@ -518,5 +518,11 @@
     "lbl_final_speed": "속도",
     "quick_settings_title": "QUICK SETTINGS",
     "quick_settings_subtitle": "빠른 메뉴",
-    "show_hitbox_title": "히트박스 표시"
+    "show_hitbox_title": "히트박스 표시",
+    "discrete_gpu_title": "외장 그래픽 카드 (고성능 GPU) 사용",
+    "discrete_gpu_desc": "여러 GPU가 장착된 경우 브라우저에 고성능 외장 그래픽 카드(NVIDIA, AMD Radeon) 우선 사용을 요청합니다.",
+    "detected_gpu_label": "현재 GPU:",
+    "dedicated_gpu_detected_note": "외장 그래픽 카드(Dedicated GPU)가 감지되었습니다.",
+    "discrete_gpu_change_title": "외장 GPU 설정",
+    "discrete_gpu_change_desc": "GPU 설정을 적용하려면 페이지를 다시 로드해야 합니다. 지금 다시 로드하시겠습니까?"
 }

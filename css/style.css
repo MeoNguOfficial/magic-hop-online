@@ -326,20 +326,23 @@ html, body {
     align-items: center;
     justify-content: center;
     pointer-events: none;
+    contain: layout style paint;
 }
 
 #combo-ui {
     position: relative;
     display: inline-block;
-    will-change: transform, opacity, filter;
+    will-change: transform, opacity;
+    transform: translate3d(0, 0, 0) scale(0.75);
     transform-origin: center center;
-    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.28s cubic-bezier(0.25, 1, 0.5, 1);
     opacity: 0;
     letter-spacing: 0.08em;
 }
 
-#combo-ui.active {
+#combo-ui.combo-visible {
     opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.0);
 }
 
 /* Tier 1: Electric Yellow/Cyan Glow (Combo 1-4) */
@@ -374,51 +377,58 @@ html, body {
         0 2px 4px rgba(0, 0, 0, 0.9);
 }
 
-/* Tier 4: Legendary Shimmer Hyper Rainbow (Combo 15+) */
+/* Tier 4: Royal Cyber Purple Neon (Combo 15+) */
 #combo-ui.combo-tier-4 {
-    background: linear-gradient(90deg, #ff0055, #ffaa00, #00ffff, #ff00ff, #ff0055);
-    background-size: 300% 300%;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: hyperShimmer 2.2s linear infinite;
-    filter: drop-shadow(0 0 10px rgba(255, 0, 255, 0.9)) drop-shadow(0 0 24px rgba(0, 255, 255, 0.9)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.9));
+    color: #f0abfc;
+    text-shadow: 
+        0 0 10px rgba(232, 121, 249, 1),
+        0 0 22px rgba(217, 70, 239, 0.9),
+        0 0 42px rgba(168, 85, 247, 0.75),
+        0 0 65px rgba(192, 38, 211, 0.5),
+        0 2px 4px rgba(0, 0, 0, 0.9);
 }
 
-/* Floating Spark Particle Element (CSS Animation) */
+/* Dual-State GPU Spark Particle Elements (Zero-GC Fixed Directions) */
 .perfect-spark {
     position: absolute;
     pointer-events: none;
-    width: 7px;
-    height: 7px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
     background: #ffffff;
-    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-    animation: sparkFloatOut 0.48s ease-out forwards;
-    z-index: 20;
-}
-
-/* Floating Spark Particle Element (AnimeJS) */
-.perfect-spark-anime {
-    position: absolute;
-    pointer-events: none;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
-    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
+    transform: translate3d(-50%, -50%, 0);
     will-change: transform, opacity;
     z-index: 20;
 }
 
-/* Shockwave Ghost Text Popup (Override animation) */
-.perfect-ghost-text {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    white-space: nowrap;
-    pointer-events: none;
-    will-change: transform, opacity;
-    z-index: 5;
-}
+@keyframes sparkDir0A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(28px, -24px, 0) scale(0.1); } }
+@keyframes sparkDir0B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(28px, -24px, 0) scale(0.1); } }
+
+@keyframes sparkDir1A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-28px, -24px, 0) scale(0.1); } }
+@keyframes sparkDir1B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-28px, -24px, 0) scale(0.1); } }
+
+@keyframes sparkDir2A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(34px, 6px, 0) scale(0.1); } }
+@keyframes sparkDir2B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(34px, 6px, 0) scale(0.1); } }
+
+@keyframes sparkDir3A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-34px, 6px, 0) scale(0.1); } }
+@keyframes sparkDir3B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-34px, 6px, 0) scale(0.1); } }
+
+@keyframes sparkDir4A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(18px, 30px, 0) scale(0.1); } }
+@keyframes sparkDir4B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(18px, 30px, 0) scale(0.1); } }
+
+@keyframes sparkDir5A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-18px, 30px, 0) scale(0.1); } }
+@keyframes sparkDir5B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-18px, 30px, 0) scale(0.1); } }
+
+.spark-dir-0-a { animation: sparkDir0A 0.38s ease-out forwards; }
+.spark-dir-0-b { animation: sparkDir0B 0.38s ease-out forwards; }
+.spark-dir-1-a { animation: sparkDir1A 0.38s ease-out forwards; }
+.spark-dir-1-b { animation: sparkDir1B 0.38s ease-out forwards; }
+.spark-dir-2-a { animation: sparkDir2A 0.38s ease-out forwards; }
+.spark-dir-2-b { animation: sparkDir2B 0.38s ease-out forwards; }
+.spark-dir-3-a { animation: sparkDir3A 0.38s ease-out forwards; }
+.spark-dir-3-b { animation: sparkDir3B 0.38s ease-out forwards; }
+.spark-dir-4-a { animation: sparkDir4A 0.38s ease-out forwards; }
+.spark-dir-4-b { animation: sparkDir4B 0.38s ease-out forwards; }
+.spark-dir-5-a { animation: sparkDir5A 0.38s ease-out forwards; }
+.spark-dir-5-b { animation: sparkDir5B 0.38s ease-out forwards; }

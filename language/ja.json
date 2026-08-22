@@ -518,5 +518,11 @@
     "lbl_final_speed": "スピード",
     "quick_settings_title": "QUICK SETTINGS",
     "quick_settings_subtitle": "クイックメニュー",
-    "show_hitbox_title": "ヒットボックス表示"
+    "show_hitbox_title": "ヒットボックス表示",
+    "discrete_gpu_title": "専用GPU（外部グラフィックス）を使用",
+    "discrete_gpu_desc": "複数のGPUが搭載されている場合、ブラウザに高性能な専用グラフィックスカード (NVIDIA, AMD Radeon) の優先使用を要求します。",
+    "detected_gpu_label": "現在のGPU:",
+    "dedicated_gpu_detected_note": "専用グラフィックスカード（外部GPU）が検出されました。",
+    "discrete_gpu_change_title": "専用GPU設定",
+    "discrete_gpu_change_desc": "GPU設定の変更を適用するにはページの再読み込みが必要です。今すぐ再読み込みしますか？"
 }

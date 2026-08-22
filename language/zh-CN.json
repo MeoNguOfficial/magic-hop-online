@@ -518,5 +518,11 @@
     "lbl_final_speed": "速度",
     "quick_settings_title": "QUICK SETTINGS",
     "quick_settings_subtitle": "快捷菜单",
-    "show_hitbox_title": "显示碰撞箱"
+    "show_hitbox_title": "显示碰撞箱",
+    "discrete_gpu_title": "使用独立显卡 (高性能 GPU)",
+    "discrete_gpu_desc": "如果设备拥有多张显卡，请求浏览器优先使用高性能独立显卡 (NVIDIA, AMD Radeon)。",
+    "detected_gpu_label": "当前 GPU:",
+    "dedicated_gpu_detected_note": "检测到设备配备独立显卡 (Dedicated GPU)。",
+    "discrete_gpu_change_title": "独立显卡设置",
+    "discrete_gpu_change_desc": "更改 GPU 设置需要重新加载页面以生效。是否立即重新加载？"
 }

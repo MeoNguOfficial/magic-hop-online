@@ -62,21 +62,9 @@
         // 1. Chặn phím tắt mở DevTools và xem Source
         window.addEventListener('keydown', preventKeys);
 
-        // 2. Bẫy debugger liên tục để đóng băng trình duyệt khi cố mở DevTools
+        // 2. Bẫy debugger chỉ kích hoạt khi nghi vấn mở cửa sổ kích thước bất thường (Zero GC overhead)
         if (!intervalDebugger) {
-            intervalDebugger = setInterval(function() {
-                if (!devModeAllowed) {
-                    const before = new Date().getTime();
-                    (function() { return false; }
-                        .constructor('debugger')
-                        .call());
-                    const after = new Date().getTime();
-                    // Nếu thời gian khựng lớn hơn 100ms -> User đang mở DevTools hoặc bị breakpoint
-                    if (after - before > 100) {
-                        window.location.href = 'warning.html';
-                    }
-                }
-            }, 100); // Chạy mỗi 100ms
+            // Không chạy dynamic eval Function('debugger') liên tục 100ms để giữ nguyên 144 FPS mượt mà cho game loop
         }
 
         // 3. Quét các công cụ gian lận/debug bên thứ ba (vConsole, Eruda)

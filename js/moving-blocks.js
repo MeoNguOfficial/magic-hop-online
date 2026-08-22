@@ -21,7 +21,11 @@ window.MovingBlocksManager = {
             delete tile.userData.amplitude;
             delete tile.userData.baseX;
         }
-        this.allMovingTiles = this.allMovingTiles.filter(t => t !== tile);
+        const idx = this.allMovingTiles.indexOf(tile);
+        if (idx !== -1) {
+            const last = this.allMovingTiles.pop();
+            if (idx < this.allMovingTiles.length) this.allMovingTiles[idx] = last;
+        }
     },
 
     /**
@@ -32,8 +36,12 @@ window.MovingBlocksManager = {
      * @param {number} timeDiff - Khoảng thời gian so với block trước
      */
     processTile: function (tile, canBeMoving, roundCount, timeDiff = 1.0) {
-        // Xóa sạch TOÀN BỘ tham chiếu cũ của tile trong allMovingTiles để tránh lỗi cập nhật lặp (multi-update speedup)
-        this.allMovingTiles = this.allMovingTiles.filter(t => t !== tile);
+        // Xóa sạch tham chiếu cũ của tile trong allMovingTiles bằng O(1) in-place không tạo mảng rác
+        const oldIdx = this.allMovingTiles.indexOf(tile);
+        if (oldIdx !== -1) {
+            const last = this.allMovingTiles.pop();
+            if (oldIdx < this.allMovingTiles.length) this.allMovingTiles[oldIdx] = last;
+        }
 
         // Đảm bảo xóa sạch trạng thái cũ từ Object Pool để tránh lỗi tái sử dụng
         if (tile.userData) {
@@ -158,10 +166,13 @@ window.MovingBlocksManager = {
      * @param {number} ballZ - Vị trí Z của quả bóng để lọc các khối đã vượt qua
      * @param {number} [frameHex] - Màu động đã được tính trước ở khung hình (tùy chọn)
      */
+    processedTilesSet: new Set(),
+
     update: function (delta, gameSpeed, ballZ, frameHex) {
         // TỐC ĐỘ DI CHUYỂN NGANG QUA LẠI: Tỉ lệ thuận với tốc độ game
         const speedFactor = gameSpeed; 
-        const processedTiles = new Set();
+        const processedTiles = this.processedTilesSet;
+        processedTiles.clear();
 
         for (let i = this.allMovingTiles.length - 1; i >= 0; i--) {
             const tile = this.allMovingTiles[i];
@@ -174,7 +185,10 @@ window.MovingBlocksManager = {
                     }
                     this.disposeHierarchy(tile);
                 }
-                this.allMovingTiles.splice(i, 1);
+                const last = this.allMovingTiles.pop();
+                if (i < this.allMovingTiles.length) {
+                    this.allMovingTiles[i] = last;
+                }
                 continue;
             }
 
@@ -201,24 +215,30 @@ window.MovingBlocksManager = {
                         }
                     }
                     
-                    // Cập nhật màu mesh chính
-                    if (tile.material) {
-                        tile.material.color.setHex(hex);
-                    }
-                    // Cập nhật màu viền (borderLine)
-                    if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-                        tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
-                    }
-                    // Cập nhật màu glowMesh
-                    const glowMesh = tile.userData.glowMesh || tile.getObjectByName("glowMesh");
-                    if (glowMesh && glowMesh.material) {
-                        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                        if (glowMat) {
-                            if (glowMat.uniforms) {
-                                glowMat.uniforms.color.value.setHex(hex);
-                            } else {
-                                glowMat.color.setHex(hex);
+                    if (tile.userData.themeColor !== hex) {
+                        tile.userData.themeColor = hex;
+                        // Cập nhật màu mesh chính
+                        if (tile.material) {
+                            tile.material.color.setHex(hex);
+                        }
+                        // Cập nhật màu viền (borderLine)
+                        if (tile.userData.borderLine && tile.userData.borderLine.material) {
+                            const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+                            tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
+                        }
+                        // Cập nhật màu glowMesh
+                        if (tile.userData.glowMesh === undefined) {
+                            tile.userData.glowMesh = tile.getObjectByName("glowMesh") || null;
+                        }
+                        const glowMesh = tile.userData.glowMesh;
+                        if (glowMesh && glowMesh.material) {
+                            const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
+                            if (glowMat) {
+                                if (glowMat.uniforms) {
+                                    glowMat.uniforms.color.value.setHex(hex);
+                                } else {
+                                    glowMat.color.setHex(hex);
+                                }
                             }
                         }
                     }

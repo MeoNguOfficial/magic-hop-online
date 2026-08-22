@@ -256,63 +256,7 @@ window.FakeBlocksManager = {
                     }
                 }
             } else {
-                fakeTile = realTile.clone();
-                
-                fakeTile.material = realTile.material.clone();
-                // Quay lại dùng opacity nguyên bản của fake block
-                fakeTile.material.opacity = isWebGPUForFake ? 0.3 : 0.25; 
-                fakeTile.material.transparent = true;
-                fakeTile.material.depthWrite = isWebGPUForFake ? false : realTile.material.depthWrite;
-                
-                for (let i = fakeTile.children.length - 1; i >= 0; i--) {
-                    const child = fakeTile.children[i];
-                    if (child.type === 'Sprite') {
-                        fakeTile.remove(child);
-                    } else if (child.name === 'centerMesh' || (child.type === 'Mesh' && child.name !== 'borderLine' && child.name !== 'glowMesh')) { 
-                        fakeTile.remove(child);
-                    } else if (child.name === 'glowMesh') {
-                        fakeTile.userData.glowMesh = child;
-                        if (Array.isArray(child.material)) {
-                            const origGlow = child.material[1];
-                            let newGlowMat;
-                            if (origGlow && origGlow.uniforms) {
-                                newGlowMat = new THREE.ShaderMaterial({
-                                    uniforms: {
-                                        color: { value: new THREE.Color(origGlow.uniforms.color ? origGlow.uniforms.color.value.getHex() : 0x00ffff) },
-                                        opacityMultiplier: { value: 0.3 },
-                                        glowHeight: { value: (origGlow.uniforms.glowHeight && origGlow.uniforms.glowHeight.value) ? origGlow.uniforms.glowHeight.value : 1.5 }
-                                    },
-                                    vertexShader: glowVertexShader,
-                                    fragmentShader: glowFragmentShader,
-                                    transparent: true,
-                                    blending: THREE.AdditiveBlending,
-                                    depthWrite: false,
-                                    side: THREE.FrontSide
-                                });
-                            } else if (origGlow) {
-                                newGlowMat = new THREE.MeshBasicMaterial({
-                                    color: origGlow.color ? origGlow.color.getHex() : 0x00ffff,
-                                    map: (typeof getSharedGlowTexture === 'function') ? getSharedGlowTexture() : origGlow.map,
-                                    transparent: true,
-                                    blending: THREE.AdditiveBlending,
-                                    depthWrite: false,
-                                    side: THREE.FrontSide,
-                                    opacity: 0.08
-                                });
-                            }
-                            if (newGlowMat) {
-                                child.material = [child.material[0], newGlowMat];
-                            }
-                        }
-                    } else if (child.material) {
-                        child.material = child.material.clone();
-                        // Quay lại độ mờ viền nguyên bản (0.15)
-                        child.material.opacity = 0.15;
-                        child.material.transparent = true;
-                        
-                        if (child.name === 'borderLine' || child.type === "LineLoop" || child.type === "Line") fakeTile.userData.borderLine = child;
-                    }
-                }
+                fakeTile = this._createTileMesh(realTile);
             }
             
             fakeTile.position.set(posX, realTile.position.y, realTile.position.z);
@@ -324,33 +268,37 @@ window.FakeBlocksManager = {
             const fGlowMesh = fakeTile.userData.glowMesh || fakeTile.getObjectByName('glowMesh');
             const targetZVal = realTile.userData.targetZ !== undefined ? realTile.userData.targetZ : realTile.position.z;
  
-            fakeTile.userData = {
-                ...realTile.userData,
-                bodyMesh: fakeTile.userData.bodyMesh || null,
-                edgeMesh: fakeTile.userData.edgeMesh || null,
-                centerMesh: null,
-                borderLine: fBorderLine,
-                glowMesh: fGlowMesh,
-                isFake: true,
-                isBroken: false,
-                isExiting: false,
-                isMoving: false, // Fake blocks tuyệt đối không kế thừa logic Moving Block
-                fallSpeed: 0,
-                targetZ: targetZVal,
-                isEntering: realTile.userData.isEntering || false,
-                isDelayedAppearance: realTile.userData.isDelayedAppearance || false
-            };
+            if (!fakeTile.userData) fakeTile.userData = {};
+            const fud = fakeTile.userData;
+            fud.borderLine = fBorderLine;
+            fud.glowMesh = fGlowMesh;
+            fud.bodyMesh = fud.bodyMesh || null;
+            fud.edgeMesh = fud.edgeMesh || null;
+            fud.centerMesh = null;
+            fud.isFake = true;
+            fud.isBroken = false;
+            fud.isExiting = false;
+            fud.isMoving = false;
+            fud.fallSpeed = 0;
+            fud.springY = 0;
+            fud.springVelocityY = 0;
+            fud.baseY = 0;
+            fud.targetZ = targetZVal;
+            fud.scale = realTile.userData.scale || 1.0;
+            fud.themeColor = realTile.userData.themeColor;
+            fud.isEntering = realTile.userData.isEntering || false;
+            fud.isDelayedAppearance = realTile.userData.isDelayedAppearance || false;
             
             // Xóa sạch các cờ động vận tốc của chu kỳ sống trước
-            delete fakeTile.userData.exitVelZ;
-            delete fakeTile.userData.exitStartZ;
-            delete fakeTile.userData.exitOpacity;
-            delete fakeTile.userData.moveSpeed;
-            delete fakeTile.userData.movePattern;
-            delete fakeTile.userData.moveTime;
-            delete fakeTile.userData.amplitude;
-            delete fakeTile.userData.baseX;
-            delete fakeTile.userData.originX;
+            delete fud.exitVelZ;
+            delete fud.exitStartZ;
+            delete fud.exitOpacity;
+            delete fud.moveSpeed;
+            delete fud.movePattern;
+            delete fud.moveTime;
+            delete fud.amplitude;
+            delete fud.baseX;
+            delete fud.originX;
             
             if (fakeTile.userData.isDelayedAppearance) {
                 fakeTile.visible = false;
@@ -767,6 +715,77 @@ window.FakeBlocksManager = {
         }
     },
 
+    _createTileMesh: function(realTile) {
+        const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+        const fakeTile = realTile.clone();
+        
+        fakeTile.material = realTile.material.clone();
+        fakeTile.material.opacity = isWebGPUForFake ? 0.3 : 0.25; 
+        fakeTile.material.transparent = true;
+        fakeTile.material.depthWrite = isWebGPUForFake ? false : realTile.material.depthWrite;
+        
+        for (let i = fakeTile.children.length - 1; i >= 0; i--) {
+            const child = fakeTile.children[i];
+            if (child.type === 'Sprite') {
+                fakeTile.remove(child);
+            } else if (child.name === 'centerMesh' || (child.type === 'Mesh' && child.name !== 'borderLine' && child.name !== 'glowMesh')) { 
+                fakeTile.remove(child);
+            } else if (child.name === 'glowMesh') {
+                fakeTile.userData.glowMesh = child;
+                if (Array.isArray(child.material)) {
+                    const origGlow = child.material[1];
+                    let newGlowMat;
+                    if (origGlow && origGlow.uniforms) {
+                        newGlowMat = new THREE.ShaderMaterial({
+                            uniforms: {
+                                color: { value: new THREE.Color(origGlow.uniforms.color ? origGlow.uniforms.color.value.getHex() : 0x00ffff) },
+                                opacityMultiplier: { value: 0.3 },
+                                glowHeight: { value: (origGlow.uniforms.glowHeight && origGlow.uniforms.glowHeight.value) ? origGlow.uniforms.glowHeight.value : 1.5 }
+                            },
+                            vertexShader: glowVertexShader,
+                            fragmentShader: glowFragmentShader,
+                            transparent: true,
+                            blending: THREE.AdditiveBlending,
+                            depthWrite: false,
+                            side: THREE.FrontSide
+                        });
+                    } else if (origGlow) {
+                        newGlowMat = new THREE.MeshBasicMaterial({
+                            color: origGlow.color ? origGlow.color.getHex() : 0x00ffff,
+                            map: (typeof getSharedGlowTexture === 'function') ? getSharedGlowTexture() : origGlow.map,
+                            transparent: true,
+                            blending: THREE.AdditiveBlending,
+                            depthWrite: false,
+                            side: THREE.FrontSide,
+                            opacity: 0.08
+                        });
+                    }
+                    if (newGlowMat) {
+                        child.material = [child.material[0], newGlowMat];
+                    }
+                }
+            } else if (child.material) {
+                child.material = child.material.clone();
+                child.material.opacity = 0.15;
+                child.material.transparent = true;
+                
+                if (child.name === 'borderLine' || child.type === "LineLoop" || child.type === "Line") fakeTile.userData.borderLine = child;
+            }
+        }
+        return fakeTile;
+    },
+
+    prewarmFakeTilePool: function(sampleTile, count = 25) {
+        if (!this.fakeTilePool) this.fakeTilePool = [];
+        if (!sampleTile) return;
+        while (this.fakeTilePool.length < count) {
+            const fakeTile = this._createTileMesh(sampleTile);
+            fakeTile.visible = false;
+            if (typeof scene !== 'undefined' && scene) scene.remove(fakeTile);
+            this.fakeTilePool.push(fakeTile);
+        }
+    },
+
     shatterTile: function(fTile) {
         if (typeof blockShatterEnabled !== 'undefined' && !blockShatterEnabled) return;
         if (!this.fragments) this.fragments = [];
@@ -831,15 +850,15 @@ window.FakeBlocksManager = {
             const ry = (Math.random() - 0.5) * 10;
             const rz = (Math.random() - 0.5) * 10;
             
-            frag.userData = {
-                vx: vx,
-                vy: vy,
-                vz: vz,
-                rx: rx,
-                ry: ry,
-                rz: rz,
-                opacity: 0.95
-            };
+            if (!frag.userData) frag.userData = {};
+            const frUd = frag.userData;
+            frUd.vx = vx;
+            frUd.vy = vy;
+            frUd.vz = vz;
+            frUd.rx = rx;
+            frUd.ry = ry;
+            frUd.rz = rz;
+            frUd.opacity = 0.95;
             
             this.fragments.push(frag);
         }

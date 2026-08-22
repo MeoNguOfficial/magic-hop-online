@@ -1264,6 +1264,27 @@
                                 </div>
                             </div>
 
+                            <div class="space-y-2 pt-1">
+                                <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                                    <div class="flex flex-col">
+                                        <span class="font-bold uppercase text-gray-200" data-i18n="discrete_gpu_title">Dùng Card rời (GPU chuyên dụng)</span>
+                                        <span class="text-[9px] text-gray-500" data-i18n="discrete_gpu_desc">Yêu cầu trình duyệt ưu tiên chạy Card đồ họa rời (NVIDIA, AMD, Intel Arc) nếu máy có nhiều GPU.</span>
+                                    </div>
+                                    <input type="checkbox" id="toggle-discrete-gpu" checked class="accent-cyan-400 w-4 h-4 cursor-pointer">
+                                </label>
+                                <div id="gpu-info-box" class="p-2 rounded bg-cyan-950/30 border border-cyan-500/20 text-[10px] text-gray-300 space-y-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-gray-400 font-semibold shrink-0" data-i18n="detected_gpu_label">GPU hiện tại:</span>
+                                        <span id="detected-gpu-name" class="font-mono text-cyan-300 truncate text-right font-bold" title="Đang nhận diện...">Đang nhận diện...</span>
+                                    </div>
+                                    <div id="dedicated-gpu-note" class="hidden text-[9px] text-emerald-400 font-bold flex items-center gap-1.5 pt-0.5">
+                                        <svg class="w-3.5 h-3.5 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                                        <span data-i18n="dedicated_gpu_detected_note">Thiết bị có Card đồ họa chuyên dụng (Dedicated GPU).</span>
+                                    </div>
+                                    <p class="text-[8.5px] text-gray-500 italic pt-0.5 leading-tight" data-i18n="discrete_gpu_windows_hint">Mẹo: Trên Windows laptop, nếu trình duyệt vẫn chưa chuyển GPU rời, hãy mở Windows Settings > Display > Graphics và đặt trình duyệt thành 'High Performance'.</p>
+                                </div>
+                            </div>
+
 
                             <div class="space-y-3 pt-2">
                                 <span class="text-xs text-cyan-400 font-bold uppercase tracking-wider font-orbitron"
@@ -2793,6 +2814,9 @@
             "js/asian-mode.js",
             "js/normal-blocks.js",
             "js/personalize.js",
+            "js/game-effects.js",
+            "js/game-camera.js",
+            "js/visualizer.js",
             "js/game.js",
             "js/autoplay.js",
             "js/bot-assist.js",

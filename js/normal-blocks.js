@@ -371,7 +371,7 @@ function pushTileToPool(tile) {
         delete tile.userData.moveType;
     }
 
-    const limit = (typeof maxTilePoolSize !== 'undefined') ? maxTilePoolSize : 15;
+    const limit = (typeof maxTilePoolSize !== 'undefined') ? maxTilePoolSize : 60;
     if (tilePool.length < limit) {
         tilePool.push(tile);
     } else {
@@ -379,14 +379,32 @@ function pushTileToPool(tile) {
     }
 }
 
-
+function prewarmTilePool(count = 35) {
+    while (tilePool.length < count) {
+        const tile = getTileFromPool(true);
+        tile.visible = false;
+        if (typeof scene !== 'undefined' && scene) {
+            scene.remove(tile);
+        }
+        tilePool.push(tile);
+    }
+    if (tilePool.length > 0 && typeof window.FakeBlocksManager !== 'undefined') {
+        if (typeof window.FakeBlocksManager.prewarmFakeTilePool === 'function') {
+            window.FakeBlocksManager.prewarmFakeTilePool(tilePool[0], 25);
+        }
+        if (typeof window.FakeBlocksManager.prewarmFragmentPool === 'function') {
+            window.FakeBlocksManager.prewarmFragmentPool();
+        }
+    }
+}
+window.prewarmTilePool = prewarmTilePool;
 
 // --- OBJECT POOL: LẤY / TẠO MESH CHO GẠCH ---
-function getTileFromPool() {
+function getTileFromPool(forceNew = false) {
     let tile;
     const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
-    if (tilePool.length > 0) {
+    if (!forceNew && tilePool.length > 0) {
         tile = tilePool.pop();
         // Xóa các label cũ nếu có
         for (let i = tile.children.length - 1; i >= 0; i--) {
@@ -394,7 +412,9 @@ function getTileFromPool() {
                 const sprite = tile.children[i];
                 tile.remove(sprite);
                 if (sprite.material) {
-                    if (sprite.material.map) sprite.material.map.dispose(); // Dọn dẹp RAM của Canvas
+                    if (sprite.material.map && !cachedTexturesSet.has(sprite.material.map)) {
+                        sprite.material.map.dispose();
+                    }
                     sprite.material.dispose();
                 }
             }
@@ -731,25 +751,23 @@ function spawnTile(isFirst = false) {
         }
     }
 
-    tile.userData = {
-        ...tile.userData, // Kế thừa borderLine, centerMesh, bodyMesh, edgeMesh…
-        themeColor: activeColor,
-        time: tileTime,
-        centerX: 0,
-        isRoundStart: isRoundStartBlock,
-        roundValue: roundCount,
-        beatIndex: currentBeatIndex,
-        isInitial16Blocks: isInitial16Blocks,
-        scale: finalScale,
-        isEntering: isDelayedAppearance ? false : isEntering,
-        isDelayedAppearance: isDelayedAppearance,
-        isExiting: false, // Dọn dẹp rác Object Pooling
-        isMoving: false,  // Dọn dẹp rác Object Pooling
-        targetZ: tileZ,
-        springY: 0,
-        springVelocityY: 0,
-        baseY: 0
-    };
+    const ud = tile.userData;
+    ud.themeColor = activeColor;
+    ud.time = tileTime;
+    ud.centerX = 0;
+    ud.isRoundStart = isRoundStartBlock;
+    ud.roundValue = roundCount;
+    ud.beatIndex = currentBeatIndex;
+    ud.isInitial16Blocks = isInitial16Blocks;
+    ud.scale = finalScale;
+    ud.isEntering = isDelayedAppearance ? false : isEntering;
+    ud.isDelayedAppearance = isDelayedAppearance;
+    ud.isExiting = false;
+    ud.isMoving = false;
+    ud.targetZ = tileZ;
+    ud.springY = 0;
+    ud.springVelocityY = 0;
+    ud.baseY = 0;
 
     // TÍCH HỢP LOGIC KHỐI DI CHUYỂN MỚI
     if (typeof window.MovingBlocksManager !== 'undefined') {

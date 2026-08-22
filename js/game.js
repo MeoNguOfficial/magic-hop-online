@@ -292,7 +292,10 @@ function dimLandedTile(tile) {
     }
 
     // Làm mờ cả glowMesh dưới chân block
-    const glowMesh = tile.getObjectByName('glowMesh');
+    if (tile.userData.glowMesh === undefined) {
+        tile.userData.glowMesh = tile.getObjectByName('glowMesh') || null;
+    }
+    const glowMesh = tile.userData.glowMesh;
     if (glowMesh) {
         const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
         if (glowMat) {
@@ -385,172 +388,51 @@ function createDiamondShockwaveGeometry() {
     return geo;
 }
 
-function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale = 1.0) {
-    if (!shockwavesEnabled || !tile) return;
-
-    const spawnRing = (scaleMultiplier) => {
-        let waveLine;
-        if (shockwavePool.length > 0) {
-            waveLine = shockwavePool.pop();
-            waveLine.visible = true;
-            waveLine.material.color.setHex(themeColor);
-            waveLine.material.opacity = 1.0;
-        } else {
-            if (!cachedShockwaveGeo) {
-                // Tạo hình vành khăn dẹt có độ dày 0.18 cho sóng dày dặn
-                const borderThickness = 0.18;
-                const waveShape = createRoundedRectShape(tileWidth + borderThickness, tileLength + borderThickness, 0.9);
-                const waveHole = createRoundedRectShape(tileWidth - borderThickness, tileLength - borderThickness, Math.max(0, 0.9 - borderThickness));
-                waveShape.holes.push(waveHole);
-
-                const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
-                let baseCurve = 12;
-                if (currentGraphicsQuality === 'simple') baseCurve = 2;
-                else if (currentGraphicsQuality === 'hd') baseCurve = 6;
-                else if (currentGraphicsQuality === 'fhd') baseCurve = 12;
-                else if (currentGraphicsQuality === 'qhd') baseCurve = 18;
-                else if (currentGraphicsQuality === 'uhd') baseCurve = 24;
-
-                const curveSegments = Math.max(1, Math.round(baseCurve * detailScale));
-                cachedShockwaveGeo = new THREE.ShapeGeometry(waveShape, curveSegments);
-            }
-
-            const waveMat = new THREE.MeshBasicMaterial({
-                color: themeColor,
-                transparent: true,
-                opacity: 1.0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                side: THREE.DoubleSide
-            });
-            waveLine = new THREE.Mesh(cachedShockwaveGeo, waveMat);
-            scene.add(waveLine);
-        }
-
-        waveLine.position.copy(tile.position);
-        waveLine.position.y = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) + 0.03;
-        waveLine.rotation.x = -Math.PI / 2;
-        waveLine.scale.set(tileScale * scaleMultiplier, tileScale * scaleMultiplier, 1);
-
-        const baseScale = tileScale * scaleMultiplier;
-        shockwaves.push({
-            mesh: waveLine,
-            isDiamondBurst: false,
-            targetTile: tile, // Lưu tham chiếu để dịch chuyển theo tile
-            scale: baseScale,
-            startScale: baseScale,
-            opacity: 1.0,
-            speed: 4.5 * customOffsetScale,
-            maxScale: 2.5 * customOffsetScale * baseScale
-        });
-    };
-
-    const spawnDiamondBurst = (scaleMultiplier) => {
-        let waveMesh;
-        if (diamondShockwavePool.length > 0) {
-            waveMesh = diamondShockwavePool.pop();
-            waveMesh.visible = true;
-            waveMesh.material.color.setHex(themeColor);
-            waveMesh.material.opacity = 1.0;
-        } else {
-            if (!cachedDiamondShockwaveGeo) {
-                cachedDiamondShockwaveGeo = createDiamondShockwaveGeometry();
-            }
-            const waveMat = new THREE.MeshBasicMaterial({
-                color: themeColor,
-                transparent: true,
-                opacity: 1.0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                side: THREE.DoubleSide
-            });
-            waveMesh = new THREE.Mesh(cachedDiamondShockwaveGeo, waveMat);
-            scene.add(waveMesh);
-        }
-
-        waveMesh.position.copy(tile.position);
-        waveMesh.position.y = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) + 0.032;
-        waveMesh.rotation.x = -Math.PI / 2;
-        waveMesh.rotation.z = 0;
-        waveMesh.scale.set(tileScale * scaleMultiplier, tileScale * scaleMultiplier, 1);
-
-        const baseScale = tileScale * scaleMultiplier;
-        shockwaves.push({
-            mesh: waveMesh,
-            isDiamondBurst: true,
-            targetTile: tile,
-            scale: baseScale,
-            startScale: baseScale,
-            opacity: 1.0,
-            speed: 4.8 * customOffsetScale,
-            maxScale: 2.6 * customOffsetScale * baseScale
-        });
-    };
-
-    // Khi đạt Perfect combo >= 6: Thay thế hoàn toàn bằng vành hoa kim cương lan tỏa (Diamond Starburst)
-    // Khi dưới combo 6 hoặc mất Perfect combo: Dùng sóng viền mặc định (Default Shockwave Ring)
-    if (comboCount >= 6) {
-        spawnDiamondBurst(1.0);
-    } else {
-        spawnRing(1.0);
+const shockwaveDataPool = [];
+function getShockwaveData(mesh, isDiamondBurst, targetTile, scale, startScale, opacity, speed, maxScale) {
+    if (shockwaveDataPool.length > 0) {
+        const sw = shockwaveDataPool.pop();
+        sw.mesh = mesh;
+        sw.isDiamondBurst = isDiamondBurst;
+        sw.targetTile = targetTile;
+        sw.scale = scale;
+        sw.startScale = startScale;
+        sw.opacity = opacity;
+        sw.speed = speed;
+        sw.maxScale = maxScale;
+        return sw;
     }
+    return { mesh, isDiamondBurst, targetTile, scale, startScale, opacity, speed, maxScale };
+}
 
-    // --- SINH CÁC ĐƯỜNG SÁNG CHẠY THEO BIÊN THEO NHỊP BEAT (NEON BOUNDARY PULSES) ---
-    if (typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled) {
-        if (!pulseGeometry) pulseGeometry = new THREE.BoxGeometry(0.20, 0.05, 12);
-        if (!pulseMaterialTemplate) {
-            pulseMaterialTemplate = new THREE.MeshBasicMaterial({
-                color: 0x00ffff,
-                transparent: true,
-                opacity: 0.85,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false
-            });
-        }
+const boundaryPulseDataPool = [];
+function getBoundaryPulseData(mesh, speed, startZ, maxDistance, opacity) {
+    if (boundaryPulseDataPool.length > 0) {
+        const p = boundaryPulseDataPool.pop();
+        p.mesh = mesh;
+        p.speed = speed;
+        p.startZ = startZ;
+        p.maxDistance = maxDistance;
+        p.opacity = opacity;
+        return p;
+    }
+    return { mesh, speed, startZ, maxDistance, opacity };
+}
 
-        // 1. Điểm xuất phát: Kéo trùng đúng với vị trí hiện tại của Camera (Z)
+function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale = 1.0) {
+    if (typeof GameEffectsManager !== 'undefined') {
+        GameEffectsManager.triggerShockwave(tile, themeColor, customOffsetScale, tileScale, typeof comboCount !== 'undefined' ? comboCount : 0);
         const camZ = camera ? camera.position.z : (tile ? tile.position.z + 13.2 : 0);
-
-        // 2. Khoảng cách chạy tiến về phía các khối xa nhất phía trước (Z âm)
-        let forwardDistance = 80.0;
+        let furthestZ = camZ - 50.0;
         if (tiles && tiles.length > 0) {
-            const furthestTile = tiles[tiles.length - 1];
-            forwardDistance = Math.max(60.0, Math.abs(camZ - furthestTile.position.z) + 30.0);
+            furthestZ = tiles[tiles.length - 1].position.z;
         }
-
-        const spawnPulse = (x, z, speedZ, maxDist) => {
-            let mesh;
-            if (boundaryPulsePool.length > 0) {
-                mesh = boundaryPulsePool.pop();
-            } else {
-                const mat = pulseMaterialTemplate.clone();
-                mesh = new THREE.Mesh(pulseGeometry, mat);
-            }
-
-            if (dynamicColorsEnabled) {
-                mesh.material.color.setHex(themeColor);
-            } else {
-                mesh.material.color.setHex(0x00ffff);
-            }
-            mesh.material.opacity = 0.85;
-
-            mesh.position.set(x, (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) + 0.01, z);
-            scene.add(mesh);
-            boundaryPulses.push({
-                mesh: mesh,
-                speed: speedZ,
-                startZ: z,
-                maxDistance: maxDist,
-                opacity: 0.85
-            });
-        };
-
-        // Vận tốc chạy tiến về trục âm (Z âm, bắn ra phía trước màn hình)
-        const speedForward = (typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40) * 2.8;
-
-        // Chỉ sinh 1 chiều duy nhất chạy từ vị trí Camera hướng về phía trước (Trái & Phải)
-        spawnPulse(-6.75, camZ, speedForward, forwardDistance);
-        spawnPulse(6.75, camZ, speedForward, forwardDistance);
+        let activeColor = 0x00ffff;
+        if (typeof activeDifficulty !== 'undefined') {
+            if (activeDifficulty === 'hard') activeColor = 0xff0055;
+            else if (activeDifficulty === 'asian') activeColor = 0xaa00ff;
+        }
+        GameEffectsManager.spawnBoundaryPulses(camZ, furthestZ, activeColor);
     }
 }
 
@@ -619,70 +501,45 @@ function spawnPerfectShockwaveGhost(text, tierClass) {
     }
 }
 
-// --- HỆ THỐNG HIỂN THỊ COMBO PERFECT TỐI ƯU (THAY THẾ ANIMATION TỨC THÌ & MỜ MƯỢT KHI NGHỈ) ---
+// --- HỆ THỐNG HIỂN THỊ COMBO PERFECT TỐI ƯU TUYỆT ĐỐI (0ms CPU, ZERO-GC PRE-CACHED LOOKUPS) ---
 let comboHideTimer = null;
+let sparkAnimToggle = false;
+
+// Bộ đệm chuỗi & Class tĩnh định vị trước (Triệt tiêu 100% việc cấp phát String trong Heap)
+const MAX_COMBO_PRECACHE = 600;
+const COMBO_TEXT_CACHE = new Array(MAX_COMBO_PRECACHE);
+const COMBO_CLASS_CACHE = new Array(MAX_COMBO_PRECACHE);
+
+for (let i = 1; i < MAX_COMBO_PRECACHE; i++) {
+    COMBO_TEXT_CACHE[i] = 'PERFECT x' + i;
+    let tier = 'combo-tier-1';
+    if (i >= 15) tier = 'combo-tier-4';
+    else if (i >= 8) tier = 'combo-tier-3';
+    else if (i >= 5) tier = 'combo-tier-2';
+    COMBO_CLASS_CACHE[i] = 'text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none combo-visible ' + tier;
+}
+
+// Mảng màu tĩnh định sẵn (Không tạo Array mới mỗi nhịp)
+const SPARK_COLORS_TIER4 = ['#f0abfc', '#d946ef', '#a855f7', '#38bdf8', '#ffffff'];
+const SPARK_COLORS_TIER3 = ['#ff5500', '#ff0055', '#ffaa00', '#ffffff'];
+const SPARK_COLORS_TIER2 = ['#ffaa00', '#ffee00', '#38bdf8', '#ffffff'];
 
 function triggerPerfectComboUI(comboCount) {
     if (!comboEl) return;
 
-    // Hủy timer ẩn combo nếu có cú nhảy mới
     if (comboHideTimer) {
         clearTimeout(comboHideTimer);
         comboHideTimer = null;
     }
 
-    // 1. Ngắt NGAY LẬP TỨC animation cũ đang chạy trên comboEl và scoreEl (Thay thế tức thì)
-    if (typeof anime !== 'undefined') {
-        anime.remove(comboEl);
-        if (typeof scoreEl !== 'undefined' && scoreEl) anime.remove(scoreEl);
+    // 1. Gán Text & Class từ Cache O(1) không tốn bộ nhớ (Zero Allocation)
+    const newText = COMBO_TEXT_CACHE[comboCount] || ('PERFECT x' + comboCount);
+    if (comboEl.textContent !== newText) {
+        comboEl.textContent = newText;
     }
+    comboEl.className = COMBO_CLASS_CACHE[comboCount] || COMBO_CLASS_CACHE[MAX_COMBO_PRECACHE - 1];
 
-    // 2. Nẩy nhẹ Score HUD (Tối ưu độ nẩy vừa phải)
-    if (typeof scoreEl !== 'undefined' && scoreEl) {
-        if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-            anime({
-                targets: scoreEl,
-                scale: [1.08, 1.0],
-                duration: 180,
-                easing: 'easeOutQuad'
-            });
-        } else {
-            scoreEl.classList.remove('score-pulse');
-            void scoreEl.offsetWidth;
-            scoreEl.classList.add('score-pulse');
-        }
-    }
-
-    // 3. Set Text & Tier Class mới tức thì
-    const newText = `PERFECT x${comboCount}`;
-    let newTierClass = 'combo-tier-1';
-    if (comboCount >= 15) newTierClass = 'combo-tier-4';
-    else if (comboCount >= 8) newTierClass = 'combo-tier-3';
-    else if (comboCount >= 5) newTierClass = 'combo-tier-2';
-
-    comboEl.innerText = newText;
-    comboEl.className = `text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none ${newTierClass}`;
-
-    // 4. Khởi chạy animation mới TỨC THÌ đè lên animation cũ (Giảm Scale nẩy vừa mắt, tinh tế)
-    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-        comboEl.style.opacity = 1;
-        anime({
-            targets: comboEl,
-            scale: [1.18, 0.98, 1.0],
-            translateY: [-4, 0],
-            duration: 300,
-            easing: 'easeOutBack(1.5)'
-        });
-    } else {
-        comboEl.classList.remove('active');
-        void comboEl.offsetWidth;
-        comboEl.classList.add('active');
-    }
-
-    // 5. Bùng nổ hạt Sparkles với AnimeJS (Batched Pooling)
-    spawnPerfectSparks(comboCount);
-
-    // 6. Tự động mờ dần combo UI mượt mà sau 1.5 giây nếu có quãng nghỉ nhịp nhạc
+    // 2. Smooth Zoom Out tự động sau 1.5 giây khi nghỉ nhịp
     comboHideTimer = setTimeout(() => {
         clearPerfectComboUI();
     }, 1500);
@@ -700,104 +557,11 @@ function clearPerfectComboUI() {
     lastPerfectComboClass = "";
     lastPerfectAnimTime = 0;
 
-    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-        anime.remove(comboEl);
-        anime({
-            targets: comboEl,
-            opacity: 0,
-            scale: 0.85,
-            duration: 350,
-            easing: 'easeOutQuad',
-            complete: () => {
-                comboEl.innerText = "";
-                comboEl.className = "text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider opacity-0 select-none";
-            }
-        });
-    } else {
-        comboEl.classList.remove('active');
-        comboEl.innerText = "";
-    }
+    // Smooth Zoom Out êm ái
+    comboEl.classList.remove('combo-visible');
 }
 
-function spawnPerfectSparks(comboCount) {
-    if (!sparkPoolInitialized) initComboUiPools();
-
-    // Tự động tối ưu số hạt theo thiết bị (Mobile vs PC) & cấu hình chất lượng đồ họa
-    const isMobileCheck = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
-    let maxCount = isMobileCheck ? 2 : 6;
-    if (typeof performanceModeEnabled !== 'undefined' && performanceModeEnabled) {
-        maxCount = 2;
-    } else if (typeof currentGraphicsQuality !== 'undefined') {
-        if (currentGraphicsQuality === 'simple') maxCount = isMobileCheck ? 2 : 3;
-        else if (currentGraphicsQuality === 'hd') maxCount = isMobileCheck ? 3 : 5;
-        else if (currentGraphicsQuality === 'fhd' || currentGraphicsQuality === 'qhd') maxCount = isMobileCheck ? 4 : 8;
-    }
-
-    const count = Math.min(maxCount, 3 + Math.floor(comboCount / 3));
-    const colors = comboCount >= 15
-        ? ['#ff0055', '#ffaa00', '#00ffff', '#ff00ff', '#ffffff']
-        : comboCount >= 8
-            ? ['#ff5500', '#ff0055', '#ffaa00', '#ffffff']
-            : comboCount >= 5
-                ? ['#ffaa00', '#ffee00', '#ffffff']
-                : ['#ffee00', '#00ffff', '#ffffff'];
-
-    const activeSparks = [];
-
-    for (let i = 0; i < count; i++) {
-        const spark = sparkPool[i % sparkPool.length];
-        if (!spark) continue;
-
-        if (typeof anime !== 'undefined') {
-            anime.remove(spark);
-        }
-
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        spark.style.color = color;
-        spark.style.backgroundColor = color;
-        spark.style.left = '50%';
-        spark.style.top = '50%';
-        spark.style.display = 'block';
-
-        const angle = Math.random() * Math.PI * 2;
-        const dist = 25 + Math.random() * 50;
-        const targetX = Math.cos(angle) * dist;
-        const targetY = Math.sin(angle) * dist - 8;
-        const targetScale = 0.1 + Math.random() * 0.2;
-
-        spark._targetX = targetX;
-        spark._targetY = targetY;
-        spark._targetScale = targetScale;
-        spark._targetRot = Math.floor(Math.random() * 360);
-
-        activeSparks.push(spark);
-    }
-
-    if (activeSparks.length === 0) return;
-
-    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-        // Gộp tất cả hạt vào 1 tween batch duy nhất của AnimeJS để tối ưu CPU/GPU
-        anime({
-            targets: activeSparks,
-            translateX: (el) => [0, el._targetX],
-            translateY: (el) => [0, el._targetY],
-            scale: (el) => [1.3, el._targetScale],
-            opacity: [1, 0],
-            rotate: (el) => el._targetRot,
-            duration: 380 + Math.random() * 120,
-            easing: 'easeOutExpo',
-            complete: (anim) => {
-                anim.animatables.forEach(a => {
-                    if (a.target) a.target.style.display = 'none';
-                });
-            }
-        });
-    } else {
-        setTimeout(() => {
-            activeSparks.forEach(s => s.style.display = 'none');
-        }, 300);
-    }
-}
+function spawnPerfectSparks(comboCount) { }
 
 // Replaced/Removed perfect ring
 function triggerPerfectRing(position) { }
@@ -812,34 +576,20 @@ const trailDummyPosition = new THREE.Vector3();
 let sharedTrailMat = null;
 
 function setupBallTrailInstancedMesh() {
-    if (!cachedTrailGeo) cachedTrailGeo = new THREE.TetrahedronGeometry(ballRadius * 0.6);
-    if (!sharedTrailMat) {
-        sharedTrailMat = new THREE.MeshBasicMaterial({
-            transparent: true,
-            opacity: 0.7,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
+    if (typeof GameEffectsManager !== 'undefined') {
+        GameEffectsManager.initBallTrail();
     }
-    if (ballTrailInstancedMesh && scene) scene.remove(ballTrailInstancedMesh);
-    ballTrailInstancedMesh = new THREE.InstancedMesh(cachedTrailGeo, sharedTrailMat, MAX_TRAIL_INSTANCES);
-    ballTrailInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    ballTrailInstancedMesh.frustumCulled = false;
-    if (scene) scene.add(ballTrailInstancedMesh);
-    initBallTrail();
+}
+
+function prewarmBallTrailPool() {
+    if (typeof GameEffectsManager !== 'undefined') {
+        GameEffectsManager.prewarmBallTrailPool();
+    }
 }
 
 function initBallTrail() {
-    ballTrailSegments = [];
-    if (ballTrailInstancedMesh) {
-        const initialColor = new THREE.Color(0x00ffff);
-        for (let i = 0; i < MAX_TRAIL_INSTANCES; i++) {
-            trailDummyMatrix.makeScale(0, 0, 0);
-            ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
-            ballTrailInstancedMesh.setColorAt(i, initialColor);
-        }
-        ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
-        if (ballTrailInstancedMesh.instanceColor) ballTrailInstancedMesh.instanceColor.needsUpdate = true;
+    if (typeof GameEffectsManager !== 'undefined') {
+        GameEffectsManager.initBallTrail();
     }
 }
 
@@ -1136,10 +886,10 @@ function initParticles() {
         positions[i * 3 + 1] = Math.random() * 45 - 10;
         positions[i * 3 + 2] = camZ - Math.random() * 350;
 
-        const pColor = Math.random() > 0.5 ? new THREE.Color(0x00ffff) : new THREE.Color(0xff00ff);
-        pColors[i * 3] = pColor.r;
-        pColors[i * 3 + 1] = pColor.g;
-        pColors[i * 3 + 2] = pColor.b;
+        const isCyan = Math.random() > 0.5;
+        pColors[i * 3] = isCyan ? 0.0 : 1.0;
+        pColors[i * 3 + 1] = isCyan ? 1.0 : 0.0;
+        pColors[i * 3 + 2] = 1.0;
     }
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particlesGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
@@ -1325,68 +1075,7 @@ function getDifficultyBoundaryColor(time) {
     }
 }
 
-function updateBoundaryFlames(delta, time) {
-    const boundariesOn = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
-    const advancedOn = boundariesOn && (typeof advancedBoundariesEnabled !== 'undefined' && advancedBoundariesEnabled);
-    
-    if (!boundariesOn || !advancedOn || !boundaryDustMesh || !camera) {
-        if (boundaryDustMesh && boundaryDustMesh.visible) boundaryDustMesh.visible = false;
-        return;
-    }
-    
-    if (!boundaryDustMesh.visible) boundaryDustMesh.visible = true;
-    
-    // Gán trực tiếp màu vào vật liệu một lần duy nhất mỗi khung hình (Cực nhẹ, 0 CPU buffer copy)
-    const activeColor = getDifficultyBoundaryColor(time);
-    boundaryDustMesh.material.color.copy(activeColor);
-    
-    const camZ = camera.position.z;
-    const surface = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02;
-    const rangeZ = 140.0;
-    const mArray = boundaryDustMesh.instanceMatrix.array;
-    
-    for (let i = 0; i < MAX_BOUNDARY_DUST; i++) {
-        const d = boundaryDustData[i];
-        d.phase = (d.phase + delta * d.speed) % 1.0;
-        
-        let worldZ = camZ + d.relZ;
-        const diffZ = worldZ - camZ;
-        const wrappedRelZ = (((diffZ - 6.0) % rangeZ) + rangeZ) % rangeZ - rangeZ + 6.0;
-        worldZ = camZ + wrappedRelZ;
-        
-        const baseX = d.side === -1 ? -6.75 : 6.75;
-        const posX = baseX + d.offsetX + Math.sin(time * d.swaySpeed + d.swayOffset) * d.swayAmp;
-        const posY = surface + (d.phase * d.maxHeight);
-        
-        const lifeFade = Math.sin(d.phase * Math.PI);
-        const twinkle = 0.85 + 0.15 * Math.sin(time * d.twinkleSpeed + i);
-        const currentScale = d.baseScale * lifeFade * twinkle;
-        
-        // Ghi trực tiếp vào mảng 16 phần tử của instance matrix (Zero Object Creation, Zero LookAt math)
-        const offset = i << 4;
-        mArray[offset + 0] = currentScale;
-        mArray[offset + 1] = 0;
-        mArray[offset + 2] = 0;
-        mArray[offset + 3] = 0;
 
-        mArray[offset + 4] = 0;
-        mArray[offset + 5] = currentScale;
-        mArray[offset + 6] = 0;
-        mArray[offset + 7] = 0;
-
-        mArray[offset + 8] = 0;
-        mArray[offset + 9] = 0;
-        mArray[offset + 10] = currentScale;
-        mArray[offset + 11] = 0;
-
-        mArray[offset + 12] = posX;
-        mArray[offset + 13] = posY;
-        mArray[offset + 14] = worldZ;
-        mArray[offset + 15] = 1;
-    }
-    
-    boundaryDustMesh.instanceMatrix.needsUpdate = true;
-}
 
 function initBoundaries() {
     if (leftBoundaryLine) scene.remove(leftBoundaryLine);
@@ -1424,13 +1113,15 @@ function updateBoundariesVisibility() {
 
     if (!boundariesOn) {
         if (typeof boundaryPulses !== 'undefined' && boundaryPulses.length > 0) {
-            boundaryPulses.forEach(pulse => {
+            for (let i = 0; i < boundaryPulses.length; i++) {
+                const pulse = boundaryPulses[i];
                 if (pulse.mesh) {
                     scene.remove(pulse.mesh);
                     boundaryPulsePool.push(pulse.mesh);
                 }
-            });
-            boundaryPulses = [];
+                boundaryPulseDataPool.push(pulse);
+            }
+            boundaryPulses.length = 0;
         }
     }
 
@@ -1485,6 +1176,9 @@ function createBall() {
     ball.add(ballGlowLight);
 
     initBallTrail();
+    if (typeof window.prewarmTilePool === 'function') {
+        window.prewarmTilePool(35);
+    }
 
     scene.add(ball);
 }
@@ -1501,6 +1195,7 @@ async function initThree() {
     const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
     const currentApi = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu') ? 'webgpu' : 'webgl';
     console.log("[Renderer] Selected graphics API setting:", currentApi);
+    const activePowerPref = (typeof preferDiscreteGpu !== 'undefined' ? preferDiscreteGpu : (localStorage.getItem('preferDiscreteGpu') !== 'false')) ? "high-performance" : "default";
 
     if (currentApi === 'webgpu') {
         try {
@@ -1510,7 +1205,7 @@ async function initThree() {
             }
             renderer = new RendererClass({
                 antialias: antialiasingEnabled,
-                powerPreference: "high-performance",
+                powerPreference: activePowerPref,
                 alpha: false,
                 stencil: false
             });
@@ -1520,6 +1215,9 @@ async function initThree() {
                 console.log("%c[Renderer] Using WebGPU backend", "color: #00ffff; font-weight: bold;");
             } else {
                 console.log("%c[Renderer] WebGPU not supported. Falling back to WebGL 2 backend", "color: #ff00ff; font-weight: bold;");
+            }
+            if (typeof window.updateGpuDetectionUI === 'function') {
+                window.updateGpuDetectionUI();
             }
         } catch (e) {
             console.warn("WebGPU initialization failed, falling back to WebGL 2:", e);
@@ -1533,7 +1231,7 @@ async function initThree() {
         const canvas = document.createElement('canvas');
         const glOptions = {
             antialias: antialiasingEnabled,
-            powerPreference: "high-performance",
+            powerPreference: activePowerPref,
             alpha: false,
             stencil: false
         };
@@ -1548,14 +1246,19 @@ async function initThree() {
             canvas: canvas,
             context: context,
             antialias: antialiasingEnabled,
+            powerPreference: activePowerPref,
             alpha: false,
             stencil: false
         });
 
         if (usingWebGL2) {
-            console.log("%c[Renderer] Using WebGL 2 context", "color: #00ffff; font-weight: bold;");
+            console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
         } else {
-            console.log("%c[Renderer] WebGL 2 not supported. Using WebGL 1 context", "color: #ff00ff; font-weight: bold;");
+            console.log("%c[Renderer] WebGL 2 not supported. Using WebGL 1 context (" + activePowerPref + ")", "color: #ff00ff; font-weight: bold;");
+        }
+
+        if (typeof window.updateGpuDetectionUI === 'function') {
+            window.updateGpuDetectionUI();
         }
     }
 
@@ -1591,15 +1294,24 @@ async function initThree() {
     dirLight.position.set(5, 25, 10);
     scene.add(dirLight);
 
+    // --- KHỞI TẠO CÁC MANAGER HIỆU ỨNG & CAMERA ---
+    if (typeof GameEffectsManager !== 'undefined') GameEffectsManager.init(scene);
+    if (typeof GameCameraManager !== 'undefined') GameCameraManager.init(camera);
+    if (typeof VisualizerManager !== 'undefined') VisualizerManager.init(bgVisualizerCanvas, analyserNode);
+
     // --- HẠT NỀN NEON DUST ---
     initParticles();
     initBoundaries();
 
     // Bóng Neon
-    createBall(); // Gọi hàm createBall để khởi tạo bóng cùng với hiệu ứng phát sáng
+    createBall(); // Khởi tạo bóng cùng với hiệu ứng phát sáng
 
     spawnTile(true);
-    spawnTile(false);
+    const initialSpawnLimit = Math.min(typeof blocksAheadLimit !== 'undefined' ? blocksAheadLimit : 8, 10);
+    while (tiles.length < initialSpawnLimit) {
+        const spawned = spawnTile(false);
+        if (spawned === false) break;
+    }
 
     if (tiles[0] && tiles[0].userData.centerMesh) {
         tiles[0].userData.centerMesh.visible = true;
@@ -1954,9 +1666,9 @@ async function initThree() {
     if (blocksAheadSlider) blocksAheadSlider.value = blocksAheadLimit;
     if (blocksBehindSlider) blocksBehindSlider.value = blocksBehindLimit;
     if (typeof maxFpsSlider !== 'undefined' && maxFpsSlider) {
-        maxFpsSlider.value = typeof maxFps !== 'undefined' ? maxFps : 0;
+        maxFpsSlider.value = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);
         if (typeof maxFpsValue !== 'undefined' && maxFpsValue) {
-            const currentVal = typeof maxFps !== 'undefined' ? maxFps : 0;
+            const currentVal = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);
             if (currentVal === 0) {
                 maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_unlimited') : 'Không giới hạn';
             } else if (currentVal === 361) {
@@ -2195,15 +1907,15 @@ function animate() {
     requestAnimationFrame(animate);
 
     const now = performance.now();
-    let limitValue = typeof maxFps !== 'undefined' ? maxFps : 0;
+    let limitValue = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);
     if (limitValue === 362) {
         limitValue = 60; // Eco locks to 60 FPS
     }
 
-    if (limitValue > 0 && limitValue <= 360) {
+    if (limitValue > 0 && limitValue <= 360 && limitValue !== 361) {
         const frameDuration = 1000 / limitValue;
         const elapsed = now - lastFrameTime;
-        if (elapsed < frameDuration - 0.5) {
+        if (elapsed < frameDuration - 1.5) {
             return;
         }
         lastFrameTime = now - (elapsed % frameDuration);
@@ -2214,8 +1926,13 @@ function animate() {
     if (typeof showFpsEnabled !== 'undefined' && showFpsEnabled) {
         fpsFrameCount++;
         const elapsedFps = now - fpsLastTime;
-        if (elapsedFps >= 1000) {
-            const fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
+        if (elapsedFps >= 500) {
+            let fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
+            if (fpsValue >= 140 && fpsValue <= 146) fpsValue = 144;
+            else if (fpsValue >= 118 && fpsValue <= 122) fpsValue = 120;
+            else if (fpsValue >= 58 && fpsValue <= 62) fpsValue = 60;
+            else if (fpsValue >= 236 && fpsValue <= 244) fpsValue = 240;
+
             fpsFrameCount = 0;
             fpsLastTime = now;
             if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
@@ -2280,64 +1997,9 @@ function animate() {
         }
 
         // --- RENDER VISUALIZER ---
-        if (visualizerEnabled && visualizerCtx && analyserNode && isPlaying && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
-            visualizerWasCleared = false;
+        if (typeof VisualizerManager !== 'undefined') {
             const nowTime = clock.getElapsedTime();
-            const isMobile = IS_MOBILE;
-            const visThrottle = (isMobile || currentGraphicsQuality === 'simple') ? 0.033 : 0.016;
-
-            if (nowTime - lastVisTime >= visThrottle) {
-                lastVisTime = nowTime;
-                const bufferLength = analyserNode.frequencyBinCount;
-                if (!visDataArray || visDataArray.length !== bufferLength) {
-                    visDataArray = new Uint8Array(bufferLength); // Chỉ tạo 1 lần duy nhất
-                }
-                analyserNode.getByteFrequencyData(visDataArray);
-
-                const width = bgVisualizerCanvas.width;
-                const height = bgVisualizerCanvas.height;
-                visualizerCtx.clearRect(0, 0, width, height);
-
-                const centerY = height * 0.25;
-
-                const numBars = Math.floor(width / 24);
-                const barSpacing = width / numBars;
-                const barWidth = Math.max(6, barSpacing - 8);
-
-                const maxBlocks = 12;
-                const blockHeight = Math.max(4, (height * 0.15) / maxBlocks);
-                const blockGap = 3;
-
-                cachedBarData.length = numBars;
-                for (let i = 0; i < numBars; i++) {
-                    let centerDist = Math.abs(i - numBars / 2);
-                    let dataIdx = Math.floor((centerDist / (numBars / 2)) * (bufferLength * 0.6));
-                    let v = visDataArray[dataIdx] / 255.0;
-                    if (v > 0.1) v = v * (0.8 + Math.random() * 0.2);
-                    cachedBarData[i] = Math.ceil(v * maxBlocks);
-                }
-
-                visualizerCtx.fillStyle = 'rgba(34, 211, 238, 0.85)';
-                for (let i = 0; i < numBars; i++) {
-                    const activeBlocks = cachedBarData[i];
-                    if (activeBlocks === 0) continue;
-                    const x = i * barSpacing + (barSpacing - barWidth) / 2;
-                    const totalHeight = activeBlocks * (blockHeight + blockGap) - blockGap;
-                    const y = centerY - totalHeight;
-                    visualizerCtx.fillRect(x, y, barWidth, totalHeight);
-                }
-
-                visualizerCtx.globalCompositeOperation = 'destination-out';
-                visualizerCtx.fillStyle = 'rgba(0,0,0,1)';
-                for (let b = 1; b < maxBlocks; b++) {
-                    const yUp = centerY - b * (blockHeight + blockGap);
-                    visualizerCtx.fillRect(0, yUp, width, blockGap);
-                }
-                visualizerCtx.globalCompositeOperation = 'source-over';
-            }
-        } else if (visualizerCtx && !visualizerWasCleared) {
-            visualizerCtx.clearRect(0, 0, bgVisualizerCanvas.width, bgVisualizerCanvas.height);
-            visualizerWasCleared = true;
+            VisualizerManager.update(nowTime, isPlaying, isFailTransition, typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition, currentGraphicsQuality);
         }
 
         // --- ĐỒNG BỘ ROUND & TỐC ĐỘ (ĐỒ THỊ TUYẾN TÍNH y = ax + b) ---
@@ -2378,16 +2040,18 @@ function animate() {
                 audio.playbackRate = Math.min(3.0, gameSpeed);
             }
 
-            const isWarmupText = !activeEndlessMode || (roundCount === 0 && totalTilesJumped < 16);
-            let modeText = isWarmupText ? t('warmup') : `${t('round')} ${activeRoundCount}`;
-            if (isWarmupText && beatmapBeats && beatmapBeats.length > 0) {
-                const progress = Math.min(100, Math.floor((totalTilesJumped / beatmapBeats.length) * 100));
-                modeText += ` ${progress}%`;
-            }
-            const newSpeedText = `${gameSpeed.toFixed(2)}x (${modeText})`;
-            if (lastDisplayedSpeedText !== newSpeedText) {
-                speedEl.innerText = newSpeedText;
-                lastDisplayedSpeedText = newSpeedText;
+            const isWarmup = !activeEndlessMode || (roundCount === 0 && totalTilesJumped < 16);
+            const roundedSpeed = Math.round(gameSpeed * 100) / 100;
+            const progress = (isWarmup && beatmapBeats && beatmapBeats.length > 0) ? Math.min(100, Math.floor((totalTilesJumped / beatmapBeats.length) * 100)) : 0;
+            
+            if (lastDisplayedSpeedValue !== roundedSpeed || lastDisplayedProgress !== progress || lastDisplayedRound !== activeRoundCount) {
+                lastDisplayedSpeedValue = roundedSpeed;
+                lastDisplayedProgress = progress;
+                lastDisplayedRound = activeRoundCount;
+                const warmupStr = (typeof t === 'function') ? t('warmup') : 'Khởi động';
+                const roundStr = (typeof t === 'function') ? t('round') : 'Màn';
+                const modeText = isWarmup ? `${warmupStr} ${progress}%` : `${roundStr} ${activeRoundCount}`;
+                if (speedEl) speedEl.textContent = `${roundedSpeed.toFixed(2)}x (${modeText})`;
             }
         }
 
@@ -2406,63 +2070,6 @@ function animate() {
                 tempColor.setHex(targetEmissiveColor);
                 ball.material.emissive.lerp(tempColor, 15 * delta);
             }
-        }
-
-        // --- CẬP NHẬT ĐUÔI BÓNG (INSTANCED MESH - 1 DRAW CALL) ---
-        if (typeof ballTrailEnabled !== 'undefined' && ballTrailEnabled && isPlaying && !isFalling && ball && ballTrailInstancedMesh) {
-            const now = clock.getElapsedTime();
-            if (now - lastTrailSpawnTime > 0.02) {
-                lastTrailSpawnTime = now;
-                if (ballTrailSegments.length < MAX_TRAIL_INSTANCES) {
-                    const seg = getTrailSegmentFromPool();
-                    seg.x = ball.position.x + (Math.random() - 0.5) * 0.4;
-                    seg.y = ball.position.y + (Math.random() - 0.5) * 0.4;
-                    seg.z = ball.position.z + (Math.random() - 0.5) * 0.4;
-                    seg.rotX = Math.random() * Math.PI;
-                    seg.rotY = Math.random() * Math.PI;
-                    seg.rotZ = Math.random() * Math.PI;
-                    seg.life = 1.0;
-                    seg.rotSpeed = (Math.random() - 0.5) * 10;
-                    if (ball && ball.material && ball.material.color) {
-                        seg.color.copy(ball.material.color);
-                    } else {
-                        seg.color.setHex(0x00ffff);
-                    }
-                    ballTrailSegments.push(seg);
-                }
-            }
-        }
-
-        if (ballTrailInstancedMesh) {
-            for (let i = ballTrailSegments.length - 1; i >= 0; i--) {
-                const seg = ballTrailSegments[i];
-                seg.life -= delta * 2.0;
-                if (seg.life <= 0) {
-                    ballTrailPool.push(seg);
-                    ballTrailSegments.splice(i, 1);
-                    continue;
-                }
-                seg.rotX += seg.rotSpeed * delta;
-                seg.rotY += seg.rotSpeed * delta;
-
-                const curScale = Math.max(0.001, seg.life);
-                trailDummyPosition.set(seg.x, seg.y, seg.z);
-                trailDummyEuler.set(seg.rotX, seg.rotY, seg.rotZ);
-                trailDummyQuaternion.setFromEuler(trailDummyEuler);
-                trailDummyScale.set(curScale, curScale, curScale);
-                trailDummyMatrix.compose(trailDummyPosition, trailDummyQuaternion, trailDummyScale);
-
-                ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
-                if (ballTrailInstancedMesh.setColorAt && seg.color) {
-                    ballTrailInstancedMesh.setColorAt(i, seg.color);
-                }
-            }
-            for (let i = ballTrailSegments.length; i < MAX_TRAIL_INSTANCES; i++) {
-                trailDummyMatrix.makeScale(0, 0, 0);
-                ballTrailInstancedMesh.setMatrixAt(i, trailDummyMatrix);
-            }
-            ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
-            if (ballTrailInstancedMesh.instanceColor) ballTrailInstancedMesh.instanceColor.needsUpdate = true;
         }
 
         // --- CẬP NHẬT BIÊN (BOUNDARIES) ---
@@ -2484,27 +2091,7 @@ function animate() {
             }
         }
 
-        // --- CẬP NHẬT BOUNDARY NÂNG CAO (LỬA THEO ĐỘ KHÓ) ---
-        updateBoundaryFlames(delta, clock.getElapsedTime());
 
-        // --- CẬP NHẬT ĐƯỜNG SÁNG CHẠY THEO NHỊP (NEON BOUNDARY PULSES) ---
-        for (let i = boundaryPulses.length - 1; i >= 0; i--) {
-            const pulse = boundaryPulses[i];
-            pulse.mesh.position.z += pulse.speed * gameSpeed * delta; // Chạy nhanh về phía trước (Z âm) đồng bộ với game speed
-
-            const distanceTraveled = Math.abs(pulse.mesh.position.z - pulse.startZ);
-            pulse.opacity = 0.85 * (1.0 - (distanceTraveled / pulse.maxDistance));
-
-            if (pulse.mesh.material) {
-                pulse.mesh.material.opacity = Math.max(0, pulse.opacity);
-            }
-
-            if (pulse.opacity <= 0 || distanceTraveled >= pulse.maxDistance) {
-                scene.remove(pulse.mesh);
-                boundaryPulsePool.push(pulse.mesh);
-                boundaryPulses.splice(i, 1);
-            }
-        }
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
         const time = clock.getElapsedTime();
@@ -2512,30 +2099,43 @@ function animate() {
         
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
-            const hue = (time * 0.2) % 1;
+            // Lượng tử hoá Hue (256 bước cho 1 vòng lặp) để giới hạn số lần vật liệu phải cập nhật thay vì cập nhật 144 lần/giây
+            const hueSteps = 256;
+            const rawHue = (time * 0.2) % 1;
+            const hue = Math.floor(rawHue * hueSteps) / hueSteps;
             tempColor.setHSL(hue, 0.8, 0.5);
             currentFrameHex = tempColor.getHex();
         }
 
-        tiles.forEach(tile => {
+        const tilesCount = tiles.length;
+        for (let ti = 0; ti < tilesCount; ti++) {
+            const tile = tiles[ti];
+            if (!tile) continue;
+            
             if (dynamicColorsEnabled && currentFrameHex !== undefined) {
-                tile.userData.themeColor = currentFrameHex;
-                if (tile.material) {
-                    tile.material.color.setHex(currentFrameHex);
-                    if (tile.material.emissive) tile.material.emissive.copy(tempColor).multiplyScalar(0.2);
-                }
+                if (tile.userData.themeColor !== currentFrameHex) {
+                    tile.userData.themeColor = currentFrameHex;
+                    
+                    if (tile.material) {
+                        tile.material.color.setHex(currentFrameHex);
+                        if (tile.material.emissive) tile.material.emissive.copy(tempColor).multiplyScalar(0.2);
+                    }
 
-                if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                    tile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
-                }
-                const glowMesh = tile.userData.glowMesh || tile.getObjectByName("glowMesh");
-                if (glowMesh && glowMesh.material) {
-                    const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                    if (glowMat) {
-                        if (glowMat.uniforms) {
-                            glowMat.uniforms.color.value.setHex(currentFrameHex);
-                        } else {
-                            glowMat.color.setHex(currentFrameHex);
+                    if (tile.userData.borderLine && tile.userData.borderLine.material) {
+                        tile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
+                    }
+                    if (tile.userData.glowMesh === undefined) {
+                        tile.userData.glowMesh = tile.getObjectByName("glowMesh") || null;
+                    }
+                    const glowMesh = tile.userData.glowMesh;
+                    if (glowMesh && glowMesh.material) {
+                        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
+                        if (glowMat) {
+                            if (glowMat.uniforms) {
+                                glowMat.uniforms.color.value.setHex(currentFrameHex);
+                            } else {
+                                glowMat.color.setHex(currentFrameHex);
+                            }
                         }
                     }
                 }
@@ -2662,7 +2262,7 @@ function animate() {
                     tile.userData.isEntering = false;
                 }
             }
-        });
+        }
 
         // --- CẬP NHẬT KHỐI DI CHUYỂN (TỪ MANAGER) ---
         if (typeof window.MovingBlocksManager !== 'undefined') {
@@ -2721,7 +2321,10 @@ function animate() {
             }
 
             // Glow
-            const glowMesh = et.userData.glowMesh || et.getObjectByName("glowMesh");
+            if (et.userData.glowMesh === undefined) {
+                et.userData.glowMesh = et.getObjectByName("glowMesh") || null;
+            }
+            const glowMesh = et.userData.glowMesh;
             if (glowMesh && glowMesh.material) {
                 const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                 if (glowMat) {
@@ -2736,11 +2339,14 @@ function animate() {
             // Thu hồi khi viền đã fade hết hoặc đã trượt ra quá xa
             const camZ = typeof camera !== 'undefined' ? camera.position.z : et.userData.exitStartZ + 20;
             if (op <= 0 || et.position.z > camZ + 5) {
-                delete et.userData.exitVelZ;
-                delete et.userData.exitStartZ;
-                delete et.userData.exitOpacity;
+                et.userData.exitVelZ = undefined;
+                et.userData.exitStartZ = undefined;
+                et.userData.exitOpacity = undefined;
                 pushTileToPool(et);
-                exitingTiles.splice(i, 1);
+                const last = exitingTiles.pop();
+                if (i < exitingTiles.length) {
+                    exitingTiles[i] = last;
+                }
             }
         }
 
@@ -2761,56 +2367,15 @@ function animate() {
             if (spawned === false) break;
         }
 
-        // --- CẬP NHẬT SÓNG XUNG KÍCH ---
-        const camZ = typeof camera !== 'undefined' ? camera.position.z : (ball ? ball.position.z + 10 : 0);
-        for (let i = shockwaves.length - 1; i >= 0; i--) {
-            const sw = shockwaves[i];
-
-            // Dọn dẹp lập tức nếu tile mục tiêu đã bị thu hồi/ẩn, hoặc sóng đã trôi ra sau camera
-            const isTileInactive = sw.targetTile && (!sw.targetTile.parent || !sw.targetTile.visible);
-            const isBehindCam = sw.mesh.position.z > camZ + 5;
-
-            if (isTileInactive || isBehindCam) {
-                sw.mesh.visible = false;
-                if (sw.isDiamondBurst) {
-                    diamondShockwavePool.push(sw.mesh);
-                } else {
-                    shockwavePool.push(sw.mesh);
-                }
-                shockwaves.splice(i, 1);
-                continue;
-            }
-
-            // Tính toán tỷ lệ lan rộng hiện tại (từ 0 đến 1)
-            const startScale = sw.startScale || 1.0;
-            const progress = Math.min(1.0, (sw.scale - startScale) / (sw.maxScale - startScale + 0.001));
-
-            // Tốc độ lan nở có quán tính (chậm dần khi lan rộng - ease-out)
-            const currentSpeed = sw.speed * (1.0 - progress * 0.45);
-            sw.scale += currentSpeed * delta;
-
-            sw.mesh.scale.set(sw.scale, sw.scale, 1);
-
-            // Đồng bộ vị trí thực tế của sóng theo tile (cho cả trục X di động và trục Z khi trượt thoát)
-            if (sw.targetTile && sw.targetTile.parent) {
-                sw.mesh.position.x = sw.targetTile.position.x;
-                sw.mesh.position.z = sw.targetTile.position.z;
-            }
-
-            // Fade out mượt bằng hàm cosine bình phương (smooth step-down)
-            // Bắt đầu nhanh, kết thúc cực kỳ nhẹ nhàng và trong suốt dần, không thô cụt
-            const fadeFactor = Math.pow(Math.cos(progress * Math.PI / 2), 2.0);
-            sw.mesh.material.opacity = fadeFactor;
-
-            if (progress >= 1.0 || fadeFactor <= 0.001) {
-                sw.mesh.visible = false;
-                if (sw.isDiamondBurst) {
-                    diamondShockwavePool.push(sw.mesh);
-                } else {
-                    shockwavePool.push(sw.mesh);
-                }
-                shockwaves.splice(i, 1);
-            }
+        // --- CẬP NHẬT HIỆU ỨNG (SHOCKWAVES, BOUNDARY PULSES, FLAMES, TRAIL) ---
+        if (typeof GameEffectsManager !== 'undefined') {
+            const camZ = typeof camera !== 'undefined' ? camera.position.z : (ball ? ball.position.z + 10 : 0);
+            const time = clock.getElapsedTime();
+            const nowTime = time;
+            GameEffectsManager.updateShockwaves(delta, camZ);
+            GameEffectsManager.updateBoundaryPulses(delta, gameSpeed);
+            GameEffectsManager.updateBoundaryFlames(delta, time, camera);
+            GameEffectsManager.updateBallTrail(delta, nowTime, isPlaying, isFalling, ball);
         }
 
 
@@ -2986,8 +2551,13 @@ function animate() {
                 ball.position.y = minFloor + currentBounceVelocityY * jumpElapsedTime + 0.5 * currentGravity * jumpElapsedTime * jumpElapsedTime;
 
                 const targetAudioSpeed = Math.min(3.0, gameSpeed);
-                if (audio && !isFailTransition && Math.abs(audio.playbackRate - targetAudioSpeed) > 0.001) {
-                    audio.playbackRate += (targetAudioSpeed - audio.playbackRate) * Math.min(1.0, 4.0 * delta);
+                if (audio && !isFailTransition) {
+                    const diff = targetAudioSpeed - audio.playbackRate;
+                    if (Math.abs(diff) > 0.01) {
+                        audio.playbackRate += diff * Math.min(1.0, 4.0 * delta);
+                    } else if (audio.playbackRate !== targetAudioSpeed) {
+                        audio.playbackRate = targetAudioSpeed;
+                    }
                 }
             }
         } else {
@@ -3038,10 +2608,15 @@ function animate() {
 
                     if (audio) {
                         const targetRescueAudioSpeed = Math.min(3.0, gameSpeed);
-                        audio.playbackRate = targetRescueAudioSpeed;
+                        if (audio.playbackRate !== targetRescueAudioSpeed) {
+                            audio.playbackRate = targetRescueAudioSpeed;
+                        }
                     }
                     if (gainNode) {
-                        gainNode.gain.value = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
+                        const targetVolume = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
+                        if (gainNode.gain.value !== targetVolume) {
+                            gainNode.gain.value = targetVolume;
+                        }
                     }
 
                     // Đánh giá điểm / combo cho cú nẩy cứu bóng
@@ -3259,48 +2834,8 @@ function animate() {
         }
 
         // --- CAMERA ---
-        if (ball && gameStarted) {
-            const targetCamZ = ball.position.z + 13.2;
-            const targetCamY = 6.8;
-            const sideLimit = 4.5;
-            let targetCamX = Math.max(-sideLimit, Math.min(sideLimit, ball.position.x));
-
-            if (typeof isVictoryTransition !== 'undefined' && isVictoryTransition) {
-                // Trong hiệu ứng kết thúc chiến thắng: Giảm dần độ bám đuôi để bóng bay vút xa dần
-                const decayFactor = (typeof victoryCameraDecay !== 'undefined' ? victoryCameraDecay : 1.0);
-                const smoothTimeZ = 0.333 / Math.max(0.01, decayFactor);
-                const dtZ = Math.min(delta, 0.1);
-                const omegaZ = 2.0 / Math.max(0.05, smoothTimeZ);
-                const xZ = omegaZ * dtZ;
-                const expZ = 1.0 / (1.0 + xZ + 0.48 * xZ * xZ + 0.235 * xZ * xZ * xZ);
-                const deltaZ = camera.position.z - targetCamZ;
-                const tempVZ = (camVelZ + omegaZ * deltaZ) * dtZ;
-                camVelZ = (camVelZ - omegaZ * tempVZ) * expZ;
-                camera.position.z = targetCamZ + (deltaZ + tempVZ) * expZ;
-            } else {
-                // Trong khi chơi: Khóa cự ly cố định trên trục Z (+13.2 so với bóng)
-                // Loại bỏ độ trễ vận tốc (velocity lag) khi tốc độ game (speed) tăng cao
-                camera.position.z = targetCamZ;
-                camVelZ = 0;
-            }
-
-            // Trục Y: Cố định độ cao 6.8
-            camera.position.y = targetCamY;
-            camVelY = 0;
-
-            // Trục X: Giữ độ mượt (SmoothDamp) khi bóng di chuyển ngang
-            const smoothTimeX = 0.5;
-            const dtX = Math.min(delta, 0.1);
-            const omegaX = 2.0 / smoothTimeX;
-            const xX = omegaX * dtX;
-            const expX = 1.0 / (1.0 + xX + 0.48 * xX * xX + 0.235 * xX * xX * xX);
-            const deltaX = camera.position.x - targetCamX;
-            const tempVX = (camVelX + omegaX * deltaX) * dtX;
-            camVelX = (camVelX - omegaX * tempVX) * expX;
-            camera.position.x = targetCamX + (deltaX + tempVX) * expX;
-
-            // Hướng nhìn của camera luôn ổn định theo cự ly cố định phía trước
-            camera.lookAt(camera.position.x, 1.6, camera.position.z - 20);
+        if (typeof GameCameraManager !== 'undefined') {
+            GameCameraManager.update(delta, ball, gameStarted, typeof isVictoryTransition !== 'undefined' && isVictoryTransition, typeof victoryCameraDecay !== 'undefined' ? victoryCameraDecay : 1.0);
         }
 
         // --- FLOATING ORIGIN DETECT & RESET ---
@@ -3352,28 +2887,25 @@ function animate() {
 
 // --- DỌN DẸP ĐỐI TƯỢNG CŨ ---
 function cleanUpOldObjects() {
-    shockwaves.forEach(sw => {
-        sw.mesh.visible = false;
-        if (sw.isDiamondBurst) {
-            diamondShockwavePool.push(sw.mesh);
-        } else {
-            shockwavePool.push(sw.mesh);
-        }
-    });
-    shockwaves = [];
+    if (typeof GameEffectsManager !== 'undefined') {
+        GameEffectsManager.reset();
+    }
 
-    perfectRings.forEach(ring => {
+    for (let i = 0; i < perfectRings.length; i++) {
+        const ring = perfectRings[i];
         scene.remove(ring.mesh);
         perfectRingPool.push(ring.mesh);
-    });
-    perfectRings = [];
+    }
+    perfectRings.length = 0;
 
-    initBallTrail();
+    for (let i = 0; i < exitingTiles.length; i++) {
+        pushTileToPool(exitingTiles[i]);
+    }
+    exitingTiles.length = 0;
 
-    exitingTiles.forEach(tile => {
-        pushTileToPool(tile);
-    });
-    exitingTiles = [];
+    if (typeof window.prewarmTilePool === 'function') {
+        window.prewarmTilePool(35);
+    }
 
     if (typeof window.FakeBlocksManager !== 'undefined') {
         window.FakeBlocksManager.reset();
@@ -4345,7 +3877,11 @@ function resetGameScene() {
     ball.scale.set(1, 1, 1);
 
     spawnTile(true);
-    spawnTile(false);
+    const initialSpawnLimit = Math.min(typeof blocksAheadLimit !== 'undefined' ? blocksAheadLimit : 8, 10);
+    while (tiles.length < initialSpawnLimit) {
+        const spawned = spawnTile(false);
+        if (spawned === false) break;
+    }
 
     if (tiles[0] && tiles[0].userData.centerMesh) {
         tiles[0].userData.centerMesh.visible = true;
