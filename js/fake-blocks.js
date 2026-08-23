@@ -874,6 +874,8 @@ window.FakeBlocksManager = {
         const bRadius = typeof ballRadius !== 'undefined' ? ballRadius : 0.75;
         const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
         
+        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+        
         for (let i = this.fakeTiles.length - 1; i >= 0; i--) {
             const fTile = this.fakeTiles[i];
 
@@ -943,7 +945,6 @@ window.FakeBlocksManager = {
                         }
                     }
                     if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
-                        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
                         fTile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
                     }
                     const glowMesh = fTile.userData.glowMesh || fTile.getObjectByName("glowMesh");

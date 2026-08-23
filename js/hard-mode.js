@@ -312,7 +312,10 @@ window.RageGameOverFireManager = {
 
             if (p.life <= 0) {
                 this.releaseParticle(p);
-                this.particles.splice(i, 1);
+                const last = this.particles.pop();
+                if (i < this.particles.length) {
+                    this.particles[i] = last;
+                }
                 continue;
             }
 
@@ -320,7 +323,10 @@ window.RageGameOverFireManager = {
                 p.size -= p.decay * 18;
                 if (p.size <= 0) {
                     this.releaseParticle(p);
-                    this.particles.splice(i, 1);
+                    const last = this.particles.pop();
+                    if (i < this.particles.length) {
+                        this.particles[i] = last;
+                    }
                     continue;
                 }
 
