@@ -527,5 +527,6 @@
     "dedicated_gpu_detected_note": "Device has Dedicated Graphics Card (Discrete GPU).",
     "discrete_gpu_change_title": "DISCRETE GPU SETTING",
     "discrete_gpu_change_desc": "Changing GPU settings requires reloading the page for the browser to apply. Reload now?",
-    "discrete_gpu_windows_hint": "Tip: On Windows laptops, if the browser still uses integrated GPU, open Windows Settings > Display > Graphics and set your browser to 'High Performance'."
+    "discrete_gpu_windows_hint": "Tip: On Windows laptops, if the browser still uses integrated GPU, open Windows Settings > Display > Graphics and set your browser to 'High Performance'.",
+    "mobile_optimize_notice": "Recommended to play on PC, currently optimizing for mobile, please be patient"
 }

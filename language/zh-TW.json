@@ -524,5 +524,6 @@
     "detected_gpu_label": "當前 GPU:",
     "dedicated_gpu_detected_note": "檢測到裝置配備獨立顯示卡 (Dedicated GPU)。",
     "discrete_gpu_change_title": "獨立顯示卡設定",
-    "discrete_gpu_change_desc": "更改 GPU 設定需要重新載入頁面以生效。是否立即重新載入？"
+    "discrete_gpu_change_desc": "更改 GPU 設定需要重新載入頁面以生效。是否立即重新載入？",
+    "mobile_optimize_notice": "建議在PC上遊玩，目前正在針對手機進行優化，請耐心等待"
 }

@@ -524,5 +524,6 @@
     "detected_gpu_label": "GPU actif :",
     "dedicated_gpu_detected_note": "L'appareil dispose d'une carte graphique dédiée (GPU dédié).",
     "discrete_gpu_change_title": "PARAMÈTRE GPU DÉDIÉ",
-    "discrete_gpu_change_desc": "La modification des paramètres GPU nécessite de recharger la page. Recharger maintenant ?"
+    "discrete_gpu_change_desc": "La modification des paramètres GPU nécessite de recharger la page. Recharger maintenant ?",
+    "mobile_optimize_notice": "Recommandé de jouer sur PC, optimisation en cours pour mobile, veuillez patienter"
 }

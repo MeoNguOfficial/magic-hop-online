@@ -524,5 +524,6 @@
     "detected_gpu_label": "현재 GPU:",
     "dedicated_gpu_detected_note": "외장 그래픽 카드(Dedicated GPU)가 감지되었습니다.",
     "discrete_gpu_change_title": "외장 GPU 설정",
-    "discrete_gpu_change_desc": "GPU 설정을 적용하려면 페이지를 다시 로드해야 합니다. 지금 다시 로드하시겠습니까?"
+    "discrete_gpu_change_desc": "GPU 설정을 적용하려면 페이지를 다시 로드해야 합니다. 지금 다시 로드하시겠습니까?",
+    "mobile_optimize_notice": "PC 플레이 권장, 현재 모바일에 맞게 최적화 중입니다. 기다려 주시기 바랍니다"
 }

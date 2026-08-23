@@ -37,8 +37,10 @@ window.VisualizerManager = {
         }
 
         this.visualizerWasCleared = false;
-        const isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const visThrottle = (isMobile || currentGraphicsQuality === 'simple') ? 0.033 : 0.016;
+        if (this.isMobile === undefined) {
+             this.isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        const visThrottle = (this.isMobile || currentGraphicsQuality === 'simple') ? 0.033 : 0.016;
 
         if (nowTime - this.lastVisTime < visThrottle) return;
         this.lastVisTime = nowTime;

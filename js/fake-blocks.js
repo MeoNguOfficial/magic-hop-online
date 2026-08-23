@@ -622,7 +622,10 @@ window.FakeBlocksManager = {
                     Math.abs(fTile.position.x - tile.position.x) < xTolerance) {
                     
                     this._recycleTile(fTile);
-                    this.fakeTiles.splice(i, 1);
+                    const last = this.fakeTiles.pop();
+                    if (i < this.fakeTiles.length) {
+                        this.fakeTiles[i] = last;
+                    }
                 }
             }
 
@@ -923,7 +926,10 @@ window.FakeBlocksManager = {
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : fTile.userData.exitStartZ + 20;
                 if (op <= 0 || fTile.position.z > camZ + 5) {
                     this._recycleTile(fTile);
-                    this.fakeTiles.splice(i, 1);
+                    const last = this.fakeTiles.pop();
+                    if (i < this.fakeTiles.length) {
+                        this.fakeTiles[i] = last;
+                    }
                 }
                 continue;
             }
@@ -1027,7 +1033,10 @@ window.FakeBlocksManager = {
                             
                             // Dọn dẹp & thu hồi khối fake lập tức
                             this._recycleTile(fTile);
-                            this.fakeTiles.splice(i, 1);
+                            const last = this.fakeTiles.pop();
+                            if (i < this.fakeTiles.length) {
+                                this.fakeTiles[i] = last;
+                            }
                             continue;
                         }
                     }
@@ -1040,7 +1049,10 @@ window.FakeBlocksManager = {
                     fTile.userData.isExiting = true;
                 } else {
                     this._recycleTile(fTile);
-                    this.fakeTiles.splice(i, 1);
+                    const last = this.fakeTiles.pop();
+                    if (i < this.fakeTiles.length) {
+                        this.fakeTiles[i] = last;
+                    }
                 }
             }
         }
@@ -1067,7 +1079,10 @@ window.FakeBlocksManager = {
                     frag.visible = false;
                     if (!this.fragmentPool) this.fragmentPool = [];
                     this.fragmentPool.push(frag);
-                    this.fragments.splice(k, 1);
+                    const last = this.fragments.pop();
+                    if (k < this.fragments.length) {
+                        this.fragments[k] = last;
+                    }
                 }
             }
         }
