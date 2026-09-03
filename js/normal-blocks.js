@@ -191,38 +191,39 @@ function createTileGlowMaterial(activeColor) {
 }
 
 // --- TEXTURE CACHE FOR LABELS ---
-const roundTextureCache = new Map();
-const percentTextureCache = new Map();
-let starTextureCache = null;
 const cachedTexturesSet = new Set();
+const roundSpriteCache = new Map();
+const percentSpriteCache = new Map();
+let starSpriteCache = null;
 
 // Tạo nhãn 3D cho Round
 function createRoundLabel(round) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     const key = `${round}_${fontFamily}`;
-    let texture = roundTextureCache.get(key);
-    if (!texture) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 512;
-        canvas.height = 128;
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.font = `bold 50px ${fontFamily}, sans-serif`;
-        ctx.fillStyle = '#00ffff';
-        ctx.textAlign = 'center';
-        ctx.shadowColor = '#00ffff';
-        ctx.shadowBlur = 15;
-        ctx.fillText(`${t('round')} ${round}`, 256, 80);
-        texture = new THREE.CanvasTexture(canvas);
-        roundTextureCache.set(key, texture);
-        cachedTexturesSet.add(texture);
-    }
+    
+    if (roundSpriteCache.has(key)) return roundSpriteCache.get(key);
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 512;
+    canvas.height = 128;
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = `bold 50px ${fontFamily}, sans-serif`;
+    ctx.fillStyle = '#00ffff';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#00ffff';
+    ctx.shadowBlur = 15;
+    ctx.fillText(`${t('round')} ${round}`, 256, 80);
+    
+    const texture = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(10, 2.5, 1);
     sprite.position.y = 0;
     sprite.position.z = 1.5;
+    
+    roundSpriteCache.set(key, sprite);
     return sprite;
 }
 
@@ -230,59 +231,59 @@ function createRoundLabel(round) {
 function createPercentLabel(percent) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     const key = `${percent}_${fontFamily}`;
-    let texture = percentTextureCache.get(key);
-    if (!texture) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 512;
-        canvas.height = 128;
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        // Sử dụng màu hồng (Pink) để phân biệt với nhãn Round (Cyan)
-        ctx.font = `bold 80px ${fontFamily}, sans-serif`;
-        ctx.fillStyle = '#ec4899';
-        ctx.textAlign = 'center';
-        ctx.shadowColor = '#ec4899';
-        ctx.shadowBlur = 15;
-        ctx.fillText(`${percent}%`, 256, 80);
-        texture = new THREE.CanvasTexture(canvas);
-        percentTextureCache.set(key, texture);
-        cachedTexturesSet.add(texture);
-    }
+    
+    if (percentSpriteCache.has(key)) return percentSpriteCache.get(key);
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 512;
+    canvas.height = 128;
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = `bold 80px ${fontFamily}, sans-serif`;
+    ctx.fillStyle = '#ec4899';
+    ctx.textAlign = 'center';
+    ctx.shadowColor = '#ec4899';
+    ctx.shadowBlur = 15;
+    ctx.fillText(`${percent}%`, 256, 80);
+    
+    const texture = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
-    // Kích thước nhỏ hơn nhãn Round một chút để tinh tế hơn
     sprite.scale.set(8, 2, 1);
     sprite.position.y = 0;
     sprite.position.z = 1.2;
+    
+    percentSpriteCache.set(key, sprite);
     return sprite;
 }
 
 function createStarLabel() {
-    if (!starTextureCache) {
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 128;
-        canvas.height = 128;
-        ctx.fillStyle = 'rgba(0,0,0,0)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (starSpriteCache) return starSpriteCache;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = 128;
+    canvas.height = 128;
+    ctx.fillStyle = 'rgba(0,0,0,0)';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        ctx.font = 'bold 80px Arial, sans-serif';
-        ctx.fillStyle = '#facc15'; // Bright yellow
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.shadowColor = '#facc15';
-        ctx.shadowBlur = 20;
-        ctx.fillText('⭐', 64, 64);
+    ctx.font = 'bold 80px Arial, sans-serif';
+    ctx.fillStyle = '#facc15';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = '#facc15';
+    ctx.shadowBlur = 20;
+    ctx.fillText('⭐', 64, 64);
 
-        starTextureCache = new THREE.CanvasTexture(canvas);
-        cachedTexturesSet.add(starTextureCache);
-    }
-    const spriteMat = new THREE.SpriteMaterial({ map: starTextureCache, transparent: true });
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(3, 3, 1);
     sprite.position.y = 0;
     sprite.position.z = 1.2;
+    
+    starSpriteCache = sprite;
     return sprite;
 }
 
@@ -417,12 +418,7 @@ function getTileFromPool(forceNew = false) {
             if (tile.children[i].type === "Sprite") {
                 const sprite = tile.children[i];
                 tile.remove(sprite);
-                if (sprite.material) {
-                    if (sprite.material.map && !cachedTexturesSet.has(sprite.material.map)) {
-                        sprite.material.map.dispose();
-                    }
-                    sprite.material.dispose();
-                }
+                // Không dispose() sprite vì chúng đã được cache và tái sử dụng
             }
         }
         // Xóa các thuộc tính game-state tạm thời của userData để tránh lỗi tái sử dụng (vd: isFinalStarTile)
