@@ -257,6 +257,7 @@ window.FakeBlocksManager = {
                 }
             } else {
                 fakeTile = this._createTileMesh(realTile);
+                if (typeof scene !== 'undefined') scene.add(fakeTile);
             }
             
             fakeTile.position.set(posX, realTile.position.y, realTile.position.z);
@@ -304,14 +305,12 @@ window.FakeBlocksManager = {
                 fakeTile.visible = false;
             }
             
-            if (typeof scene !== 'undefined') scene.add(fakeTile);
             this.fakeTiles.push(fakeTile);
         });
     },
 
     _recycleTile: function(t) {
         if (!t) return;
-        if (typeof scene !== 'undefined' && scene) scene.remove(t);
         t.visible = false;
         t.position.set(0, 0, 0);
         t.rotation.set(0, 0, 0);
@@ -780,7 +779,7 @@ window.FakeBlocksManager = {
         while (this.fakeTilePool.length < count) {
             const fakeTile = this._createTileMesh(sampleTile);
             fakeTile.visible = false;
-            if (typeof scene !== 'undefined' && scene) scene.remove(fakeTile);
+            if (typeof scene !== 'undefined' && scene) scene.add(fakeTile);
             this.fakeTilePool.push(fakeTile);
         }
     },

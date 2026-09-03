@@ -354,9 +354,6 @@ function pushTileToPool(tile) {
     
     const cleanFunc = (t) => {
         t.visible = false;
-        if (typeof scene !== 'undefined' && scene) {
-            scene.remove(t);
-        }
 
         if (typeof window.MovingBlocksManager !== 'undefined' && typeof window.MovingBlocksManager.removeTile === 'function') {
             window.MovingBlocksManager.removeTile(t);
@@ -387,16 +384,12 @@ function prewarmTilePool(count = 100) {
         const createFunc = () => getTileFromPool(true);
         const cleanFunc = (t) => {
             t.visible = false;
-            if (typeof scene !== 'undefined' && scene) scene.remove(t);
         };
         window.PoolHelpers.prewarm(tilePool, count, createFunc, cleanFunc);
     } else {
         while (tilePool.length < count) {
             const tile = getTileFromPool(true);
             tile.visible = false;
-            if (typeof scene !== 'undefined' && scene) {
-                scene.remove(tile);
-            }
             tilePool.push(tile);
         }
     }
@@ -537,6 +530,8 @@ function getTileFromPool(forceNew = false) {
         hitboxMesh.visible = typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled;
         tile.add(hitboxMesh);
         tile.userData.hitboxMesh = hitboxMesh;
+
+        scene.add(tile);
     }
 
     // Reset trạng thái cơ bản
@@ -570,7 +565,6 @@ function getTileFromPool(forceNew = false) {
         }
     }
 
-    scene.add(tile);
     return tile;
 }
 
