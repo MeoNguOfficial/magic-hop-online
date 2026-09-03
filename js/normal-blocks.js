@@ -348,49 +348,62 @@ function disposeTile(tile) {
     }
 }
 
-// --- THÊM GẠCH VÀO POOL VỚI LIMIT ---
+// --- THÊM GẠCH VÀO POOL ---
 function pushTileToPool(tile) {
     if (!tile) return;
-    tile.visible = false;
-    if (typeof scene !== 'undefined' && scene) {
-        scene.remove(tile);
-    }
+    
+    const cleanFunc = (t) => {
+        t.visible = false;
+        if (typeof scene !== 'undefined' && scene) {
+            scene.remove(t);
+        }
 
-    if (typeof window.MovingBlocksManager !== 'undefined' && typeof window.MovingBlocksManager.removeTile === 'function') {
-        window.MovingBlocksManager.removeTile(tile);
-    }
+        if (typeof window.MovingBlocksManager !== 'undefined' && typeof window.MovingBlocksManager.removeTile === 'function') {
+            window.MovingBlocksManager.removeTile(t);
+        }
 
-    if (tile.userData) {
-        tile.userData.isMoving = false;
-        tile.userData.isExiting = false;
-        tile.userData.isEntering = false;
-        delete tile.userData.moveSpeed;
-        delete tile.userData.moveTime;
-        delete tile.userData.amplitude;
-        delete tile.userData.baseX;
-        delete tile.userData.moveType;
-    }
-
-    const limit = (typeof maxTilePoolSize !== 'undefined') ? maxTilePoolSize : 60;
-    if (tilePool.length < limit) {
-        tilePool.push(tile);
+        if (t.userData) {
+            t.userData.isMoving = false;
+            t.userData.isExiting = false;
+            t.userData.isEntering = false;
+            delete t.userData.moveSpeed;
+            delete t.userData.moveTime;
+            delete t.userData.amplitude;
+            delete t.userData.baseX;
+            delete t.userData.moveType;
+        }
+    };
+    
+    if (typeof window.PoolHelpers !== 'undefined') {
+        window.PoolHelpers.release(tilePool, tile, cleanFunc);
     } else {
-        disposeTile(tile);
+        cleanFunc(tile);
+        tilePool.push(tile);
     }
 }
 
-function prewarmTilePool(count = 35) {
-    while (tilePool.length < count) {
-        const tile = getTileFromPool(true);
-        tile.visible = false;
-        if (typeof scene !== 'undefined' && scene) {
-            scene.remove(tile);
+function prewarmTilePool(count = 100) {
+    if (typeof window.PoolHelpers !== 'undefined') {
+        const createFunc = () => getTileFromPool(true);
+        const cleanFunc = (t) => {
+            t.visible = false;
+            if (typeof scene !== 'undefined' && scene) scene.remove(t);
+        };
+        window.PoolHelpers.prewarm(tilePool, count, createFunc, cleanFunc);
+    } else {
+        while (tilePool.length < count) {
+            const tile = getTileFromPool(true);
+            tile.visible = false;
+            if (typeof scene !== 'undefined' && scene) {
+                scene.remove(tile);
+            }
+            tilePool.push(tile);
         }
-        tilePool.push(tile);
     }
+    
     if (tilePool.length > 0 && typeof window.FakeBlocksManager !== 'undefined') {
         if (typeof window.FakeBlocksManager.prewarmFakeTilePool === 'function') {
-            window.FakeBlocksManager.prewarmFakeTilePool(tilePool[0], 25);
+            window.FakeBlocksManager.prewarmFakeTilePool(tilePool[0], 60);
         }
         if (typeof window.FakeBlocksManager.prewarmFragmentPool === 'function') {
             window.FakeBlocksManager.prewarmFragmentPool();
@@ -673,7 +686,7 @@ function spawnTile(isFirst = false) {
                 } else {
                     const minX = Math.max(-4.5, prevX - maxDeltaX);
                     const maxX = Math.min(4.5, prevX + maxDeltaX);
-                    tileX = minX + Math.random() * (maxX - minX);
+                    tileX = typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomRange(minX, maxX) : minX + Math.random() * (maxX - minX);
                 }
             }
         }

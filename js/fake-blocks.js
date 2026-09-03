@@ -362,12 +362,8 @@ window.FakeBlocksManager = {
             }
         }
 
-        if (this.fakeTilePool.length < this.maxPoolSize) {
-            this.fakeTilePool.push(t);
-        } else {
-            this._disposeMaterial(t.material);
-            t.children.forEach(c => { this._disposeMaterial(c.material); });
-        }
+        // Loại bỏ giới hạn maxPoolSize để tái sử dụng toàn bộ object và tránh GC Allocation
+        this.fakeTilePool.push(t);
     },
 
     // Ghi lại vị trí X của khối thật vừa spawn (giữ tối đa 3 entries)

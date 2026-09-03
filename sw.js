@@ -4,14 +4,23 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.0.34';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.34';
+const STATIC_CACHE = 'magic-hop-static-v1.0.0.36';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.36';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
     './',
     './index.html',
     './manifest.json',
+    './favicon.ico',
+    './apple-touch-icon.png',
+    './icons/icon-192x192.png',
+    './icons/icon-512x512.png',
+    './icons/icon-maskable-192x192.png',
+    './icons/icon-maskable-512x512.png',
+    './icons/apple-touch-icon.png',
+    './icons/favicon-32x32.png',
+    './icons/favicon-16x16.png',
     './css/style.css',
     'https://cdn.jsdelivr.net/npm/disable-devtool@latest/disable-devtool.min.js',
     './js/config.js',
@@ -31,6 +40,7 @@ const CORE_ASSETS = [
     './language/pt.json',
     './language/ru.json',
     './js/global.js',
+    './js/global_function.js',
     './js/settings.js',
     './js/storage-manager.js',
     './js/audio-manager.js',
@@ -54,6 +64,7 @@ const CORE_ASSETS = [
     './js/chat.js',
     './js/admin-panel.js',
     './js/pwa-installer.js',
+    './js/tos-warning.js',
     'https://flagcdn.io/flags/4x3/vn.svg',
     'https://flagcdn.io/flags/4x3/us.svg',
     'https://flagcdn.io/flags/4x3/fr.svg',

@@ -62,14 +62,15 @@ window.MovingBlocksManager = {
             isMovingThisTile = true;
             this.movingGroupCount--;
             if (this.movingGroupCount === 0) {
-                this.cooldownCount = Math.floor(Math.random() * 3) + 2; // Cooldown 2-4 khối
+                this.cooldownCount = typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomInt(2, 4) : Math.floor(Math.random() * 3) + 2; // Cooldown 2-4 khối
             }
         } 
         // Cơ hội bắt đầu một nhóm di chuyển mới (nếu đã hết thời gian nghỉ)
         const isEasyMode = (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled);
         const isAsianMode = (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled);
+        const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
         const spawnChance = isEasyMode ? 0.05 : (isAsianMode ? 0.25 : 0.15);
-        if (canBeMoving && this.cooldownCount <= 0 && Math.random() < spawnChance) { 
+        if (canBeMoving && this.cooldownCount <= 0 && (typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomRange(0, 1) : Math.random()) < spawnChance) { 
             // SPAWN THÔNG MINH: Giới hạn số lượng khối di chuyển dựa trên tốc độ nhịp nhạc
             let maxAllowed = Math.min(8, roundCount + 2);
             const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);

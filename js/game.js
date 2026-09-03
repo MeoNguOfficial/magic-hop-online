@@ -1177,7 +1177,7 @@ function createBall() {
 
     initBallTrail();
     if (typeof window.prewarmTilePool === 'function') {
-        window.prewarmTilePool(35);
+        window.prewarmTilePool(100);
     }
 
     scene.add(ball);
@@ -2904,7 +2904,7 @@ function cleanUpOldObjects() {
     exitingTiles.length = 0;
 
     if (typeof window.prewarmTilePool === 'function') {
-        window.prewarmTilePool(35);
+        window.prewarmTilePool(100);
     }
 
     if (typeof window.FakeBlocksManager !== 'undefined') {
