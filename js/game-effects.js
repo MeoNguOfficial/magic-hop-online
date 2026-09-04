@@ -23,13 +23,13 @@ window.GameEffectsManager = {
     // --- 3. BỤI LỬA ĐỘ KHÓ (BOUNDARY FLAMES / DUST) ---
     boundaryDustMesh: null,
     boundaryDustData: [],
-    MAX_BOUNDARY_DUST: 120,
+    MAX_BOUNDARY_DUST: (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 0 : 120,
 
     // --- 4. ĐUÔI BÓNG (BALL TRAIL INSTANCED MESH) ---
     ballTrailInstancedMesh: null,
     ballTrailSegments: [],
     ballTrailPool: [],
-    MAX_TRAIL_INSTANCES: 60,
+    MAX_TRAIL_INSTANCES: (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 15 : 60,
     lastTrailSpawnTime: 0,
     trailDummyPosition: null,
     trailDummyEuler: null,
@@ -67,7 +67,7 @@ window.GameEffectsManager = {
             const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
             let baseCurve = 12;
             if (typeof currentGraphicsQuality !== 'undefined') {
-                if (currentGraphicsQuality === 'simple') baseCurve = 2;
+                if (currentGraphicsQuality === 'simple') baseCurve = 1;
                 else if (currentGraphicsQuality === 'hd') baseCurve = 6;
                 else if (currentGraphicsQuality === 'fhd') baseCurve = 12;
                 else if (currentGraphicsQuality === 'qhd') baseCurve = 18;
@@ -79,7 +79,7 @@ window.GameEffectsManager = {
         }
 
         // Diamond Burst Geometry
-        if (!this.cachedDiamondShockwaveGeo) {
+        if (!this.cachedDiamondShockwaveGeo && (typeof currentGraphicsQuality === 'undefined' || currentGraphicsQuality !== 'simple')) {
             this.cachedDiamondShockwaveGeo = this.createDiamondShockwaveGeometry();
         }
 
@@ -192,7 +192,8 @@ window.GameEffectsManager = {
             this.shockwavePool.push(wave);
         }
 
-        while (this.diamondShockwavePool.length < 30) {
+        if (this.cachedDiamondShockwaveGeo) {
+            while (this.diamondShockwavePool.length < 30) {
             const waveMat = new THREE.MeshBasicMaterial({
                 color: 0x00ffff,
                 transparent: true,
@@ -204,7 +205,8 @@ window.GameEffectsManager = {
             const wave = new THREE.Mesh(this.cachedDiamondShockwaveGeo, waveMat);
             wave.visible = false;
             if (this.scene) this.scene.add(wave);
-            this.diamondShockwavePool.push(wave);
+                this.diamondShockwavePool.push(wave);
+            }
         }
 
         while (this.shockwaveDataPool.length < 60) {
@@ -247,7 +249,7 @@ window.GameEffectsManager = {
 
         const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
 
-        if (comboCount >= 6) {
+        if (comboCount >= 6 && this.cachedDiamondShockwaveGeo) {
             let waveMesh;
             if (this.diamondShockwavePool.length > 0) {
                 waveMesh = this.diamondShockwavePool.pop();

@@ -842,7 +842,7 @@ function updatePixelRatio() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     if (currentGraphicsQuality === 'simple') {
-        maxPixelRatio = isMobile ? 0.85 : 1;
+        maxPixelRatio = isMobile ? 0.5 : 0.65;
     } else if (currentGraphicsQuality === 'hd') {
         maxPixelRatio = 1.5;
     } else if (currentGraphicsQuality === 'fhd') {
@@ -870,7 +870,7 @@ function initParticles() {
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
     let particleCount = 400;
-    if (currentGraphicsQuality === 'simple') particleCount = isMobile ? 80 : 100;
+    if (currentGraphicsQuality === 'simple') particleCount = 0;
     else if (currentGraphicsQuality === 'hd') particleCount = isMobile ? 180 : 250;
     else if (currentGraphicsQuality === 'fhd') particleCount = isMobile ? 300 : 400;
     else if (currentGraphicsQuality === 'qhd') particleCount = isMobile ? 450 : 600;
@@ -1146,7 +1146,7 @@ function createBall() {
     }
 
     let segments = 32;
-    if (currentGraphicsQuality === 'simple') segments = 16;
+    if (currentGraphicsQuality === 'simple') segments = 8;
     else if (currentGraphicsQuality === 'hd') segments = 24;
     else if (currentGraphicsQuality === 'fhd') segments = 32;
     else if (currentGraphicsQuality === 'qhd') segments = 48;

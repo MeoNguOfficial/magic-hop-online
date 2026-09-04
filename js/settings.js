@@ -390,8 +390,8 @@ if (performanceModeEnabled) {
     tileDetailScale = 0.2;
 }
 
-let blocksAheadLimit = localStorage.getItem('blocksAheadLimit') !== null ? parseInt(localStorage.getItem('blocksAheadLimit')) : (currentGraphicsQuality === 'simple' ? 5 : 8);
-blocksAheadLimit = Math.min(10, Math.max(4, blocksAheadLimit)); // Giới hạn max là 10, min là 4
+let blocksAheadLimit = localStorage.getItem('blocksAheadLimit') !== null ? parseInt(localStorage.getItem('blocksAheadLimit')) : (currentGraphicsQuality === 'simple' ? 4 : 8);
+blocksAheadLimit = Math.min(10, Math.max(3, blocksAheadLimit)); // Giới hạn max là 10, min là 3
 let blocksBehindLimit = localStorage.getItem('blocksBehindLimit') !== null ? parseInt(localStorage.getItem('blocksBehindLimit')) : 2;
 blocksBehindLimit = Math.min(3, Math.max(0, blocksBehindLimit)); // Giới hạn max là 3, min là 0
 
@@ -997,7 +997,7 @@ function applySettings() {
             const tileShape = createRoundedRectShape(tileWidth, tileLength, 0.8);
 
             let baseCurve = 12;
-            if (currentGraphicsQuality === 'simple') baseCurve = 2;
+            if (currentGraphicsQuality === 'simple') baseCurve = 1;
             else if (currentGraphicsQuality === 'hd') baseCurve = 6;
             else if (currentGraphicsQuality === 'fhd') baseCurve = 12;
             else if (currentGraphicsQuality === 'qhd') baseCurve = 18;
@@ -1037,7 +1037,7 @@ function applySettings() {
                 }
                 const glowHeight = getCurrentGlowHeight();
                 const tileShape = createRoundedRectShape(tileWidth, tileLength, 0.8);
-                let baseCurve = currentGraphicsQuality === 'simple' ? 2 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
+                let baseCurve = currentGraphicsQuality === 'simple' ? 1 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
                 const glowExtrudeSettings = {
                     depth: glowHeight,
                     bevelEnabled: false,

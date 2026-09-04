@@ -434,7 +434,7 @@ function getTileFromPool(forceNew = false) {
         if (!cachedTileGeo) {
             const tileShape = createRoundedRectShape(tileWidth, tileLength, 0.8);
             let baseCurve = 12;
-            if (currentGraphicsQuality === 'simple') baseCurve = 2;
+            if (currentGraphicsQuality === 'simple') baseCurve = 1;
             else if (currentGraphicsQuality === 'hd') baseCurve = 6;
             else if (currentGraphicsQuality === 'fhd') baseCurve = 12;
             else if (currentGraphicsQuality === 'qhd') baseCurve = 18;
@@ -478,7 +478,7 @@ function getTileFromPool(forceNew = false) {
             const shape = createRoundedRectShape(tileWidth + borderThickness, tileLength + borderThickness, 0.8 + borderThickness / 2);
             const hole = createRoundedRectShape(tileWidth - borderThickness, tileLength - borderThickness, Math.max(0, 0.8 - borderThickness / 2));
             shape.holes.push(hole);
-            let baseCurve = currentGraphicsQuality === 'simple' ? 2 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
+            let baseCurve = currentGraphicsQuality === 'simple' ? 1 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
             cachedBorderGeo = new THREE.ShapeGeometry(shape, Math.max(1, Math.round(baseCurve * detailScale)));
         }
         const borderLine = new THREE.Mesh(cachedBorderGeo, new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
@@ -502,7 +502,7 @@ function getTileFromPool(forceNew = false) {
         const glowHeight = getCurrentGlowHeight();
         if (!cachedGlowGeo) {
             const tileShape = createRoundedRectShape(tileWidth, tileLength, 0.8);
-            let baseCurve = currentGraphicsQuality === 'simple' ? 2 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
+            let baseCurve = currentGraphicsQuality === 'simple' ? 1 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
             const glowExtrudeSettings = {
                 depth: glowHeight,
                 bevelEnabled: false,
