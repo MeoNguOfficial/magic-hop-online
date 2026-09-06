@@ -720,6 +720,10 @@ function shiftCoordinateOrigin(offsetZ) {
         sw.mesh.position.z += offsetZ;
     });
 
+    if (typeof window.GameEffectsManager !== 'undefined' && window.GameEffectsManager.shiftZ) {
+        window.GameEffectsManager.shiftZ(offsetZ);
+    }
+
     // 7. Dịch chuyển gạch giả và các mảnh vỡ (Fake blocks)
     if (window.FakeBlocksManager) {
         if (window.FakeBlocksManager.fakeTiles) {
@@ -1936,7 +1940,13 @@ function animate() {
             fpsFrameCount = 0;
             fpsLastTime = now;
             if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
-            if (fpsHudEl) fpsHudEl.innerText = `FPS: ${fpsValue}`;
+            if (fpsHudEl) {
+                if (typeof window.lastDisplayedFps === 'undefined') window.lastDisplayedFps = -1;
+                if (window.lastDisplayedFps !== fpsValue) {
+                    fpsHudEl.textContent = `FPS: ${fpsValue}`;
+                    window.lastDisplayedFps = fpsValue;
+                }
+            }
         }
     }
 
@@ -2457,11 +2467,11 @@ function animate() {
                         }
 
                         if (lastDisplayedScore !== score) {
-                            scoreEl.innerText = formatScoreDisplay(score);
+                            scoreEl.textContent = formatScoreDisplay(score);
                             lastDisplayedScore = score;
                         }
                         if (perfectStreakHud && lastDisplayedPerfectHUD !== comboCount) {
-                            perfectStreakHud.innerText = comboCount;
+                            perfectStreakHud.textContent = comboCount;
                             lastDisplayedPerfectHUD = comboCount;
                         }
 
@@ -2654,11 +2664,11 @@ function animate() {
                     }
 
                     if (lastDisplayedScore !== score) {
-                        scoreEl.innerText = formatScoreDisplay(score);
+                        scoreEl.textContent = formatScoreDisplay(score);
                         lastDisplayedScore = score;
                     }
                     if (perfectStreakHud && lastDisplayedPerfectHUD !== comboCount) {
-                        perfectStreakHud.innerText = comboCount;
+                        perfectStreakHud.textContent = comboCount;
                         lastDisplayedPerfectHUD = comboCount;
                     }
 

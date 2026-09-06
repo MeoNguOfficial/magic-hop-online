@@ -702,6 +702,32 @@ window.GameEffectsManager = {
         }
     },
 
+    shiftZ: function (offsetZ) {
+        if (!offsetZ) return;
+        
+        // 1. Shockwaves
+        for (let i = 0; i < this.shockwaves.length; i++) {
+            if (this.shockwaves[i] && this.shockwaves[i].mesh) {
+                this.shockwaves[i].mesh.position.z += offsetZ;
+            }
+        }
+        
+        // 2. Boundary Pulses
+        for (let i = 0; i < this.boundaryPulses.length; i++) {
+            if (this.boundaryPulses[i]) {
+                if (this.boundaryPulses[i].mesh) this.boundaryPulses[i].mesh.position.z += offsetZ;
+                if (this.boundaryPulses[i].startZ !== undefined) this.boundaryPulses[i].startZ += offsetZ;
+            }
+        }
+        
+        // 3. Ball Trail (Instanced Mesh)
+        for (let i = 0; i < this.ballTrailSegments.length; i++) {
+            if (this.ballTrailSegments[i] && this.ballTrailSegments[i].z !== undefined) {
+                this.ballTrailSegments[i].z += offsetZ;
+            }
+        }
+    },
+
     reset: function () {
         for (let i = 0; i < this.shockwaves.length; i++) {
             const sw = this.shockwaves[i];
