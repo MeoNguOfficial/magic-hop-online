@@ -1501,8 +1501,12 @@ let adminScoreNextCursor = null;
 let adminScoreHasMore = true;
 let isAdminScoreLoading = false;
 let adminScoreRenderStartIndex = 0;
-const ADMIN_SCORE_MAX_VISIBLE = 20;
-window.adminScoreSelectedMode = 'default';
+const ADMIN_SCORE_MAX_VISIBLE = 50;
+
+let currentPreviewAudio = null;
+let currentPreviewBtn = null;
+
+// Khởi tạo Custom Confirm ModalreSelectedMode = 'default';
 
 async function loadTopScoresForBeatmap(beatmap) {
     currentScoreBeatmapId = beatmap.id;
@@ -1711,6 +1715,17 @@ function renderAdminBeatmapsTable() {
                         <td class="p-4 border-b border-cyan-500/10 text-gray-400">${m.artist}</td>
                         <td class="p-4 border-b border-cyan-500/10 ${statusClass}">${statusText}</td>
                         <td class="p-4 border-b border-cyan-500/10 text-right space-x-3">
+                            <button class="text-green-400 hover:text-green-300 btn-preview-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" data-url="${m.file_url || m.url}" title="${t('admin_action_preview') || 'Nghe thử'}">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </button>
+                            <button class="text-purple-400 hover:text-purple-300 btn-edit-in-editor inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="Sửa nhịp trong Beat Editor">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                                </svg>
+                            </button>
                             <button class="text-cyan-400 hover:text-cyan-300 btn-edit-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_edit') || 'Edit'}">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
@@ -1731,7 +1746,93 @@ function renderAdminBeatmapsTable() {
                 `;
     });
 
-    // Gắn sự kiện sửa/xóa/export cho Beatmap
+    // Gắn sự kiện sửa/xóa/export/preview cho Beatmap
+    document.querySelectorAll('.btn-preview-beatmap').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const url = btn.getAttribute('data-url');
+            if (!url) {
+                if (typeof logToConsole === 'function') logToConsole('URL nhạc không hợp lệ!', 'error');
+                return;
+            }
+            
+            // Toggle play/pause if clicking the same button
+            if (currentPreviewBtn === btn && currentPreviewAudio) {
+                if (!currentPreviewAudio.paused) {
+                    currentPreviewAudio.pause();
+                    btn.classList.remove('text-blue-400');
+                    btn.classList.add('text-green-400');
+                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                    return;
+                }
+            }
+
+            // Stop previous audio
+            if (currentPreviewAudio) {
+                currentPreviewAudio.pause();
+                currentPreviewAudio.currentTime = 0;
+            }
+            if (currentPreviewBtn) {
+                currentPreviewBtn.classList.remove('text-blue-400');
+                currentPreviewBtn.classList.add('text-green-400');
+                currentPreviewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+
+            currentPreviewBtn = btn;
+            
+            try {
+                // Change icon to loading
+                btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>`;
+                
+                let playUrl = url;
+                if (typeof window.getCachedAudioUrl === 'function') {
+                    playUrl = await window.getCachedAudioUrl(url);
+                }
+                
+                currentPreviewAudio = new Audio(playUrl);
+                currentPreviewAudio.volume = 0.5;
+                
+                currentPreviewAudio.addEventListener('ended', () => {
+                    btn.classList.remove('text-blue-400');
+                    btn.classList.add('text-green-400');
+                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                });
+
+                await currentPreviewAudio.play();
+                
+                // Change icon to pause
+                btn.classList.remove('text-green-400');
+                btn.classList.add('text-blue-400');
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                if (typeof logToConsole === 'function') logToConsole(`Đang phát: \${url}`, 'success');
+            } catch (error) {
+                console.error("Preview play error:", error);
+                if (typeof logToConsole === 'function') logToConsole('Không thể phát nhạc.', 'error');
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-edit-in-editor').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-id');
+            if (id) {
+                const map = globalBeatmapsList.find(m => m.id == id);
+                if (map) {
+                    const audioUrl = map.file_url || map.url;
+
+                    const importData = {
+                        title: map.title || map.name,
+                        audioUrl: audioUrl,
+                        beats: map.beats || []
+                    };
+                    localStorage.setItem('beatEditor_import_request', JSON.stringify(importData));
+                    if (typeof logToConsole === 'function') logToConsole(`Đang mở ${map.title} trong Beat Editor...`, 'success');
+                    window.open('beat_editor.html', '_blank');
+                }
+            }
+        });
+    });
+
     document.querySelectorAll('.btn-edit-beatmap').forEach(btn => {
         btn.addEventListener('click', () => {
             const id = btn.getAttribute('data-id');
@@ -2897,3 +2998,54 @@ function initGameSettingsToggle() {
     }
 }
 initGameSettingsToggle();
+
+// --- GET BEAT FROM BEAT EDITOR ---
+function initBeatEditorSync() {
+    const btnAddGetEditor = document.getElementById('btn-add-bm-get-editor');
+    const btnEditGetEditor = document.getElementById('btn-edit-bm-get-editor');
+
+    const handleGetBeat = (targetElementId) => {
+        const savedBeats = localStorage.getItem('beatEditor_beats');
+        if (savedBeats) {
+            try {
+                // Ensure it's valid JSON
+                const parsed = JSON.parse(savedBeats);
+                if (Array.isArray(parsed)) {
+                    document.getElementById(targetElementId).value = JSON.stringify(parsed);
+                    if (typeof logToConsole === 'function') {
+                        logToConsole('Đã lấy mảng beat từ Beat Editor thành công!', 'success');
+                    } else {
+                        alert('Đã lấy mảng beat từ Beat Editor thành công!');
+                    }
+                } else {
+                    if (typeof logToConsole === 'function') {
+                        logToConsole('Dữ liệu beat không hợp lệ!', 'error');
+                    } else {
+                        alert('Dữ liệu beat không hợp lệ!');
+                    }
+                }
+            } catch (e) {
+                if (typeof logToConsole === 'function') {
+                    logToConsole('Lỗi phân tích JSON từ Beat Editor!', 'error');
+                } else {
+                    alert('Lỗi phân tích JSON từ Beat Editor!');
+                }
+            }
+        } else {
+            if (typeof logToConsole === 'function') {
+                logToConsole('Không tìm thấy dữ liệu beat nào từ Beat Editor. Bạn cần lưu beat bên Beat Editor trước.', 'error');
+            } else {
+                alert('Không tìm thấy dữ liệu beat nào từ Beat Editor. Bạn cần lưu beat bên Beat Editor trước.');
+            }
+        }
+    };
+
+    if (btnAddGetEditor) {
+        btnAddGetEditor.addEventListener('click', () => handleGetBeat('add-bm-beats'));
+    }
+    
+    if (btnEditGetEditor) {
+        btnEditGetEditor.addEventListener('click', () => handleGetBeat('edit-bm-beats'));
+    }
+}
+initBeatEditorSync();

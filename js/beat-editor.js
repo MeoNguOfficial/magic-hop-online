@@ -250,8 +250,70 @@ function loadFile(file) {
         durationInfo.textContent = `00:00 / ${formatMinutesSeconds(audio.duration)}`;
         applyZoom();
         applyPlaybackRate();
-    });
+    }, { once: true });
 }
+
+async function loadFromAdmin() {
+    const dataStr = localStorage.getItem('beatEditor_import_request');
+    if (!dataStr) return;
+    
+    try {
+        const data = JSON.parse(dataStr);
+        localStorage.removeItem('beatEditor_import_request'); // Clear after reading
+        
+        if (!data.audioUrl) {
+            showNotification("Dữ liệu từ Admin không chứa link nhạc.", "Lỗi tải nhạc", true);
+            return;
+        }
+
+        audio.src = data.audioUrl;
+        songName.innerHTML = `🎵 <strong>${data.title || "Unknown"}</strong> (Từ Admin)`;
+        currentFile = { name: data.title || "Unknown" };
+
+        playBtn.disabled = false;
+        recordBtn.disabled = false;
+        addCurrentBtn.disabled = false;
+        exportBtn.disabled = false;
+        resetBtn.disabled = false;
+        autoGenerateBtn.disabled = true; // Disable AI until buffer is loaded
+        
+        status.textContent = "Đang tải dữ liệu âm thanh...";
+        status.className = "";
+        
+        // Load beats
+        if (Array.isArray(data.beats)) {
+            beats = [...data.beats];
+            updateBeatList();
+        }
+
+        audio.addEventListener("loadedmetadata", () => {
+            durationInfo.textContent = `00:00 / ${formatMinutesSeconds(audio.duration)}`;
+            renderTimelineRuler();
+            renderTimelineMarkers();
+            applyZoom();
+            applyPlaybackRate();
+        }, { once: true });
+        
+        // Try fetching array buffer for AI
+        try {
+            const response = await fetch(data.audioUrl);
+            const buffer = await response.arrayBuffer();
+            currentArrayBuffer = buffer;
+            autoGenerateBtn.disabled = false;
+            status.textContent = "Sẵn sàng (Đã tải ArrayBuffer từ Admin)";
+        } catch (e) {
+            console.error("Lỗi lấy array buffer:", e);
+            status.textContent = "Không thể tải dữ liệu dạng mảng (AI sẽ bị tắt)";
+            status.className = "text-danger";
+        }
+
+    } catch (e) {
+        console.error("Lỗi phân tích dữ liệu import từ admin:", e);
+        showNotification("Dữ liệu truyền từ Admin bị lỗi.", "Lỗi phân tích", true);
+    }
+}
+window.addEventListener('DOMContentLoaded', loadFromAdmin);
+
 
 dropZone.addEventListener("click", () => fileInput.click());
 
@@ -647,6 +709,11 @@ function updateBeatList() {
     beatCount.textContent = `Beat: ${beats.length}`;
     const dataObj = { song: currentFile ? currentFile.name : "", beats: beats };
     output.value = exportMode === "oneline" ? JSON.stringify(dataObj) : JSON.stringify(dataObj, null, 2);
+    try {
+        localStorage.setItem('beatEditor_beats', JSON.stringify(beats));
+    } catch (e) {
+        console.error("Could not save to localStorage", e);
+    }
     renderTimelineMarkers(); updateSelectionIndicator();
 }
 

@@ -70,7 +70,11 @@ function updateSongAccessTime(url) {
         let meta = {};
         const metaStr = localStorage.getItem('music_cache_metadata');
         if (metaStr) {
-            meta = JSON.parse(metaStr);
+            try {
+                meta = JSON.parse(metaStr);
+            } catch (e) {
+                localStorage.removeItem('music_cache_metadata');
+            }
         }
         meta[url] = {
             lastUsed: Date.now()
@@ -86,7 +90,15 @@ async function evictCacheIfNeeded() {
         const metaStr = localStorage.getItem('music_cache_metadata');
         if (!metaStr) return;
 
-        let meta = JSON.parse(metaStr);
+        let meta;
+        try {
+            meta = JSON.parse(metaStr);
+        } catch (parseError) {
+            console.warn('[CacheManager] music_cache_metadata không hợp lệ, đang xóa để làm mới...');
+            localStorage.removeItem('music_cache_metadata');
+            return;
+        }
+
         const urls = Object.keys(meta);
         if (urls.length === 0) return;
 

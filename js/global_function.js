@@ -68,3 +68,11 @@ const PoolHelpers = {
 
 window.MathUtils = MathUtils;
 window.PoolHelpers = PoolHelpers;
+
+function formatScoreDisplay(val) {
+    if (val === null || val === undefined || val === '') return '0';
+    const num = Number(val);
+    if (isNaN(num)) return String(val);
+    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+window.formatScoreDisplay = formatScoreDisplay;

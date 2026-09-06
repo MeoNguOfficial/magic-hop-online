@@ -4,16 +4,6 @@
 //         changeSong, event listeners UI, bootstrap hệ thống.
 //  Phụ thuộc: game.js (phải load sau global.js)
 // --- UTILS ---
-// Format điểm số hiển thị dạng dấu chấm phân cách hàng nghìn (VD: 113537 -> 113.537)
-// Chỉ thay đổi chuỗi hiển thị thị giác, giữ nguyên giá trị số (value) thực của điểm số
-function formatScoreDisplay(val) {
-    if (val === null || val === undefined || val === '') return '0';
-    const num = Number(val);
-    if (isNaN(num)) return String(val);
-    return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-}
-window.formatScoreDisplay = formatScoreDisplay;
-
 // --- DOM REFERENCES ---
 const container = document.getElementById('canvas-container');
 const scoreEl = document.getElementById('score');
