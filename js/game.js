@@ -822,17 +822,7 @@ function onWindowResize() {
         bgVisualizerCanvas.height = height;
     }
 
-    if (selectedBackground === 'japan' && bgMesh) {
-        const distance = 15;
-        const vFOV = THREE.MathUtils.degToRad(camera.fov);
-        const bgHeight = 2 * Math.tan(vFOV / 2) * distance;
-        const bgWidth = bgHeight * camera.aspect;
-        bgMesh.scale.set(bgWidth, bgHeight, 1);
 
-        bgMesh.position.copy(camera.position);
-        bgMesh.quaternion.copy(camera.quaternion);
-        bgMesh.translateZ(-distance);
-    }
 
     if (typeof window.adjustTabsKerning === 'function') {
         window.adjustTabsKerning();
@@ -1721,83 +1711,13 @@ async function initThree() {
     updateBackgroundStyle();
 }
 
-// --- PORTAL CANVAS TEXTURE GENERATOR ---
-let portalCanvas = null;
-let portalCtx = null;
-let portalTexture = null;
 
-function drawPortalCanvas() {
-    if (!portalCanvas) {
-        portalCanvas = document.createElement('canvas');
-        portalCanvas.width = 256; // 256x256 cực kỳ nhẹ
-        portalCanvas.height = 256;
-        portalCtx = portalCanvas.getContext('2d');
-    }
-
-    const ctx = portalCtx;
-    ctx.clearRect(0, 0, 256, 256);
-
-    // Nền đen hoàn toàn (vì ta sẽ nhân màu trên GPU)
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, 256, 256);
-
-    ctx.save();
-    ctx.translate(128, 128);
-
-    // Lớp 1: Ambient Glow ngoài cùng (trắng mờ)
-    const grad1 = ctx.createRadialGradient(0, 0, 20, 0, 0, 120);
-    grad1.addColorStop(0, 'rgba(255,255,255,0)');
-    grad1.addColorStop(0.35, 'rgba(255,255,255,0.4)');
-    grad1.addColorStop(0.85, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad1;
-    ctx.fillRect(-128, -128, 256, 256);
-
-    // Lớp 2: Xoắn ốc 1 (trắng sáng)
-    ctx.save();
-    ctx.rotate(0.3);
-    ctx.scale(1.25, 0.75); // Bầu dục nghiêng 3D
-    const grad2 = ctx.createRadialGradient(-15, 0, 12, 0, 0, 95);
-    grad2.addColorStop(0, 'rgba(0,0,0,0)');
-    grad2.addColorStop(0.45, 'rgba(255,255,255,0.7)');
-    grad2.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad2;
-    ctx.globalCompositeOperation = 'screen';
-    ctx.fillRect(-128, -128, 256, 256);
-    ctx.restore();
-
-    // Lớp 3: Xoắn ốc 2 (trắng sáng, góc khác)
-    ctx.save();
-    ctx.rotate(-0.8);
-    ctx.scale(0.75, 1.25);
-    const grad3 = ctx.createRadialGradient(15, -8, 8, 0, 0, 85);
-    grad3.addColorStop(0, 'rgba(0,0,0,0)');
-    grad3.addColorStop(0.5, 'rgba(255,255,255,0.55)');
-    grad3.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grad3;
-    ctx.globalCompositeOperation = 'screen';
-    ctx.fillRect(-128, -128, 256, 256);
-    ctx.restore();
-
-    // Lớp 4: Lõi tối ở trung tâm để làm nổi bật bóng khi chơi
-    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 42);
-    coreGrad.addColorStop(0, '#000000');
-    coreGrad.addColorStop(0.4, 'rgba(0,0,0,0.92)');
-    coreGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = coreGrad;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillRect(-128, -128, 256, 256);
-
-    ctx.restore();
-}
 
 // --- BACKGROUND STYLES IMPLEMENTATION ---
 function updateBackgroundStyle() {
     if (!camera) return;
 
     if (selectedBackground === 'default') {
-        if (bgMesh) {
-            bgMesh.visible = false;
-        }
         // Khôi phục sương mù & màu renderer mặc định
         if (scene && scene.fog) {
             scene.fog.color.setHex(0x020108);
@@ -1810,17 +1730,6 @@ function updateBackgroundStyle() {
     }
 
     if (selectedBackground === 'japan') {
-        // Khởi tạo Canvas Texture (chỉ vẽ 1 lần duy nhất trên CPU)
-        if (!portalCanvas) {
-            portalCanvas = document.createElement('canvas');
-            portalCanvas.width = 256;
-            portalCanvas.height = 256;
-            portalCtx = portalCanvas.getContext('2d');
-
-            drawPortalCanvas();
-            portalTexture = new THREE.CanvasTexture(portalCanvas);
-            portalTexture.center.set(0.5, 0.5);
-        }
 
         // Áp dụng màu ban đầu
         let activeTile = tiles[currentTileIndex];
@@ -1829,53 +1738,19 @@ function updateBackgroundStyle() {
             tileColorHex = activeTile.userData.themeColor;
         }
 
-        const baseGray = 0.10;
-        targetBgColor.setHex(tileColorHex).multiplyScalar(0.07);
+        const baseGray = 0.015;
+        targetBgColor.setHex(tileColorHex).multiplyScalar(0.035);
         targetBgColor.r += baseGray;
         targetBgColor.g += baseGray;
         targetBgColor.b += baseGray;
         currentBgColor.copy(targetBgColor);
 
-        if (!bgMesh) {
-            // Dùng MeshBasicMaterial kết hợp màu uColor trực tiếp trên GPU
-            bgMaterial = new THREE.MeshBasicMaterial({
-                map: portalTexture,
-                color: currentBgColor,
-                depthTest: false,
-                depthWrite: false,
-                fog: false,
-                transparent: false
-            });
-
-            const bgGeometry = new THREE.PlaneGeometry(1, 1);
-            bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
-            bgMesh.renderOrder = -10000;
-
-            // Thêm trực tiếp vào scene
-            scene.add(bgMesh);
-        } else {
-            bgMaterial.color.copy(currentBgColor);
-        }
-
-        bgMesh.visible = true;
-
-        // Căn thẳng hàng và bám sát camera ở khoảng cách 15 đơn vị
-        const distance = 15;
-        bgMesh.position.copy(camera.position);
-        bgMesh.quaternion.copy(camera.quaternion);
-        bgMesh.translateZ(-distance);
-
-        const vFOV = THREE.MathUtils.degToRad(camera.fov);
-        const bgHeight = 2 * Math.tan(vFOV / 2) * distance;
-        const bgWidth = bgHeight * camera.aspect;
-
-        bgMesh.scale.set(bgWidth, bgHeight, 1);
-
         if (scene && scene.fog) {
             scene.fog.color.copy(currentBgColor);
+            scene.fog.density = 0.012;
         }
         if (renderer) {
-            renderer.setClearColor(scene.fog.color);
+            renderer.setClearColor(currentBgColor);
         }
     }
 }
@@ -2855,15 +2730,15 @@ function animate() {
     }
 
     // --- CẬP NHẬT MÀU SẮC HÌNH NỀN ---
-    if (selectedBackground === 'japan' && bgMesh && bgMaterial) {
+    if (selectedBackground === 'japan') {
         let activeTile = tiles[currentTileIndex];
         let tileColorHex = 0x00ffff;
         if (activeTile && activeTile.userData && activeTile.userData.themeColor) {
             tileColorHex = activeTile.userData.themeColor;
         }
 
-        const baseGray = 0.10;
-        tempColor.setHex(tileColorHex).multiplyScalar(0.07);
+        const baseGray = 0.015;
+        tempColor.setHex(tileColorHex).multiplyScalar(0.035);
         tempColor.r += baseGray;
         tempColor.g += baseGray;
         tempColor.b += baseGray;
@@ -2872,17 +2747,6 @@ function animate() {
         const lerpSpeed = 3.0;
         const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
         currentBgColor.lerp(targetBgColor, lerpFactor);
-
-        // Xoay texture trên GPU (Không vẽ lại Canvas, không upload texture lên GPU => 0% CPU cost!)
-        const time = clock.getElapsedTime();
-        portalTexture.rotation = time * 0.12;
-        bgMaterial.color.copy(currentBgColor);
-
-        // Đồng bộ vị trí hình nền bám sát camera ở khoảng cách 15 đơn vị
-        const distance = 15;
-        bgMesh.position.copy(camera.position);
-        bgMesh.quaternion.copy(camera.quaternion);
-        bgMesh.translateZ(-distance);
 
         if (scene && scene.fog) {
             scene.fog.color.copy(currentBgColor);
