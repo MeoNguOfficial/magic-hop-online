@@ -1170,6 +1170,9 @@ function createBall() {
     ball.add(ballGlowLight);
 
     initBallTrail();
+    if (typeof window.updateBallCustomization === 'function') {
+        window.updateBallCustomization();
+    }
     if (typeof window.prewarmTilePool === 'function') {
         window.prewarmTilePool(100);
     }
@@ -1756,6 +1759,35 @@ function updateBackgroundStyle() {
 }
 window.updateBackgroundStyle = updateBackgroundStyle;
 
+// --- CẬP NHẬT TÙY CHỈNH BÓNG ---
+function updateBallCustomization() {
+    if (!ball || !ball.material) return;
+
+    // Cập nhật Pattern
+    if (selectedBallPattern === 'wireframe') {
+        ball.material.wireframe = true;
+    } else {
+        ball.material.wireframe = false;
+    }
+
+    // Nếu không phải là Dynamic Color, gán màu ngay lập tức
+    if (selectedBallColor !== 'dynamic') {
+        let hexColor = 0x00ffff;
+        let emissiveColor = 0x0088cc;
+        
+        if (selectedBallColor === 'cyan') { hexColor = 0x00ffff; emissiveColor = 0x0088cc; }
+        else if (selectedBallColor === 'pink') { hexColor = 0xff00ff; emissiveColor = 0xaa00aa; }
+        else if (selectedBallColor === 'yellow') { hexColor = 0xffff00; emissiveColor = 0xaaaa00; }
+        else if (selectedBallColor === 'white') { hexColor = 0xffffff; emissiveColor = 0xcccccc; }
+
+        ball.material.color.setHex(hexColor);
+        if (ball.material.emissive) {
+            ball.material.emissive.setHex(emissiveColor);
+        }
+    }
+}
+window.updateBallCustomization = updateBallCustomization;
+
 
 // --- VÒNG LẶP CHÍNH ---
 let currentTileIndex = 0;
@@ -1940,21 +1972,26 @@ function animate() {
             }
         }
 
-        // --- CẬP NHẬT MÀU BÓNG (THEO COMBO) ---
+        // --- CẬP NHẬT MÀU BÓNG (THEO COMBO HOẶC TÙY CHỈNH) ---
         if (ball && ball.material) {
-            let targetBallColor = 0x00ffff; // Cyan mặc định
-            let targetEmissiveColor = 0x0088cc;
+            if (selectedBallColor === 'dynamic') {
+                let targetBallColor = 0x00ffff; // Cyan mặc định
+                let targetEmissiveColor = 0x0088cc;
 
-            if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
-            else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
-            else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
+                if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
+                else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
+                else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
 
-            tempColor.setHex(targetBallColor);
-            ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
-            if (ball.material.emissive) {
-                tempColor.setHex(targetEmissiveColor);
-                ball.material.emissive.lerp(tempColor, 15 * delta);
+                if (ball.material.color.getHex() !== targetBallColor) {
+                    tempColor.setHex(targetBallColor);
+                    ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
+                    if (ball.material.emissive) {
+                        tempColor.setHex(targetEmissiveColor);
+                        ball.material.emissive.lerp(tempColor, 15 * delta);
+                    }
+                }
             }
+            // Nếu không phải dynamic, màu đã được set trong updateBallCustomization(), không cần update mỗi frame.
         }
 
         // --- CẬP NHẬT BIÊN (BOUNDARIES) ---
@@ -2677,20 +2714,24 @@ function animate() {
             }
         }
 
-        // --- CẬP NHẬT MÀU BÓNG (THEO COMBO) ---
+        // --- CẬP NHẬT MÀU BÓNG (THEO COMBO HOẶC TÙY CHỈNH) ---
         if (ball && ball.material) {
-            let targetBallColor = 0x00ffff; // Cyan mặc định
-            let targetEmissiveColor = 0x0088cc;
+            if (selectedBallColor === 'dynamic') {
+                let targetBallColor = 0x00ffff; // Cyan mặc định
+                let targetEmissiveColor = 0x0088cc;
 
-            if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
-            else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
-            else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
+                if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
+                else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
+                else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
 
-            tempColor.setHex(targetBallColor);
-            ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
-            if (ball.material.emissive) {
-                tempColor.setHex(targetEmissiveColor);
-                ball.material.emissive.lerp(tempColor, 15 * delta);
+                if (ball.material.color.getHex() !== targetBallColor) {
+                    tempColor.setHex(targetBallColor);
+                    ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
+                    if (ball.material.emissive) {
+                        tempColor.setHex(targetEmissiveColor);
+                        ball.material.emissive.lerp(tempColor, 15 * delta);
+                    }
+                }
             }
         }
 

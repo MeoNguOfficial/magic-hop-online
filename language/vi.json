@@ -528,5 +528,14 @@
     "discrete_gpu_change_title": "CÀI ĐẶT GPU CHUYÊN DỤNG",
     "discrete_gpu_change_desc": "Thay đổi cài đặt GPU yêu cầu tải lại trang để trình duyệt áp dụng GPU mới. Tải lại ngay?",
     "discrete_gpu_windows_hint": "Mẹo: Trên Windows laptop, nếu trình duyệt vẫn chưa chuyển GPU rời, hãy mở Windows Settings > Display > Graphics và đặt trình duyệt thành 'High Performance'.",
-    "mobile_optimize_notice": "Khuyến nghị chơi trên PC, đang cố gắng tối ưu trên điện thoại, hãy kiên nhẫn"
+    "mobile_optimize_notice": "Khuyến nghị chơi trên PC, đang cố gắng tối ưu trên điện thoại, hãy kiên nhẫn",
+    "personalize_ball_color": "Màu Bóng",
+    "color_dynamic": "Màu động",
+    "color_cyan": "Xanh Lơ",
+    "color_pink": "Hồng",
+    "color_yellow": "Vàng",
+    "color_white": "Trắng",
+    "personalize_ball_pattern": "Hoa Văn Bóng",
+    "personalize_pattern_solid": "Đặc (Solid)",
+    "personalize_pattern_wireframe": "Khung lưới (Wireframe)"
 }

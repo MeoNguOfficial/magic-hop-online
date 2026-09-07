@@ -1239,23 +1239,23 @@ function applySettings() {
     // Sliders
     if (sensitivitySlider) {
         sensitivity = parseFloat(sensitivitySlider.value);
-        localStorage.setItem('sensitivity', sensitivity);
+        window.debouncedLocalStorageSet('sensitivity', sensitivity);
         if (sensitivityValueSpan) sensitivityValueSpan.innerText = `${sensitivity.toFixed(1)}x`;
     }
     if (blocksAheadSlider) {
         blocksAheadLimit = parseInt(blocksAheadSlider.value);
-        localStorage.setItem('blocksAheadLimit', blocksAheadLimit);
+        window.debouncedLocalStorageSet('blocksAheadLimit', blocksAheadLimit);
         if (blocksAheadValue) blocksAheadValue.innerText = blocksAheadLimit;
     }
     if (blocksBehindSlider) {
         blocksBehindLimit = parseInt(blocksBehindSlider.value);
-        localStorage.setItem('blocksBehindLimit', blocksBehindLimit);
+        window.debouncedLocalStorageSet('blocksBehindLimit', blocksBehindLimit);
         if (blocksBehindValue) blocksBehindValue.innerText = blocksBehindLimit;
     }
     if (maxFpsSlider) {
         window.maxFps = parseInt(maxFpsSlider.value);
         maxFps = window.maxFps;
-        localStorage.setItem('maxFps', maxFps);
+        window.debouncedLocalStorageSet('maxFps', maxFps);
         if (maxFpsValue) {
             if (maxFps === 0) {
                 maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_unlimited') : 'Không giới hạn';
@@ -1281,7 +1281,7 @@ function applySettings() {
     // Audio volumes
     if (menuVolumeSlider) {
         menuVolume = parseFloat(menuVolumeSlider.value);
-        localStorage.setItem('menuVolume', menuVolume);
+        window.debouncedLocalStorageSet('menuVolume', menuVolume);
         if (menuVolumeValue) menuVolumeValue.innerText = Math.round(menuVolume * 100) + '%';
         const targetVol = isMenuMuted ? 0 : menuVolume;
         if (menuGainNode && audioCtx) {
@@ -1292,7 +1292,7 @@ function applySettings() {
     }
     if (typeof previewVolumeSlider !== 'undefined' && previewVolumeSlider) {
         previewVolume = parseFloat(previewVolumeSlider.value);
-        localStorage.setItem('previewVolume', previewVolume);
+        window.debouncedLocalStorageSet('previewVolume', previewVolume);
         if (typeof previewVolumeValue !== 'undefined' && previewVolumeValue) previewVolumeValue.innerText = Math.round(previewVolume * 100) + '%';
         const targetVol = isPreviewMuted ? 0 : previewVolume;
         if (typeof previewGainNode !== 'undefined' && previewGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
@@ -1303,7 +1303,7 @@ function applySettings() {
     }
     if (gameVolumeSlider) {
         gameVolume = parseFloat(gameVolumeSlider.value);
-        localStorage.setItem('gameVolume', gameVolume);
+        window.debouncedLocalStorageSet('gameVolume', gameVolume);
         if (gameVolumeValue) gameVolumeValue.innerText = Math.round(gameVolume * 100) + '%';
         const targetVol = isGameMuted ? 0 : gameVolume;
         if (gainNode && audioCtx) gainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
@@ -1329,7 +1329,7 @@ function applySettings() {
     }
     if (sfxVolumeSlider) {
         sfxVolume = parseFloat(sfxVolumeSlider.value);
-        localStorage.setItem('sfxVolume', sfxVolume);
+        window.debouncedLocalStorageSet('sfxVolume', sfxVolume);
         if (sfxVolumeValue) sfxVolumeValue.innerText = Math.round(sfxVolume * 100) + '%';
         const targetVol = isSfxMuted ? 0 : sfxVolume;
         if (sfxGainNode && audioCtx) {
@@ -1340,7 +1340,7 @@ function applySettings() {
     }
     if (typeof playSfxVolumeSlider !== 'undefined' && playSfxVolumeSlider) {
         playSfxVolume = parseFloat(playSfxVolumeSlider.value);
-        localStorage.setItem('playSfxVolume', playSfxVolume);
+        window.debouncedLocalStorageSet('playSfxVolume', playSfxVolume);
         if (typeof playSfxVolumeValue !== 'undefined' && playSfxVolumeValue) playSfxVolumeValue.innerText = Math.round(playSfxVolume * 100) + '%';
         const targetVol = isPlaySfxMuted ? 0 : playSfxVolume;
         if (typeof playSfxGainNode !== 'undefined' && playSfxGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
@@ -1351,7 +1351,7 @@ function applySettings() {
     }
     if (typeof pregameVolumeSlider !== 'undefined' && pregameVolumeSlider) {
         pregameVolume = parseFloat(pregameVolumeSlider.value);
-        localStorage.setItem('pregameVolume', pregameVolume);
+        window.debouncedLocalStorageSet('pregameVolume', pregameVolume);
         if (typeof pregameVolumeValue !== 'undefined' && pregameVolumeValue) pregameVolumeValue.innerText = Math.round(pregameVolume * 100) + '%';
         const targetVol = isPregameMuted ? 0 : pregameVolume;
         if (typeof pregameGainNode !== 'undefined' && pregameGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
@@ -1362,14 +1362,14 @@ function applySettings() {
     }
     if (roundVolumeSlider) {
         roundVolume = parseFloat(roundVolumeSlider.value);
-        localStorage.setItem('roundVolume', roundVolume);
+        window.debouncedLocalStorageSet('roundVolume', roundVolume);
         if (roundVolumeValue) roundVolumeValue.innerText = Math.round(roundVolume * 100) + '%';
         const targetVol = isRoundMuted ? 0 : roundVolume;
         if (roundGainNode && audioCtx) roundGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
     }
     if (typeof mfxGameOverVolumeSlider !== 'undefined' && mfxGameOverVolumeSlider) {
         mfxGameOverVolume = parseFloat(mfxGameOverVolumeSlider.value);
-        localStorage.setItem('mfxGameOverVolume', mfxGameOverVolume);
+        window.debouncedLocalStorageSet('mfxGameOverVolume', mfxGameOverVolume);
         if (typeof mfxGameOverVolumeValue !== 'undefined' && mfxGameOverVolumeValue) mfxGameOverVolumeValue.innerText = Math.round(mfxGameOverVolume * 100) + '%';
         const targetVol = isMfxGameOverMuted ? 0 : mfxGameOverVolume;
         if (typeof mfxGameOverGainNode !== 'undefined' && mfxGameOverGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
@@ -1378,14 +1378,14 @@ function applySettings() {
     }
     if (uiVolumeSlider) {
         uiVolume = parseFloat(uiVolumeSlider.value);
-        localStorage.setItem('uiVolume', uiVolume);
+        window.debouncedLocalStorageSet('uiVolume', uiVolume);
         if (uiVolumeValue) uiVolumeValue.innerText = Math.round(uiVolume * 100) + '%';
         const targetVol = isUiMuted ? 0 : uiVolume;
         if (uiGainNode && audioCtx) uiGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
     }
     if (typeof breakBlockVolumeSlider !== 'undefined' && breakBlockVolumeSlider) {
         breakBlockVolume = parseFloat(breakBlockVolumeSlider.value);
-        localStorage.setItem('breakBlockVolume', breakBlockVolume);
+        window.debouncedLocalStorageSet('breakBlockVolume', breakBlockVolume);
         if (typeof breakBlockVolumeValue !== 'undefined' && breakBlockVolumeValue) {
             breakBlockVolumeValue.innerText = Math.round(breakBlockVolume * 100) + '%';
         }

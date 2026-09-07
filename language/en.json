@@ -528,5 +528,14 @@
     "discrete_gpu_change_title": "DISCRETE GPU SETTING",
     "discrete_gpu_change_desc": "Changing GPU settings requires reloading the page for the browser to apply. Reload now?",
     "discrete_gpu_windows_hint": "Tip: On Windows laptops, if the browser still uses integrated GPU, open Windows Settings > Display > Graphics and set your browser to 'High Performance'.",
-    "mobile_optimize_notice": "Recommended to play on PC, currently optimizing for mobile, please be patient"
+    "mobile_optimize_notice": "Recommended to play on PC, currently optimizing for mobile, please be patient",
+    "personalize_ball_color": "Ball Color",
+    "color_dynamic": "Dynamic Color",
+    "color_cyan": "Cyan",
+    "color_pink": "Pink",
+    "color_yellow": "Yellow",
+    "color_white": "White",
+    "personalize_ball_pattern": "Ball Pattern",
+    "personalize_pattern_solid": "Solid",
+    "personalize_pattern_wireframe": "Wireframe"
 }

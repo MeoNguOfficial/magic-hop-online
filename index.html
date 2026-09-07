@@ -1090,6 +1090,76 @@
                             </div>
                         </label>
                     </div>
+                    
+                    <!-- Ball Customization Section -->
+                    <div class="mt-8 border-t border-cyan-500/20 pt-6">
+                        <!-- Ball Color -->
+                        <div class="mb-6">
+                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2 uppercase tracking-widest font-orbitron">
+                                <i class="fas fa-palette text-cyan-400"></i>
+                                <span data-i18n="personalize_ball_color">Màu Bóng</span>
+                            </h3>
+                            <div class="flex flex-wrap gap-3">
+                                <!-- Dynamic -->
+                                <label class="cursor-pointer group flex items-center justify-center relative w-10 h-10 rounded-full bg-black border-2 border-gray-600 hover:border-cyan-400 transition-colors" data-ball-color="dynamic" title="Màu động" data-i18n-title="color_dynamic">
+                                    <input type="radio" name="selected-ball-color" value="dynamic" class="hidden">
+                                    <div class="w-full h-full rounded-full bg-gradient-to-tr from-cyan-400 via-pink-500 to-yellow-400 opacity-80 group-hover:opacity-100 transition-opacity"></div>
+                                    <!-- Selection ring -->
+                                    <div class="absolute -inset-1 rounded-full border-2 border-cyan-400 scale-0 opacity-0 transition-all duration-200 ring-indicator"></div>
+                                </label>
+                                <!-- Cyan -->
+                                <label class="cursor-pointer group flex items-center justify-center relative w-10 h-10 rounded-full bg-black border-2 border-gray-600 hover:border-cyan-400 transition-colors" data-ball-color="cyan" title="Cyan" data-i18n-title="color_cyan">
+                                    <input type="radio" name="selected-ball-color" value="cyan" class="hidden">
+                                    <div class="w-full h-full rounded-full bg-[#00ffff] opacity-80 group-hover:opacity-100 transition-opacity shadow-[0_0_8px_#00ffff]"></div>
+                                    <div class="absolute -inset-1 rounded-full border-2 border-cyan-400 scale-0 opacity-0 transition-all duration-200 ring-indicator"></div>
+                                </label>
+                                <!-- Pink -->
+                                <label class="cursor-pointer group flex items-center justify-center relative w-10 h-10 rounded-full bg-black border-2 border-gray-600 hover:border-cyan-400 transition-colors" data-ball-color="pink" title="Pink" data-i18n-title="color_pink">
+                                    <input type="radio" name="selected-ball-color" value="pink" class="hidden">
+                                    <div class="w-full h-full rounded-full bg-[#ff00ff] opacity-80 group-hover:opacity-100 transition-opacity shadow-[0_0_8px_#ff00ff]"></div>
+                                    <div class="absolute -inset-1 rounded-full border-2 border-cyan-400 scale-0 opacity-0 transition-all duration-200 ring-indicator"></div>
+                                </label>
+                                <!-- Yellow -->
+                                <label class="cursor-pointer group flex items-center justify-center relative w-10 h-10 rounded-full bg-black border-2 border-gray-600 hover:border-cyan-400 transition-colors" data-ball-color="yellow" title="Yellow" data-i18n-title="color_yellow">
+                                    <input type="radio" name="selected-ball-color" value="yellow" class="hidden">
+                                    <div class="w-full h-full rounded-full bg-[#ffff00] opacity-80 group-hover:opacity-100 transition-opacity shadow-[0_0_8px_#ffff00]"></div>
+                                    <div class="absolute -inset-1 rounded-full border-2 border-cyan-400 scale-0 opacity-0 transition-all duration-200 ring-indicator"></div>
+                                </label>
+                                <!-- White -->
+                                <label class="cursor-pointer group flex items-center justify-center relative w-10 h-10 rounded-full bg-black border-2 border-gray-600 hover:border-cyan-400 transition-colors" data-ball-color="white" title="White" data-i18n-title="color_white">
+                                    <input type="radio" name="selected-ball-color" value="white" class="hidden">
+                                    <div class="w-full h-full rounded-full bg-[#ffffff] opacity-80 group-hover:opacity-100 transition-opacity shadow-[0_0_8px_#ffffff]"></div>
+                                    <div class="absolute -inset-1 rounded-full border-2 border-cyan-400 scale-0 opacity-0 transition-all duration-200 ring-indicator"></div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Ball Pattern -->
+                        <div>
+                            <h3 class="text-sm font-bold text-white mb-3 flex items-center gap-2 uppercase tracking-widest font-orbitron">
+                                <i class="fas fa-shapes text-cyan-400"></i>
+                                <span data-i18n="personalize_ball_pattern">Hoa Văn Bóng</span>
+                            </h3>
+                            <div class="grid grid-cols-2 gap-4">
+                                <!-- Solid -->
+                                <label class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none" data-ball-pattern="solid">
+                                    <input type="radio" name="selected-ball-pattern" value="solid" class="hidden">
+                                    <span class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors" data-i18n="personalize_pattern_solid">Đặc (Solid)</span>
+                                    <div class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        <div class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200"></div>
+                                    </div>
+                                </label>
+                                <!-- Wireframe -->
+                                <label class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none" data-ball-pattern="wireframe">
+                                    <input type="radio" name="selected-ball-pattern" value="wireframe" class="hidden">
+                                    <span class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors" data-i18n="personalize_pattern_wireframe">Khung lưới (Wireframe)</span>
+                                    <div class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        <div class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200"></div>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

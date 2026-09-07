@@ -102,6 +102,11 @@ function applyTranslations() {
         el.placeholder = t(key);
     });
 
+    document.querySelectorAll('[data-i18n-title]').forEach(el => {
+        const key = el.getAttribute('data-i18n-title');
+        el.title = t(key);
+    });
+
     // Cập nhật lại các label dropdown filter khi đổi ngôn ngữ
     const artistBtn = document.getElementById('song-filter-artist-btn');
     const genreBtn  = document.getElementById('song-filter-genre-btn');

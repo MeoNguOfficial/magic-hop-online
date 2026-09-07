@@ -154,6 +154,8 @@ let starField;
 
 // --- BACKGROUND CUSTOMIZATION STATE ---
 let selectedBackground = localStorage.getItem('selectedBackground') || 'default';
+let selectedBallColor = localStorage.getItem('selectedBallColor') || 'dynamic';
+let selectedBallPattern = localStorage.getItem('selectedBallPattern') || 'solid';
 let bgMesh = null;
 let bgTexture = null;
 let bgMaterial = null;
@@ -1481,3 +1483,18 @@ window.updateMainMenuTheme = updateMainMenuTheme;
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(updateMainMenuTheme, 100);
 });
+
+// --- TỐI ƯU HIỆU SUẤT (DEBOUNCE LOCAL STORAGE) ---
+window.debouncedLocalStorageSet = (function() {
+    let timers = {};
+    return function(key, value, delay = 150) {
+        clearTimeout(timers[key]);
+        timers[key] = setTimeout(() => {
+            try {
+                localStorage.setItem(key, value);
+            } catch (e) {
+                console.warn('[Storage] Lỗi khi lưu settings:', e);
+            }
+        }, delay);
+    };
+})();
