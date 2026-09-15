@@ -62,11 +62,11 @@ window.AsianModeManager = {
     },
 
     getFakeBlockThreshold: function () {
-        return this.isEnabled ? 0.08 : 0.25;
+        return this.isEnabled ? 0.15 : 0.25;
     },
 
     getMovingBlockThreshold: function () {
-        return this.isEnabled ? 0.05 : 0.2;
+        return this.isEnabled ? 0.15 : 0.2;
     }
 };
 

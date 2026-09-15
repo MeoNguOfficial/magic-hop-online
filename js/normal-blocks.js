@@ -629,15 +629,29 @@ function spawnTile(isFirst = false) {
         // --- LOGIC TRÁNH IMPOSSIBLE JUMP & 16 BLOCK ĐẦU ---
         if (timeDiff < 0.08) isTooClose = true;
         let maxDeltaX = timeDiff * 18;
+        
+        const isHardMode = typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled;
+        const isAsianMode = typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled;
+        let fixedDeltaX = null;
+        const blockUnit = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
 
-        if (isTooClose) {
+        if (!isInitial16Blocks && (isHardMode || isAsianMode) && timeDiff < 0.15) {
+            if (timeDiff < 0.08) {
+                fixedDeltaX = isAsianMode ? (0.5 * blockUnit) : (0.25 * blockUnit);
+            } else {
+                fixedDeltaX = isAsianMode ? (1.0 * blockUnit) : (0.5 * blockUnit);
+            }
+        }
+
+        if (fixedDeltaX !== null) {
+            // Bỏ qua gán maxDeltaX vì dùng độ lệch cố định
+        } else if (isTooClose) {
             maxDeltaX = 0;
         } else if (isFirst3Blocks) {
             // 3 block đầu tiên luôn luôn thẳng hàng (maxDeltaX = 0)
             maxDeltaX = 0;
         } else if (isInitial16Blocks) {
             // 13 block còn lại trong 16 block đầu: nếu nhịp beat gần (<0.3s) thì thẳng hàng, ngược lại lệch tối đa 0.8 block
-            const blockUnit = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
             if (timeDiff < 0.3) {
                 maxDeltaX = 0; // Beat gần → ưu tiên thẳng hàng
             } else {
@@ -654,7 +668,13 @@ function spawnTile(isFirst = false) {
         }
 
         if (!isRoundStartBlock) {
-            if (maxDeltaX === 0) {
+            if (fixedDeltaX !== null) {
+                const direction = Math.random() < 0.5 ? 1 : -1;
+                tileX = prevX + direction * fixedDeltaX;
+                if (tileX < -4.5 || tileX > 4.5) {
+                    tileX = prevX - direction * fixedDeltaX; // Bẻ hướng nếu lọt ra ngoài
+                }
+            } else if (maxDeltaX === 0) {
                 tileX = prevX;
             } else {
                 const isAsianMode = typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled;
