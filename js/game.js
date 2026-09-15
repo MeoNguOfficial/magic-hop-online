@@ -2300,6 +2300,33 @@ function animate() {
             GameEffectsManager.updateBallTrail(delta, nowTime, isPlaying, isFalling, ball);
         }
 
+        // --- CẬP NHẬT BỤI KHÔNG GIAN (SPACE DUST) ---
+        if (typeof starField !== 'undefined' && starField && starField.visible) {
+            const baseDustSpeed = 25.0; // Tốc độ cơ bản của bụi
+            const moveZ = baseDustSpeed * (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * delta;
+            
+            if (typeof starFieldUniforms !== 'undefined' && starFieldUniforms && starFieldUniforms.uZOffset !== undefined) {
+                // Shader (WebGL): Shader tự động wrap-around theo hàm mod()
+                starFieldUniforms.uZOffset.value += moveZ;
+            } else if (starField.geometry && starField.geometry.attributes.position) {
+                // Tối ưu hoá fallback (WebGPU/Mobile/CPU): tự xử lý reposition/wrap-around
+                const posArr = starField.geometry.attributes.position.array;
+                const camZ = typeof camera !== 'undefined' ? camera.position.z : 10;
+                const rangeZ = 360.0;
+                
+                for (let i = 0; i < posArr.length / 3; i++) {
+                    posArr[i * 3 + 2] += moveZ;
+                    const relZ = posArr[i * 3 + 2] - camZ;
+                    
+                    // Cơ chế object pooling / reposition: 
+                    // Khi bụi đi qua sau lưng camera (relZ > 10.0), ngay lập tức vòng lại phía trước xa (-350.0)
+                    if (relZ > 10.0) { 
+                        posArr[i * 3 + 2] -= rangeZ;
+                    }
+                }
+                starField.geometry.attributes.position.needsUpdate = true;
+            }
+        }
 
 
         // --- VẬT LÝ BÓNG ---
