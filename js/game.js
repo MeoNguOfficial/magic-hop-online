@@ -847,6 +847,9 @@ function updatePixelRatio() {
         maxPixelRatio = 4;
     }
     targetRatio = Math.min(window.devicePixelRatio, maxPixelRatio);
+    if (isMobile && targetRatio > 1.5) {
+        targetRatio = 1.5;
+    }
     renderer.setPixelRatio(targetRatio);
 }
 
@@ -944,6 +947,8 @@ function initParticles() {
 
     starField = new THREE.Points(particlesGeo, particlesMat);
     starField.frustumCulled = false;
+    starField.matrixAutoUpdate = false;
+    starField.updateMatrix();
     starField.visible = bgParticlesEnabled;
     scene.add(starField);
 
@@ -1012,6 +1017,8 @@ function initBoundaryFlames() {
     boundaryDustMesh = new THREE.InstancedMesh(dustGeo, dustMat, MAX_BOUNDARY_DUST);
     boundaryDustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     boundaryDustMesh.frustumCulled = false;
+    boundaryDustMesh.matrixAutoUpdate = false;
+    boundaryDustMesh.updateMatrix();
     
     boundaryDustData = [];
     const rangeZ = 140.0;
@@ -1153,6 +1160,7 @@ function createBall() {
         new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x0088cc, shininess: 100 });
 
     ball = new THREE.Mesh(ballGeo, ballMat);
+    ball.frustumCulled = false;
     ball.position.set(0, minFloor, 0);
 
     // --- HIỆU ỨNG PHÁT SÁNG BÓNG (BALL GLOW) ---
@@ -1248,6 +1256,7 @@ async function initThree() {
             alpha: false,
             stencil: false
         });
+        renderer.shadowMap.enabled = false;
 
         if (usingWebGL2) {
             console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
@@ -1807,6 +1816,9 @@ let fpsHudEl = null;
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 window.IS_MOBILE = IS_MOBILE;
 const ballTrailPool = [];
+for (let i = 0; i < 40; i++) {
+    ballTrailPool.push({ x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0, life: 1.0, rotSpeed: 0, color: new THREE.Color() });
+}
 
 function getTrailSegmentFromPool() {
     if (ballTrailPool.length > 0) {
@@ -3763,7 +3775,7 @@ function resetGameScene() {
     activeRoundCount = 0;
     activeEndlessMode = false;
     blocksSinceLastRound = 0;
-    scoreEl.innerText = "0";
+    scoreEl.textContent = "0";
     if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
         scoreEl.classList.remove('text-cyan-400', 'neon-glow-cyan', 'text-orange-500', 'neon-glow-orange', 'text-green-400', 'neon-glow-green', 'text-yellow-400', 'neon-glow-yellow');
         scoreEl.classList.add('text-red-500', 'neon-glow-red');
