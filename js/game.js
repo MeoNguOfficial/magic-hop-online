@@ -453,7 +453,7 @@ function initComboUiPools() {
 
     // 1. Element bóng ma Shockwave (Tái sử dụng 1 phần tử duy nhất)
     ghostElement = document.createElement('div');
-    ghostElement.className = 'perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none';
+    ghostElement.className = 'perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none py-4 px-6';
     ghostElement.style.display = 'none';
     container.appendChild(ghostElement);
 
@@ -479,7 +479,7 @@ function spawnPerfectShockwaveGhost(text, tierClass) {
         anime.remove(ghostElement);
     }
 
-    ghostElement.className = `perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none ${tierClass}`;
+    ghostElement.className = `perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none py-4 px-6 ${tierClass}`;
     ghostElement.innerText = text;
     ghostElement.style.display = 'block';
 
