@@ -863,12 +863,12 @@ function initParticles() {
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    let particleCount = 400;
+    let particleCount = 600;
     if (currentGraphicsQuality === 'simple') particleCount = 0;
-    else if (currentGraphicsQuality === 'hd') particleCount = isMobile ? 180 : 250;
-    else if (currentGraphicsQuality === 'fhd') particleCount = isMobile ? 300 : 400;
-    else if (currentGraphicsQuality === 'qhd') particleCount = isMobile ? 450 : 600;
-    else if (currentGraphicsQuality === 'uhd') particleCount = isMobile ? 600 : 800;
+    else if (currentGraphicsQuality === 'hd') particleCount = isMobile ? 250 : 350;
+    else if (currentGraphicsQuality === 'fhd') particleCount = isMobile ? 400 : 550;
+    else if (currentGraphicsQuality === 'qhd') particleCount = isMobile ? 600 : 800;
+    else if (currentGraphicsQuality === 'uhd') particleCount = isMobile ? 800 : 1200;
 
     particlesGeo = new THREE.BufferGeometry();
     const positions = new Float32Array(particleCount * 3);
@@ -876,9 +876,10 @@ function initParticles() {
 
     const camZ = camera ? camera.position.z : 10;
     for (let i = 0; i < particleCount; i++) {
-        positions[i * 3] = (Math.random() - 0.5) * 80;
-        positions[i * 3 + 1] = Math.random() * 45 - 10;
-        positions[i * 3 + 2] = camZ - Math.random() * 350;
+        // Mở rộng không gian X, Y, Z gấp đôi
+        positions[i * 3] = (Math.random() - 0.5) * 160; // X: -80 to 80
+        positions[i * 3 + 1] = Math.random() * 80 - 20; // Y: -20 to 60
+        positions[i * 3 + 2] = camZ - Math.random() * 800; // Z: camZ to camZ - 800
 
         const isCyan = Math.random() > 0.5;
         pColors[i * 3] = isCyan ? 0.0 : 1.0;
@@ -917,8 +918,8 @@ function initParticles() {
                     vColor = color;
                     vec3 pos = position;
                     float relZ = pos.z - uCamZ + uZOffset;
-                    float rangeZ = 360.0;
-                    relZ = mod(relZ + 350.0, rangeZ) - 350.0;
+                    float rangeZ = 810.0;
+                    relZ = mod(relZ + 800.0, rangeZ) - 800.0;
                     vec3 worldPos = vec3(pos.x, pos.y, uCamZ + relZ);
                     vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
                     gl_PointSize = uParticleSize * (10.0 / -mvPosition.z);
@@ -2308,18 +2309,21 @@ function animate() {
             if (typeof starFieldUniforms !== 'undefined' && starFieldUniforms && starFieldUniforms.uZOffset !== undefined) {
                 // Shader (WebGL): Shader tự động wrap-around theo hàm mod()
                 starFieldUniforms.uZOffset.value += moveZ;
+                if (starFieldUniforms.uCamZ) {
+                    starFieldUniforms.uCamZ.value = typeof camera !== 'undefined' ? camera.position.z : 10;
+                }
             } else if (starField.geometry && starField.geometry.attributes.position) {
                 // Tối ưu hoá fallback (WebGPU/Mobile/CPU): tự xử lý reposition/wrap-around
                 const posArr = starField.geometry.attributes.position.array;
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : 10;
-                const rangeZ = 360.0;
+                const rangeZ = 810.0;
                 
                 for (let i = 0; i < posArr.length / 3; i++) {
                     posArr[i * 3 + 2] += moveZ;
                     const relZ = posArr[i * 3 + 2] - camZ;
                     
                     // Cơ chế object pooling / reposition: 
-                    // Khi bụi đi qua sau lưng camera (relZ > 10.0), ngay lập tức vòng lại phía trước xa (-350.0)
+                    // Khi bụi đi qua sau lưng camera (relZ > 10.0), ngay lập tức vòng lại phía trước xa (-800.0)
                     if (relZ > 10.0) { 
                         posArr[i * 3 + 2] -= rangeZ;
                     }
