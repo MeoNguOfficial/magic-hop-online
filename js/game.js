@@ -896,7 +896,7 @@ function initParticles() {
 
     if (isWebGPU) {
         particlesMat = new THREE.PointsMaterial({
-            size: (currentGraphicsQuality === 'simple' ? 2.5 : 1.8) * (isMobile ? 0.85 : 1.0),
+            size: (currentGraphicsQuality === 'simple' ? 3.5 : 2.5) * (isMobile ? 0.85 : 1.0),
             vertexColors: true,
             transparent: true,
             opacity: 0.65,
@@ -904,7 +904,7 @@ function initParticles() {
             depthWrite: false
         });
     } else {
-        starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 35.0 : 25.0) * (isMobile ? 0.85 : 1.0);
+        starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 45.0 : 35.0) * (isMobile ? 0.85 : 1.0);
         starFieldUniforms.uCamZ.value = camZ;
         starFieldUniforms.uZOffset.value = 0.0;
 
@@ -2316,7 +2316,17 @@ function animate() {
         // --- CẬP NHẬT BỤI KHÔNG GIAN (SPACE DUST) ---
         if (typeof starField !== 'undefined' && starField && starField.visible) {
             const baseDustSpeed = 25.0; // Tốc độ cơ bản của bụi
-            const moveZ = baseDustSpeed * (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * delta;
+            let dustSpeedMult = typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0;
+            
+            // Giảm tốc độ bụi (tắt gió) khi thua game hoặc đang ở trạng thái chuyển cảnh
+            if (typeof isFailTransition !== 'undefined' && (isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition))) {
+                dustSpeedMult *= (typeof audio !== 'undefined' && audio) ? Math.max(0, audio.playbackRate) : 0.05;
+            } else if (typeof isVictoryTransition !== 'undefined' && isVictoryTransition) {
+                const elapsed = typeof victoryTimeElapsed !== 'undefined' ? victoryTimeElapsed : 0;
+                dustSpeedMult *= Math.max(0, 1.0 - (elapsed / 2.0)); // Giảm dần về 0
+            }
+            
+            const moveZ = baseDustSpeed * dustSpeedMult * delta;
             
             if (typeof starFieldUniforms !== 'undefined' && starFieldUniforms && starFieldUniforms.uZOffset !== undefined) {
                 // Shader (WebGL): Shader tự động wrap-around theo hàm mod()
