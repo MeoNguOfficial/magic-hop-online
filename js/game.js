@@ -595,6 +595,7 @@ function initBallTrail() {
 
 // --- TÍNH TOÁN QUỸ ĐẠO PARABOL (TỰ ĐỘNG ĐỒNG BỘ CHUẨN BEAT KHI TILE PHÓNG TO / THU NHỎ / RESCUE) ---
 function calculateNextParabola(currentTargetIndex) {
+    jumpStartRawY = typeof minFloor !== 'undefined' ? minFloor : 0.95;
     const currentTile = tiles[currentTargetIndex];
     const nextTile = tiles[currentTargetIndex + 1];
     if (!currentTile || !nextTile) return;
@@ -645,35 +646,33 @@ function calculateRescueParabola(currentTargetIndex) {
         return;
     }
 
-    const currentTileEffectiveZ = currentTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? currentTile.userData.targetZ : currentTile.position.z;
     const nextTileEffectiveZ = nextTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? nextTile.userData.targetZ : nextTile.position.z;
-    const distanceZ = Math.abs(currentTileEffectiveZ - nextTileEffectiveZ);
+    
+    // Smooth Interpolation: Dùng điểm contact hiện tại làm origin (không teleport cứng)
+    const distanceZ = Math.abs(jumpStartRawZ - nextTileEffectiveZ);
 
     let standardVelocityZ = baseBallVelocityZ * gameSpeed;
     let standardFlightTime = distanceZ / Math.abs(standardVelocityZ);
     let targetFlightTime = standardFlightTime;
 
-    /*
-    if (audio && !audio.paused && nextTile.userData && typeof nextTile.userData.time === 'number') {
+    // Lệch Nhịp Cứu Bóng (Beat Synchronization Fix):
+    // Cố định thời gian rơi (flightTime) theo đúng thời lượng tới beat kế tiếp của bài nhạc.
+    if (typeof audio !== 'undefined' && audio && !audio.paused && nextTile.userData && typeof nextTile.userData.time === 'number') {
         const now = audio.currentTime;
         const targetBeatTime = nextTile.userData.time;
-        const currentSpeed = Math.min(3.0, gameSpeed);
-        const timeRemainingSec = (targetBeatTime - now) / currentSpeed;
-
-        if (timeRemainingSec >= standardFlightTime * 0.5) {
-            targetFlightTime = Math.max(standardFlightTime * 0.8, Math.min(standardFlightTime * 1.25, timeRemainingSec));
-        } else {
-            // Nếu thời gian tới beat kế tiếp bị trễ do nhún cứu bóng,
-            // giữ nhịp nhảy mượt mà và vi điều chỉnh playbackRate thay vì ngắt/seek audio.currentTime
-            targetFlightTime = standardFlightTime;
-            if (timeRemainingSec > 0) {
-                const targetRate = (targetBeatTime - now) / standardFlightTime;
-                const clampedRate = Math.max(gameSpeed * 0.85, Math.min(gameSpeed * 1.15, targetRate));
-                audio.playbackRate = clampedRate;
-            }
+        
+        let timeRemainingAudioSec = targetBeatTime - now;
+        if (timeRemainingAudioSec > 0) {
+            // Tốc độ Game vs Tốc độ Nhạc:
+            // Khi gameSpeed > 3.0, nhạc bị giới hạn (cap) ở 3.0x, nhưng physics/logic game vẫn chạy > 3.0x.
+            // Do đó, phải chia cho gameSpeed (thay vì audio.playbackRate bị cap) để t_beat khớp 100% với diễn biến hình ảnh của game.
+            let effectiveSpeedForPhysics = Math.max(gameSpeed, audio.playbackRate);
+            let timeToBeatSec = timeRemainingAudioSec / effectiveSpeedForPhysics;
+            
+            // Snap cứng theo nhịp nhạc, có chặn khoảng an toàn để tránh nẩy quá chậm/nhanh nếu lỡ hụt beat quá xa
+            targetFlightTime = Math.max(standardFlightTime * 0.7, Math.min(standardFlightTime * 1.4, timeToBeatSec));
         }
     }
-    */
 
     flightTime = targetFlightTime;
     ballVelocityZ = -distanceZ / flightTime;
@@ -681,8 +680,12 @@ function calculateRescueParabola(currentTargetIndex) {
     const baseHeight = 3.5;
     const adaptiveHeight = Math.min(5.5, baseHeight + (distanceZ - tileSpacingMin) * 0.1);
 
+    // Giữ nguyên trọng lực chuẩn
     currentGravity = -(8 * adaptiveHeight) / (flightTime * flightTime);
-    currentBounceVelocityY = (4 * adaptiveHeight) / flightTime;
+    
+    // Zero-velocity stutter fix: Cập nhật Vector vận tốc Y mới bù trừ từ điểm va chạm hiện tại
+    const targetFloorY = typeof minFloor !== 'undefined' ? minFloor : 0.95;
+    currentBounceVelocityY = (targetFloorY - jumpStartRawY - 0.5 * currentGravity * flightTime * flightTime) / flightTime;
 }
 
 // --- FLOATING ORIGIN (DỊCH CHUYỂN GỐC TỌA ĐỘ) ---
@@ -2523,7 +2526,7 @@ function animate() {
 
             if (!isFalling) {
                 ball.position.z = jumpStartRawZ + ballVelocityZ * jumpElapsedTime;
-                ball.position.y = minFloor + currentBounceVelocityY * jumpElapsedTime + 0.5 * currentGravity * jumpElapsedTime * jumpElapsedTime;
+                ball.position.y = jumpStartRawY + currentBounceVelocityY * jumpElapsedTime + 0.5 * currentGravity * jumpElapsedTime * jumpElapsedTime;
 
                 const targetAudioSpeed = Math.min(3.0, gameSpeed);
                 if (audio && !isFailTransition) {
@@ -2554,8 +2557,8 @@ function animate() {
 
             // Kiểm tra cứu nguy bóng rơi (Hitbox kéo dài xuống Neon Glow)
             let targetTile = tiles[currentTileIndex + 1];
-            // Hitbox vùng sáng cố định là 1.0 bất kể cài đặt đồ họa tắt hay giảm
-            const glowHeightHitbox = 1.0;
+            // Hitbox vùng sáng cố định là 1.2 theo yêu cầu
+            const glowHeightHitbox = 1.2;
             const bottomY = -currentTileThickness / 2 - glowHeightHitbox + ballRadius;
 
             if (targetTile && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
@@ -2641,13 +2644,24 @@ function animate() {
                         targetTile.userData.springVelocityY = -14.0;
                     }
 
-                    jumpStartRawZ = targetTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? targetTile.userData.targetZ : targetTile.position.z;
+                    // Zero-velocity stutter fix: Dùng vị trí bóng lúc chạm (P_impact) thay vì tâm gạch
+                    jumpStartRawZ = ball.position.z;
+                    jumpStartRawY = ball.position.y;
 
                     const driftRatio = diffX / (tileWidth * activeScale / 2);
                     let shockwaveScale = 1.0;
+                    let isEdgeHit = false;
 
                     if (driftRatio > 0.85) {
                         shockwaveScale = 1.35;
+                        isEdgeHit = true;
+                        
+                        // Anti-Stuck / Multi-trigger: Dịch nhẹ bóng vào trong (epsilon)
+                        const epsilon = 0.15;
+                        const directionToCenter = ball.position.x > targetTile.position.x ? -1 : 1;
+                        ball.position.x += directionToCenter * epsilon;
+                        ballTargetX = ball.position.x; // Khóa target để không bị lerp giật ngược
+                        
                         const originalX = targetTile.position.x;
                         targetTile.position.x += (ball.position.x > targetTile.position.x ? 0.15 : -0.15);
                         setTimeout(() => {
@@ -2690,7 +2704,14 @@ function animate() {
                         }
 
                         jumpElapsedTime = 0;
-                        calculateNextParabola(currentTileIndex);
+                        if (isEdgeHit) {
+                            // Cập nhật Vector vận tốc mới nối tiếp không làm khựng
+                            calculateRescueParabola(currentTileIndex);
+                        } else {
+                            // Hitbox normal
+                            jumpStartRawZ = targetTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? targetTile.userData.targetZ : targetTile.position.z;
+                            calculateNextParabola(currentTileIndex);
+                        }
                     }
 
                     if (targetTile.material && targetTile.material.emissive) targetTile.material.emissive.setHex(0x00ffff);

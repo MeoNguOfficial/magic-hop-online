@@ -242,6 +242,7 @@ let ballVelocityZ = baseBallVelocityZ;
 let jumpElapsedTime = 0;
 let flightTime = 0;
 let jumpStartRawZ = 0;
+let jumpStartRawY = 0.95;
 let currentGravity = -70;
 let currentBounceVelocityY = 24;
 let isFalling = false;
