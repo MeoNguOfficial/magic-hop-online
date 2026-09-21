@@ -4051,14 +4051,14 @@ async function handleIntro() {
             progress = 100;
             clearInterval(simulateLoad);
             introLoadingContainer.style.display = 'none';
-            startGameBtn.style.display = 'block';
+            doStartGameTransition(); // Tự động vào luôn do đã click ở disclaimer
         }
 
         introProgressBar.style.width = progress + '%';
         loadPercentText.innerText = Math.floor(progress) + '%';
     }, 100);
 
-    startGameBtn.addEventListener('click', () => {
+    function doStartGameTransition() {
         // KIỂM TRA OFFLINE MÀ CHƯA CÓ NHẠC
         if (!navigator.onLine && (!audio || !audio.src || audio.src === window.location.href)) {
             if (typeof showCyberModal === 'function') {
@@ -4157,7 +4157,9 @@ async function handleIntro() {
                 }
             }
         }
-    });
+    }
+    
+    startGameBtn.addEventListener('click', doStartGameTransition);
 }
 
 function startGame() {
