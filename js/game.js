@@ -656,21 +656,27 @@ function calculateRescueParabola(currentTargetIndex) {
     let targetFlightTime = standardFlightTime;
 
     // Lệch Nhịp Cứu Bóng (Beat Synchronization Fix):
-    // Cố định thời gian rơi (flightTime) theo đúng thời lượng tới beat kế tiếp của bài nhạc.
+    // Yêu cầu: Tốc độ cứu bóng không được nhanh hơn cũng không được chậm hơn -> Giữ nguyên standardFlightTime
+    targetFlightTime = standardFlightTime;
+
     if (typeof audio !== 'undefined' && audio && !audio.paused && nextTile.userData && typeof nextTile.userData.time === 'number') {
         const now = audio.currentTime;
         const targetBeatTime = nextTile.userData.time;
         
         let timeRemainingAudioSec = targetBeatTime - now;
         if (timeRemainingAudioSec > 0) {
-            // Tốc độ Game vs Tốc độ Nhạc:
-            // Khi gameSpeed > 3.0, nhạc bị giới hạn (cap) ở 3.0x, nhưng physics/logic game vẫn chạy > 3.0x.
-            // Do đó, phải chia cho gameSpeed (thay vì audio.playbackRate bị cap) để t_beat khớp 100% với diễn biến hình ảnh của game.
-            let effectiveSpeedForPhysics = Math.max(gameSpeed, audio.playbackRate);
-            let timeToBeatSec = timeRemainingAudioSec / effectiveSpeedForPhysics;
+            // Để đồng bộ nhịp nhạc khi bóng bay với tốc độ gốc, ta phải vi chỉnh tốc độ nhạc (audio.playbackRate)
+            let targetAudioRate = timeRemainingAudioSec / standardFlightTime;
             
-            // Snap cứng theo nhịp nhạc, có chặn khoảng an toàn để tránh nẩy quá chậm/nhanh nếu lỡ hụt beat quá xa
-            targetFlightTime = Math.max(standardFlightTime * 0.7, Math.min(standardFlightTime * 1.4, timeToBeatSec));
+            // Giới hạn thay đổi tốc độ nhạc trong khoảng an toàn (ví dụ +- 15%) so với gameSpeed
+            let minRate = gameSpeed * 0.85;
+            let maxRate = gameSpeed * 1.15;
+            let clampedRate = Math.max(minRate, Math.min(maxRate, targetAudioRate));
+            
+            // Tốc độ Nhạc: Đặt trần giới hạn tối đa là 3.0x theo đúng yêu cầu
+            clampedRate = Math.min(clampedRate, 3.0);
+            
+            audio.playbackRate = clampedRate;
         }
     }
 
@@ -2786,6 +2792,12 @@ function animate() {
                 const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
                 ball.position.x += (ballTargetX - ball.position.x) * lerpFactor;
             }
+        }
+
+        // --- CẬP NHẬT GÓC XOAY BÓNG (LĂN TRÒN) ---
+        if (ball && ballRadius) {
+            const currentSpeedZ = isFalling ? Math.abs(fallVelocityZ) : Math.abs(ballVelocityZ);
+            ball.rotation.x -= (currentSpeedZ * delta) / ballRadius;
         }
 
         // --- CẬP NHẬT MÀU BÓNG (THEO COMBO HOẶC TÙY CHỈNH) ---
