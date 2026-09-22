@@ -1850,7 +1850,7 @@ function updateEnvironment() {
         cityInstancedMesh.visible = false;
     }
 
-    // Rice Field
+    // Rice Fields
     if (selectedEnvironment === 'ricefield') {
         if (!riceGroundPlane) {
             // Ground
