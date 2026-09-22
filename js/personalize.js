@@ -10,6 +10,7 @@
             const radios = document.querySelectorAll('input[name="selected-bg-style"]');
             const ballColorRadios = document.querySelectorAll('input[name="selected-ball-color"]');
             const ballPatternRadios = document.querySelectorAll('input[name="selected-ball-pattern"]');
+            const environmentRadios = document.querySelectorAll('input[name="selected-environment"]');
             
             const updateUI = () => {
                 radios.forEach(radio => {
@@ -64,6 +65,37 @@
                 });
 
                 ballPatternRadios.forEach(radio => {
+                    const card = radio.closest('.bg-option-card');
+                    if (!card) return;
+                    const dot = card.querySelector('.radio-dot div');
+                    const border = card.querySelector('.radio-dot');
+                    
+                    if (radio.checked) {
+                        card.classList.add('border-cyan-400', 'shadow-[0_0_15px_rgba(6,182,212,0.15)]', 'bg-cyan-950/20');
+                        card.classList.remove('border-cyan-500/20');
+                        if (dot) {
+                            dot.classList.remove('scale-0');
+                            dot.classList.add('scale-100');
+                        }
+                        if (border) {
+                            border.classList.add('border-cyan-400');
+                            border.classList.remove('border-gray-600');
+                        }
+                    } else {
+                        card.classList.remove('border-cyan-400', 'shadow-[0_0_15px_rgba(6,182,212,0.15)]', 'bg-cyan-950/20');
+                        card.classList.add('border-cyan-500/20');
+                        if (dot) {
+                            dot.classList.remove('scale-100');
+                            dot.classList.add('scale-0');
+                        }
+                        if (border) {
+                            border.classList.remove('border-cyan-400');
+                            border.classList.add('border-gray-600');
+                        }
+                    }
+                });
+
+                environmentRadios.forEach(radio => {
                     const card = radio.closest('.bg-option-card');
                     if (!card) return;
                     const dot = card.querySelector('.radio-dot div');
@@ -148,6 +180,25 @@
                         // Notify Three.js to update the ball pattern instantly
                         if (typeof window.updateBallCustomization === 'function') {
                             window.updateBallCustomization();
+                        }
+                    }
+                });
+            });
+
+            environmentRadios.forEach(radio => {
+                if (radio.value === selectedEnvironment) {
+                    radio.checked = true;
+                }
+
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedEnvironment = e.target.value;
+                        localStorage.setItem('selectedEnvironment', selectedEnvironment);
+                        updateUI();
+
+                        // Notify Three.js to update the environment
+                        if (typeof window.updateEnvironment === 'function') {
+                            window.updateEnvironment();
                         }
                     }
                 });

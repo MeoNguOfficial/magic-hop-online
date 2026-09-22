@@ -525,5 +525,14 @@
     "dedicated_gpu_detected_note": "O dispositivo possui placa de vídeo dedicada (GPU dedicada).",
     "discrete_gpu_change_title": "CONFIGURAÇÃO DE GPU DEDICADA",
     "discrete_gpu_change_desc": "A alteração das configurações de GPU requer o recarregamento da página. Recarregar agora?",
-    "mobile_optimize_notice": "Recomendado jogar no PC, atualmente otimizando para celular, por favor seja paciente"
+    "mobile_optimize_notice": "Recomendado jogar no PC, atualmente otimizando para celular, por favor seja paciente",
+    "personalize_pattern_solid": "Solid",
+    "personalize_pattern_wireframe": "Wire",
+    "personalize_pattern_checkerboard": "Checkerboard",
+    "personalize_pattern_stripes": "Stripes",
+    "personalize_pattern_dots": "Polka Dots",
+    "personalize_pattern_grid": "Tech Grid",
+    "personalize_environment": "Environment",
+    "env_void": "The Void",
+    "env_blueprint": "Blueprint 3D"
 }

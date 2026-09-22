@@ -525,5 +525,14 @@
     "dedicated_gpu_detected_note": "専用グラフィックスカード（外部GPU）が検出されました。",
     "discrete_gpu_change_title": "専用GPU設定",
     "discrete_gpu_change_desc": "GPU設定の変更を適用するにはページの再読み込みが必要です。今すぐ再読み込みしますか？",
-    "mobile_optimize_notice": "PCでのプレイを推奨します。現在モバイル向けに最適化中です。お待ちください"
+    "mobile_optimize_notice": "PCでのプレイを推奨します。現在モバイル向けに最適化中です。お待ちください",
+    "personalize_pattern_solid": "Solid",
+    "personalize_pattern_wireframe": "Wire",
+    "personalize_pattern_checkerboard": "Checkerboard",
+    "personalize_pattern_stripes": "Stripes",
+    "personalize_pattern_dots": "Polka Dots",
+    "personalize_pattern_grid": "Tech Grid",
+    "personalize_environment": "Environment",
+    "env_void": "The Void",
+    "env_blueprint": "Blueprint 3D"
 }

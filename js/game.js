@@ -733,6 +733,10 @@ function shiftCoordinateOrigin(offsetZ) {
         window.GameEffectsManager.shiftZ(offsetZ);
     }
 
+    if (blueprintGrid) {
+        blueprintGrid.position.z += offsetZ;
+    }
+
     // 7. Dịch chuyển gạch giả và các mảnh vỡ (Fake blocks)
     if (window.FakeBlocksManager) {
         if (window.FakeBlocksManager.fakeTiles) {
@@ -1322,6 +1326,10 @@ async function initThree() {
     // Bóng Neon
     createBall(); // Khởi tạo bóng cùng với hiệu ứng phát sáng
 
+    if (typeof window.updateEnvironment === 'function') {
+        window.updateEnvironment();
+    }
+
     spawnTile(true);
     const initialSpawnLimit = Math.min(typeof blocksAheadLimit !== 'undefined' ? blocksAheadLimit : 8, 10);
     while (tiles.length < initialSpawnLimit) {
@@ -1778,6 +1786,91 @@ function updateBackgroundStyle() {
 }
 window.updateBackgroundStyle = updateBackgroundStyle;
 
+// --- CẬP NHẬT MÔI TRƯỜNG (ENVIRONMENT) ---
+function updateEnvironment() {
+    if (!scene) return;
+
+    if (selectedEnvironment === 'blueprint') {
+        if (!blueprintGrid) {
+            // Tạo grid helper: size=2000, divisions=200, colorCenterLine, colorGrid
+            blueprintGrid = new THREE.GridHelper(2000, 200, 0x00ffff, 0x004488);
+            const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
+            blueprintGrid.position.set(0, mFloor - 0.2, 0); // Đặt ngay dưới các khối gạch
+            
+            // Tối ưu hiệu năng: không nhận bóng đổ
+            blueprintGrid.receiveShadow = false;
+            scene.add(blueprintGrid);
+        }
+        blueprintGrid.visible = true;
+    } else {
+        if (blueprintGrid) {
+            blueprintGrid.visible = false;
+        }
+    }
+}
+window.updateEnvironment = updateEnvironment;
+
+// --- HOA VĂN BÓNG (PROCEDURAL TEXTURES) ---
+const patternTextures = {};
+function getPatternTexture(type) {
+    if (patternTextures[type]) return patternTextures[type];
+    
+    const size = 512;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+
+    // Nền trắng để nhân (multiply) với màu gốc của material không bị mất màu
+    ctx.fillStyle = '#ffffff'; 
+    ctx.fillRect(0, 0, size, size);
+    
+    // Họa tiết màu tối hoặc xám để hiện rõ trên nền màu sáng
+    ctx.fillStyle = '#666666'; 
+    ctx.strokeStyle = '#666666';
+
+    if (type === 'checkerboard') {
+        const squares = 8;
+        const sqSize = size / squares;
+        for (let i = 0; i < squares; i++) {
+            for (let j = 0; j < squares; j++) {
+                if ((i + j) % 2 === 0) ctx.fillRect(i * sqSize, j * sqSize, sqSize, sqSize);
+            }
+        }
+    } else if (type === 'stripes') {
+        const stripes = 8;
+        const stripeWidth = size / (stripes * 2);
+        for (let i = 0; i < stripes * 2; i += 2) {
+            ctx.fillRect(i * stripeWidth, 0, stripeWidth, size);
+        }
+    } else if (type === 'dots') {
+        const cols = 6;
+        const spacing = size / cols;
+        const radius = spacing * 0.25;
+        for (let i = 0; i <= cols; i++) {
+            for (let j = 0; j <= cols; j++) {
+                ctx.beginPath();
+                ctx.arc(i * spacing, j * spacing, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+    } else if (type === 'grid') {
+        ctx.lineWidth = 15;
+        const lines = 8;
+        const spacing = size / lines;
+        for (let i = 0; i <= lines; i++) {
+            ctx.beginPath(); ctx.moveTo(i * spacing, 0); ctx.lineTo(i * spacing, size); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, i * spacing); ctx.lineTo(size, i * spacing); ctx.stroke();
+        }
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    patternTextures[type] = texture;
+    return texture;
+}
+
 // --- CẬP NHẬT TÙY CHỈNH BÓNG ---
 function updateBallCustomization() {
     if (!ball || !ball.material) return;
@@ -1785,9 +1878,15 @@ function updateBallCustomization() {
     // Cập nhật Pattern
     if (selectedBallPattern === 'wireframe') {
         ball.material.wireframe = true;
+        ball.material.map = null;
+    } else if (selectedBallPattern === 'solid') {
+        ball.material.wireframe = false;
+        ball.material.map = null;
     } else {
         ball.material.wireframe = false;
+        ball.material.map = getPatternTexture(selectedBallPattern);
     }
+    ball.material.needsUpdate = true;
 
     // Nếu không phải là Dynamic Color, gán màu ngay lập tức
     if (selectedBallColor !== 'dynamic') {

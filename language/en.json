@@ -537,5 +537,12 @@
     "color_white": "White",
     "personalize_ball_pattern": "Ball Pattern",
     "personalize_pattern_solid": "Solid",
-    "personalize_pattern_wireframe": "Wireframe"
+    "personalize_pattern_wireframe": "Wire",
+    "personalize_pattern_checkerboard": "Checkerboard",
+    "personalize_pattern_stripes": "Stripes",
+    "personalize_pattern_dots": "Polka Dots",
+    "personalize_pattern_grid": "Tech Grid",
+    "personalize_environment": "Environment",
+    "env_void": "The Void",
+    "env_blueprint": "Blueprint 3D"
 }
