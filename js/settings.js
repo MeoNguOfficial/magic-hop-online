@@ -180,7 +180,18 @@ window.checkAndCleanLocalStorageIntegrity = checkAndCleanLocalStorageIntegrity;
 checkAndCleanLocalStorageIntegrity(true);
 
 // --- BIẾN TRẠNG THÁI CÀI ĐẶT ---
-let performanceModeEnabled = JSON.parse(localStorage.getItem('performanceModeEnabled')) === true;
+let rawPerfMode = localStorage.getItem('performanceModeEnabled');
+let performanceModeEnabled = false;
+if (rawPerfMode !== null) {
+    performanceModeEnabled = JSON.parse(rawPerfMode) === true;
+} else {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isWeakCPU = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
+    if (isMobile || isWeakCPU) {
+        performanceModeEnabled = true;
+        localStorage.setItem('performanceModeEnabled', 'true');
+    }
+}
 let currentGraphicsQuality = localStorage.getItem('graphicsQuality') || 'fhd';
 let rawAPI = localStorage.getItem('graphicsAPI') || 'webgl';
 let graphicsAPI = (rawAPI === 'd2ViZ3B1' || rawAPI === 'webgpu') ? 'webgpu' : 'webgl';

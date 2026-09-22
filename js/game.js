@@ -2277,11 +2277,15 @@ function animate() {
         }
 
         const tilesCount = tiles.length;
+        const camZForCulling = typeof camera !== 'undefined' && camera ? camera.position.z : (typeof ball !== 'undefined' && ball ? ball.position.z + 10 : 0);
+        
         for (let ti = 0; ti < tilesCount; ti++) {
             const tile = tiles[ti];
             if (!tile) continue;
             
-            if (dynamicColorsEnabled && currentFrameHex !== undefined) {
+            const isVisible = tile.position.z < camZForCulling + 30 && tile.position.z > camZForCulling - 250;
+            
+            if (isVisible && dynamicColorsEnabled && currentFrameHex !== undefined) {
                 if (tile.userData.themeColor !== currentFrameHex) {
                     tile.userData.themeColor = currentFrameHex;
                     
