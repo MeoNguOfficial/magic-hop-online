@@ -544,5 +544,7 @@
     "personalize_pattern_grid": "Lưới vi mạch",
     "personalize_environment": "Môi Trường",
     "env_void": "Hư Không",
-    "env_blueprint": "Đường Lưới 3D"
+    "env_blueprint": "Đường Lưới 3D",
+    "env_city": "Thành Phố",
+    "env_ricefield": "Đồng Lúa"
 }

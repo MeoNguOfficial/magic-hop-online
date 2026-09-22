@@ -544,5 +544,7 @@
     "personalize_pattern_grid": "Tech Grid",
     "personalize_environment": "Environment",
     "env_void": "The Void",
-    "env_blueprint": "Blueprint 3D"
+    "env_blueprint": "Blueprint 3D",
+    "env_city": "City",
+    "env_ricefield": "Rice Field"
 }

@@ -736,6 +736,24 @@ function shiftCoordinateOrigin(offsetZ) {
     if (blueprintGrid) {
         blueprintGrid.position.z += offsetZ;
     }
+    
+    if (cityInstancedMesh) {
+        for (let i = 0; i < cityInstancedMesh.count; i++) {
+            cityInstancedMesh.instanceMatrix.array[i * 16 + 14] += offsetZ;
+        }
+        cityInstancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    if (riceFieldInstancedMesh) {
+        for (let i = 0; i < riceFieldInstancedMesh.count; i++) {
+            riceFieldInstancedMesh.instanceMatrix.array[i * 16 + 14] += offsetZ;
+        }
+        riceFieldInstancedMesh.instanceMatrix.needsUpdate = true;
+    }
+
+    if (riceGroundPlane) {
+        riceGroundPlane.position.z += offsetZ;
+    }
 
     // 7. Dịch chuyển gạch giả và các mảnh vỡ (Fake blocks)
     if (window.FakeBlocksManager) {
@@ -1789,26 +1807,130 @@ window.updateBackgroundStyle = updateBackgroundStyle;
 // --- CẬP NHẬT MÔI TRƯỜNG (ENVIRONMENT) ---
 function updateEnvironment() {
     if (!scene) return;
+    const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
+    const groundY = mFloor - 2.5; // Đặt mặt đất/lưới thấp hơn tiles để không che khuất
 
+    // Blueprint
     if (selectedEnvironment === 'blueprint') {
         if (!blueprintGrid) {
-            // Tạo grid helper: size=2000, divisions=200, colorCenterLine, colorGrid
             blueprintGrid = new THREE.GridHelper(2000, 200, 0x00ffff, 0x004488);
-            const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
-            blueprintGrid.position.set(0, mFloor - 0.2, 0); // Đặt ngay dưới các khối gạch
-            
-            // Tối ưu hiệu năng: không nhận bóng đổ
+            blueprintGrid.position.set(0, groundY, 0);
             blueprintGrid.receiveShadow = false;
             scene.add(blueprintGrid);
         }
         blueprintGrid.visible = true;
-    } else {
-        if (blueprintGrid) {
-            blueprintGrid.visible = false;
+    } else if (blueprintGrid) {
+        blueprintGrid.visible = false;
+    }
+
+    // City
+    if (selectedEnvironment === 'city') {
+        if (!cityInstancedMesh) {
+            const count = 200;
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const mat = new THREE.MeshPhongMaterial({ color: 0x020a15, emissive: 0x002244 });
+            cityInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
+            const dummy = new THREE.Object3D();
+            for (let i = 0; i < count; i++) {
+                const z = 100 - Math.random() * 1100;
+                const side = Math.random() > 0.5 ? 1 : -1;
+                const x = side * (16 + Math.random() * 30); // Lùi ra 16 để không bị đè boundary
+                const h = 5 + Math.random() * 40;
+                const w = 4 + Math.random() * 8;
+                const d = 4 + Math.random() * 8;
+                dummy.position.set(x, groundY + h/2, z);
+                dummy.scale.set(w, h, d);
+                dummy.updateMatrix();
+                cityInstancedMesh.setMatrixAt(i, dummy.matrix);
+            }
+            scene.add(cityInstancedMesh);
         }
+        cityInstancedMesh.visible = true;
+    } else if (cityInstancedMesh) {
+        cityInstancedMesh.visible = false;
+    }
+
+    // Rice Field
+    if (selectedEnvironment === 'ricefield') {
+        if (!riceGroundPlane) {
+            // Ground
+            const pGeo = new THREE.PlaneGeometry(500, 1500);
+            pGeo.rotateX(-Math.PI / 2);
+            const pMat = new THREE.MeshPhongMaterial({ color: 0x8b5a00, emissive: 0x221100 });
+            riceGroundPlane = new THREE.Mesh(pGeo, pMat);
+            riceGroundPlane.position.set(0, groundY, -300);
+            scene.add(riceGroundPlane);
+
+            // Stalks
+            const count = 500;
+            const geo = new THREE.PlaneGeometry(0.8, 4);
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffb700, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+            riceFieldInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
+            const dummy = new THREE.Object3D();
+            for (let i = 0; i < count; i++) {
+                const z = 100 - Math.random() * 1100;
+                const side = Math.random() > 0.5 ? 1 : -1;
+                const x = side * (16 + Math.random() * 100); // Lùi ra 16 giống City
+                
+                dummy.position.set(x, groundY + 2, z); // Thân lúa cao 4, tâm ở giữa nên y + 2
+                dummy.rotation.y = Math.random() * Math.PI;
+                dummy.rotation.x = (Math.random() - 0.5) * 0.3;
+                dummy.updateMatrix();
+                riceFieldInstancedMesh.setMatrixAt(i, dummy.matrix);
+            }
+            scene.add(riceFieldInstancedMesh);
+        }
+        riceGroundPlane.visible = true;
+        riceFieldInstancedMesh.visible = true;
+    } else {
+        if (riceGroundPlane) riceGroundPlane.visible = false;
+        if (riceFieldInstancedMesh) riceFieldInstancedMesh.visible = false;
     }
 }
 window.updateEnvironment = updateEnvironment;
+
+function recycleEnvironmentObjects(cameraZ) {
+    if (selectedEnvironment === 'city' && cityInstancedMesh) {
+        let updated = false;
+        // The matrix for each instance is a 16-element Float32Array where elements[14] is Z translation
+        for (let i = 0; i < cityInstancedMesh.count; i++) {
+            const zIndex = i * 16 + 14; 
+            const z = cityInstancedMesh.instanceMatrix.array[zIndex];
+            if (z > cameraZ + 50) {
+                cityInstancedMesh.instanceMatrix.array[zIndex] -= 1100;
+                updated = true;
+            }
+        }
+        if (updated) {
+            cityInstancedMesh.instanceMatrix.needsUpdate = true;
+            // update bounding sphere for frustum culling
+            cityInstancedMesh.computeBoundingSphere();
+        }
+    }
+    
+    if (selectedEnvironment === 'ricefield' && riceFieldInstancedMesh) {
+        let updated = false;
+        for (let i = 0; i < riceFieldInstancedMesh.count; i++) {
+            const zIndex = i * 16 + 14;
+            const z = riceFieldInstancedMesh.instanceMatrix.array[zIndex];
+            if (z > cameraZ + 50) {
+                riceFieldInstancedMesh.instanceMatrix.array[zIndex] -= 1100;
+                updated = true;
+            }
+        }
+        if (updated) {
+            riceFieldInstancedMesh.instanceMatrix.needsUpdate = true;
+            riceFieldInstancedMesh.computeBoundingSphere();
+        }
+        
+        if (riceGroundPlane) {
+            // Keep the ground plane somewhat centered relative to the camera
+            // to maintain the infinite illusion without needing constant shifting
+            riceGroundPlane.position.z = cameraZ - 300;
+        }
+    }
+}
+window.recycleEnvironmentObjects = recycleEnvironmentObjects;
 
 // --- HOA VĂN BÓNG (PROCEDURAL TEXTURES) ---
 const patternTextures = {};
@@ -1937,6 +2059,10 @@ function getTrailSegmentFromPool() {
 
 function animate() {
     requestAnimationFrame(animate);
+
+    if (typeof recycleEnvironmentObjects === 'function' && camera) {
+        recycleEnvironmentObjects(camera.position.z);
+    }
 
     const now = performance.now();
     let limitValue = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);

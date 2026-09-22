@@ -1,271 +1,54 @@
-Hãy rà soát toàn bộ mã nguồn hiện tại của project trước khi thực hiện bất kỳ thay đổi nào.
+**Mục tiêu:** 
+Refactor và tối ưu hoá hiệu suất toàn bộ source code của game "Cyber Beat Hopper" (chạy trên Next.js/React & Canvas/WebGL). Đảm bảo game duy trì ổn định 60 FPS trên các máy cấu hình yếu, hạn chế tối đa nghẽn CPU, tụt khung hình do Garbage Collection và GPU render-overdraw.
 
-Mục tiêu là thực hiện **2 yêu cầu chính** dưới đây, đồng thời **giữ nguyên hoàn toàn gameplay, logic và hành vi hiện tại** nếu không liên quan trực tiếp đến các yêu cầu này.
-
-## 1. Thêm tùy chỉnh màu và hoa văn cho bóng
-
-Bổ sung vào phần **BG / Background & Ball settings** tùy chọn để người chơi có thể:
-
-* Chọn **màu của bóng**.
-* Chọn **hoa văn / pattern / texture của bóng**.
-* Preview trực quan bóng sau khi thay đổi.
-* Các tùy chọn phải được tích hợp phù hợp với UI/settings hiện tại, không phá vỡ layout hoặc flow hiện có.
-* Nếu project đã có hệ thống Settings, hãy **tái sử dụng hệ thống hiện tại** thay vì tạo một hệ thống settings mới không cần thiết.
-
-### Lưu cấu hình
-
-Các lựa chọn của người chơi phải được lưu persistent bằng:
-
-* `localStorage`, hoặc
-* `IndexedDB` nếu kiến trúc hiện tại phù hợp hơn.
-
-Ưu tiên giải pháp đơn giản, nhẹ và phù hợp với dữ liệu settings.
-
-Khi reload/reopen game:
-
-* Các tùy chọn màu bóng và hoa văn phải được khôi phục tự động.
-* Nếu chưa có dữ liệu đã lưu, sử dụng giá trị mặc định hiện tại của game.
-* Phải có cơ chế xử lý dữ liệu settings cũ/missing/invalid để không làm game crash.
-
-### Yêu cầu quan trọng
-
-* Không làm thay đổi physics, collision, movement, scoring, gameplay logic hoặc các mechanic hiện tại.
-* Không thay đổi kích thước/hitbox của bóng chỉ vì thêm visual customization.
-* Việc thay đổi màu/hoa văn chỉ ảnh hưởng đến phần **render/visual presentation** của bóng.
-* Nếu game có nhiều loại bóng hoặc nhiều trạng thái bóng, cần đảm bảo customization được áp dụng đúng đối tượng và không gây side effect.
+**Nguyên tắc tối thượng:** 
+- KHÔNG thay đổi bất kỳ logic gameplay hiện tại: công thức tính điểm, hitbox/collision, nhịp beat-sync, combo window, tốc độ rơi/di chuyển, và các state flow (Menu, Playing, GameOver).
+- Giữ nguyên toàn bộ visual core style (Cyberpunk/Neon vibe) nhưng thay đổi cách dựng hình để tối ưu chi phí render.
 
 ---
 
-# 2. Tối ưu hiệu suất toàn bộ project
+### CÁC HẠNG MỤC TỐI ƯU CẦN THỰC HIỆN
 
-Sau khi hiểu rõ kiến trúc hiện tại, hãy rà soát và tối ưu hiệu suất ở **3 khu vực: UI, Game và Core**.
+#### 1. Zero-Allocation trong Game Loop & Triệt tiêu Garbage Collection (GC)
+* **Object Pooling:** 
+  - Áp dụng pool cố định cho toàn bộ entities sinh/hủy liên tục: Beats/Tiles, Particle effects, Shockwaves, Float text (+Score, Combo). 
+  - Tái sử dụng mảng/object thay vì dùng `new Object()` hoặc array methods sinh mảng mới (`.map()`, `.filter()`, `.slice()`, spread operator `[...]`) bên trong `requestAnimationFrame` hay hàm update.
+* **Pre-allocation:** Khởi tạo sẵn các vector, matrix hoặc biến tạm dùng cho tính toán toạ độ và bounding box ngay ngoài vòng lặp.
 
-## UI
+#### 2. Tối ưu Canvas / WebGL Rendering Pipeline
+* **Tối ưu hiệu ứng Neon Glow (Đặc thù Cyberpunk):**
+  - Tuyệt đối hạn chế lạm dụng `ctx.shadowBlur` và `ctx.shadowColor` liên tục trên từng frame vì gây nghẽn rasterization nghiêm trọng trên GPU yếu.
+  - Chuyển đổi các asset phát sáng tĩnh/bán tĩnh (Tile nền, icon, bóng sáng cố định) sang kỹ thuật **Offscreen Canvas pre-rendering**: vẽ trước hiệu ứng blur một lần vào offscreen buffer và dùng `ctx.drawImage()` lên canvas chính.
+* **Canvas Pixel Ratio (DPR) Scaling:**
+  - Không hardcode `window.devicePixelRatio` lên mức 2x/3x trên mobile/low-end GPU.
+  - Giới hạn DPR tối đa ở mức `Math.min(window.devicePixelRatio, 1.5)` (hoặc fallback về `1` nếu phát hiện FPS drop dưới 45).
+* **Clear Rect & Batching:**
+  - Gom các lệnh vẽ cùng thuộc tính (`fillStyle`, `strokeStyle`) lại với nhau trước khi gọi `fill()` / `stroke()` để giảm state changes.
+  - Sử dụng toạ độ số nguyên (`| 0` hoặc `Math.floor`) khi render texture/bitmap để tránh trình duyệt phải xử lý sub-pixel anti-aliasing tốn kém.
 
-Kiểm tra:
+#### 3. React / Next.js Lifecycle & Decoupling
+* **Tách rời React State khỏi Game Loop:**
+  - Tuyệt đối không lưu các biến thay đổi liên tục 60fps (vị trí người chơi, timer, animation frame, beat tick) vào React `useState`. 
+  - Sử dụng React `useRef` để chứa toàn bộ state engine thời gian thực.
+  - Chỉ trigger re-render React khi có state chuyển đổi giao diện lớn (Game Over, Level Clear, Pause menu).
+* **HUD Overlay Tối ưu:**
+  - Nếu điểm số, combo hiển thị bằng DOM text: dùng DOM Ref trực tiếp (`scoreRef.current.textContent = score`) hoặc vẽ trực tiếp lên Canvas thay vì ép React render lại component root.
 
-* Unnecessary re-render / redraw.
-* DOM operations không cần thiết.
-* Event listeners bị đăng ký lặp.
-* Event listener không được cleanup.
-* Layout/reflow/repaint không cần thiết.
-* Animation không tối ưu.
-* Các component/state update dư thừa.
-* Các thao tác có thể cache nhưng đang được tính toán lại.
-* Các asset/UI resource được load hoặc tạo lại nhiều lần.
+#### 4. Beat Timing & Audio Engine Resilience
+* **AudioContext Clock Sync:**
+  - Giữ nguyên logic sync beat theo `audioContext.currentTime`, không phụ thuộc vào `performance.now()` hay biến delta time không ổn định khi drop frame.
+  - Tách luồng tính toán audio scheduler chạy theo chunk nhỏ (lookahead scheduler) để nhạc không bị giật/khựng ngay cả khi main thread bị spike nhẹ.
 
-Tối ưu nhưng **không làm thay đổi UI/UX hiện tại**, trừ khi thay đổi đó cần thiết để sửa vấn đề hiệu suất và không ảnh hưởng hành vi.
-
-## Game
-
-Kiểm tra:
-
-* Game loop / update loop.
-* Render loop.
-* Physics/update calculations.
-* Collision detection.
-* Object creation/destruction.
-* Garbage collection pressure.
-* Allocation object/array/string trong loop.
-* Các phép tính được thực hiện lặp lại nhưng có thể cache/precompute.
-* Các object/resource có thể reuse.
-* Animation và rendering.
-* Các thao tác không cần thiết mỗi frame.
-
-Đặc biệt chú ý những đoạn code chạy **mỗi frame / tick**.
-
-Không được thay đổi:
-
-* Physics behavior.
-* Collision behavior.
-* Movement.
-* Timing gameplay.
-* Difficulty.
-* Score.
-* Spawn logic.
-* Game rules.
-* Input behavior.
-
-Mục tiêu là làm cho implementation hiệu quả hơn nhưng **kết quả gameplay phải tương đương với phiên bản hiện tại**.
-
-## Core
-
-Rà soát các module/core systems để tìm:
-
-* Logic bị duplicate.
-* Function được gọi quá nhiều lần.
-* Computation có thể cache/memoize.
-* Data structure chưa phù hợp.
-* Unnecessary serialization/deserialization.
-* Unnecessary state synchronization.
-* Memory leak.
-* Resource leak.
-* Timer/interval không được cleanup.
-* Event subscription không được unsubscribe.
-* Các dependency/import không cần thiết.
-* Code path không còn sử dụng.
-* Các thao tác I/O/storage không cần thiết hoặc quá thường xuyên.
-
-Ưu tiên các tối ưu có tác động thực tế và **không thay đổi public API hoặc behavior hiện tại** nếu không thực sự cần thiết.
+#### 5. Adaptive Performance Mode (Fallback tự động)
+* Thêm một module đo FPS ngầm:
+  - Nếu FPS trung bình dưới 40 FPS trong 3 giây liên tiếp:
+    - Giảm số lượng hạt sinh ra (Particles limit giảm 50%).
+    - Vô hiệu hoá các hiệu ứng filter hậu kỳ (hạ scanline/chromatic aberration CSS nếu có).
+    - Tắt glow thời gian thực trên các vật thể nhỏ.
 
 ---
 
-# Nguyên tắc bắt buộc
-
-### 1. Không rewrite toàn bộ project
-
-Không được tự ý viết lại architecture hoặc thay framework/engine/library.
-
-Chỉ refactor những phần thực sự cần thiết.
-
-### 2. Không thay đổi gameplay
-
-Đây là yêu cầu quan trọng nhất.
-
-Sau khi tối ưu:
-
-> Game phải hoạt động và cho kết quả giống phiên bản trước, chỉ khác ở hiệu suất và tính năng customization được yêu cầu.
-
-### 3. Không over-engineering
-
-Không tạo abstraction, manager, service hoặc architecture mới nếu hệ thống hiện tại đã có thể xử lý yêu cầu một cách đơn giản.
-
-Ưu tiên:
-
-> Existing architecture → minimal changes → measurable improvement.
-
-### 4. Ưu tiên backward compatibility
-
-Các settings/game data hiện tại phải tiếp tục hoạt động.
-
-Không được làm mất dữ liệu người chơi đang có.
-
-### 5. Không tối ưu mù
-
-Trước khi sửa, hãy xác định:
-
-* Đoạn code nào có vấn đề.
-* Tại sao nó gây overhead.
-* Nó chạy bao nhiêu lần / khi nào.
-* Có thể tối ưu bằng cách nào.
-* Việc tối ưu có risk gì đối với gameplay.
-
-Không thay đổi code chỉ vì "trông có vẻ chưa tối ưu".
-
----
-
-# Quy trình thực hiện
-
-Hãy thực hiện theo thứ tự:
-
-### Phase 1 — Audit
-
-Rà soát toàn bộ source code và xác định:
-
-* Architecture hiện tại.
-* UI architecture.
-* Game loop.
-* Rendering.
-* Physics/collision.
-* State management.
-* Settings system.
-* Storage system.
-* Các bottleneck tiềm năng.
-* Các đoạn code chạy thường xuyên.
-
-### Phase 2 — Implementation
-
-Triển khai:
-
-1. Ball color customization.
-2. Ball pattern customization.
-3. Persistent storage cho các settings.
-4. Performance optimization cho UI.
-5. Performance optimization cho Game.
-6. Performance optimization cho Core.
-
-### Phase 3 — Validation
-
-Sau khi chỉnh sửa:
-
-* Kiểm tra toàn bộ flow game.
-* Kiểm tra UI.
-* Kiểm tra settings.
-* Reload game để kiểm tra persistence.
-* Kiểm tra ball color/pattern.
-* Kiểm tra gameplay trước và sau optimization.
-* Kiểm tra console/runtime errors.
-* Kiểm tra memory/resource leak nếu có thể.
-* Kiểm tra performance regression.
-
-Nếu project có test suite, hãy chạy toàn bộ test hiện có và bổ sung test cần thiết cho functionality mới.
-
----
-
-# Output yêu cầu
-
-Sau khi hoàn thành, hãy báo cáo rõ:
-
-## A. Files đã thay đổi
-
-Liệt kê từng file và lý do thay đổi.
-
-## B. Tính năng mới
-
-Mô tả:
-
-* Ball color.
-* Ball pattern.
-* Storage/persistence.
-* Default/fallback settings.
-
-## C. Performance optimization
-
-Chia thành:
-
-* UI.
-* Game.
-* Core.
-
-Với mỗi optimization, giải thích ngắn gọn:
-
-**Before → After → Benefit**
-
-Ví dụ:
-
-* Loại bỏ object allocation trong game loop.
-* Cache calculation được sử dụng nhiều lần.
-* Cleanup event listener.
-* Giảm unnecessary render/update.
-* Reuse object thay vì tạo mới liên tục.
-
-## D. Behavior compatibility
-
-Xác nhận rõ những gameplay behavior nào đã được giữ nguyên.
-
-Nếu có thay đổi behavior ngoài phạm vi yêu cầu, **không tự ý chấp nhận thay đổi đó**; hãy nêu rõ để tôi xem xét.
-
-## E. Risk / Remaining issues
-
-Liệt kê các vấn đề hiệu suất còn tồn tại nhưng chưa sửa, nếu có, cùng lý do tại sao chưa sửa.
-
----
-
-### Tiêu chí hoàn thành
-
-Chỉ coi task hoàn thành khi:
-
-* [ ] Có thể chọn màu bóng.
-* [ ] Có thể chọn hoa văn bóng.
-* [ ] Có preview/feedback trực quan phù hợp.
-* [ ] Settings được lưu persistent.
-* [ ] Settings được restore sau reload.
-* [ ] Không làm mất settings/data hiện tại.
-* [ ] UI không bị regression.
-* [ ] Gameplay không bị thay đổi.
-* [ ] Game/core được tối ưu mà không phá behavior.
-* [ ] Không phát sinh memory/resource leak do implementation mới.
-* [ ] Không có runtime error liên quan đến các thay đổi.
-* [ ] Test/validation hiện có vẫn pass.
-
-**Quan trọng:** Đừng chỉ tập trung vào việc thêm tính năng. Hãy ưu tiên hiểu rõ source code hiện tại trước, sau đó thực hiện thay đổi nhỏ nhất cần thiết để đạt mục tiêu. Không rewrite hoặc thay đổi architecture nếu không có lý do kỹ thuật rõ ràng.
+### YÊU CẦU ĐẦU RA:
+1. Đưa ra chi tiết những đoạn code được refactor (GameLoop, Canvas Renderer, Particle System, State Manager).
+2. Giải thích ngắn gọn cơ chế giảm tải CPU/GPU ở từng phần tương ứng.
+3. Đảm bảo cấu trúc code sạch, dễ bảo trì và tích hợp mượt mà với codebase hiện tại.
