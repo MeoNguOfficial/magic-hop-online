@@ -1473,7 +1473,58 @@ function applySettings() {
     if (typeof window.adjustTabsKerning === 'function') {
         window.adjustTabsKerning();
     }
+    
+    if (typeof window.checkAndLockHeavyEnvironments === 'function') {
+        window.checkAndLockHeavyEnvironments();
+    }
 }
+
+window.checkAndLockHeavyEnvironments = function() {
+    const isLocked = performanceModeEnabled || currentGraphicsQuality === 'simple';
+    
+    const cityOpt = document.querySelector('label[data-environment="city"]');
+    const riceOpt = document.querySelector('label[data-environment="ricefield"]');
+    
+    [cityOpt, riceOpt].forEach(card => {
+        if (!card) return;
+        if (isLocked) {
+            card.classList.add('opacity-40', 'pointer-events-none', 'grayscale');
+            card.setAttribute('title', 'Không khả dụng khi bật Hiệu suất hoặc Đồ họa Thấp');
+            const input = card.querySelector('input');
+            if (input) input.disabled = true;
+        } else {
+            card.classList.remove('opacity-40', 'pointer-events-none', 'grayscale');
+            card.removeAttribute('title');
+            const input = card.querySelector('input');
+            if (input) input.disabled = false;
+        }
+    });
+
+    if (isLocked) {
+        let currentEnv = typeof selectedEnvironment !== 'undefined' ? selectedEnvironment : localStorage.getItem('selectedEnvironment') || 'void';
+        if (currentEnv === 'city' || currentEnv === 'ricefield') {
+            currentEnv = 'void';
+            if (typeof selectedEnvironment !== 'undefined') {
+                selectedEnvironment = 'void';
+            }
+            localStorage.setItem('selectedEnvironment', 'void');
+            
+            if (typeof window.updateEnvironment === 'function') {
+                window.updateEnvironment();
+            }
+            
+            const voidRadio = document.querySelector('input[name="selected-environment"][value="void"]');
+            if (voidRadio) {
+                voidRadio.checked = true;
+                voidRadio.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    window.checkAndLockHeavyEnvironments();
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     function updateMuteButtonUI(btn, isMuted) {

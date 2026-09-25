@@ -740,8 +740,14 @@ function shiftCoordinateOrigin(offsetZ) {
     if (cityInstancedMesh) {
         for (let i = 0; i < cityInstancedMesh.count; i++) {
             cityInstancedMesh.instanceMatrix.array[i * 16 + 14] += offsetZ;
+            if (window.cityWireframeInstancedMesh) {
+                window.cityWireframeInstancedMesh.instanceMatrix.array[i * 16 + 14] += offsetZ;
+            }
         }
         cityInstancedMesh.instanceMatrix.needsUpdate = true;
+        if (window.cityWireframeInstancedMesh) {
+            window.cityWireframeInstancedMesh.instanceMatrix.needsUpdate = true;
+        }
     }
 
     if (riceFieldInstancedMesh) {
@@ -1827,27 +1833,108 @@ function updateEnvironment() {
     if (selectedEnvironment === 'city') {
         if (!cityInstancedMesh) {
             const count = 200;
-            const geo = new THREE.BoxGeometry(1, 1, 1);
-            const mat = new THREE.MeshPhongMaterial({ color: 0x020a15, emissive: 0x002244 });
+            // Tối ưu City: Chỉ tạo mặt trước (Front) và mặt hông trái (Left)
+            const geo = new THREE.BufferGeometry();
+            const vertices = new Float32Array([
+                // Front face (z = 0.5)
+                 0.5,  0.5, 0.5,
+                -0.5,  0.5, 0.5,
+                -0.5, -0.5, 0.5,
+                 0.5, -0.5, 0.5,
+                // Left face (x = -0.5)
+                -0.5,  0.5, -0.5,
+                -0.5,  0.5,  0.5,
+                -0.5, -0.5,  0.5,
+                -0.5, -0.5, -0.5
+            ]);
+            const normals = new Float32Array([
+                 0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1,
+                -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0
+            ]);
+            const indices = [
+                0, 1, 2,   0, 2, 3,
+                4, 5, 6,   4, 6, 7
+            ];
+            geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+            geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
+            geo.setIndex(indices);
+
+            // Dùng DoubleSide để khi lật Scale X thì mặt không bị culling
+            const mat = new THREE.MeshPhongMaterial({ color: 0x020a15, emissive: 0x002244, side: THREE.DoubleSide });
+            
             cityInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
+            
+            // Lưới viền (Wireframe) đè lên để tạo viền cho toà nhà siêu nhẹ
+            const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
+            window.cityWireframeInstancedMesh = new THREE.InstancedMesh(geo, wireMat, count);
+
             const dummy = new THREE.Object3D();
             for (let i = 0; i < count; i++) {
-                const z = 100 - Math.random() * 1100;
-                const side = Math.random() > 0.5 ? 1 : -1;
-                const x = side * (16 + Math.random() * 30); // Lùi ra 16 để không bị đè boundary
-                const h = 5 + Math.random() * 40;
+                // Sắp xếp grid để tránh đè nhau (100 toà mỗi bên, 2 cột/bên, 50 hàng dọc)
+                const sideIndex = Math.floor(i / 2); 
+                const side = (i % 2 === 0) ? 1 : -1;
+                const col = sideIndex % 2; 
+                const row = Math.floor(sideIndex / 2); 
+                
+                // w, d tối đa là 12, nên grid ô 16x22
                 const w = 4 + Math.random() * 8;
                 const d = 4 + Math.random() * 8;
+                const h = 5 + Math.random() * 40;
+                
+                // Khoảng cách an toàn để không đâm xuyên
+                const xBase = 24 + col * 16; // Cột 1: x=24, Cột 2: x=40
+                const zBase = 100 - row * 22; // Hàng 0: z=100, Hàng 49: z=-978
+                
+                const x = side * (xBase + (Math.random() * 4 - 2)); // Lệch random nhẹ +-2
+                let z = zBase + (Math.random() * 10 - 5); // Lệch random dọc +-5
+                
+                // Align with cameraZ immediately if updating mid-game
+                const currentCameraZ = typeof camera !== 'undefined' && camera ? camera.position.z : 15;
+                if (z > currentCameraZ + 50) {
+                    const shifts = Math.ceil((z - (currentCameraZ + 50)) / 1100);
+                    z -= shifts * 1100;
+                }
+
                 dummy.position.set(x, groundY + h/2, z);
-                dummy.scale.set(w, h, d);
+                // Lật scale X=-1 nếu ở bên trái để mặt Left hướng ra ngoài thành Right
+                dummy.scale.set(side === 1 ? w : -w, h, d);
                 dummy.updateMatrix();
                 cityInstancedMesh.setMatrixAt(i, dummy.matrix);
+                window.cityWireframeInstancedMesh.setMatrixAt(i, dummy.matrix);
             }
             scene.add(cityInstancedMesh);
+            scene.add(window.cityWireframeInstancedMesh);
+        } else {
+            // Đã tồn tại, căn chỉnh lại theo camera nếu đang chơi giữa ván
+            if (typeof camera !== 'undefined' && camera && cityInstancedMesh) {
+                let updated = false;
+                for (let i = 0; i < cityInstancedMesh.count; i++) {
+                    const zIndex = i * 16 + 14; 
+                    let z = cityInstancedMesh.instanceMatrix.array[zIndex];
+                    if (z > camera.position.z + 50) {
+                        const shifts = Math.ceil((z - (camera.position.z + 50)) / 1100);
+                        cityInstancedMesh.instanceMatrix.array[zIndex] -= shifts * 1100;
+                        if (window.cityWireframeInstancedMesh) {
+                            window.cityWireframeInstancedMesh.instanceMatrix.array[zIndex] -= shifts * 1100;
+                        }
+                        updated = true;
+                    }
+                }
+                if (updated) {
+                    cityInstancedMesh.instanceMatrix.needsUpdate = true;
+                    cityInstancedMesh.computeBoundingSphere();
+                    if (window.cityWireframeInstancedMesh) {
+                        window.cityWireframeInstancedMesh.instanceMatrix.needsUpdate = true;
+                        window.cityWireframeInstancedMesh.computeBoundingSphere();
+                    }
+                }
+            }
         }
         cityInstancedMesh.visible = true;
+        if (window.cityWireframeInstancedMesh) window.cityWireframeInstancedMesh.visible = true;
     } else if (cityInstancedMesh) {
         cityInstancedMesh.visible = false;
+        if (window.cityWireframeInstancedMesh) window.cityWireframeInstancedMesh.visible = false;
     }
 
     // Rice Fields
@@ -1868,7 +1955,15 @@ function updateEnvironment() {
             riceFieldInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
             const dummy = new THREE.Object3D();
             for (let i = 0; i < count; i++) {
-                const z = 100 - Math.random() * 1100;
+                let z = 100 - Math.random() * 1100;
+                
+                // Align with cameraZ immediately if updating mid-game
+                const currentCameraZ = typeof camera !== 'undefined' && camera ? camera.position.z : 15;
+                if (z > currentCameraZ + 50) {
+                    const shifts = Math.ceil((z - (currentCameraZ + 50)) / 1100);
+                    z -= shifts * 1100;
+                }
+                
                 const side = Math.random() > 0.5 ? 1 : -1;
                 const x = side * (16 + Math.random() * 100); // Lùi ra 16 giống City
                 
@@ -1879,8 +1974,30 @@ function updateEnvironment() {
                 riceFieldInstancedMesh.setMatrixAt(i, dummy.matrix);
             }
             scene.add(riceFieldInstancedMesh);
+        } else {
+            // Đã tồn tại, căn chỉnh lại theo camera nếu đang chơi giữa ván
+            if (typeof camera !== 'undefined' && camera && riceFieldInstancedMesh) {
+                let updated = false;
+                for (let i = 0; i < riceFieldInstancedMesh.count; i++) {
+                    const zIndex = i * 16 + 14; 
+                    let z = riceFieldInstancedMesh.instanceMatrix.array[zIndex];
+                    if (z > camera.position.z + 50) {
+                        const shifts = Math.ceil((z - (camera.position.z + 50)) / 1100);
+                        riceFieldInstancedMesh.instanceMatrix.array[zIndex] -= shifts * 1100;
+                        updated = true;
+                    }
+                }
+                if (updated) {
+                    riceFieldInstancedMesh.instanceMatrix.needsUpdate = true;
+                    riceFieldInstancedMesh.computeBoundingSphere();
+                }
+            }
         }
         riceGroundPlane.visible = true;
+        // Align ground immediately if updating mid-game
+        if (typeof camera !== 'undefined' && camera) {
+            riceGroundPlane.position.z = camera.position.z - 300;
+        }
         riceFieldInstancedMesh.visible = true;
     } else {
         if (riceGroundPlane) riceGroundPlane.visible = false;
@@ -1888,6 +2005,36 @@ function updateEnvironment() {
     }
 }
 window.updateEnvironment = updateEnvironment;
+
+function resetEnvironmentPositions() {
+    if (typeof cityInstancedMesh !== 'undefined' && cityInstancedMesh) {
+        scene.remove(cityInstancedMesh);
+        if (cityInstancedMesh.geometry) cityInstancedMesh.geometry.dispose();
+        if (cityInstancedMesh.material) cityInstancedMesh.material.dispose();
+        cityInstancedMesh = null;
+    }
+    if (typeof window.cityWireframeInstancedMesh !== 'undefined' && window.cityWireframeInstancedMesh) {
+        scene.remove(window.cityWireframeInstancedMesh);
+        if (window.cityWireframeInstancedMesh.geometry) window.cityWireframeInstancedMesh.geometry.dispose();
+        if (window.cityWireframeInstancedMesh.material) window.cityWireframeInstancedMesh.material.dispose();
+        window.cityWireframeInstancedMesh = null;
+    }
+    if (typeof riceFieldInstancedMesh !== 'undefined' && riceFieldInstancedMesh) {
+        scene.remove(riceFieldInstancedMesh);
+        if (riceFieldInstancedMesh.geometry) riceFieldInstancedMesh.geometry.dispose();
+        if (riceFieldInstancedMesh.material) riceFieldInstancedMesh.material.dispose();
+        riceFieldInstancedMesh = null;
+    }
+    if (typeof riceGroundPlane !== 'undefined' && riceGroundPlane) {
+        scene.remove(riceGroundPlane);
+        if (riceGroundPlane.geometry) riceGroundPlane.geometry.dispose();
+        if (riceGroundPlane.material) riceGroundPlane.material.dispose();
+        riceGroundPlane = null;
+    }
+    
+    // Recreate them at the origin (Z=0 area)
+    updateEnvironment();
+}
 
 function recycleEnvironmentObjects(cameraZ) {
     if (selectedEnvironment === 'city' && cityInstancedMesh) {
@@ -1898,13 +2045,19 @@ function recycleEnvironmentObjects(cameraZ) {
             const z = cityInstancedMesh.instanceMatrix.array[zIndex];
             if (z > cameraZ + 50) {
                 cityInstancedMesh.instanceMatrix.array[zIndex] -= 1100;
+                if (window.cityWireframeInstancedMesh) {
+                    window.cityWireframeInstancedMesh.instanceMatrix.array[zIndex] -= 1100;
+                }
                 updated = true;
             }
         }
         if (updated) {
             cityInstancedMesh.instanceMatrix.needsUpdate = true;
-            // update bounding sphere for frustum culling
             cityInstancedMesh.computeBoundingSphere();
+            if (window.cityWireframeInstancedMesh) {
+                window.cityWireframeInstancedMesh.instanceMatrix.needsUpdate = true;
+                window.cityWireframeInstancedMesh.computeBoundingSphere();
+            }
         }
     }
     
@@ -4095,6 +4248,10 @@ function resetGameScene() {
     }
 
     cleanUpOldObjects();
+    
+    if (typeof resetEnvironmentPositions === 'function') {
+        resetEnvironmentPositions();
+    }
 
     // Dọn dẹp các đường sáng chạy trên biên (đưa vào pool)
     boundaryPulses.forEach(pulse => {
