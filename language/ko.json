@@ -536,5 +536,6 @@
     "env_void": "The Void",
     "env_blueprint": "Blueprint 3D",
     "env_city": "City",
-    "env_ricefield": "Rice Field"
+    "env_ricefield": "Rice Field",
+    "env_perf_warning": "(성능이 저하될 수 있습니다)"
 }

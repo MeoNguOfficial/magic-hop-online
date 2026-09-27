@@ -277,34 +277,14 @@ async function saveBestScore(songIndex, score, isPassed = false) {
 
 // --- LÀM MỜ TILE SAU KHI BÓNG ĐÃ CHẠM ---
 function dimLandedTile(tile) {
-    if (!tile || !tile.userData || tile.userData.isDimmed) return;
-
-    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-
-    // Chỉ áp dụng dim cho WebGPU API, WebGL giữ nguyên không thay đổi
+    if (!tile || !tile.userData) return;
+    const isWebGPU = typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu');
+    // Chỉ áp dụng dim cho WebGPU API
     if (!isWebGPU) return;
 
     tile.userData.isDimmed = true;
-
-    // Chỉ làm mờ phần nền body bên trong
-    if (tile.material) {
-        tile.material.opacity = 0.08;
-    }
-
-    // Làm mờ cả glowMesh dưới chân block
-    if (tile.userData.glowMesh === undefined) {
-        tile.userData.glowMesh = tile.getObjectByName('glowMesh') || null;
-    }
-    const glowMesh = tile.userData.glowMesh;
-    if (glowMesh) {
-        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-        if (glowMat) {
-            if (glowMat.uniforms) {
-                glowMat.uniforms.opacityMultiplier.value = 0.15;
-            } else {
-                glowMat.opacity = 0.08;
-            }
-        }
+    if (window.globalTileDimmedMat) {
+        tile.material = window.globalTileDimmedMat;
     }
 }
 
@@ -2080,11 +2060,19 @@ function resetEnvironmentPositions() {
     updateEnvironment();
 }
 
+let lastEnvironmentRecycleZ = 0;
+
 function recycleEnvironmentObjects(cameraZ) {
     if (selectedEnvironment === 'blueprint' && blueprintGrid) {
         const cellSize = 10;
         blueprintGrid.position.z = Math.floor(cameraZ / cellSize) * cellSize;
     }
+
+    if (Math.abs(cameraZ - lastEnvironmentRecycleZ) < 30) {
+        return;
+    }
+    lastEnvironmentRecycleZ = cameraZ;
+
 
     if (selectedEnvironment === 'city' && cityInstancedMesh) {
         let updated = false;
@@ -2460,12 +2448,63 @@ function animate() {
         
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
-            // Lượng tử hoá Hue (256 bước cho 1 vòng lặp) để giới hạn số lần vật liệu phải cập nhật thay vì cập nhật 144 lần/giây
-            const hueSteps = 256;
-            const rawHue = (time * 0.2) % 1;
-            const hue = Math.floor(rawHue * hueSteps) / hueSteps;
+            // Không lượng tử hoá Hue nữa vì ta đã dùng Shared Materials (O(1)), màu sẽ mượt hoàn toàn ở bất kỳ FPS nào
+            const hue = (time * 0.2) % 1;
             tempColor.setHSL(hue, 0.8, 0.5);
             currentFrameHex = tempColor.getHex();
+            
+            const syncMaterial = (mat) => {
+                if (!mat) return;
+                if (mat.color && mat.color.getHex() !== currentFrameHex) {
+                    mat.color.setHex(currentFrameHex);
+                }
+                if (mat.emissive) mat.emissive.copy(tempColor).multiplyScalar(0.2);
+            };
+
+            syncMaterial(window.globalTileMatCyan);
+            syncMaterial(window.globalTileMatMagenta);
+            syncMaterial(window.globalTileDimmedMatCyan);
+            syncMaterial(window.globalTileDimmedMatMagenta);
+
+            if (window.globalBorderMatCyan && window.globalBorderMatCyan.color.getHex() !== (isWebGPUCached ? 0xffffff : currentFrameHex)) {
+                window.globalBorderMatCyan.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
+            }
+            if (window.globalBorderMatMagenta && window.globalBorderMatMagenta.color.getHex() !== (isWebGPUCached ? 0xffffff : currentFrameHex)) {
+                window.globalBorderMatMagenta.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
+            }
+
+            const syncGlow = (glowMat) => {
+                if (!glowMat) return;
+                if (glowMat.uniforms && glowMat.uniforms.color) {
+                    glowMat.uniforms.color.value.setHex(currentFrameHex);
+                } else if (glowMat.color) {
+                    glowMat.color.setHex(currentFrameHex);
+                }
+            };
+            syncGlow(window.globalTileGlowMatCyan);
+            syncGlow(window.globalTileGlowMatMagenta);
+            // Update fake tile colors explicitly if they have cloned materials
+            if (typeof FakeBlocksManager !== 'undefined' && Array.isArray(FakeBlocksManager.fakeTiles)) {
+                const fTiles = FakeBlocksManager.fakeTiles;
+                for (let j = 0; j < fTiles.length; j++) {
+                    const fTile = fTiles[j];
+                    if (fTile && fTile.visible) {
+                        if (fTile.material) fTile.material.color.setHex(currentFrameHex);
+                        if (fTile.userData && fTile.userData.borderLine && fTile.userData.borderLine.material) {
+                            fTile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
+                        }
+                        const glowMesh = fTile.getObjectByName('glowMesh');
+                        if (glowMesh && glowMesh.material) {
+                            const mat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
+                            if (mat && mat.uniforms && mat.uniforms.color) {
+                                mat.uniforms.color.value.setHex(currentFrameHex);
+                            } else if (mat && mat.color) {
+                                mat.color.setHex(currentFrameHex);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         const tilesCount = tiles.length;
@@ -2478,32 +2517,7 @@ function animate() {
             const isVisible = tile.position.z < camZForCulling + 30 && tile.position.z > camZForCulling - 250;
             
             if (isVisible && dynamicColorsEnabled && currentFrameHex !== undefined) {
-                if (tile.userData.themeColor !== currentFrameHex) {
-                    tile.userData.themeColor = currentFrameHex;
-                    
-                    if (tile.material) {
-                        tile.material.color.setHex(currentFrameHex);
-                        if (tile.material.emissive) tile.material.emissive.copy(tempColor).multiplyScalar(0.2);
-                    }
-
-                    if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                        tile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
-                    }
-                    if (tile.userData.glowMesh === undefined) {
-                        tile.userData.glowMesh = tile.getObjectByName("glowMesh") || null;
-                    }
-                    const glowMesh = tile.userData.glowMesh;
-                    if (glowMesh && glowMesh.material) {
-                        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                        if (glowMat) {
-                            if (glowMat.uniforms) {
-                                glowMat.uniforms.color.value.setHex(currentFrameHex);
-                            } else {
-                                glowMat.color.setHex(currentFrameHex);
-                            }
-                        }
-                    }
-                }
+                tile.userData.themeColor = currentFrameHex;
             }
 
             if (tile.userData.centerMeshFade && tile.userData.centerMesh && tile.userData.centerMesh.material) {
@@ -2667,38 +2681,18 @@ function animate() {
             et.userData.exitVelZ += 60 * delta;
             et.position.z += et.userData.exitVelZ * delta;
 
-            // Fade tất cả các phần hiển thị
+            // Cập nhật biến tính toán thời điểm thu hồi (mô phỏng opacity để giữ logic thu hồi cũ)
             const fadeDelta = 2.2 * delta;
             et.userData.exitOpacity = Math.max(0, et.userData.exitOpacity - fadeDelta);
             const op = et.userData.exitOpacity;
 
-            // Body (có thể đã dim rất thấp, fade cùng)
-            if (et.material) et.material.opacity = Math.max(0, et.material.opacity - fadeDelta);
+            // Đưa scale về bình thường, block sẽ chỉ trượt (slide) về phía sau và tự động bị culling khi ra khỏi tầm nhìn camera
+            // như logic slide nguyên bản, thay vì bị thu nhỏ.
+            et.scale.set(1, 1, 1);
 
-            // Viền — luôn fade để animation thấy được
-            if (et.userData.borderLine && et.userData.borderLine.material) {
-                et.userData.borderLine.material.opacity = op;
-            }
-
-            // Center dot
+            // Center dot (vật liệu này đã được clone riêng nên có thể fade độc lập)
             if (et.userData.centerMesh && et.userData.centerMesh.material) {
                 et.userData.centerMesh.material.opacity = Math.max(0, et.userData.centerMesh.material.opacity - fadeDelta);
-            }
-
-            // Glow
-            if (et.userData.glowMesh === undefined) {
-                et.userData.glowMesh = et.getObjectByName("glowMesh") || null;
-            }
-            const glowMesh = et.userData.glowMesh;
-            if (glowMesh && glowMesh.material) {
-                const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                if (glowMat) {
-                    if (glowMat.uniforms) {
-                        glowMat.uniforms.opacityMultiplier.value = Math.max(0, glowMat.uniforms.opacityMultiplier.value - fadeDelta);
-                    } else {
-                        glowMat.opacity = Math.max(0, glowMat.opacity - fadeDelta * 0.85);
-                    }
-                }
             }
 
             // Thu hồi khi viền đã fade hết hoặc đã trượt ra quá xa
@@ -2764,7 +2758,7 @@ function animate() {
                 if (starFieldUniforms.uCamZ) {
                     starFieldUniforms.uCamZ.value = typeof camera !== 'undefined' ? camera.position.z : 10;
                 }
-            } else if (starField.geometry && starField.geometry.attributes.position) {
+            } else if (starField.geometry && starField.geometry.attributes.position && moveZ !== 0) {
                 // Tối ưu hoá fallback (WebGPU/Mobile/CPU): tự xử lý reposition/wrap-around
                 const posArr = starField.geometry.attributes.position.array;
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : 10;
@@ -2923,13 +2917,8 @@ function animate() {
                             calculateNextParabola(currentTileIndex);
                         }
 
-                        if (targetTile.material.emissive) targetTile.material.emissive.setHex(0x00ffff);
-                        const capturedTile = targetTile;
-                        setTimeout(() => {
-                            if (capturedTile && capturedTile.material && capturedTile.material.emissive) {
-                                capturedTile.material.emissive.setHex(capturedTile.userData.themeColor === 0xff00ff ? 0x220022 : 0x001122);
-                            }
-                        }, 150);
+                        // Bỏ hiệu ứng flash emissive trên material dùng chung để tránh lỗi chớp sáng toàn màn hình.
+                        // (Hiệu ứng flash đã được centerMesh đảm nhiệm an toàn qua cơ chế clone per-tile).
                     } else {
                         isFalling = true;
                         // Cắt giảm vận tốc rơi tự do ban đầu để người chơi có thêm thời gian phản xạ cứu bóng
@@ -3137,13 +3126,8 @@ function animate() {
                         }
                     }
 
-                    if (targetTile.material && targetTile.material.emissive) targetTile.material.emissive.setHex(0x00ffff);
-                    const capturedTile = targetTile;
-                    setTimeout(() => {
-                        if (capturedTile && capturedTile.material && capturedTile.material.emissive) {
-                            capturedTile.material.emissive.setHex(capturedTile.userData.themeColor === 0xff00ff ? 0x220022 : 0x001122);
-                        }
-                    }, 150);
+                    // Bỏ hiệu ứng flash emissive trên material dùng chung để tránh lỗi chớp sáng toàn màn hình.
+                    // (Hiệu ứng flash đã được centerMesh đảm nhiệm an toàn qua cơ chế clone per-tile).
                 } else if (ball.position.y < -10 && !isFailTransition) {
                     // Nếu đã rơi qua đáy glow, bắt đầu fail transition (1.5s chờ game over)
                     isFailTransition = true;

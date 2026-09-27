@@ -455,13 +455,28 @@ function getTileFromPool(forceNew = false) {
 
         const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
-        const tileMat = isWebGPU
-            ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.8, depthWrite: false })
-            : (currentGraphicsQuality === 'simple'
-                ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false })
-                : new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.45, shininess: 120, depthWrite: false }));
+        if (!window.globalTileMatCyan) {
+            window.globalTileMatCyan = isWebGPU
+                ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.8, depthWrite: false, color: 0x00ffff })
+                : (currentGraphicsQuality === 'simple'
+                    ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, color: 0x00ffff })
+                    : new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.45, shininess: 120, depthWrite: false, color: 0x00ffff, emissive: 0x001122 }));
+        }
+        if (!window.globalTileMatMagenta) {
+            window.globalTileMatMagenta = window.globalTileMatCyan.clone();
+            window.globalTileMatMagenta.color.setHex(0xff00ff);
+            if (window.globalTileMatMagenta.emissive) window.globalTileMatMagenta.emissive.setHex(0x220022);
+        }
+        if (!window.globalTileDimmedMatCyan) {
+            window.globalTileDimmedMatCyan = window.globalTileMatCyan.clone();
+            window.globalTileDimmedMatCyan.opacity = 0.08;
+        }
+        if (!window.globalTileDimmedMatMagenta) {
+            window.globalTileDimmedMatMagenta = window.globalTileMatMagenta.clone();
+            window.globalTileDimmedMatMagenta.opacity = 0.08;
+        }
 
-        tile = new THREE.Mesh(cachedTileGeo, tileMat);
+        tile = new THREE.Mesh(cachedTileGeo, window.globalTileMatCyan);
         tile.rotation.x = -Math.PI / 2;
 
         if (!tile.userData) tile.userData = {};
@@ -481,7 +496,13 @@ function getTileFromPool(forceNew = false) {
             let baseCurve = currentGraphicsQuality === 'simple' ? 1 : (currentGraphicsQuality === 'hd' ? 6 : (currentGraphicsQuality === 'fhd' ? 12 : (currentGraphicsQuality === 'qhd' ? 18 : 24)));
             cachedBorderGeo = new THREE.ShapeGeometry(shape, Math.max(1, Math.round(baseCurve * detailScale)));
         }
-        const borderLine = new THREE.Mesh(cachedBorderGeo, new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+        if (!window.globalBorderMatCyan) {
+            window.globalBorderMatCyan = new THREE.MeshBasicMaterial({ color: isWebGPU ? 0xffffff : 0x00ffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+        }
+        if (!window.globalBorderMatMagenta) {
+            window.globalBorderMatMagenta = new THREE.MeshBasicMaterial({ color: isWebGPU ? 0xffffff : 0xff00ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+        }
+        const borderLine = new THREE.Mesh(cachedBorderGeo, window.globalBorderMatCyan);
         borderLine.name = "borderLine";
         borderLine.position.z = surfaceZ + 0.01;
         tile.add(borderLine);
@@ -491,7 +512,11 @@ function getTileFromPool(forceNew = false) {
             const centerSegments = Math.max(8, Math.round(32 * detailScale));
             cachedCenterGeo = new THREE.CircleGeometry(tileWidth * 0.18, centerSegments);
         }
-        const centerMesh = new THREE.Mesh(cachedCenterGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, transparent: true }));
+        if (!window.globalCenterMat) {
+            window.globalCenterMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, transparent: true });
+        }
+        // centerMesh needs its own cloned material because its opacity is tweened independently on hit
+        const centerMesh = new THREE.Mesh(cachedCenterGeo, window.globalCenterMat.clone());
         centerMesh.name = "centerMesh";
         centerMesh.position.z = surfaceZ + 0.015;
         tile.add(centerMesh);
@@ -511,8 +536,13 @@ function getTileFromPool(forceNew = false) {
             cachedGlowGeo = new THREE.ExtrudeGeometry(tileShape, glowExtrudeSettings);
             cachedGlowGeo.center();
         }
-        const tileGlowMat = createTileGlowMaterial(typeof activeColor !== 'undefined' ? activeColor : 0x00ffff);
-        const glowMesh = new THREE.Mesh(cachedGlowGeo, [capMaterial, tileGlowMat]);
+        if (!window.globalTileGlowMatCyan) {
+            window.globalTileGlowMatCyan = createTileGlowMaterial(0x00ffff);
+        }
+        if (!window.globalTileGlowMatMagenta) {
+            window.globalTileGlowMatMagenta = createTileGlowMaterial(0xff00ff);
+        }
+        const glowMesh = new THREE.Mesh(cachedGlowGeo, [capMaterial, window.globalTileGlowMatCyan]);
         glowMesh.name = "glowMesh";
         const bevelOffset = (typeof currentBevelEnabled !== 'undefined' && currentBevelEnabled) ? currentBevelThickness : 0;
         glowMesh.position.z = -currentTileThickness / 2 - bevelOffset - glowHeight / 2;
@@ -544,8 +574,9 @@ function getTileFromPool(forceNew = false) {
         if (tile.userData.borderLine && tile.userData.borderLine.material) {
             tile.userData.borderLine.material.opacity = 1.0;
         }
-        // Reset isDimmed
+        // Reset isDimmed and material
         tile.userData.isDimmed = false;
+        tile.material = (tile.userData.themeColor === 0xff00ff) ? window.globalTileMatMagenta : window.globalTileMatCyan;
     }
 
     // Reset glow opacity
@@ -719,12 +750,16 @@ function spawnTile(isFirst = false) {
         }
     }
 
-    tile.material.color.setHex(activeColor);
-    if (tile.material.emissive) tile.material.emissive.setHex(activeColor === 0xff00ff ? 0x220022 : 0x001122);
-    const isWebGPUSpawn = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-    tile.material.opacity = isWebGPUSpawn ? 0.8 : (currentGraphicsQuality === 'simple' ? 0.6 : 0.45);
-    if (tile.userData.borderLine && tile.userData.borderLine.material) {
-        tile.userData.borderLine.material.color.setHex(isWebGPUSpawn ? 0xffffff : activeColor);
+    tile.userData.themeColor = activeColor;
+    tile.material = (activeColor === 0xff00ff) ? window.globalTileMatMagenta : window.globalTileMatCyan;
+
+    if (tile.userData.borderLine) {
+        tile.userData.borderLine.material = (activeColor === 0xff00ff) ? window.globalBorderMatMagenta : window.globalBorderMatCyan;
+    }
+
+    const poolGlowMesh = tile.getObjectByName('glowMesh');
+    if (poolGlowMesh && Array.isArray(poolGlowMesh.material)) {
+        poolGlowMesh.material = [poolGlowMesh.material[0], (activeColor === 0xff00ff) ? window.globalTileGlowMatMagenta : window.globalTileGlowMatCyan];
     }
 
     let isEntering = !isFirst && spawnAnimationMode !== 'none';

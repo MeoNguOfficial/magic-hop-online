@@ -536,5 +536,6 @@
     "env_void": "The Void",
     "env_blueprint": "Blueprint 3D",
     "env_city": "City",
-    "env_ricefield": "Rice Field"
+    "env_ricefield": "Rice Field",
+    "env_perf_warning": "(可能會降低效能)"
 }
