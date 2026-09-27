@@ -451,6 +451,8 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         const extraOptClasses = (isAdmin && isOutOrHidden) ? 'border-dashed border-red-500/30 bg-red-950/10' : 'border-cyan-500/10 bg-cyan-950/5';
         opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-lg border hover:border-cyan-400/40 flex flex-col transition-all duration-200`;
         opt.dataset.index = originalIndex;
+        const isExpanded = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === originalIndex);
+        
         opt.innerHTML = `
             <div class="song-option-main flex justify-between items-center w-full pointer-events-none">
                 <div class="flex-1 min-w-0 pr-2 overflow-hidden pointer-events-auto">
@@ -464,19 +466,19 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                     <p class="text-[10px] text-gray-400 pointer-events-none">${song.artist || 'Unknown Artist'}</p>
                 </div>
                 <div class="flex items-center pointer-events-auto">
-                    <svg class="w-5 h-5 text-cyan-500 transition-transform duration-300 expand-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-5 h-5 text-cyan-500 transition-transform duration-300 expand-icon ${isExpanded ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
                 </div>
             </div>
             <!-- Expandable details -->
-            <div class="song-option-details hidden flex-col gap-1.5 mt-2 pt-2 border-t border-cyan-500/20 w-full pointer-events-auto">
+            <div class="song-option-details ${isExpanded ? 'flex' : 'hidden'} flex-col gap-1.5 mt-2 pt-2 border-t border-cyan-500/20 w-full pointer-events-auto">
                 <div class="flex justify-between items-center gap-2">
                     <button class="bxh-btn flex-1 py-1.5 text-[10px] font-bold text-yellow-400 bg-yellow-950/40 border border-yellow-500/30 rounded flex items-center justify-center gap-1 hover:bg-yellow-900/60 transition-all font-orbitron uppercase">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        BXH
+                        ${typeof t === 'function' ? t('leaderboard') : 'BXH'}
                     </button>
                 </div>
                 <div class="flex justify-between items-center gap-2">
@@ -484,14 +486,14 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                        XÓA CACHE
+                        ${typeof t === 'function' ? t('btn_clear_cache') : 'XÓA CACHE'}
                     </button>
                     <button class="play-btn flex-1 py-1.5 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 rounded flex items-center justify-center gap-1 hover:bg-cyan-900/60 transition-all font-orbitron uppercase">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        CHƠI
+                        ${typeof t === 'function' ? t('play_song') : 'CHƠI'}
                     </button>
                 </div>
             </div>
@@ -685,6 +687,11 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                 const statusDiv = document.getElementById(`cache-status-${originalIndex}`);
                 if (statusDiv) {
                     statusDiv.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400 self-center my-auto shrink-0 inline-block align-middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                }
+                const details = opt.querySelector('.song-option-details');
+                const cBtn = opt.querySelector('.clear-cache-btn');
+                if (details && !details.classList.contains('hidden') && cBtn) {
+                    cBtn.classList.remove('hidden');
                 }
             }
         });

@@ -820,8 +820,8 @@ function checkAndApplyFloatingOrigin() {
 function onInputMove(clientX) {
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) || (window.AutoplayManager && window.AutoplayManager.shouldBypassInput())) return;
 
-    const controlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
-    const halfControlWidth = controlWidth / 2;
+    if (typeof window.cachedControlWidth === 'undefined') window.cachedControlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
+    const halfControlWidth = window.cachedControlWidth / 2;
 
     if (typeof window.absoluteControlCenter !== 'number') {
         window.absoluteControlCenter = window.innerWidth / 2;
@@ -849,6 +849,8 @@ function onWindowResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     const aspect = width / height;
+    
+    window.cachedControlWidth = Math.min(width, height * 0.83);
 
     camera.aspect = aspect;
     camera.fov = aspect < 1 ? 75 : 60;
@@ -1407,8 +1409,8 @@ async function initThree() {
                     if (typeof invertControlsEnabled !== 'undefined' && invertControlsEnabled) {
                         deltaX = -deltaX;
                     }
-                    const controlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
-                    ballTargetX = Math.max(-6.75, Math.min(6.75, ballTargetX + (deltaX / controlWidth) * 13.5 * sensitivity));
+                    if (typeof window.cachedControlWidth === 'undefined') window.cachedControlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
+                    ballTargetX = Math.max(-6.75, Math.min(6.75, ballTargetX + (deltaX / window.cachedControlWidth) * 13.5 * sensitivity));
                 }
                 lastInputX = e.clientX;
             } else {
@@ -1451,8 +1453,8 @@ async function initThree() {
             deltaX = -deltaX;
         }
         lastInputX = currentX;
-        const controlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
-        ballTargetX = Math.max(-6.75, Math.min(6.75, ballTargetX + (deltaX / controlWidth) * 13.5 * sensitivity));
+        if (typeof window.cachedControlWidth === 'undefined') window.cachedControlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
+        ballTargetX = Math.max(-6.75, Math.min(6.75, ballTargetX + (deltaX / window.cachedControlWidth) * 13.5 * sensitivity));
     }, { passive: false });
 
     window.addEventListener('resize', onWindowResize);
@@ -2198,17 +2200,7 @@ let visualizerWasCleared = false;
 let fpsHudEl = null;
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 window.IS_MOBILE = IS_MOBILE;
-const ballTrailPool = [];
-for (let i = 0; i < 40; i++) {
-    ballTrailPool.push({ x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0, life: 1.0, rotSpeed: 0, color: new THREE.Color() });
-}
 
-function getTrailSegmentFromPool() {
-    if (ballTrailPool.length > 0) {
-        return ballTrailPool.pop();
-    }
-    return { x: 0, y: 0, z: 0, rotX: 0, rotY: 0, rotZ: 0, life: 1.0, rotSpeed: 0, color: new THREE.Color() };
-}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -2731,14 +2723,10 @@ function animate() {
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : 10;
                 const rangeZ = 810.0;
                 
-                for (let i = 0; i < posArr.length / 3; i++) {
-                    posArr[i * 3 + 2] += moveZ;
-                    const relZ = posArr[i * 3 + 2] - camZ;
-                    
-                    // Cơ chế object pooling / reposition: 
-                    // Khi bụi đi qua sau lưng camera (relZ > 10.0), ngay lập tức vòng lại phía trước xa (-800.0)
-                    if (relZ > 10.0) { 
-                        posArr[i * 3 + 2] -= rangeZ;
+                for (let i = 2, len = posArr.length; i < len; i += 3) {
+                    posArr[i] += moveZ;
+                    if (posArr[i] - camZ > 10.0) { 
+                        posArr[i] -= rangeZ;
                     }
                 }
                 starField.geometry.attributes.position.needsUpdate = true;
