@@ -449,145 +449,220 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
         const opt = document.createElement('div');
         const extraOptClasses = (isAdmin && isOutOrHidden) ? 'border-dashed border-red-500/30 bg-red-950/10' : 'border-cyan-500/10 bg-cyan-950/5';
-        opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-lg border hover:border-cyan-400/40 flex justify-between items-center transition-all duration-200`;
+        opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-lg border hover:border-cyan-400/40 flex flex-col transition-all duration-200`;
         opt.dataset.index = originalIndex;
         opt.innerHTML = `
-            <div class="flex-1 min-w-0 pr-2 overflow-hidden">
-                <div class="flex items-center gap-1.5 min-w-0 w-full">
-                    <h3 class="font-bold text-white group-hover:text-cyan-300 font-orbitron text-sm pointer-events-none overflow-hidden whitespace-nowrap flex-1 min-w-0 marquee-container">
-                        <span class="marquee-text inline-block">${song.name}</span>
-                    </h3>
-                    ${adminEyeBadgeHtml}
-                    <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none inline-flex items-center justify-center self-center my-auto"></div>
+            <div class="song-option-main flex justify-between items-center w-full pointer-events-none">
+                <div class="flex-1 min-w-0 pr-2 overflow-hidden pointer-events-auto">
+                    <div class="flex items-center gap-1.5 min-w-0 w-full">
+                        <h3 class="font-bold text-white group-hover:text-cyan-300 font-orbitron text-sm pointer-events-none overflow-hidden whitespace-nowrap flex-1 min-w-0 marquee-container">
+                            <span class="marquee-text inline-block">${song.name}</span>
+                        </h3>
+                        ${adminEyeBadgeHtml}
+                        <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none inline-flex items-center justify-center self-center my-auto"></div>
+                    </div>
+                    <p class="text-[10px] text-gray-400 pointer-events-none">${song.artist || 'Unknown Artist'}</p>
                 </div>
-                <p class="text-[10px] text-gray-400 pointer-events-none">${song.artist || 'Unknown Artist'}</p>
+                <div class="flex items-center pointer-events-auto">
+                    <svg class="w-5 h-5 text-cyan-500 transition-transform duration-300 expand-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                </div>
             </div>
-            <div class="flex items-center gap-3">
-                <button id="preview-btn-${originalIndex}" class="preview-btn relative p-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-400 transition-all duration-300 border border-cyan-500/30 flex items-center justify-center shrink-0 w-7 h-7 overflow-hidden select-none" title="${t('preview_btn')}">
-                    <!-- Static Wave Icon -->
-                    <div class="wave-icon-static transition-all duration-300 transform flex items-center justify-center pointer-events-none">
-                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M4 12v1M8 9v6M12 5v14M16 9v6M20 12v1"></path>
+            <!-- Expandable details -->
+            <div class="song-option-details hidden flex-col gap-1.5 mt-2 pt-2 border-t border-cyan-500/20 w-full pointer-events-auto">
+                <div class="flex justify-between items-center gap-2">
+                    <button class="bxh-btn flex-1 py-1.5 text-[10px] font-bold text-yellow-400 bg-yellow-950/40 border border-yellow-500/30 rounded flex items-center justify-center gap-1 hover:bg-yellow-900/60 transition-all font-orbitron uppercase">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                    </div>
-                    <!-- Animated Bouncing Equalizer Bars -->
-                    <div class="wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none">
-                        <div class="audio-wave-bars text-pink-400">
-                            <span class="audio-wave-bar"></span>
-                            <span class="audio-wave-bar"></span>
-                            <span class="audio-wave-bar"></span>
-                            <span class="audio-wave-bar"></span>
-                        </div>
-                    </div>
-                    <!-- Loading Spinner Icon -->
-                    <div class="wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none">
-                        <svg class="w-3.5 h-3.5 animate-spin text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10" stroke-dasharray="16 16"></circle>
+                        BXH
+                    </button>
+                </div>
+                <div class="flex justify-between items-center gap-2">
+                    <button class="clear-cache-btn flex-1 py-1.5 text-[10px] font-bold text-red-400 bg-red-950/40 border border-red-500/30 rounded flex items-center justify-center gap-1 hover:bg-red-900/60 transition-all font-orbitron uppercase hidden">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
-                    </div>
-                </button>
-                <div id="action-area-${originalIndex}" class="flex items-center">
-                    <span class="text-cyan-400 group-hover:neon-glow-cyan text-xs font-bold whitespace-nowrap shrink-0 pointer-events-none">PLAY ▶</span>
+                        XÓA CACHE
+                    </button>
+                    <button class="play-btn flex-1 py-1.5 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 rounded flex items-center justify-center gap-1 hover:bg-cyan-900/60 transition-all font-orbitron uppercase">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        CHƠI
+                    </button>
                 </div>
             </div>
         `;
 
-        // Setup Context Menu (Right Click on PC, Long Press on mobile)
-        let longPressTimeout = null;
-        let lastTouchX = 0;
-        let lastTouchY = 0;
-        let isLongPressTriggered = false;
+        let clickTimeout = null;
+        let lastClickTime = 0;
 
-        opt.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            showSongContextMenu(e, originalIndex, e.clientX, e.clientY);
-        });
+        const playSongAction = async () => {
+            if (typeof playGameStartSound === 'function') playGameStartSound();
+            playlistRenderStartIndex = 0;
+            let isPassed = await checkSongPassedStatus(song, originalIndex);
+            const isHelperMode = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
 
-        opt.addEventListener('touchstart', (e) => {
-            isLongPressTriggered = false;
-            if (e.touches.length !== 1) return;
-            const touch = e.touches[0];
-            lastTouchX = touch.clientX;
-            lastTouchY = touch.clientY;
-            
-            if (longPressTimeout) clearTimeout(longPressTimeout);
-            
-            longPressTimeout = setTimeout(() => {
-                isLongPressTriggered = true;
-                if (navigator.vibrate) {
-                    navigator.vibrate(50);
-                }
-                showSongContextMenu(null, originalIndex, lastTouchX, lastTouchY);
-            }, 1000);
-        }, { passive: true });
-
-        opt.addEventListener('touchmove', (e) => {
-            if (e.touches.length !== 1) return;
-            const touch = e.touches[0];
-            const dx = touch.clientX - lastTouchX;
-            const dy = touch.clientY - lastTouchY;
-            if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-                if (longPressTimeout) {
-                    clearTimeout(longPressTimeout);
-                    longPressTimeout = null;
-                }
+            if (isHelperMode || isPassed) {
+                promptPlayModeSelection((mode) => {
+                    window.chosenPlayMode = mode;
+                    changeSong(originalIndex, true);
+                });
+            } else {
+                window.chosenPlayMode = 'normal';
+                changeSong(originalIndex, true);
             }
-        }, { passive: true });
-
-        opt.addEventListener('touchend', (e) => {
-            if (longPressTimeout) {
-                clearTimeout(longPressTimeout);
-                longPressTimeout = null;
-            }
-            if (isLongPressTriggered) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        });
+        };
 
         opt.addEventListener('click', async (e) => {
-            if (isLongPressTriggered) {
-                e.preventDefault();
-                e.stopPropagation();
-                isLongPressTriggered = false;
+            const playBtn = e.target.closest('.play-btn');
+            const bxhBtn = e.target.closest('.bxh-btn');
+            const clearCacheBtn = e.target.closest('.clear-cache-btn');
+
+            if (playBtn) {
+                await playSongAction();
                 return;
             }
-            const previewBtn = e.target.closest('.preview-btn');
-            if (previewBtn) {
-                if (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled) {
-                    if (typeof anime !== 'undefined') {
-                        anime({
-                            targets: previewBtn,
-                            scale: [0.82, 1.2, 1],
-                            duration: 350,
-                            easing: 'easeOutElastic(1, .6)'
+
+            if (bxhBtn) {
+                if (typeof playClickSound === 'function') playClickSound();
+                if (typeof showLeaderboard === 'function') showLeaderboard(originalIndex);
+                return;
+            }
+
+            if (clearCacheBtn) {
+                if (typeof playClickSound === 'function') playClickSound();
+                if (typeof showCyberModal === 'function') {
+                    showCyberModal({
+                        title: typeof t === 'function' ? t('confirm_title') : "XÁC NHẬN",
+                        message: typeof t === 'function' ? t('msg_confirm_delete_song_cache').replace('{name}', song.name) : `Bạn có chắc chắn muốn xóa bộ nhớ đệm của bài hát "${song.name}" không?`,
+                        type: 'confirm',
+                        onConfirm: async () => {
+                            if (typeof deleteSongCache === 'function') {
+                                await deleteSongCache(song.url, song.lazyUrl);
+                            }
+                            song.loaded = false;
+                            song.beats = [0, 1, 2, 3];
+                            renderSongList();
+                        }
+                    });
+                }
+                return;
+            }
+
+            // Implement double tap/click
+            const now = Date.now();
+            if (now - lastClickTime < 300) {
+                if (clickTimeout) {
+                    clearTimeout(clickTimeout);
+                    clickTimeout = null;
+                }
+                await playSongAction();
+                return;
+            }
+            lastClickTime = now;
+
+            // Single click -> Toggle details
+            clickTimeout = setTimeout(() => {
+                const details = opt.querySelector('.song-option-details');
+                const expandIcon = opt.querySelector('.expand-icon');
+                if (details) {
+                    const isAnimEnabled = (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+                    if (typeof playClickSound === 'function') playClickSound();
+
+                    if (details.classList.contains('hidden')) {
+                        // Close other opened options
+                        document.querySelectorAll('.song-option-details').forEach(el => {
+                            if (!el.classList.contains('hidden') && el !== details) {
+                                if (isAnimEnabled && typeof anime !== 'undefined') {
+                                    el.style.overflow = 'hidden';
+                                    anime({
+                                        targets: el,
+                                        height: [el.offsetHeight + 'px', 0],
+                                        opacity: [1, 0],
+                                        duration: 250,
+                                        easing: 'easeInQuad',
+                                        complete: () => {
+                                            el.classList.add('hidden');
+                                            el.style.height = '';
+                                            el.style.opacity = '';
+                                            el.style.display = '';
+                                        }
+                                    });
+                                } else {
+                                    el.classList.add('hidden');
+                                    el.style.height = '';
+                                    el.style.opacity = '';
+                                    el.style.display = '';
+                                }
+                            }
                         });
+                        document.querySelectorAll('.expand-icon').forEach(icon => {
+                            if (icon !== expandIcon) icon.classList.remove('rotate-180');
+                        });
+
+                        details.classList.remove('hidden');
+                        if (expandIcon) expandIcon.classList.add('rotate-180');
+                        
+                        // Check cache to show clear button
+                        if (opt.dataset.isCached === 'true' || opt.dataset.isCached === true) {
+                            const cBtn = details.querySelector('.clear-cache-btn');
+                            if (cBtn) cBtn.classList.remove('hidden');
+                        }
+
+                        if (isAnimEnabled && typeof anime !== 'undefined') {
+                            details.style.display = 'flex';
+                            const targetHeight = details.scrollHeight;
+                            details.style.height = '0px';
+                            details.style.opacity = '0';
+                            details.style.overflow = 'hidden';
+                            anime({
+                                targets: details,
+                                height: [0, targetHeight + 'px'],
+                                opacity: [0, 1],
+                                duration: 300,
+                                easing: 'easeOutQuad',
+                                complete: () => {
+                                    details.style.height = 'auto';
+                                    details.style.overflow = 'visible';
+                                }
+                            });
+                        }
+                        
+                        // Play preview automatically
+                        if (typeof togglePreview === 'function') {
+                            togglePreview(originalIndex);
+                        }
                     } else {
-                        previewBtn.classList.remove('pop-animate');
-                        void previewBtn.offsetWidth;
-                        previewBtn.classList.add('pop-animate');
+                        if (expandIcon) expandIcon.classList.remove('rotate-180');
+                        // Stop preview when collapsed (with false to allow menu music resume)
+                        if (typeof stopPreview === 'function') stopPreview(false);
+                        
+                        if (isAnimEnabled && typeof anime !== 'undefined') {
+                            details.style.overflow = 'hidden';
+                            anime({
+                                targets: details,
+                                height: [details.offsetHeight + 'px', 0],
+                                opacity: [1, 0],
+                                duration: 250,
+                                easing: 'easeInQuad',
+                                complete: () => {
+                                    details.classList.add('hidden');
+                                    details.style.height = '';
+                                    details.style.opacity = '';
+                                    details.style.display = '';
+                                }
+                            });
+                        } else {
+                            details.classList.add('hidden');
+                            details.style.display = '';
+                        }
                     }
                 }
-                if (typeof togglePreview === 'function') togglePreview(originalIndex);
-            } else {
-                playlistRenderStartIndex = 0; // Trở về đầu để thấy bài đang chơi khi mở lại Menu
-                
-                // Kiểm tra xem đã vượt qua (Passed) bài hát chưa (Ưu tiên Server metadata, ngoại tuyến 60s mới dùng đến Local DB)
-                let isPassed = await checkSongPassedStatus(song, originalIndex);
-
-                const isHelperMode = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
-
-                if (isHelperMode || isPassed) {
-                    promptPlayModeSelection((mode) => {
-                        window.chosenPlayMode = mode;
-                        changeSong(originalIndex, true);
-                    });
-                } else {
-                    window.chosenPlayMode = 'normal';
-                    changeSong(originalIndex, true);
-                }
-            }
+            }, 250);
         });
 
         selector.appendChild(opt);
@@ -668,56 +743,31 @@ function updatePreviewUI(index, state) {
     let iconAnimated = btn.querySelector('.wave-icon-animated');
     let iconLoading = btn.querySelector('.wave-icon-loading');
 
-    // Fallback nếu DOM cũ chưa có đủ 3 icon con
     if (!iconStatic || !iconAnimated || !iconLoading) {
-        btn.className = `preview-btn relative p-1.5 rounded-full bg-cyan-950 hover:bg-cyan-900 text-cyan-400 transition-all duration-300 border border-cyan-500/30 flex items-center justify-center shrink-0 w-7 h-7 overflow-hidden select-none`;
-        btn.innerHTML = `
-            <div class="wave-icon-static transition-all duration-300 transform flex items-center justify-center pointer-events-none">
-                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 12v1M8 9v6M12 5v14M16 9v6M20 12v1"></path>
-                </svg>
-            </div>
-            <div class="wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none">
-                <div class="audio-wave-bars text-pink-400">
-                    <span class="audio-wave-bar"></span>
-                    <span class="audio-wave-bar"></span>
-                    <span class="audio-wave-bar"></span>
-                    <span class="audio-wave-bar"></span>
-                </div>
-            </div>
-            <div class="wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none">
-                <svg class="w-3.5 h-3.5 animate-spin text-pink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10" stroke-dasharray="16 16"></circle>
-                </svg>
-            </div>
-        `;
-        iconStatic = btn.querySelector('.wave-icon-static');
-        iconAnimated = btn.querySelector('.wave-icon-animated');
-        iconLoading = btn.querySelector('.wave-icon-loading');
+        return; 
     }
 
     btn.classList.remove('playing', 'loading-state', 'text-pink-400', 'border-pink-500/50', 'border-pink-500/80', 'shadow-[0_0_12px_rgba(236,72,153,0.6)]', 'bg-pink-950/60', 'text-cyan-400', 'text-cyan-300', 'border-cyan-400/60', 'shadow-[0_0_8px_rgba(6,182,212,0.3)]');
 
+    const labelText = btn.querySelector('.label-text');
     if (state === 'loading') {
         btn.classList.add('loading-state', 'text-pink-400', 'border-pink-500/50', 'bg-pink-950/40');
         if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-0 scale-50 rotate-45 pointer-events-none';
-        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none';
+        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none hidden';
         if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-100 scale-100 rotate-0 pointer-events-none';
+        if (labelText) labelText.classList.add('opacity-0');
     } else if (state === 'playing') {
         btn.classList.add('playing', 'text-pink-400', 'border-pink-500/80', 'shadow-[0_0_12px_rgba(236,72,153,0.6)]', 'bg-pink-950/60');
-        if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-0 scale-50 rotate-90 pointer-events-none';
-        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none';
+        if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-0 scale-50 rotate-90 pointer-events-none hidden';
+        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none hidden';
         if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-100 scale-100 rotate-0 pointer-events-none';
+        if (labelText) labelText.classList.add('opacity-0');
     } else {
-        const isSelected = (typeof selectedSongIndex !== 'undefined' && selectedSongIndex === index);
-        if (isSelected) {
-            btn.classList.add('text-cyan-300', 'border-cyan-400/60', 'bg-cyan-950/60', 'shadow-[0_0_8px_rgba(6,182,212,0.3)]');
-        } else {
-            btn.classList.add('text-cyan-400');
-        }
+        btn.classList.add('text-pink-400');
         if (iconStatic) iconStatic.className = 'wave-icon-static transition-all duration-300 transform opacity-100 scale-100 rotate-0 pointer-events-none';
-        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none';
-        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none';
+        if (iconAnimated) iconAnimated.className = 'wave-icon-animated absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 -rotate-90 pointer-events-none hidden';
+        if (iconLoading) iconLoading.className = 'wave-icon-loading absolute inset-0 flex items-center justify-center transition-all duration-300 transform opacity-0 scale-50 pointer-events-none hidden';
+        if (labelText) labelText.classList.remove('opacity-0');
     }
 }
 
@@ -1304,135 +1354,7 @@ initSongFilters();
 // Context Menu for Beatmaps
 // ==========================================
 
-function showSongContextMenu(e, songIndex, x, y) {
-    // Ensure listeners are initialized when we show the menu (since the HTML is parsed after the script)
-    initSongContextMenu();
-
-    if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-    
-    const menu = document.getElementById('song-context-menu');
-    if (!menu) return;
-    
-    menu.dataset.songIndex = songIndex;
-    
-    // Check if cached
-    const opt = document.querySelector(`.song-option[data-index="${songIndex}"]`);
-    const isCached = opt ? (opt.dataset.isCached === 'true') : false;
-    
-    const deleteCacheBtn = document.getElementById('ctx-delete-cache-btn');
-    if (deleteCacheBtn) {
-        if (isCached) {
-            deleteCacheBtn.style.display = 'flex';
-        } else {
-            deleteCacheBtn.style.display = 'none';
-        }
-    }
-    
-    menu.classList.remove('hidden');
-    menu.style.display = 'block';
-    
-    const menuWidth = menu.offsetWidth || 170;
-    const menuHeight = menu.offsetHeight || 90;
-    
-    let left = x;
-    let top = y;
-    
-    if (left + menuWidth > window.innerWidth) {
-        left = window.innerWidth - menuWidth - 10;
-    }
-    if (top + menuHeight > window.innerHeight) {
-        top = window.innerHeight - menuHeight - 10;
-    }
-    
-    menu.style.left = `${left}px`;
-    menu.style.top = `${top}px`;
-}
-
-function initSongContextMenu() {
-    const menu = document.getElementById('song-context-menu');
-    const playBtn = document.getElementById('ctx-play-btn');
-    const leaderboardBtn = document.getElementById('ctx-leaderboard-btn');
-    const deleteCacheBtn = document.getElementById('ctx-delete-cache-btn');
-    
-    if (playBtn && !playBtn.dataset.listenerBound) {
-        playBtn.dataset.listenerBound = 'true';
-        playBtn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            if (menu) {
-                menu.classList.add('hidden');
-                menu.style.display = 'none';
-                const songIndex = parseInt(menu.dataset.songIndex);
-                if (!isNaN(songIndex)) {
-                    playlistRenderStartIndex = 0; // Trở về đầu để thấy bài đang chơi khi mở lại Menu
-                    
-                    // Kiểm tra xem đã vượt qua (Passed) bài hát chưa (Ưu tiên Server metadata, ngoại tuyến 60s mới dùng đến Local DB)
-                    let currentSong = activePlaylist && activePlaylist[songIndex] ? activePlaylist[songIndex] : (typeof songs !== 'undefined' && songs ? songs[songIndex] : null);
-                    let isPassed = await checkSongPassedStatus(currentSong, songIndex);
-
-                    const isHelperMode = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
-
-                    if (isHelperMode || isPassed) {
-                        promptPlayModeSelection((mode) => {
-                            window.chosenPlayMode = mode;
-                            changeSong(songIndex, true);
-                        });
-                    } else {
-                        window.chosenPlayMode = 'normal';
-                        changeSong(songIndex, true);
-                    }
-                }
-            }
-        });
-    }
-    
-    if (leaderboardBtn && !leaderboardBtn.dataset.listenerBound) {
-        leaderboardBtn.dataset.listenerBound = 'true';
-        leaderboardBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (menu) {
-                menu.classList.add('hidden');
-                menu.style.display = 'none';
-                const songIndex = parseInt(menu.dataset.songIndex);
-                if (!isNaN(songIndex) && typeof showLeaderboard === 'function') {
-                    showLeaderboard(songIndex);
-                }
-            }
-        });
-    }
-    
-    if (deleteCacheBtn && !deleteCacheBtn.dataset.listenerBound) {
-        deleteCacheBtn.dataset.listenerBound = 'true';
-        deleteCacheBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (menu) {
-                menu.classList.add('hidden');
-                menu.style.display = 'none';
-                const songIndex = parseInt(menu.dataset.songIndex);
-                if (!isNaN(songIndex)) {
-                    const song = playlist[songIndex];
-                    if (song && typeof showCyberModal === 'function') {
-                        showCyberModal({
-                            title: typeof t === 'function' ? t('confirm_title') : "XÁC NHẬN",
-                            message: typeof t === 'function' ? t('msg_confirm_delete_song_cache').replace('{name}', song.name) : `Bạn có chắc chắn muốn xóa bộ nhớ đệm của bài hát "${song.name}" không?`,
-                            type: 'confirm',
-                            onConfirm: async () => {
-                                if (typeof deleteSongCache === 'function') {
-                                    await deleteSongCache(song.url, song.lazyUrl);
-                                }
-                                song.loaded = false;
-                                song.beats = [0, 1, 2, 3];
-                                renderSongList();
-                            }
-                        });
-                    }
-                }
-            }
-        });
-    }
-}
+// Dismiss play mode modal logic is handled globally elsewhere
 
 function promptPlayModeSelection(onSelect) {
     const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
@@ -1511,31 +1433,6 @@ function promptPlayModeSelection(onSelect) {
         };
     }
 }
-
-// Dismiss context menu on click/touchstart outside
-document.addEventListener('click', (e) => {
-    const menu = document.getElementById('song-context-menu');
-    if (menu && !menu.contains(e.target)) {
-        menu.classList.add('hidden');
-        menu.style.display = 'none';
-    }
-});
-
-document.addEventListener('touchstart', (e) => {
-    const menu = document.getElementById('song-context-menu');
-    if (menu && !menu.contains(e.target)) {
-        menu.classList.add('hidden');
-        menu.style.display = 'none';
-    }
-}, { passive: true });
-
-document.addEventListener('contextmenu', (e) => {
-    const menu = document.getElementById('song-context-menu');
-    if (menu && !e.target.closest('.song-option') && !menu.contains(e.target)) {
-        menu.classList.add('hidden');
-        menu.style.display = 'none';
-    }
-});
 
 // Initialize listeners
 if (document.readyState === 'loading') {

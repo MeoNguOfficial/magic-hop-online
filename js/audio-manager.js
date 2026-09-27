@@ -34,6 +34,8 @@ let breakBlockAudios = [], breakBlockGainNode, breakBlockIndex = 0;
 let useAudioContextFallback = false;
 
 let previewAudio, previewSource, previewGainNode;
+let previewAudio2, previewSource2, previewGainNode2;
+let activePreviewIdx = 1; // 1 = previewAudio, 2 = previewAudio2
 let previewTimeout = null;
 let currentPreviewIndex = -1;
 
@@ -79,6 +81,10 @@ function initAudio() {
     previewAudio = new Audio();
     previewAudio.crossOrigin = "anonymous";
     previewAudio.loop = false;
+
+    previewAudio2 = new Audio();
+    previewAudio2.crossOrigin = "anonymous";
+    previewAudio2.loop = false;
 
     roundStartAudio = new Audio();
     roundStartAudio.crossOrigin = "anonymous";
@@ -204,6 +210,12 @@ function initAudio() {
         previewSource.connect(previewGainNode);
         previewGainNode.connect(menuFilterNode);
 
+        previewSource2 = audioCtx.createMediaElementSource(previewAudio2);
+        previewGainNode2 = audioCtx.createGain();
+        previewGainNode2.gain.value = 0;
+        previewSource2.connect(previewGainNode2);
+        previewGainNode2.connect(menuFilterNode);
+
         roundStartSource = audioCtx.createMediaElementSource(roundStartAudio);
         scoreTickSource = audioCtx.createMediaElementSource(scoreTickAudio);
         newBestSource = audioCtx.createMediaElementSource(newBestAudio);
@@ -313,15 +325,22 @@ async function togglePreview(index) {
         return;
     }
 
-    // Đánh thức (Unlock) thẻ Audio trên thiết bị di động bằng cách chạy một file rỗng đồng bộ ngay khi bấm click
-    if (previewAudio) {
-        if (!previewAudio.src || previewAudio.src === window.location.href || previewAudio.src.startsWith('data:audio/')) {
-            previewAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"; 
-            previewAudio.play().catch(() => {});
+    const nextPreviewIdx = activePreviewIdx === 1 ? 2 : 1;
+    const nextPreviewAudio = nextPreviewIdx === 1 ? previewAudio : previewAudio2;
+    const nextPreviewGainNode = nextPreviewIdx === 1 ? previewGainNode : previewGainNode2;
+    
+    const prevPreviewAudio = activePreviewIdx === 1 ? previewAudio : previewAudio2;
+    const prevPreviewGainNode = activePreviewIdx === 1 ? previewGainNode : previewGainNode2;
+
+    // Wake up audio
+    if (nextPreviewAudio) {
+        if (!nextPreviewAudio.src || nextPreviewAudio.src === window.location.href || nextPreviewAudio.src.startsWith('data:audio/')) {
+            nextPreviewAudio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"; 
+            nextPreviewAudio.play().catch(() => {});
         }
     }
 
-    stopPreview(true); // Dừng ngay preview cũ
+    // Do NOT stop immediately here. Let it crossfade when ready.
     currentPreviewIndex = index;
     const targetIndex = index;
 
@@ -365,7 +384,7 @@ async function togglePreview(index) {
     }
     
     const song = activePlaylist[index];
-    if (!previewAudio) return;
+    if (!nextPreviewAudio) return;
 
     if (!song || !song.url) {
         stopPreview(true);
@@ -375,55 +394,137 @@ async function togglePreview(index) {
     const audioUrl = typeof getCachedAudioUrl === 'function' ? await getCachedAudioUrl(song.url) : song.url;
     if (currentPreviewIndex !== targetIndex) return; // Nếu người dùng đã ấn sang bài khác trong lúc chờ thì hủy
 
-    previewAudio.src = audioUrl;
-    previewAudio.load();
+    nextPreviewAudio.src = audioUrl;
+    nextPreviewAudio.load();
 
     const playPreviewWhenReady = () => {
         if (currentPreviewIndex !== index) return;
         
-        // Random điểm bắt đầu nhưng chừa lại ít nhất 16s cuối để đủ thời lượng fade out
+        // Random điểm bắt đầu nhưng chừa lại ít nhất 15s cuối
         let maxStart = 0;
-        if (previewAudio.duration && !isNaN(previewAudio.duration) && isFinite(previewAudio.duration)) {
-            maxStart = Math.max(0, previewAudio.duration - 16);
+        if (nextPreviewAudio.duration && !isNaN(nextPreviewAudio.duration) && isFinite(nextPreviewAudio.duration)) {
+            maxStart = Math.max(0, nextPreviewAudio.duration - 15);
         }
-        previewAudio.currentTime = Math.random() * maxStart;
+        nextPreviewAudio.currentTime = Math.random() * maxStart;
+        const previewStartTime = nextPreviewAudio.currentTime;
 
         if (typeof updatePreviewUI === 'function') {
             updatePreviewUI(index, 'playing');
         }
         
-        if (audioCtx && menuGainNode && previewGainNode) {
+        // Fade OUT old preview, Fade IN new preview
+        if (audioCtx && nextPreviewGainNode) {
             const now = audioCtx.currentTime;
-            menuGainNode.gain.cancelScheduledValues(now);
-            menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
-            menuGainNode.gain.linearRampToValueAtTime(0, now + 0.5);
             
-            previewGainNode.gain.cancelScheduledValues(now);
-            previewGainNode.gain.setValueAtTime(0, now);
+            // Fade out menu if needed
+            if (menuGainNode) {
+                menuGainNode.gain.cancelScheduledValues(now);
+                menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
+                menuGainNode.gain.linearRampToValueAtTime(0, now + 0.5);
+            }
+            
+            // Fade out previous preview
+            if (prevPreviewGainNode) {
+                prevPreviewGainNode.gain.cancelScheduledValues(now);
+                prevPreviewGainNode.gain.setValueAtTime(prevPreviewGainNode.gain.value, now);
+                prevPreviewGainNode.gain.linearRampToValueAtTime(0, now + 0.5);
+                setTimeout(() => {
+                    if (prevPreviewAudio && prevPreviewAudio !== nextPreviewAudio) {
+                        prevPreviewAudio.pause();
+                    }
+                }, 550);
+            }
+            
+            // Fade in new preview
+            nextPreviewGainNode.gain.cancelScheduledValues(now);
+            nextPreviewGainNode.gain.setValueAtTime(0, now);
             const targetVol = typeof isPreviewMuted !== 'undefined' && isPreviewMuted ? 0 : (typeof previewVolume !== 'undefined' ? previewVolume : 0.6);
-            previewGainNode.gain.linearRampToValueAtTime(targetVol, now + 0.5);
+            nextPreviewGainNode.gain.linearRampToValueAtTime(targetVol, now + 0.5);
         } else if (!audioCtx) {
             if (menuAudio) menuAudio.volume = 0;
-            previewAudio.volume = typeof isPreviewMuted !== 'undefined' && isPreviewMuted ? 0 : (typeof previewVolume !== 'undefined' ? previewVolume : 0.6);
+            if (prevPreviewAudio) {
+                prevPreviewAudio.volume = 0;
+                prevPreviewAudio.pause();
+            }
+            nextPreviewAudio.volume = typeof isPreviewMuted !== 'undefined' && isPreviewMuted ? 0 : (typeof previewVolume !== 'undefined' ? previewVolume : 0.6);
         }
 
-        previewAudio.play().catch(e => {
+        activePreviewIdx = nextPreviewIdx; // Switch active index
+        
+        nextPreviewAudio.play().catch(e => {
             console.log("Preview play failed:", e);
             stopPreview(true);
         });
 
-        previewTimeout = setTimeout(() => {
-            stopPreview(false);
-        }, 14000); // 14s phát nhạc + 1s fadeout = tròn 15s
+        nextPreviewAudio.ontimeupdate = null;
+        
+        // Setup the other audio for looping after the initial crossfade finishes
+        if (prevPreviewAudio) {
+            setTimeout(() => {
+                if (currentPreviewIndex === index && prevPreviewAudio.src !== nextPreviewAudio.src) {
+                    prevPreviewAudio.src = nextPreviewAudio.src;
+                }
+            }, 1000);
+        }
+
+        const LOOP_DURATION = 15;
+        const CROSSFADE_TIME = 0.5;
+        const targetVol = typeof isPreviewMuted !== 'undefined' && isPreviewMuted ? 0 : (typeof previewVolume !== 'undefined' ? previewVolume : 0.6);
+
+        const scheduleLoopCrossfade = (currAudio, currGain, nextAudio, nextGain) => {
+            if (currentPreviewIndex !== index) return;
+            const timeUntilCrossfade = (previewStartTime + LOOP_DURATION - CROSSFADE_TIME) - currAudio.currentTime;
+            
+            if (timeUntilCrossfade > 0) {
+                previewTimeout = setTimeout(() => {
+                    if (currentPreviewIndex !== index) return;
+                    
+                    nextAudio.currentTime = previewStartTime;
+                    
+                    if (audioCtx) {
+                        const now = audioCtx.currentTime;
+                        nextGain.gain.cancelScheduledValues(now);
+                        nextGain.gain.setValueAtTime(0, now);
+                        nextGain.gain.linearRampToValueAtTime(targetVol, now + CROSSFADE_TIME);
+                        
+                        currGain.gain.cancelScheduledValues(now);
+                        currGain.gain.setValueAtTime(currGain.gain.value, now);
+                        currGain.gain.linearRampToValueAtTime(0, now + CROSSFADE_TIME);
+                    } else {
+                        nextAudio.volume = targetVol;
+                    }
+                    
+                    nextAudio.play().catch(()=>{});
+                    
+                    setTimeout(() => {
+                        if (currentPreviewIndex === index) {
+                            currAudio.pause();
+                        }
+                    }, CROSSFADE_TIME * 1000 + 50);
+                    
+                    activePreviewIdx = activePreviewIdx === 1 ? 2 : 1;
+                    
+                    scheduleLoopCrossfade(nextAudio, nextGain, currAudio, currGain);
+                }, timeUntilCrossfade * 1000);
+            } else {
+                // Polling if we missed it
+                previewTimeout = setTimeout(() => {
+                    scheduleLoopCrossfade(currAudio, currGain, nextAudio, nextGain);
+                }, 100);
+            }
+        };
+
+        // Start scheduling the loop crossfade
+        scheduleLoopCrossfade(nextPreviewAudio, nextPreviewGainNode, prevPreviewAudio, prevPreviewGainNode);
     };
 
-    previewAudio.onloadeddata = null;
-    previewAudio.oncanplay = null;
-    previewAudio.onloadedmetadata = null;
-    if (previewAudio.readyState >= 1) { // HAVE_METADATA
+    nextPreviewAudio.onloadeddata = null;
+    nextPreviewAudio.oncanplay = null;
+    nextPreviewAudio.onloadedmetadata = null;
+    if (nextPreviewAudio.readyState >= 1) { // HAVE_METADATA
         playPreviewWhenReady();
     } else {
-        previewAudio.onloadedmetadata = playPreviewWhenReady;
+        nextPreviewAudio.onloadedmetadata = playPreviewWhenReady;
     }
 }
 
@@ -440,48 +541,64 @@ function stopPreview(immediate = false) {
         updatePreviewUI(prevIndex, 'stopped');
     }
 
-    if (!previewAudio) return;
-    previewAudio.onloadeddata = null;
+    if (previewAudio) {
+        previewAudio.onloadeddata = null;
+        previewAudio.ontimeupdate = null;
+    }
+    if (previewAudio2) {
+        previewAudio2.onloadeddata = null;
+        previewAudio2.ontimeupdate = null;
+    }
 
-    if (immediate) {
-        if (audioCtx && previewGainNode) {
-            const now = audioCtx.currentTime;
-            previewGainNode.gain.cancelScheduledValues(now);
-            previewGainNode.gain.setValueAtTime(previewGainNode.gain.value, now);
-            previewGainNode.gain.linearRampToValueAtTime(0, now + 0.05);
-            setTimeout(() => {
-                if (currentPreviewIndex === -1 && previewAudio) previewAudio.pause();
-            }, 50);
-        } else if (!audioCtx) {
-            if (previewAudio) previewAudio.volume = 0;
-            if (previewAudio) previewAudio.pause();
+    const fadeOutAudio = (audioObj, gainNodeObj, timeOffset, isImmediate) => {
+        if (!audioObj) return;
+        if (isImmediate) {
+            if (audioCtx && gainNodeObj) {
+                const now = audioCtx.currentTime;
+                gainNodeObj.gain.cancelScheduledValues(now);
+                gainNodeObj.gain.setValueAtTime(0, now);
+            }
+            audioObj.pause();
+        } else {
+            if (audioCtx && gainNodeObj) {
+                const now = audioCtx.currentTime;
+                gainNodeObj.gain.cancelScheduledValues(now);
+                gainNodeObj.gain.setValueAtTime(gainNodeObj.gain.value, now);
+                gainNodeObj.gain.linearRampToValueAtTime(0, now + timeOffset);
+                setTimeout(() => {
+                    if (currentPreviewIndex === -1 && audioObj) audioObj.pause();
+                }, timeOffset * 1000 + 50);
+            } else {
+                let vol = audioObj.volume;
+                const fadeInterval = setInterval(() => {
+                    vol -= 0.1;
+                    if (vol <= 0) {
+                        clearInterval(fadeInterval);
+                        if (currentPreviewIndex === -1) audioObj.pause();
+                    } else {
+                        audioObj.volume = vol;
+                    }
+                }, 50);
+            }
         }
-    } else {
-        if (audioCtx && previewGainNode && menuGainNode) {
-            const now = audioCtx.currentTime;
-            previewGainNode.gain.cancelScheduledValues(now);
-            previewGainNode.gain.setValueAtTime(previewGainNode.gain.value, now);
-            previewGainNode.gain.linearRampToValueAtTime(0, now + 1.0);
+    };
 
-            if (startScreen.style.display !== 'none') {
+    fadeOutAudio(previewAudio, previewGainNode, 0.5, immediate);
+    fadeOutAudio(previewAudio2, previewGainNode2, 0.5, immediate);
+
+    // Resume menu background music if we are on the start screen
+    if (!immediate) {
+        if (typeof startScreen !== 'undefined' && startScreen.style.display !== 'none') {
+            if (audioCtx && menuGainNode) {
+                const now = audioCtx.currentTime;
                 menuGainNode.gain.cancelScheduledValues(now);
                 menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
-                menuGainNode.gain.linearRampToValueAtTime(isMenuMuted ? 0 : menuVolume, now + 1.0);
-                if (typeof menuAudio !== 'undefined' && menuAudio) {
-                    const playPromise = menuAudio.play();
-                    if (playPromise !== undefined) {
-                        playPromise.catch(e => { setTimeout(() => { menuAudio.play().catch(()=>{}); }, 50); });
-                    }
-                }
+                const targetMenuVol = (typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.6);
+                menuGainNode.gain.linearRampToValueAtTime(targetMenuVol, now + 1.0);
+            } else if (!audioCtx && menuAudio) {
+                menuAudio.volume = (typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.6);
             }
-
-            setTimeout(() => {
-                if (currentPreviewIndex === -1) previewAudio.pause();
-            }, 1000);
-        } else {
-            previewAudio.pause();
-            if (!audioCtx && menuAudio && startScreen.style.display !== 'none') {
-                menuAudio.volume = isMenuMuted ? 0 : menuVolume;
+            if (typeof menuAudio !== 'undefined' && menuAudio) {
                 const playPromise = menuAudio.play();
                 if (playPromise !== undefined) {
                     playPromise.catch(e => { setTimeout(() => { menuAudio.play().catch(()=>{}); }, 50); });
@@ -680,14 +797,13 @@ document.addEventListener('click', (e) => {
 
     // Phát âm thanh click cho các thành phần giao diện khi không chơi game
     if (!isPlaying) {
-        const target = e.target.closest('button, .nav-btn, .tab-btn, .song-option, select, input[type="range"], input[type="checkbox"], input[type="radio"], #tap-to-play-overlay');
+        const target = e.target.closest('button, .nav-btn, .tab-btn, select, input[type="range"], input[type="checkbox"], input[type="radio"], #tap-to-play-overlay');
         if (target) {
-            if (target.classList.contains('nav-btn') || target.classList.contains('tab-btn')) {
+            // Let song-selector.js handle audio for song options
+            if (target.closest('.song-option')) {
+                // Do nothing
+            } else if (target.classList.contains('nav-btn') || target.classList.contains('tab-btn')) {
                 playTabSwitchSound();
-            } else if (target.classList.contains('song-option')) {
-                playGameStartSound();
-            } else if (target.classList.contains('preview-btn')) {
-                playClickSound();
             } else {
                 playClickSound();
             }

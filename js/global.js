@@ -650,9 +650,15 @@ async function changeSong(index, autoStart = false) {
                         previewGainNode.gain.setValueAtTime(previewGainNode.gain.value, now);
                         previewGainNode.gain.linearRampToValueAtTime(0, now + 1.2);
                     }
+                    if (typeof previewGainNode2 !== 'undefined' && previewGainNode2) {
+                        previewGainNode2.gain.cancelScheduledValues(now);
+                        previewGainNode2.gain.setValueAtTime(previewGainNode2.gain.value, now);
+                        previewGainNode2.gain.linearRampToValueAtTime(0, now + 1.2);
+                    }
                 } else if (!audioCtx) {
                     if (menuAudio) menuAudio.volume = 0;
                     if (typeof previewAudio !== 'undefined' && previewAudio) previewAudio.volume = 0;
+                    if (typeof previewAudio2 !== 'undefined' && previewAudio2) previewAudio2.volume = 0;
                 }
 
                 setTimeout(() => {
