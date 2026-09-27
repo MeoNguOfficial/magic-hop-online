@@ -1812,32 +1812,52 @@ function updateBackgroundStyle() {
 }
 window.updateBackgroundStyle = updateBackgroundStyle;
 
+function createBlueprintGridMesh(groundY) {
+    const size = 2000;
+    const halfSize = size / 2; // 1000
+    const cellSize = 10;
+
+    const vertices = [];
+
+    // 1. Các đường kẻ ngang (song song trục X, nối liền từ -halfSize đến +halfSize)
+    for (let z = -halfSize; z <= halfSize; z += cellSize) {
+        vertices.push(-halfSize, 0, z, halfSize, 0, z);
+    }
+
+    // 2. Các đường kẻ dọc (song song trục Z, từ -halfSize đến +halfSize)
+    for (let x = -halfSize; x <= halfSize; x += cellSize) {
+        vertices.push(x, 0, -halfSize, x, 0, halfSize);
+    }
+
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+
+    // Đồng bộ đồng nhất màu sắc toàn bộ lưới (0x0066aa), không còn tình trạng đường giữa bị lệch màu
+    const material = new THREE.LineBasicMaterial({
+        color: 0x0066aa,
+        toneMapped: false
+    });
+
+    const mesh = new THREE.LineSegments(geometry, material);
+    mesh.position.set(0, groundY, 0);
+    mesh.receiveShadow = false;
+    return mesh;
+}
+
 // --- CẬP NHẬT MÔI TRƯỜNG (ENVIRONMENT) ---
 function updateEnvironment() {
     if (!scene) return;
     const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
-    const groundY = mFloor - 2.5; // Đặt mặt đất/lưới thấp hơn tiles để không che khuất
+    const groundY = mFloor - 2.5; // Đặt mặt đất cho City/Ricefield
 
-    // Blueprint
+    // Blueprint: Hạ thấp hơn (-5.0 thay vì -2.5) và chỉ xuất hiện ngoài 2 biên boundary
     if (selectedEnvironment === 'blueprint') {
+        const blueprintGroundY = mFloor - 5.0; // Hạ thấp để không đè hoặc gây nhiễu block chính
         if (!blueprintGrid) {
-            blueprintGrid = new THREE.GridHelper(2000, 200, 0x00ffff, 0x004488);
-            blueprintGrid.position.set(0, groundY, 0);
-            blueprintGrid.receiveShadow = false;
-
-            // Đồng bộ màu đường ngang tâm (z = 0) với màu lưới (0x004488)
-            // để khi lưới dịch chuyển bước nhảy theo camera (vô hạn) không bị vạch sáng cyan ngang chạy giật
-            if (blueprintGrid.geometry && blueprintGrid.geometry.attributes && blueprintGrid.geometry.attributes.color) {
-                const colors = blueprintGrid.geometry.attributes.color;
-                const c2 = new THREE.Color(0x004488);
-                const center = 200 / 2;
-                colors.setXYZ(center * 4, c2.r, c2.g, c2.b);
-                colors.setXYZ(center * 4 + 1, c2.r, c2.g, c2.b);
-                colors.needsUpdate = true;
-            }
+            blueprintGrid = createBlueprintGridMesh(blueprintGroundY);
             scene.add(blueprintGrid);
         }
-        blueprintGrid.position.y = groundY;
+        blueprintGrid.position.y = blueprintGroundY;
         if (typeof camera !== 'undefined' && camera) {
             const cellSize = 10;
             blueprintGrid.position.z = Math.floor(camera.position.z / cellSize) * cellSize;
