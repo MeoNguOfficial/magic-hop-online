@@ -1824,7 +1824,23 @@ function updateEnvironment() {
             blueprintGrid = new THREE.GridHelper(2000, 200, 0x00ffff, 0x004488);
             blueprintGrid.position.set(0, groundY, 0);
             blueprintGrid.receiveShadow = false;
+
+            // Đồng bộ màu đường ngang tâm (z = 0) với màu lưới (0x004488)
+            // để khi lưới dịch chuyển bước nhảy theo camera (vô hạn) không bị vạch sáng cyan ngang chạy giật
+            if (blueprintGrid.geometry && blueprintGrid.geometry.attributes && blueprintGrid.geometry.attributes.color) {
+                const colors = blueprintGrid.geometry.attributes.color;
+                const c2 = new THREE.Color(0x004488);
+                const center = 200 / 2;
+                colors.setXYZ(center * 4, c2.r, c2.g, c2.b);
+                colors.setXYZ(center * 4 + 1, c2.r, c2.g, c2.b);
+                colors.needsUpdate = true;
+            }
             scene.add(blueprintGrid);
+        }
+        blueprintGrid.position.y = groundY;
+        if (typeof camera !== 'undefined' && camera) {
+            const cellSize = 10;
+            blueprintGrid.position.z = Math.floor(camera.position.z / cellSize) * cellSize;
         }
         blueprintGrid.visible = true;
     } else if (blueprintGrid) {
@@ -2009,6 +2025,12 @@ function updateEnvironment() {
 window.updateEnvironment = updateEnvironment;
 
 function resetEnvironmentPositions() {
+    if (typeof blueprintGrid !== 'undefined' && blueprintGrid) {
+        scene.remove(blueprintGrid);
+        if (blueprintGrid.geometry) blueprintGrid.geometry.dispose();
+        if (blueprintGrid.material) blueprintGrid.material.dispose();
+        blueprintGrid = null;
+    }
     if (typeof cityInstancedMesh !== 'undefined' && cityInstancedMesh) {
         scene.remove(cityInstancedMesh);
         if (cityInstancedMesh.geometry) cityInstancedMesh.geometry.dispose();
@@ -2039,6 +2061,11 @@ function resetEnvironmentPositions() {
 }
 
 function recycleEnvironmentObjects(cameraZ) {
+    if (selectedEnvironment === 'blueprint' && blueprintGrid) {
+        const cellSize = 10;
+        blueprintGrid.position.z = Math.floor(cameraZ / cellSize) * cellSize;
+    }
+
     if (selectedEnvironment === 'city' && cityInstancedMesh) {
         let updated = false;
         // The matrix for each instance is a 16-element Float32Array where elements[14] is Z translation
