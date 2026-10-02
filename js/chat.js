@@ -475,7 +475,9 @@ document.addEventListener('change', (e) => {
 
         // Giới hạn dung lượng nếu cần (ví dụ: 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            showCyberModal({ title: "FILE LARGE", message: "Kích thước ảnh tối đa là 5MB!", type: 'alert' });
+            let fMsg = typeof t === 'function' && t('file_large_msg') ? t('file_large_msg') : 'Kích thước ảnh tối đa là 5MB!';
+            let fTitle = typeof t === 'function' && t('file_large_title') ? t('file_large_title') : 'FILE LARGE';
+            showCyberModal({ title: fTitle, message: fMsg, type: 'alert' });
             e.target.value = '';
             return;
         }

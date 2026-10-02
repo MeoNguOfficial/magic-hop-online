@@ -782,7 +782,11 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
     const song = playlist[songIndex];
     if (!song || !song.id) {
         if (typeof showCyberModal === 'function') {
-            showCyberModal({ title: "BẢNG XẾP HẠNG", message: "Bài hát này chưa được đồng bộ từ Server.", type: 'alert' });
+            showCyberModal({ 
+            title: typeof t === 'function' ? t('lb_title') || "BẢNG XẾP HẠNG" : "BẢNG XẾP HẠNG", 
+            message: typeof t === 'function' ? t('lb_not_synced') || "Bài hát này chưa được đồng bộ từ Server." : "Bài hát này chưa được đồng bộ từ Server.", 
+            type: 'alert' 
+        });
         }
         return;
     }
@@ -840,11 +844,11 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
             </div>
             <div class="mt-3 flex justify-between h-8 items-center text-[10px] text-gray-400 font-orbitron">
                 <span id="lb-current-mode-indicator" class="flex items-center gap-1.5">
-                    Chế độ: <strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>
+                    ${typeof t === 'function' ? t('lb_mode') : 'Chế độ: '} <strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>
                 </span>
                 <button id="btn-refresh-lb-${song.id}" class="px-3 py-1.5 bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 text-[11px] text-cyan-400 rounded-lg font-orbitron flex items-center gap-1.5 transition-all opacity-50 cursor-not-allowed" disabled>
                     <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                    Đang tải...
+                    ${typeof t === 'function' ? t('lb_loading') : 'Đang tải...'}
                 </button>
             </div>
         </div>
@@ -893,7 +897,9 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
 
         let listHtml = '';
         if (scores.length === 0) {
-            listHtml = `<div class="h-full flex flex-col items-center justify-center text-gray-400 text-xs font-orbitron py-10"><p>Chưa có ai đạt điểm trên chế độ <strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>.</p></div>`;
+            let t1 = typeof t === 'function' ? t('lb_no_score_1') : 'Chưa có ai đạt điểm trên chế độ ';
+            let t2 = typeof t === 'function' ? t('lb_no_score_2') : '.';
+            listHtml = `<div class="h-full flex flex-col items-center justify-center text-gray-400 text-xs font-orbitron py-10"><p>${t1}<strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>${t2}</p></div>`;
         } else {
             scores.forEach((s, idx) => {
                 let colorClass = idx === 0 ? "text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.5)]" : (idx === 1 ? "text-gray-200 font-bold" : (idx === 2 ? "text-orange-400 font-bold" : "text-gray-300"));
@@ -937,7 +943,7 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
             btnRef.classList.remove('opacity-50', 'cursor-not-allowed');
             btnRef.innerHTML = `
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                Làm mới
+                ${typeof t === 'function' ? t('lb_refresh') : 'Làm mới'}
             `;
             btnRef.onclick = () => showLeaderboard(songIndex, true, activeMode);
         }
@@ -945,7 +951,7 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
     } catch (e) {
         const listEl = document.getElementById('lb-modal-list');
         if (listEl) {
-            listEl.innerHTML = `<div class="h-full flex items-center justify-center text-red-400 text-xs font-orbitron py-10">Không thể lấy dữ liệu bảng xếp hạng lúc này.</div>`;
+            listEl.innerHTML = `<div class="h-full flex items-center justify-center text-red-400 text-xs font-orbitron py-10">${typeof t === 'function' ? t('lb_error') : 'Không thể lấy dữ liệu bảng xếp hạng lúc này.'}</div>`;
         }
         const btnRef = document.getElementById(`btn-refresh-lb-${song.id}`);
         if (btnRef) {

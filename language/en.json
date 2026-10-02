@@ -547,5 +547,18 @@
     "env_blueprint": "Blueprint 3D",
     "env_city": "City",
     "env_ricefield": "Rice Field",
-    "env_perf_warning": "(May reduce performance)"
+    "env_perf_warning": "(May reduce performance)",
+    "msg_error_retry": "Error, reintentar",
+    "lb_mode": "Mode: ",
+    "lb_no_score_1": "No one has scored on ",
+    "lb_no_score_2": " mode yet.",
+    "lb_refresh": "Refresh",
+    "lb_loading": "Loading...",
+    "lb_error": "Cannot fetch leaderboard data at this time.",
+    "lb_title": "LEADERBOARD",
+    "lb_not_synced": "This song has not been synced from the server yet.",
+    "file_large_title": "FILE LARGE",
+    "file_large_msg": "Maximum image size is 5MB!",
+    "msg_record_deleted": "Deleted {count} data entries",
+    "msg_record_delete_err": "Cannot delete record: {err}"
 }

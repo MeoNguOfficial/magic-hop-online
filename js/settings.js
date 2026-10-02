@@ -2127,12 +2127,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             if (typeof showCyberModal === 'function') {
                                 const successMsg = typeof t === 'function' ? t('msg_reset_local_highscores_success') : '✅ Đã xóa toàn bộ kỷ lục cục bộ thành công!';
-                                showCyberModal({ message: `${successMsg}\n(Đã xóa ${keysToRemove.length + 1} mục dữ liệu)`, type: 'info' });
+                                let msg = typeof t === 'function' && t('msg_record_deleted') ? t('msg_record_deleted').replace('{count}', keysToRemove.length + 1) : `(Đã xóa ${keysToRemove.length + 1} mục dữ liệu)`;
+                    showCyberModal({ message: `${successMsg}\n${msg}`, type: 'info' });
                             }
                         } catch (err) {
                             console.error('[Settings] Lỗi xóa kỷ lục:', err);
                             if (typeof showCyberModal === 'function') {
-                                showCyberModal({ message: `❌ Không thể xóa kỷ lục: ${err.message}`, type: 'info' });
+                                let errText = typeof t === 'function' && t('msg_record_delete_err') ? t('msg_record_delete_err').replace('{err}', err.message) : `❌ Không thể xóa kỷ lục: ${err.message}`;
+                showCyberModal({ message: errText, type: 'info' });
                             }
                         }
                     }

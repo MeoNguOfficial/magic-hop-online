@@ -547,5 +547,18 @@
     "env_blueprint": "Đường Lưới 3D",
     "env_city": "Thành Phố",
     "env_ricefield": "Đồng Lúa",
-    "env_perf_warning": "(Có thể giảm hiệu suất)"
+    "env_perf_warning": "(Có thể giảm hiệu suất)",
+    "msg_error_retry": "Error, reintentar",
+    "lb_mode": "Chế độ: ",
+    "lb_no_score_1": "Chưa có ai đạt điểm trên chế độ ",
+    "lb_no_score_2": ".",
+    "lb_refresh": "Làm mới",
+    "lb_loading": "Đang tải...",
+    "lb_error": "Không thể lấy dữ liệu bảng xếp hạng lúc này.",
+    "lb_title": "BẢNG XẾP HẠNG",
+    "lb_not_synced": "Bài hát này chưa được đồng bộ từ Server.",
+    "file_large_title": "FILE LARGE",
+    "file_large_msg": "Kích thước ảnh tối đa là 5MB!",
+    "msg_record_deleted": "Đã xóa {count} mục dữ liệu",
+    "msg_record_delete_err": "Không thể xóa kỷ lục: {err}"
 }
