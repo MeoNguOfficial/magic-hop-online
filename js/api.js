@@ -148,6 +148,10 @@ apiClient.interceptors.request.use((config) => {
             console.error('[API] Lỗi giải mã token trong request interceptor:', e);
         }
         config.headers.Authorization = `Bearer ${token}`;
+
+        // Gia han thoi gian dang nhap them 30 ngay ke tu lan tuong tac cuoi
+        const expTime = Date.now() + 30 * 24 * 60 * 60 * 1000;
+        localStorage.setItem('auth_token_exp', expTime.toString());
     }
     return config;
 }, (error) => Promise.reject(error));

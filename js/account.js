@@ -372,7 +372,7 @@ async function checkLoginStatus(forceRefresh = false) {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_token_exp');
             localStorage.removeItem('auth_user');
-            renderLoggedOutState();
+            goToLoggedOutOrSwitchState();
             return;
         }
         try {
@@ -404,7 +404,7 @@ async function checkLoginStatus(forceRefresh = false) {
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('auth_token_exp');
                 localStorage.removeItem('auth_user');
-                renderLoggedOutState();
+                goToLoggedOutOrSwitchState();
                 return;
             }
 
@@ -416,11 +416,11 @@ async function checkLoginStatus(forceRefresh = false) {
                     window.preloadBackendAndPassedStatusOnStartup();
                 }
             } else {
-                renderLoggedOutState();
+                goToLoggedOutOrSwitchState();
             }
         }
     } else {
-        renderLoggedOutState();
+        goToLoggedOutOrSwitchState();
     }
 }
 
@@ -622,10 +622,20 @@ function renderLoggedInState(user) {
             await window.ApiService.logout();
         } catch (error) {
         } finally {
+            if (user && user.id) {
+                const savedList = getSavedAccounts();
+                const accIndex = savedList.findIndex(a => String(a.id) === String(user.id));
+                if (accIndex !== -1) {
+                    savedList[accIndex].token = null;
+                    savedList[accIndex].tokenExp = null;
+                    localStorage.setItem('saved_accounts', JSON.stringify(savedList));
+                }
+            }
+
             localStorage.removeItem('auth_token');
             localStorage.removeItem('auth_token_exp');
             localStorage.removeItem('auth_user');
-            renderLoggedOutState();
+            goToLoggedOutOrSwitchState();
         }
     });
 
@@ -644,10 +654,19 @@ function renderLoggedInState(user) {
                         message: t('account_delete_success'),
                         type: 'alert',
                         onConfirm: () => {
+                            if (user && user.id) {
+                                const savedList = getSavedAccounts();
+                                const accIndex = savedList.findIndex(a => String(a.id) === String(user.id));
+                                if (accIndex !== -1) {
+                                    savedList[accIndex].token = null;
+                                    savedList[accIndex].tokenExp = null;
+                                    localStorage.setItem('saved_accounts', JSON.stringify(savedList));
+                                }
+                            }
                             localStorage.removeItem('auth_token');
                             localStorage.removeItem('auth_token_exp');
                             localStorage.removeItem('auth_user');
-                            renderLoggedOutState();
+                            goToLoggedOutOrSwitchState();
                         }
                     });
                 } catch (error) {
@@ -841,13 +860,26 @@ function renderSwitchAccountState(currentUser) {
                 (currentUser.email && acc.email && currentUser.email.toLowerCase() === acc.email.toLowerCase()) ||
                 (currentUser.username && acc.username && currentUser.username === acc.username)
             );
-            const activeBadgeHtml = isActive ? `
-                <span class="px-2.5 py-1 text-[9px] font-bold text-green-400 bg-green-950/60 border border-green-500/40 rounded uppercase font-orbitron tracking-wider" data-i18n="account_switcher_active">${t('account_switcher_active') || 'ĐANG SỬ DỤNG'}</span>
-            ` : `
-                <button data-id="${acc.id}" class="btn-select-account px-3 py-1.5 text-[10px] font-bold text-cyan-400 border border-cyan-500/40 hover:bg-cyan-900/40 rounded font-orbitron uppercase transition-all shadow-[0_0_8px_rgba(6,182,212,0.2)]" data-i18n="account_switcher_btn_select">
-                    ${t('account_switcher_btn_select') || 'CHUYỂN SANG'}
-                </button>
-            `;
+            const needsLogin = !acc.token || (acc.tokenExp && Date.now() > parseInt(acc.tokenExp, 10));
+
+            let activeBadgeHtml = '';
+            if (isActive) {
+                activeBadgeHtml = `
+                    <span class="px-2.5 py-1 text-[9px] font-bold text-green-400 bg-green-950/60 border border-green-500/40 rounded uppercase font-orbitron tracking-wider" data-i18n="account_switcher_active">${t('account_switcher_active') || 'ĐANG SỬ DỤNG'}</span>
+                `;
+            } else if (needsLogin) {
+                activeBadgeHtml = `
+                    <button data-id="${acc.id}" class="btn-login-needed px-3 py-1.5 text-[10px] font-bold text-yellow-400 border border-yellow-500/40 hover:bg-yellow-900/40 rounded font-orbitron uppercase transition-all shadow-[0_0_8px_rgba(234,179,8,0.2)]" data-i18n="account_switcher_login_needed">
+                        ${t('account_switcher_login_needed') || 'LOGIN NEEDED'}
+                    </button>
+                `;
+            } else {
+                activeBadgeHtml = `
+                    <button data-id="${acc.id}" class="btn-select-account px-3 py-1.5 text-[10px] font-bold text-cyan-400 border border-cyan-500/40 hover:bg-cyan-900/40 rounded font-orbitron uppercase transition-all shadow-[0_0_8px_rgba(6,182,212,0.2)]" data-i18n="account_switcher_logged_in">
+                        ${t('account_switcher_logged_in') || 'LOGGED IN'}
+                    </button>
+                `;
+            }
 
             listHtml += `
                 <div class="flex items-center justify-between bg-black/40 border ${isActive ? 'border-cyan-400/60 shadow-[0_0_12px_rgba(34,211,238,0.2)]' : 'border-cyan-500/20'} p-3 rounded-xl transition-all hover:border-cyan-500/40 mb-2">
@@ -957,15 +989,36 @@ function renderSwitchAccountState(currentUser) {
         });
     });
 
+    // Sự kiện yêu cầu đăng nhập lại cho tài khoản đã hết hạn token
+    container.querySelectorAll('.btn-login-needed').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const rawId = e.currentTarget.dataset.id;
+            const savedList = getSavedAccounts();
+            const targetAcc = savedList.find(a => String(a.id) === String(rawId));
+            if (targetAcc) {
+                renderLoggedOutState(true, null, targetAcc.username || targetAcc.email || '');
+            }
+        });
+    });
+
     if (typeof applyTranslations === 'function') applyTranslations();
 }
 
-function renderLoggedOutState(canGoBack = false, previousSession = null) {
+function goToLoggedOutOrSwitchState() {
+    const savedList = getSavedAccounts();
+    if (savedList.length > 0) {
+        renderSwitchAccountState(null);
+    } else {
+        renderLoggedOutState();
+    }
+}
+
+function renderLoggedOutState(canGoBack = false, previousSession = null, prefillUsername = '') {
     const container = document.getElementById('account-tab-content');
     if (!container) return;
 
     const savedAccounts = getSavedAccounts();
-    const showBack = canGoBack || savedAccounts.length > 0;
+    const showBack = canGoBack;
 
     container.innerHTML = `
         <div class="space-y-4 p-2 animate-fade-in">
@@ -980,7 +1033,7 @@ function renderLoggedOutState(canGoBack = false, previousSession = null) {
 
             <form id="form-login" class="space-y-3">
                 <div>
-                    <input type="text" id="login-username" class="w-full bg-black/40 border border-cyan-500/30 rounded-lg py-2.5 px-4 text-xs text-white focus:outline-none focus:border-cyan-400 transition-all placeholder:text-gray-600 font-orbitron" data-i18n-placeholder="account_username_email" placeholder="${t('account_username_email')}" required />
+                    <input type="text" id="login-username" value="${prefillUsername}" class="w-full bg-black/40 border border-cyan-500/30 rounded-lg py-2.5 px-4 text-xs text-white focus:outline-none focus:border-cyan-400 transition-all placeholder:text-gray-600 font-orbitron" data-i18n-placeholder="account_username_email" placeholder="${t('account_username_email')}" required />
                 </div>
                 <div>
                     <input type="password" id="login-password" class="w-full bg-black/40 border border-cyan-500/30 rounded-lg py-2.5 px-4 text-xs text-white focus:outline-none focus:border-cyan-400 transition-all placeholder:text-gray-600 font-orbitron" data-i18n-placeholder="account_password" placeholder="${t('account_password')}" required />
