@@ -166,6 +166,22 @@ apiClient.interceptors.response.use(
             return apiClient(config);
         }
 
+                if (error.response && error.response.status === 500 && error.response.data && error.response.data.error_code === 'DATABASE_CONNECTION_ERROR') {
+            console.error('[API] Lỗi kết nối CSDL, hệ thống đang bảo trì.');
+            // Tùy chỉnh thông báo nếu có sweetalert hoặc alert mặc định
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Bảo trì máy chủ',
+                    text: 'Hệ thống đang được nâng cấp hoặc bảo trì. Vui lòng quay lại sau ít phút!',
+                    confirmButtonText: 'Đã hiểu',
+                    confirmButtonColor: '#e0b230'
+                });
+            } else {
+                alert('Hệ thống máy chủ trò chơi hiện đang nâng cấp hoặc bảo trì. Vui lòng quay lại sau ít phút!');
+            }
+        }
+
         if (error.response && error.response.status === 401) {
             console.warn("[API] Token hết hạn hoặc truy cập bị từ chối. Tiến hành đăng xuất ngầm.");
             localStorage.removeItem('auth_token');
