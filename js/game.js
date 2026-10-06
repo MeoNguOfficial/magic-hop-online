@@ -4797,6 +4797,12 @@ function showTapToOverlay(type = 'start') {
     }
 
     const handleTap = () => {
+        const qsPanel = document.getElementById('tap-quick-settings-panel');
+        if (qsPanel && qsPanel.closePanel && !qsPanel.classList.contains('translate-y-full')) {
+            qsPanel.closePanel();
+            return;
+        }
+
         // KIỂM TRA OFFLINE MÀ CHƯA CÓ NHẠC
         if (!navigator.onLine && (!audio || !audio.src || audio.src === window.location.href)) {
             if (typeof showCyberModal === 'function') {
@@ -4942,111 +4948,173 @@ function showTapToOverlay(type = 'start') {
     if (!quickSettingsBtn) {
         quickSettingsBtn = document.createElement('button');
         quickSettingsBtn.id = 'tap-quick-settings-btn';
-        quickSettingsBtn.className = "absolute bottom-6 right-6 w-10 h-10 rounded-full bg-cyan-900/50 border border-cyan-500/50 flex items-center justify-center text-cyan-400 hover:bg-cyan-800 transition-all z-50 shadow-[0_0_10px_rgba(34,211,238,0.3)]";
-        quickSettingsBtn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>`;
+        quickSettingsBtn.className = "absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-8 bg-cyan-950/80 border-t border-l border-r border-cyan-500/50 rounded-t-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-800 transition-all z-[60] backdrop-blur-sm cursor-pointer shadow-[0_0_10px_rgba(34,211,238,0.2)]";
+        quickSettingsBtn.innerHTML = `<svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 21l7-7 7 7"></path></svg>`;
         tapToPlayOverlay.appendChild(quickSettingsBtn);
 
         quickSettingsPanel = document.createElement('div');
         quickSettingsPanel.id = 'tap-quick-settings-panel';
-        quickSettingsPanel.className = "absolute bottom-20 right-6 w-72 max-h-[460px] rounded-xl border border-cyan-500/40 bg-cyan-950/95 backdrop-blur-md shadow-[0_0_25px_rgba(34,211,238,0.25)] p-4 flex flex-col gap-2 hidden z-50 font-rajdhani";
+        quickSettingsPanel.className = "absolute bottom-0 left-0 w-full rounded-t-2xl border-t border-cyan-500/40 bg-cyan-950/95 backdrop-blur-xl shadow-[0_-10px_30px_rgba(34,211,238,0.3)] p-5 flex flex-col gap-3 z-[60] font-rajdhani transform translate-y-full transition-transform duration-300 ease-out";
 
         quickSettingsPanel.innerHTML = `
-            <div class="border-b border-cyan-500/30 pb-2">
-                <h3 class="text-cyan-400 font-orbitron font-bold text-sm tracking-wider text-center" data-i18n="quick_settings_title">QUICK SETTINGS</h3>
+            <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3 mb-1">
+                <h3 class="text-cyan-400 font-orbitron font-bold text-base tracking-wider" data-i18n="quick_settings_title">QUICK SETTINGS</h3>
+                <button id="close-qs-btn" class="text-gray-400 hover:text-red-400 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
             </div>
-            <div class="max-h-[350px] overflow-y-auto space-y-3 pr-1 text-xs scrollbar-thin scrollbar-thumb-cyan-500/40">
-                <!-- Game Volume -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-300 font-bold" data-i18n="game_vol">Âm lượng Nhạc</span>
-                        <span id="qs-game-vol-val" class="text-cyan-400 font-bold">80%</span>
+            
+            <div class="max-h-[50vh] overflow-y-auto space-y-5 pr-2 text-sm scrollbar-thin scrollbar-thumb-cyan-500/40 pb-6">
+                <!-- AUDIO CATEGORY -->
+                <div class="space-y-3">
+                    <h4 class="text-yellow-400 font-orbitron font-bold text-[11px] uppercase flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                        Audio
+                    </h4>
+                    <div class="bg-black/30 p-3 rounded-lg border border-cyan-900/40 space-y-3">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300 font-bold" data-i18n="game_vol">Âm lượng Nhạc</span>
+                                <span id="qs-game-vol-val" class="text-cyan-400 font-bold">80%</span>
+                            </div>
+                            <input type="range" id="qs-game-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300 font-bold" data-i18n="sfx_vol">Âm lượng Hiệu ứng SFX</span>
+                                <span id="qs-sfx-vol-val" class="text-cyan-400 font-bold">80%</span>
+                            </div>
+                            <input type="range" id="qs-sfx-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                        </div>
                     </div>
-                    <input type="range" id="qs-game-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
                 </div>
 
-                <!-- SFX Volume -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-300 font-bold" data-i18n="sfx_vol">Âm lượng Hiệu ứng SFX</span>
-                        <span id="qs-sfx-vol-val" class="text-cyan-400 font-bold">80%</span>
+                <!-- GAMEPLAY CATEGORY -->
+                <div class="space-y-3">
+                    <h4 class="text-green-400 font-orbitron font-bold text-[11px] uppercase flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Gameplay
+                    </h4>
+                    <div class="bg-black/30 p-3 rounded-lg border border-cyan-900/40 space-y-3">
+                        <div class="flex flex-col gap-1">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-300 font-bold" data-i18n="sens_title">Độ nhạy bóng</span>
+                                <span id="qs-sens-val" class="text-cyan-400 font-bold">1.0x</span>
+                            </div>
+                            <input type="range" id="qs-sens" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                        </div>
                     </div>
-                    <input type="range" id="qs-sfx-vol" min="0" max="1" step="0.05" value="0.8" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
                 </div>
 
-                <!-- Sensitivity -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-300 font-bold" data-i18n="sens_title">Độ nhạy bóng</span>
-                        <span id="qs-sens-val" class="text-cyan-400 font-bold">1.0x</span>
+                <!-- GRAPHICS & EFFECTS CATEGORY -->
+                <div class="space-y-3">
+                    <h4 class="text-pink-400 font-orbitron font-bold text-[11px] uppercase flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                        Graphics & Effects
+                    </h4>
+                    <div class="bg-black/30 p-3 rounded-lg border border-cyan-900/40 space-y-3">
+                        <div class="flex flex-col gap-1">
+                            <span class="text-gray-300 font-bold mb-0.5" data-i18n="quality_title">Chất lượng Đồ họa</span>
+                            <select id="qs-quality" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
+                                <option value="simple">Simple (Thấp)</option>
+                                <option value="hd">HD (Trung bình)</option>
+                                <option value="fhd">FHD (Cao)</option>
+                                <option value="qhd">QHD (Quad HD)</option>
+                                <option value="uhd">UHD (Ultra HD)</option>
+                            </select>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <span class="text-gray-300 font-bold mb-0.5" data-i18n="spawn_title">Xuất hiện Block</span>
+                            <select id="qs-spawn-mode" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
+                                <option value="slide" data-i18n="spawn_slide">Hiệu ứng Trượt (Slide)</option>
+                                <option value="mix" data-i18n="spawn_mix">Hỗn hợp (Mix)</option>
+                                <option value="none" data-i18n="spawn_inst">Ngay lập tức (Instant)</option>
+                            </select>
+                        </div>
+
+                        <!-- Toggle Options Grid -->
+                        <div class="grid grid-cols-2 gap-1 border-t border-cyan-500/20 pt-2 mt-2">
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="anim_title" class="text-xs">Nẩy Gạch</span>
+                                <input type="checkbox" id="qs-tile-bounce" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="block_shatter_title" class="text-xs">Vỡ Mảnh</span>
+                                <input type="checkbox" id="qs-block-shatter" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="ball_glow_title" class="text-xs">Bóng Phát Sáng</span>
+                                <input type="checkbox" id="qs-ball-glow" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="ball_trail_title" class="text-xs">Vệt Đuôi Bóng</span>
+                                <input type="checkbox" id="qs-ball-trail" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="sw_title" class="text-xs">Sóng Xung Kích</span>
+                                <input type="checkbox" id="qs-shockwaves" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="boundaries_title" class="text-xs">Hiện Đường Biên</span>
+                                <input type="checkbox" id="qs-show-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30 col-span-2">
+                                <span data-i18n="advanced_boundaries_title" class="text-xs">Boundary nâng cao</span>
+                                <input type="checkbox" id="qs-advanced-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                        </div>
                     </div>
-                    <input type="range" id="qs-sens" min="0.1" max="5.0" step="0.1" value="1.0" class="w-full accent-cyan-400 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
-                </div>
-
-                <!-- Spawn Animation Mode -->
-                <div class="flex flex-col gap-1">
-                    <span class="text-gray-300 font-bold mb-0.5" data-i18n="spawn_title">Xuất hiện Block</span>
-                    <select id="qs-spawn-mode" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
-                        <option value="slide" data-i18n="spawn_slide">Hiệu ứng Trượt (Slide)</option>
-                        <option value="mix" data-i18n="spawn_mix">Hỗn hợp (Mix)</option>
-                        <option value="none" data-i18n="spawn_inst">Ngay lập tức (Instant)</option>
-                    </select>
-                </div>
-
-                <!-- Graphics Quality -->
-                <div class="flex flex-col gap-1">
-                    <span class="text-gray-300 font-bold mb-0.5" data-i18n="quality_title">Chất lượng Đồ họa</span>
-                    <select id="qs-quality" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
-                        <option value="simple">Simple (Thấp)</option>
-                        <option value="hd">HD (Trung bình)</option>
-                        <option value="fhd">FHD (Cao)</option>
-                        <option value="qhd">QHD (Quad HD)</option>
-                        <option value="uhd">UHD (Ultra HD)</option>
-                    </select>
-                </div>
-
-                <!-- Toggle Options Grid -->
-                <div class="grid grid-cols-2 gap-1.5 border-t border-cyan-500/20 pt-2">
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="anim_title">Nẩy Gạch</span>
-                        <input type="checkbox" id="qs-tile-bounce" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="block_shatter_title">Vỡ Mảnh</span>
-                        <input type="checkbox" id="qs-block-shatter" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="ball_glow_title">Bóng Phát Sáng</span>
-                        <input type="checkbox" id="qs-ball-glow" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="ball_trail_title">Vệt Đuôi Bóng</span>
-                        <input type="checkbox" id="qs-ball-trail" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="sw_title">Sóng Xung Kích</span>
-                        <input type="checkbox" id="qs-shockwaves" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="boundaries_title">Hiện Đường Biên</span>
-                        <input type="checkbox" id="qs-show-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
-                    <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1 rounded hover:bg-cyan-900/30">
-                        <span data-i18n="advanced_boundaries_title">Boundary nâng cao</span>
-                        <input type="checkbox" id="qs-advanced-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                    </label>
                 </div>
             </div>
         `;
         tapToPlayOverlay.appendChild(quickSettingsPanel);
 
         const stopProp = (e) => e.stopPropagation();
+        
+        let isQsOpen = false;
+        const toggleQsPanel = (forceOpen = null) => {
+            if (forceOpen !== null) isQsOpen = forceOpen;
+            else isQsOpen = !isQsOpen;
+
+            const useAnim = (typeof uiAnimationsEnabled !== 'undefined' ? uiAnimationsEnabled : true);
+            
+            if (!useAnim) {
+                quickSettingsPanel.style.transition = 'none';
+                quickSettingsBtn.style.transition = 'none';
+            } else {
+                quickSettingsPanel.style.transition = '';
+                quickSettingsBtn.style.transition = '';
+            }
+
+            if (isQsOpen) {
+                quickSettingsBtn.style.opacity = '0';
+                quickSettingsBtn.style.pointerEvents = 'none';
+                quickSettingsPanel.classList.remove('translate-y-full');
+                if (typeof applyTranslations === 'function') applyTranslations();
+            } else {
+                quickSettingsBtn.style.opacity = '1';
+                quickSettingsBtn.style.pointerEvents = 'auto';
+                quickSettingsPanel.classList.add('translate-y-full');
+            }
+        };
+
+        quickSettingsPanel.closePanel = () => {
+            toggleQsPanel(false);
+        };
+
         quickSettingsBtn.addEventListener('click', (e) => {
             stopProp(e);
-            quickSettingsPanel.classList.toggle('hidden');
-            if (!quickSettingsPanel.classList.contains('hidden')) {
-                if (typeof applyTranslations === 'function') applyTranslations();
-            }
+            toggleQsPanel(true);
         });
+        
+        const closeQsBtn = quickSettingsPanel.querySelector('#close-qs-btn');
+        if (closeQsBtn) {
+            closeQsBtn.addEventListener('click', (e) => {
+                stopProp(e);
+                toggleQsPanel(false);
+            });
+        }
+
         ['mousedown', 'touchstart', 'dblclick'].forEach(evt => quickSettingsBtn.addEventListener(evt, stopProp));
         ['click', 'mousedown', 'touchstart', 'dblclick'].forEach(evt => quickSettingsPanel.addEventListener(evt, stopProp));
 
@@ -5176,7 +5244,11 @@ function showTapToOverlay(type = 'start') {
 
         if (typeof applyTranslations === 'function') applyTranslations();
 
-        quickSettingsPanel.classList.add('hidden');
+        quickSettingsPanel.classList.add('translate-y-full');
+        if (quickSettingsBtn) {
+            quickSettingsBtn.style.opacity = '1';
+            quickSettingsBtn.style.pointerEvents = 'auto';
+        }
     }
 
     if (type === 'start') {
