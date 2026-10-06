@@ -474,11 +474,12 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             <!-- Expandable details -->
             <div class="song-option-details ${isExpanded ? 'flex' : 'hidden'} flex-col gap-1.5 mt-2 pt-2 border-t border-cyan-500/20 w-full pointer-events-auto">
                 <div class="flex justify-between items-center gap-2">
-                    <button class="bxh-btn flex-1 py-1.5 text-[10px] font-bold text-yellow-400 bg-yellow-950/40 border border-yellow-500/30 rounded flex items-center justify-center gap-1 hover:bg-yellow-900/60 transition-all font-orbitron uppercase">
+                    <button class="play-btn flex-1 py-1.5 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 rounded flex items-center justify-center gap-1 hover:bg-cyan-900/60 transition-all font-orbitron uppercase">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        ${typeof t === 'function' ? t('leaderboard') : 'BXH'}
+                        ${typeof t === 'function' ? t('play_song') : 'CHƠI'}
                     </button>
                 </div>
                 <div class="flex justify-between items-center gap-2">
@@ -488,12 +489,11 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         </svg>
                         ${typeof t === 'function' ? t('btn_clear_cache') : 'XÓA CACHE'}
                     </button>
-                    <button class="play-btn flex-1 py-1.5 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 rounded flex items-center justify-center gap-1 hover:bg-cyan-900/60 transition-all font-orbitron uppercase">
+                    <button class="bxh-btn flex-1 py-1.5 text-[10px] font-bold text-yellow-400 bg-yellow-950/40 border border-yellow-500/30 rounded flex items-center justify-center gap-1 hover:bg-yellow-900/60 transition-all font-orbitron uppercase">
                         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        ${typeof t === 'function' ? t('play_song') : 'CHƠI'}
+                        ${typeof t === 'function' ? t('leaderboard') : 'BXH'}
                     </button>
                 </div>
             </div>
