@@ -128,9 +128,11 @@
             };
 
             // Set initial state from global/localStorage
+            let bgFound = false;
             radios.forEach(radio => {
                 if (radio.value === selectedBackground) {
                     radio.checked = true;
+                    bgFound = true;
                 }
                 
                 radio.addEventListener('change', (e) => {
@@ -146,10 +148,17 @@
                     }
                 });
             });
+            if (!bgFound && radios.length > 0) {
+                radios[0].checked = true;
+                selectedBackground = radios[0].value;
+                localStorage.setItem('selectedBackground', selectedBackground);
+            }
 
+            let ballColorFound = false;
             ballColorRadios.forEach(radio => {
                 if (radio.value === selectedBallColor) {
                     radio.checked = true;
+                    ballColorFound = true;
                 }
 
                 radio.addEventListener('change', (e) => {
@@ -165,10 +174,17 @@
                     }
                 });
             });
+            if (!ballColorFound && ballColorRadios.length > 0) {
+                ballColorRadios[0].checked = true;
+                selectedBallColor = ballColorRadios[0].value;
+                localStorage.setItem('selectedBallColor', selectedBallColor);
+            }
 
+            let ballPatternFound = false;
             ballPatternRadios.forEach(radio => {
                 if (radio.value === selectedBallPattern) {
                     radio.checked = true;
+                    ballPatternFound = true;
                 }
 
                 radio.addEventListener('change', (e) => {
@@ -184,10 +200,17 @@
                     }
                 });
             });
+            if (!ballPatternFound && ballPatternRadios.length > 0) {
+                ballPatternRadios[0].checked = true;
+                selectedBallPattern = ballPatternRadios[0].value;
+                localStorage.setItem('selectedBallPattern', selectedBallPattern);
+            }
 
+            let envFound = false;
             environmentRadios.forEach(radio => {
                 if (radio.value === selectedEnvironment) {
                     radio.checked = true;
+                    envFound = true;
                 }
 
                 radio.addEventListener('change', (e) => {
@@ -203,6 +226,11 @@
                     }
                 });
             });
+            if (!envFound && environmentRadios.length > 0) {
+                environmentRadios[0].checked = true;
+                selectedEnvironment = environmentRadios[0].value;
+                localStorage.setItem('selectedEnvironment', selectedEnvironment);
+            }
 
             // Initialize UI styling
             updateUI();
