@@ -422,12 +422,16 @@ function getTileFromPool(forceNew = false) {
             }
         }
         // Xóa các thuộc tính game-state tạm thời của userData để tránh lỗi tái sử dụng (vd: isFinalStarTile)
-        const keysToKeep = ['borderLine', 'centerMesh', 'glowMesh', 'bodyMesh', 'edgeMesh', 'innerBorderLine', 'hitboxMesh'];
-        for (let key in tile.userData) {
-            if (!keysToKeep.includes(key)) {
-                delete tile.userData[key];
-            }
-        }
+        const u = tile.userData;
+        tile.userData = {
+            borderLine: u.borderLine,
+            centerMesh: u.centerMesh,
+            glowMesh: u.glowMesh,
+            bodyMesh: u.bodyMesh,
+            edgeMesh: u.edgeMesh,
+            innerBorderLine: u.innerBorderLine,
+            hitboxMesh: u.hitboxMesh
+        };
     } else {
         const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
 
@@ -717,7 +721,12 @@ function spawnTile(isFirst = false) {
                     // các khối còn lại luôn luôn cách vị trí cũ ít nhất 1 block (khoảng cách slot >= 4.0)
                     const slots = [-4.5, 0, 4.5];
                     const minBlockDistance = 4.0;
-                    const candidates = slots.filter(s => Math.abs(s - prevX) >= minBlockDistance);
+                    const candidates = [];
+                    for (let i = 0; i < 3; i++) {
+                        if (Math.abs(slots[i] - prevX) >= minBlockDistance) {
+                            candidates.push(slots[i]);
+                        }
+                    }
 
                     if (candidates.length > 0) {
                         tileX = candidates[Math.floor(Math.random() * candidates.length)];

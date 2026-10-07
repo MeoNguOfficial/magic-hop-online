@@ -687,27 +687,34 @@ function shiftCoordinateOrigin(offsetZ) {
     jumpStartRawZ += offsetZ;
 
     // 3. Dịch chuyển tất cả gạch hiện có
-    tiles.forEach(tile => {
+    let tileIdx = tiles.length;
+    while (tileIdx--) {
+        const tile = tiles[tileIdx];
         tile.position.z += offsetZ;
         if (tile.userData.targetZ !== undefined) tile.userData.targetZ += offsetZ;
-    });
+    }
 
     // 4. Dịch chuyển gạch đang biến mất (exit tiles)
-    exitingTiles.forEach(tile => {
+    let exTileIdx = exitingTiles.length;
+    while (exTileIdx--) {
+        const tile = exitingTiles[exTileIdx];
         tile.position.z += offsetZ;
         if (tile.userData.exitStartZ !== undefined) tile.userData.exitStartZ += offsetZ;
-    });
+    }
 
     // 5. Dịch chuyển đuôi bóng (trail segments)
-    ballTrailSegments.forEach(segment => {
+    let segmentIdx = ballTrailSegments.length;
+    while (segmentIdx--) {
+        const segment = ballTrailSegments[segmentIdx];
         if (segment.mesh) segment.mesh.position.z += offsetZ;
         if (segment.z !== undefined) segment.z += offsetZ;
-    });
+    }
 
     // 6. Dịch chuyển các vòng sóng xung kích (shockwaves)
-    shockwaves.forEach(sw => {
-        sw.mesh.position.z += offsetZ;
-    });
+    let swIdx = shockwaves.length;
+    while (swIdx--) {
+        shockwaves[swIdx].mesh.position.z += offsetZ;
+    }
 
     if (typeof window.GameEffectsManager !== 'undefined' && window.GameEffectsManager.shiftZ) {
         window.GameEffectsManager.shiftZ(offsetZ);
@@ -744,16 +751,19 @@ function shiftCoordinateOrigin(offsetZ) {
     // 7. Dịch chuyển gạch giả và các mảnh vỡ (Fake blocks)
     if (window.FakeBlocksManager) {
         if (window.FakeBlocksManager.fakeTiles) {
-            window.FakeBlocksManager.fakeTiles.forEach(ft => {
+            let ftIdx = window.FakeBlocksManager.fakeTiles.length;
+            while (ftIdx--) {
+                const ft = window.FakeBlocksManager.fakeTiles[ftIdx];
                 ft.position.z += offsetZ;
                 if (ft.userData.targetZ !== undefined) ft.userData.targetZ += offsetZ;
                 if (ft.userData.exitStartZ !== undefined) ft.userData.exitStartZ += offsetZ;
-            });
+            }
         }
         if (window.FakeBlocksManager.fragments) {
-            window.FakeBlocksManager.fragments.forEach(frag => {
-                frag.position.z += offsetZ;
-            });
+            let fragIdx = window.FakeBlocksManager.fragments.length;
+            while (fragIdx--) {
+                window.FakeBlocksManager.fragments[fragIdx].position.z += offsetZ;
+            }
         }
         if (window.FakeBlocksManager.lastSpawnZ !== null && window.FakeBlocksManager.lastSpawnZ !== undefined) {
             window.FakeBlocksManager.lastSpawnZ += offsetZ;
@@ -762,10 +772,12 @@ function shiftCoordinateOrigin(offsetZ) {
 
     // 8. Dịch chuyển các xung phát sáng biên chạy theo nhịp nhạc (Boundary pulses)
     if (typeof boundaryPulses !== 'undefined' && boundaryPulses.length > 0) {
-        boundaryPulses.forEach(pulse => {
+        let bpIdx = boundaryPulses.length;
+        while (bpIdx--) {
+            const pulse = boundaryPulses[bpIdx];
             if (pulse.mesh) pulse.mesh.position.z += offsetZ;
             if (pulse.startZ !== undefined) pulse.startZ += offsetZ;
-        });
+        }
     }
 
     // 9. Dịch chuyển hệ thống hạt nền (starField GPU Shader)
@@ -3427,9 +3439,10 @@ async function gameVictory() {
         audio.playbackRate = 1.0;
     }
 
-    tiles.forEach(tile => {
-        pushTileToPool(tile);
-    });
+    let tileIdx = tiles.length;
+    while (tileIdx--) {
+        pushTileToPool(tiles[tileIdx]);
+    }
     tiles = [];
 
     cleanUpOldObjects();
@@ -3950,9 +3963,10 @@ async function gameOver() {
         uiGainNode.gain.value = typeof isUiMuted !== 'undefined' && isUiMuted ? 0 : uiVolume;
     }
 
-    tiles.forEach(tile => {
-        pushTileToPool(tile);
-    });
+    let tileIdx = tiles.length;
+    while (tileIdx--) {
+        pushTileToPool(tiles[tileIdx]);
+    }
     tiles = [];
 
     cleanUpOldObjects();
@@ -4248,14 +4262,16 @@ function resetGameScene() {
     if (window.EasyGameOverCloverManager) window.EasyGameOverCloverManager.stop();
     if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
 
-    tiles.forEach(tile => {
-        pushTileToPool(tile);
-    });
+    let tileIdx = tiles.length;
+    while (tileIdx--) {
+        pushTileToPool(tiles[tileIdx]);
+    }
     tiles = [];
 
-    exitingTiles.forEach(tile => {
-        pushTileToPool(tile);
-    });
+    let exTileIdx = exitingTiles.length;
+    while (exTileIdx--) {
+        pushTileToPool(exitingTiles[exTileIdx]);
+    }
     exitingTiles = [];
 
     if (typeof window.FakeBlocksManager !== 'undefined') {
@@ -4273,10 +4289,11 @@ function resetGameScene() {
     }
 
     // Dọn dẹp các đường sáng chạy trên biên (đưa vào pool)
-    boundaryPulses.forEach(pulse => {
-        scene.remove(pulse.mesh);
-        boundaryPulsePool.push(pulse.mesh);
-    });
+    let bpIdx = boundaryPulses.length;
+    while (bpIdx--) {
+        scene.remove(boundaryPulses[bpIdx].mesh);
+        boundaryPulsePool.push(boundaryPulses[bpIdx].mesh);
+    }
     boundaryPulses = [];
 
     ball.position.set(0, minFloor, 0);
