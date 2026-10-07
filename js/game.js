@@ -4769,7 +4769,16 @@ function returnToMenu() {
 
 menuBtn.addEventListener('click', returnToMenu);
 
+let globalHandleTap = null;
+let globalOverlayTapTime = 0;
+
 function showTapToOverlay(type = 'start') {
+    if (globalHandleTap) {
+        tapToPlayOverlay.removeEventListener('click', globalHandleTap);
+        tapToPlayOverlay.removeEventListener('touchstart', globalHandleTap);
+        globalHandleTap = null;
+    }
+    
     tapToPlayOverlay.style.display = 'flex';
     countdownNumber.innerText = type === 'start' ? t('tap_play') : t('tap_resume');
 
@@ -4791,7 +4800,15 @@ function showTapToOverlay(type = 'start') {
         }
     }
 
-    const handleTap = () => {
+    const handleTap = (e) => {
+        if (e && e.type === 'touchstart') {
+            if (e.cancelable) e.preventDefault();
+            if (e.touches && e.touches.length > 1) return;
+        }
+
+        if (Date.now() - globalOverlayTapTime < 350) return;
+        globalOverlayTapTime = Date.now();
+
         const qsPanel = document.getElementById('tap-quick-settings-panel');
         if (qsPanel && qsPanel.closePanel && !qsPanel.classList.contains('translate-y-full')) {
             qsPanel.closePanel();
@@ -4811,8 +4828,11 @@ function showTapToOverlay(type = 'start') {
         }
 
         tapToPlayOverlay.style.display = 'none';
-        tapToPlayOverlay.removeEventListener('click', handleTap);
-        tapToPlayOverlay.removeEventListener('touchstart', handleTap);
+        if (globalHandleTap) {
+            tapToPlayOverlay.removeEventListener('click', globalHandleTap);
+            tapToPlayOverlay.removeEventListener('touchstart', globalHandleTap);
+            globalHandleTap = null;
+        }
         if (typeof stopPregameMusic === 'function') stopPregameMusic();
 
         if (type === 'start') {
@@ -4836,8 +4856,11 @@ function showTapToOverlay(type = 'start') {
         tapBackBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             tapToPlayOverlay.style.display = 'none';
-            tapToPlayOverlay.removeEventListener('click', handleTap);
-            tapToPlayOverlay.removeEventListener('touchstart', handleTap);
+            if (globalHandleTap) {
+                tapToPlayOverlay.removeEventListener('click', globalHandleTap);
+                tapToPlayOverlay.removeEventListener('touchstart', globalHandleTap);
+                globalHandleTap = null;
+            }
             if (typeof stopPregameMusic === 'function') stopPregameMusic();
             returnToMenu();
         });
@@ -5250,8 +5273,9 @@ function showTapToOverlay(type = 'start') {
         if (typeof playPregameMusic === 'function') playPregameMusic();
     }
 
-    tapToPlayOverlay.addEventListener('click', handleTap);
-    tapToPlayOverlay.addEventListener('touchstart', handleTap);
+    globalHandleTap = handleTap;
+    tapToPlayOverlay.addEventListener('click', globalHandleTap);
+    tapToPlayOverlay.addEventListener('touchstart', globalHandleTap, { passive: false });
 }
 
 function startCountdown() {
