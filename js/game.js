@@ -4475,15 +4475,10 @@ async function handleIntro() {
 
     await changeSong(selectedSongIndex, false);
     animate();
-
     let progress = 0;
     const simulateLoad = setInterval(() => {
-        if (menuAudio && menuAudio.readyState >= 3) {
-            progress += Math.random() * 10;
-        } else {
-            progress += Math.random() * 2;
-            if (progress > 95) progress = 95; // Chờ nhạc nền tải hoặc xuất từ bộ đệm xong
-        }
+        // Luôn cho phép thanh tải tiếp tục lên 100% để tránh lỗi kẹt trên PC 
+        progress += Math.random() * 8 + 2;
 
         if (progress >= 100) {
             progress = 100;

@@ -376,33 +376,29 @@ async function getCachedAudioUrlWithProgress(url, onProgress) {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const contentLength = response.headers.get('content-length');
-        let downloadedBlob;
+        const total = contentLength ? parseInt(contentLength, 10) : 4 * 1024 * 1024; // Giả định 4MB nếu server ẩn Content-Length
+        let loaded = 0;
+        const reader = response.body.getReader();
+        const chunks = [];
 
-        if (!contentLength) {
-            downloadedBlob = await response.blob();
-            if (onProgress) onProgress(100);
-        } else {
-            const total = parseInt(contentLength, 10);
-            let loaded = 0;
-            const reader = response.body.getReader();
-            const chunks = [];
-
-            while (true) {
-                if (window.isSongLoadingCancelled) {
-                    reader.cancel();
-                    throw new Error("User cancelled song loading");
-                }
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                chunks.push(value);
-                loaded += value.length;
-
-                const percent = Math.round((loaded / total) * 100);
-                if (onProgress) onProgress(percent);
+        while (true) {
+            if (window.isSongLoadingCancelled) {
+                reader.cancel();
+                throw new Error("User cancelled song loading");
             }
-            downloadedBlob = new Blob(chunks);
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            chunks.push(value);
+            loaded += value.length;
+
+            let percent = Math.round((loaded / total) * 100);
+            // Nếu không có contentLength, giữ tối đa 95% cho đến khi tải xong thực sự
+            if (!contentLength && percent > 95) percent = 95; 
+            if (onProgress) onProgress(percent);
         }
+        if (!contentLength && onProgress) onProgress(100);
+        const downloadedBlob = new Blob(chunks);
 
         // Lưu vào cache
         if (hasOPFS) {
