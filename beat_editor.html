@@ -19,9 +19,15 @@
 
 <body>
 
-    <header>
-        <h1>🎵 Beat Editor Pro</h1>
-        <p class="subtitle">Công cụ tạo & chỉnh sửa sơ đồ beat nhạc trực quan - Tích hợp AI & Tạo Beat theo BPM</p>
+    <header style="display: flex; justify-content: space-between; align-items: center; padding-right: 20px;">
+        <div>
+            <h1>🎵 Beat Editor Pro</h1>
+            <p class="subtitle">Công cụ tạo & chỉnh sửa sơ đồ beat nhạc trực quan - Tích hợp AI & Tạo Beat theo BPM</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button id="memoryBtn" class="modal-btn" style="background: var(--primary); color: var(--bg-color); padding: 8px 16px; font-weight: bold;">💾 Lịch sử đã lưu</button>
+            <button id="exitBtn" class="modal-btn btn-danger" style="padding: 8px 16px; font-weight: bold;">🚪 Thoát</button>
+        </div>
     </header>
 
     <div id="dropZone">
@@ -33,7 +39,11 @@
         <input type="file" id="fileInput" accept="audio/*" hidden>
     </div>
 
-    <div id="songName">🎵 Chưa chọn bài hát</div>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px;">
+        <div id="songName" style="margin: 0;">🎵 Chưa chọn bài hát</div>
+        <button id="locateAudioBtn" class="modal-btn" style="display: none; padding: 4px 10px; font-size: 0.85rem; background: var(--secondary); color: var(--bg-color);">🔍 Định vị file mp3</button>
+        <input type="file" id="locateAudioInput" accept="audio/*" style="display: none;">
+    </div>
 
     <!-- Timeline Chỉnh Sửa & Xem Trước Beat Nâng Cao -->
     <div class="timeline-panel" id="timelinePanel">
@@ -108,6 +118,12 @@
                 <button class="add-current" id="addCurrentBtn" disabled>➕ Thêm Beat</button>
                 <button class="undo" id="undoBtn" disabled>↶ Hoàn tác (Undo)</button>
                 <button class="export" id="exportBtn" disabled>📦 Xuất JSON</button>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="export" id="saveMemoryBtn" disabled style="background: #10b981; margin: 0;">💾 Lưu vào Lịch sử</button>
+                    <label style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
+                        <input type="checkbox" id="autoSaveToggle" checked> Tự động lưu
+                    </label>
+                </div>
                 <button class="reset-btn" id="resetBtn" disabled>🔄 Làm lại từ đầu</button>
             </div>
 
@@ -249,6 +265,32 @@
             <div style="margin-bottom: 15px;"></div>
             <div class="modal-buttons" style="border-top: 1px solid var(--border-color); padding-top: 15px;">
                 <button class="modal-btn btn-cancel" id="closeGroupModal" style="width: 100%;">Đóng bảng điều khiển</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Lịch sử Bộ Nhớ (10 bài hát) -->
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal" style="max-width: 600px; width: 90%;">
+            <h3 style="color: var(--primary); margin-bottom: 15px;">💾 10 Bài Hát Gần Nhất Đã Lưu</h3>
+            <div id="historyList" style="max-height: 300px; overflow-y: auto; text-align: left; margin-bottom: 15px; padding: 10px; background: var(--bg-alt); border-radius: 8px;">
+                <!-- Nội dung danh sách sẽ được render ở đây -->
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn btn-cancel" id="closeHistoryModal" style="width: 100%;">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Xác Nhận Thoát -->
+    <div class="modal-overlay" id="exitModal">
+        <div class="modal">
+            <h3 style="color: var(--warning);">Thoát Trình Biên Tập?</h3>
+            <p>Bạn muốn lưu lại trước khi thoát chứ?</p>
+            <div class="modal-buttons" style="flex-direction: column; gap: 10px;">
+                <button class="modal-btn btn-confirm" id="exitSaveBtn" style="width: 100%; background: var(--primary);">Lưu vào Bộ nhớ & Thoát</button>
+                <button class="modal-btn btn-danger" id="exitNoSaveBtn" style="width: 100%;">Không lưu & Thoát</button>
+                <button class="modal-btn btn-cancel" id="exitCancelBtn" style="width: 100%;">Quay lại làm việc</button>
             </div>
         </div>
     </div>

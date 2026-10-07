@@ -9,6 +9,19 @@ const exportBtn = document.getElementById("exportBtn");
 const undoBtn = document.getElementById("undoBtn");
 const resetBtn = document.getElementById("resetBtn");
 const autoGenerateBtn = document.getElementById("autoGenerateBtn");
+const saveMemoryBtn = document.getElementById("saveMemoryBtn");
+
+const memoryBtn = document.getElementById("memoryBtn");
+const exitBtn = document.getElementById("exitBtn");
+
+const historyModal = document.getElementById("historyModal");
+const historyList = document.getElementById("historyList");
+const closeHistoryModal = document.getElementById("closeHistoryModal");
+
+const exitModal = document.getElementById("exitModal");
+const exitSaveBtn = document.getElementById("exitSaveBtn");
+const exitNoSaveBtn = document.getElementById("exitNoSaveBtn");
+const exitCancelBtn = document.getElementById("exitCancelBtn");
 
 const output = document.getElementById("output");
 const beatCount = document.getElementById("beatCount");
@@ -97,6 +110,7 @@ let isCountingDown = false;
 let currentFile = null;
 let currentArrayBuffer = null;
 let zoomLevel = 1;
+let currentProjectName = "Unknown Song";
 
 let selectedBeatsIndices = new Set();
 let clipboardBeats = [];
@@ -226,9 +240,10 @@ function checkAndHighlightBeats(currentTime) {
 
 function loadFile(file) {
     currentFile = file;
+    currentProjectName = file.name;
     const url = URL.createObjectURL(file);
     audio.src = url;
-    songName.innerHTML = `🎵 <strong>${file.name}</strong>`;
+    songName.innerHTML = `🎵 <strong>${currentProjectName}</strong> <span style="font-size: 0.8em; cursor: pointer;" title="Đổi tên bản lưu">✏️</span>`;
 
     playBtn.disabled = false;
     recordBtn.disabled = false;
@@ -236,6 +251,7 @@ function loadFile(file) {
     exportBtn.disabled = false;
     resetBtn.disabled = false;
     autoGenerateBtn.disabled = false;
+    if (saveMemoryBtn) saveMemoryBtn.disabled = false;
 
     status.textContent = "Sẵn sàng";
     status.className = "";
@@ -267,14 +283,16 @@ async function loadFromAdmin() {
         }
 
         audio.src = data.audioUrl;
-        songName.innerHTML = `🎵 <strong>${data.title || "Unknown"}</strong> (Từ Admin)`;
-        currentFile = { name: data.title || "Unknown" };
+        currentProjectName = data.title || "Unknown";
+        songName.innerHTML = `🎵 <strong>${currentProjectName}</strong> (Từ Admin) <span style="font-size: 0.8em; cursor: pointer;" title="Đổi tên bản lưu">✏️</span>`;
+        currentFile = { name: currentProjectName };
 
         playBtn.disabled = false;
         recordBtn.disabled = false;
         addCurrentBtn.disabled = false;
         exportBtn.disabled = false;
         resetBtn.disabled = false;
+        if (saveMemoryBtn) saveMemoryBtn.disabled = false;
         autoGenerateBtn.disabled = true; // Disable AI until buffer is loaded
         
         status.textContent = "Đang tải dữ liệu âm thanh...";
@@ -705,15 +723,28 @@ importBtn.onclick = () => {
 formatOneLineBtn.onclick = () => { exportMode = "oneline"; formatOneLineBtn.classList.add("active"); formatBeautifyBtn.classList.remove("active"); updateBeatList(); };
 formatBeautifyBtn.onclick = () => { exportMode = "beautify"; formatBeautifyBtn.classList.add("active"); formatOneLineBtn.classList.remove("active"); updateBeatList(); };
 
+function getCleanSongName() {
+    return currentProjectName || "Unknown Song";
+}
+
 function updateBeatList() {
     beatCount.textContent = `Beat: ${beats.length}`;
-    const dataObj = { song: currentFile ? currentFile.name : "", beats: beats };
+    const sName = getCleanSongName();
+    const dataObj = { song: sName !== "Unknown Song" ? sName : "", beats: beats };
     output.value = exportMode === "oneline" ? JSON.stringify(dataObj) : JSON.stringify(dataObj, null, 2);
     try {
         localStorage.setItem('beatEditor_beats', JSON.stringify(beats));
     } catch (e) {
         console.error("Could not save to localStorage", e);
     }
+    
+    const autoSaveToggle = document.getElementById("autoSaveToggle");
+    if (autoSaveToggle && autoSaveToggle.checked && beats.length > 0) {
+        if (typeof saveHistory === 'function') {
+            saveHistory(sName, beats, true);
+        }
+    }
+
     renderTimelineMarkers(); updateSelectionIndicator();
 }
 
@@ -1107,12 +1138,16 @@ document.addEventListener("keydown", e => {
 undoBtn.onclick = () => undoLastBeat();
 
 exportBtn.onclick = () => {
-    const data = { song: currentFile ? currentFile.name : "", beats: beats };
+    const data = { song: currentProjectName, beats: beats };
     const jsonText = exportMode === "oneline" ? JSON.stringify(data) : JSON.stringify(data, null, 2);
     const blob = new Blob([jsonText], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = currentFile ? `${currentFile.name.split('.').slice(0, -1).join('.')}_beatmap.json` : "beatmap.json";
+    let fileName = currentProjectName;
+    if (fileName.toLowerCase().endsWith('.mp3') || fileName.toLowerCase().endsWith('.wav') || fileName.toLowerCase().endsWith('.ogg')) {
+        fileName = fileName.split('.').slice(0, -1).join('.');
+    }
+    a.download = `${fileName || "beatmap"}_beatmap.json`;
     a.click();
 };
 
@@ -1122,8 +1157,254 @@ confirmResetBtn.onclick = () => {
     audio.pause(); audio.currentTime = 0; beats = []; recording = false; isCountingDown = false; clearSelection();
     timeLabel.textContent = "00:00.000"; status.textContent = "Sẵn sàng (Đã đặt lại danh sách beat)"; status.className = ""; beatCount.textContent = "Beat: 0"; output.value = ""; timelineBeats.innerHTML = "";
     playBtn.textContent = "▶ Phát"; undoBtn.disabled = true; confirmModal.classList.remove("active");
+    if (typeof lastSavedBeatsStr !== 'undefined') lastSavedBeatsStr = "[]";
 };
 
 confirmModal.addEventListener("click", e => { if (e.target === confirmModal) confirmModal.classList.remove("active"); });
 alertModal.addEventListener("click", e => { if (e.target === alertModal) alertModal.classList.remove("active"); });
 groupActionModal.addEventListener("click", e => { if (e.target === groupActionModal) groupActionModal.classList.remove("active"); });
+
+// --- LỊCH SỬ BỘ NHỚ ---
+let lastSavedBeatsStr = "[]";
+
+async function getHistoryAsync() {
+    let hist = [];
+    try {
+        const lsStr = localStorage.getItem("beat_editor_history");
+        if (lsStr) hist = JSON.parse(lsStr);
+    } catch(e) {}
+    
+    try {
+        const dbHist = await new Promise((resolve, reject) => {
+            const req = indexedDB.open("BeatEditorDB", 1);
+            req.onupgradeneeded = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains("HistoryStore")) db.createObjectStore("HistoryStore", { keyPath: "id" });
+            };
+            req.onsuccess = e => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains("HistoryStore")) return resolve(null);
+                const tx = db.transaction("HistoryStore", "readonly");
+                const getReq = tx.objectStore("HistoryStore").get("beat_editor_history");
+                getReq.onsuccess = () => resolve(getReq.result ? getReq.result.data : null);
+                getReq.onerror = () => resolve(null);
+            };
+            req.onerror = () => resolve(null);
+        });
+        
+        if (dbHist) {
+            const parsedDB = JSON.parse(dbHist);
+            // Ưu tiên DB nếu dài hơn hoặc mới hơn
+            if (parsedDB.length > hist.length || (parsedDB[0] && hist[0] && parsedDB[0].timestamp > hist[0].timestamp)) {
+                hist = parsedDB;
+                localStorage.setItem("beat_editor_history", JSON.stringify(hist));
+            }
+        }
+    } catch (e) {}
+    
+    return hist;
+}
+
+function getHistory() {
+    try {
+        const hist = localStorage.getItem("beat_editor_history");
+        return hist ? JSON.parse(hist) : [];
+    } catch(e) { return []; }
+}
+
+function saveHistory(song, beatsArray, silent = false) {
+    let hist = getHistory();
+    hist = hist.filter(item => item.song !== song);
+    hist.unshift({ song: song, beats: [...beatsArray], timestamp: Date.now() });
+    if (hist.length > 10) hist = hist.slice(0, 10);
+    
+    const histStr = JSON.stringify(hist);
+    localStorage.setItem("beat_editor_history", histStr);
+    
+    try {
+        const req = indexedDB.open("BeatEditorDB", 1);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains("HistoryStore")) db.createObjectStore("HistoryStore", { keyPath: "id" });
+        };
+        req.onsuccess = e => {
+            const db = e.target.result;
+            const tx = db.transaction("HistoryStore", "readwrite");
+            tx.objectStore("HistoryStore").put({ id: "beat_editor_history", data: histStr });
+        };
+    } catch (err) {}
+    
+    lastSavedBeatsStr = JSON.stringify(beatsArray);
+    if (!silent && typeof showNotification === 'function') showNotification("Đã lưu bài hát vào bộ nhớ!", "Thành công");
+}
+
+async function deleteHistory(song) {
+    let hist = getHistory();
+    hist = hist.filter(item => item.song !== song);
+    
+    const histStr = JSON.stringify(hist);
+    localStorage.setItem("beat_editor_history", histStr);
+    try {
+        const req = indexedDB.open("BeatEditorDB", 1);
+        req.onsuccess = e => {
+            const db = e.target.result;
+            const tx = db.transaction("HistoryStore", "readwrite");
+            tx.objectStore("HistoryStore").put({ id: "beat_editor_history", data: histStr });
+        };
+    } catch (err) {}
+    
+    await renderHistory();
+}
+
+async function renderHistory() {
+    historyList.innerHTML = "<div style='text-align: center; padding: 20px;'><span class='spinner'></span> Đang tải...</div>";
+    const hist = await getHistoryAsync();
+    historyList.innerHTML = "";
+    if (hist.length === 0) {
+        historyList.innerHTML = "<div style='color: var(--text-muted); text-align: center; padding: 20px;'>Chưa có lịch sử lưu nào.</div>";
+        return;
+    }
+    hist.forEach(item => {
+        const div = document.createElement("div");
+        div.style.display = "flex";
+        div.style.justifyContent = "space-between";
+        div.style.alignItems = "center";
+        div.style.padding = "10px";
+        div.style.borderBottom = "1px solid var(--border-color)";
+        
+        const info = document.createElement("div");
+        const date = new Date(item.timestamp).toLocaleString("vi-VN");
+        info.innerHTML = `<div style='font-weight: bold; color: var(--primary);'>${item.song}</div><div style='font-size: 0.8rem; color: var(--text-muted);'>${item.beats.length} beats - ${date}</div>`;
+        
+        const actions = document.createElement("div");
+        actions.style.display = "flex";
+        actions.style.gap = "5px";
+        
+        const loadBtn = document.createElement("button");
+        loadBtn.className = "modal-btn btn-confirm";
+        loadBtn.style.padding = "5px 10px";
+        loadBtn.style.fontSize = "0.85rem";
+        loadBtn.textContent = "Tải";
+        loadBtn.onclick = () => {
+            beats = [...item.beats];
+            lastSavedBeatsStr = JSON.stringify(beats);
+            if (typeof updateBeatList === 'function') updateBeatList(); 
+            if (typeof clearSelection === 'function') clearSelection();
+            output.value = exportMode === "oneline" ? JSON.stringify({song: item.song, beats: beats}) : JSON.stringify({song: item.song, beats: beats}, null, 2);
+            beatCount.textContent = `Beat: ${beats.length}`;
+            currentProjectName = item.song;
+            songName.innerHTML = `🎵 <strong>${currentProjectName}</strong> <span style="color:var(--warning); font-size:0.85em;">(Thiếu file nhạc)</span> <span style="font-size: 0.8em; cursor: pointer;" title="Đổi tên bản lưu">✏️</span>`;
+            
+            const locBtn = document.getElementById("locateAudioBtn");
+            if (locBtn) locBtn.style.display = "inline-block";
+
+            historyModal.classList.remove("active");
+            if (typeof showNotification === 'function') showNotification(`Đã tải beatmap của ${item.song}. Vui lòng định vị file nhạc.`, "Thành công");
+        };
+        
+        const delBtn = document.createElement("button");
+        delBtn.className = "modal-btn btn-danger";
+        delBtn.style.padding = "5px 10px";
+        delBtn.style.fontSize = "0.85rem";
+        delBtn.textContent = "Xóa";
+        delBtn.onclick = () => deleteHistory(item.song);
+        
+        actions.appendChild(loadBtn);
+        actions.appendChild(delBtn);
+        
+        div.appendChild(info);
+        div.appendChild(actions);
+        historyList.appendChild(div);
+    });
+}
+
+if (saveMemoryBtn) {
+    saveMemoryBtn.onclick = () => {
+        saveHistory(getCleanSongName(), beats);
+    };
+}
+
+if (memoryBtn) {
+    memoryBtn.onclick = async () => {
+        historyModal.classList.add("active");
+        await renderHistory();
+    };
+}
+
+if (closeHistoryModal) closeHistoryModal.onclick = () => historyModal.classList.remove("active");
+if (historyModal) historyModal.addEventListener("click", e => { if (e.target === historyModal) historyModal.classList.remove("active"); });
+
+function isDirty() {
+    return JSON.stringify(beats) !== lastSavedBeatsStr && beats.length > 0;
+}
+
+if (exitBtn) {
+    exitBtn.onclick = () => {
+        if (isDirty()) {
+            exitModal.classList.add("active");
+        } else {
+            window.location.href = "index.html"; 
+        }
+    };
+}
+
+if (exitSaveBtn) {
+    exitSaveBtn.onclick = () => {
+        saveHistory(getCleanSongName(), beats);
+        window.location.href = "index.html";
+    };
+}
+
+if (exitNoSaveBtn) exitNoSaveBtn.onclick = () => window.location.href = "index.html";
+if (exitCancelBtn) exitCancelBtn.onclick = () => exitModal.classList.remove("active");
+if (exitModal) exitModal.addEventListener("click", e => { if (e.target === exitModal) exitModal.classList.remove("active"); });
+
+window.addEventListener("beforeunload", (e) => {
+    if (isDirty()) {
+        // Tự động lưu ngầm vào bộ nhớ trước khi tab bị đóng (Auto-save on exit)
+        const sName = getCleanSongName() === "Unknown Song" ? "Auto-saved Song" : getCleanSongName();
+        saveHistory(sName, beats, true);
+        
+        // Vẫn bật cảnh báo mặc định của trình duyệt
+        e.preventDefault();
+        e.returnValue = "Bạn có thay đổi chưa lưu. Bạn có chắc muốn thoát?";
+    }
+});
+
+const locateAudioBtn = document.getElementById("locateAudioBtn");
+const locateAudioInput = document.getElementById("locateAudioInput");
+
+if (locateAudioBtn && locateAudioInput) {
+    locateAudioBtn.onclick = () => locateAudioInput.click();
+    locateAudioInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            loadFile(file);
+            locateAudioBtn.style.display = "none";
+            if (typeof showNotification === 'function') {
+                showNotification("Đã kết nối file nhạc thành công!", "Định vị hoàn tất");
+            }
+        }
+    });
+}
+
+if (songName) {
+    songName.addEventListener("click", () => {
+        if (currentProjectName === "Unknown Song" && !currentFile && beats.length === 0) return;
+        const newName = prompt("Nhập tên bản lưu mới (Save As - Tạo bản sao):", currentProjectName);
+        if (newName && newName.trim() !== "") {
+            currentProjectName = newName.trim();
+            const hasMissing = document.getElementById("locateAudioBtn") && document.getElementById("locateAudioBtn").style.display !== "none";
+            songName.innerHTML = `🎵 <strong>${currentProjectName}</strong> ${hasMissing ? '<span style="color:var(--warning); font-size:0.85em;">(Thiếu file nhạc)</span>' : ''} <span style="font-size: 0.8em; cursor: pointer;" title="Đổi tên bản lưu">✏️</span>`;
+            
+            updateBeatList();
+            // Cập nhật lại giao diện Lịch sử nếu modal đang mở
+            if (historyModal && historyModal.classList.contains("active")) {
+                renderHistory();
+            }
+            if (typeof showNotification === 'function') {
+                showNotification("Đã đổi tên và bắt đầu lưu vào bản ghi mới: " + currentProjectName, "Tạo bản sao thành công");
+            }
+        }
+    });
+}
