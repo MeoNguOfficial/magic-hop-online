@@ -71,9 +71,10 @@ function setSubmitButtonState(btnSubmit, state, options = {}) {
         const loadingText = options.text || 'ĐANG XỬ LÝ...';
         btnSubmit.innerHTML = `
             <span class="inline-flex items-center justify-center gap-2">
-                <svg class="w-4 h-4 animate-spin shrink-0 text-current" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                <svg class="w-4 h-4 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none">
+                    <circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle>
+                    <circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle>
+                    <circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle>
                 </svg>
                 <span>${loadingText}</span>
             </span>
@@ -672,15 +673,15 @@ async function withRefreshAnimation(buttonId, asyncFunc) {
         await asyncFunc();
         return;
     }
-    const svg = btn.querySelector('svg');
-    if (svg) svg.classList.add('animate-spin');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = `<svg class="w-4 h-4 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg>`;
     btn.disabled = true;
     try {
         await asyncFunc();
     } finally {
         // Subtle delay so animation is visible even for very fast requests
         await new Promise(resolve => setTimeout(resolve, 500));
-        if (svg) svg.classList.remove('animate-spin');
+        btn.innerHTML = originalHtml;
         btn.disabled = false;
     }
 }
@@ -1781,7 +1782,7 @@ function renderAdminBeatmapsTable() {
             
             try {
                 // Change icon to loading
-                btn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>`;
+                btn.innerHTML = `<svg class="w-4 h-4 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg>`;
                 
                 let playUrl = url;
                 if (typeof window.getCachedAudioUrl === 'function') {

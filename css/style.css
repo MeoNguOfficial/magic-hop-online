@@ -408,4 +408,34 @@ html, body {
 .spark-dir-4-a { animation: sparkDir4A 0.38s ease-out forwards; }
 .spark-dir-4-b { animation: sparkDir4B 0.38s ease-out forwards; }
 .spark-dir-5-a { animation: sparkDir5A 0.38s ease-out forwards; }
-.spark-dir-5-b { animation: sparkDir5B 0.38s ease-out forwards; }
+.spark-dir-5-b { animation: sparkDir5B 0.38s ease-out forwards; }
+
+/* --- CYBERPUNK MAGIC LOADER --- */
+.magic-loader {
+    transform-origin: center;
+    animation: magic-rotate 2s linear infinite;
+    overflow: visible;
+}
+.magic-loader .loader-path {
+    stroke-dasharray: 1, 200;
+    stroke-dashoffset: 0;
+    animation: magic-dash 1.5s ease-in-out infinite;
+    filter: drop-shadow(0 0 3px currentColor);
+}
+.magic-loader .loader-core {
+    transform-origin: 50px 50px;
+    animation: magic-pulse-core 1.5s ease-in-out infinite alternate;
+    filter: drop-shadow(0 0 2px currentColor);
+}
+@keyframes magic-rotate {
+    100% { transform: rotate(360deg); }
+}
+@keyframes magic-dash {
+    0% { stroke-dasharray: 1, 200; stroke-dashoffset: 0; }
+    50% { stroke-dasharray: 90, 200; stroke-dashoffset: -35px; }
+    100% { stroke-dashoffset: -125px; }
+}
+@keyframes magic-pulse-core {
+    0%, 100% { transform: scale(0.8); opacity: 0.6; }
+    50% { transform: scale(1.4); opacity: 1; }
+}

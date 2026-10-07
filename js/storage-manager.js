@@ -194,12 +194,20 @@ window.StorageManager = {
     // --- 5. SỰ KIỆN NÚT LÀM MỚI (REFRESH STORAGE) ---
     async refreshStorage() {
         const icon = document.getElementById('refresh-storage-icon');
-        if (icon) icon.classList.add('animate-spin');
+        const parentBtn = icon ? icon.parentElement : null;
+        let originalHtml = '';
+        if (parentBtn && icon) {
+            originalHtml = icon.outerHTML;
+            icon.outerHTML = `<svg id="refresh-storage-icon" class="w-4 h-4 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg>`;
+        }
 
         await this.updateStorageUI();
 
         setTimeout(() => {
-            if (icon) icon.classList.remove('animate-spin');
+            const newIcon = document.getElementById('refresh-storage-icon');
+            if (newIcon && originalHtml) {
+                newIcon.outerHTML = originalHtml;
+            }
             const msg = typeof t === 'function' ? t('msg_storage_refreshed') : 'Đã cập nhật dung lượng bộ nhớ!';
             if (typeof showCyberToast === 'function') {
                 showCyberToast(msg, 'info');

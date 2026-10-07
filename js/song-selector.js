@@ -327,7 +327,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             if (!btn) return;
             btn.disabled = true;
             btn.className = "w-full mb-3 py-2.5 text-xs font-bold text-cyan-300 border border-cyan-500/50 bg-cyan-950/50 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2 shadow-[0_0_10px_rgba(6,182,212,0.25)] cursor-not-allowed opacity-80";
-            btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-cyan-300" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> ${(typeof t === 'function' ? t('msg_loading_data') : 'ĐANG TẢI DỮ LIỆU...')}`;
+            btn.innerHTML = `<svg class="w-4 h-4 text-cyan-300 magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg> ${(typeof t === 'function' ? t('msg_loading_data') : 'ĐANG TẢI DỮ LIỆU...')}`;
         };
 
         const setRefreshBtnSuccess = (btn) => {
@@ -847,7 +847,7 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
                     ${typeof t === 'function' ? t('lb_mode') : 'Chế độ: '} <strong class="${currentModeInfo.color}">${currentModeInfo.name}</strong>
                 </span>
                 <button id="btn-refresh-lb-${song.id}" class="px-3 py-1.5 bg-cyan-950/40 border border-cyan-500/30 hover:border-cyan-400 text-[11px] text-cyan-400 rounded-lg font-orbitron flex items-center gap-1.5 transition-all opacity-50 cursor-not-allowed" disabled>
-                    <svg class="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <svg class="w-3.5 h-3.5 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg>
                     ${typeof t === 'function' ? t('lb_loading') : 'Đang tải...'}
                 </button>
             </div>

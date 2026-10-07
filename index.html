@@ -579,22 +579,11 @@
             <div id="intro-loading-container" class="space-y-4 w-full">
                 <!-- Concentric Arc Spinning Loader -->
                 <div class="flex justify-center items-center py-4">
-                    <div class="relative w-16 h-16 flex items-center justify-center">
-                        <!-- Outer ring: top cyan, bottom pink, clockwise rotation -->
-                        <div
-                            class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-cyan-400 border-b-pink-500 animate-spin-clockwise">
-                        </div>
-
-                        <!-- Inner ring: top cyan, bottom purple, counter-clockwise rotation -->
-                        <div
-                            class="absolute inset-2 rounded-full border-[3px] border-transparent border-t-cyan-400 border-b-purple-500 animate-spin-counterclockwise">
-                        </div>
-
-                        <!-- Center glowing white dot -->
-                        <div
-                            class="w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_12px_#ffffff,0_0_4px_rgba(255,255,255,0.8)]">
-                        </div>
-                    </div>
+                    <svg class="w-16 h-16 text-cyan-400 magic-loader shrink-0" viewBox="25 25 50 50" fill="none">
+                        <circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"></circle>
+                        <circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle>
+                        <circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle>
+                    </svg>
                 </div>
                 <div class="w-full h-1.5 bg-gray-900/80 rounded-full overflow-hidden p-0.5 border border-purple-500/20">
                     <div id="intro-progress-bar"
@@ -2566,17 +2555,11 @@
         <div class="max-w-md w-full flex flex-col items-center">
             <!-- Concentric Arc Spinning Loader -->
             <div class="flex justify-center items-center py-4 mb-4">
-                <div class="relative w-16 h-16 flex items-center justify-center">
-                    <div
-                        class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-cyan-400 border-b-pink-500 animate-spin-clockwise">
-                    </div>
-                    <div
-                        class="absolute inset-2 rounded-full border-[3px] border-transparent border-t-cyan-400 border-b-purple-500 animate-spin-counterclockwise">
-                    </div>
-                    <div
-                        class="w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_12px_#ffffff,0_0_4px_rgba(255,255,255,0.8)]">
-                    </div>
-                </div>
+                <svg class="w-16 h-16 text-cyan-400 magic-loader shrink-0" viewBox="25 25 50 50" fill="none">
+                    <circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="3" stroke-opacity="0.25"></circle>
+                    <circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle>
+                    <circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle>
+                </svg>
             </div>
 
             <div

@@ -154,7 +154,7 @@ function renderBestScoreUI(songIndex) {
     };
 
     const setLoadingState = () => {
-        bestScoreLabel.innerHTML = `<span class="inline-flex items-center justify-center gap-1.5 text-gray-400 font-bold"><svg class="w-3 h-3 animate-spin text-cyan-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span class="animate-pulse text-cyan-300">...</span></span>`;
+        bestScoreLabel.innerHTML = `<span class="inline-flex items-center justify-center gap-1.5 text-gray-400 font-bold"><svg class="w-3 h-3 text-cyan-400 magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg> <span class="animate-pulse text-cyan-300">...</span></span>`;
     };
 
     const cacheKey = getScoreCacheKey(songIndex);
