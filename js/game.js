@@ -2393,7 +2393,11 @@ function animate() {
                     gameSpeed = 1.0;
                 }
                 // Tốc độ game speed có thể lên rất cao, nhưng tốc độ phát nhạc audio.playbackRate vẫn giữ trần 3.0x
-                audio.playbackRate = Math.min(3.0, gameSpeed);
+                const targetPlaybackRate = Math.round(Math.min(3.0, gameSpeed) * 100) / 100;
+                // Chỉ set lại playbackRate nếu có sự thay đổi rõ rệt (tránh việc gọi API liên tục gây khựng Audio/Browser)
+                if (Math.abs(audio.playbackRate - targetPlaybackRate) >= 0.01) {
+                    audio.playbackRate = targetPlaybackRate;
+                }
             }
 
             const isWarmup = !activeEndlessMode || (roundCount === 0 && totalTilesJumped < 16);
@@ -2529,6 +2533,16 @@ function animate() {
         const springMass = 1;
         const scaleLerpSpeed = Math.min(1.0, 10 * delta);
         
+        // Hoist các biến invariant ra khỏi vòng lặp tiles để triệt tiêu điểm nghẽn
+        const targetTileScaleCached = typeof currentTileScale !== 'undefined' ? currentTileScale : 1.0;
+        const isHitboxVisibleCached = typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled;
+        const currentRoundCached = typeof roundCount !== 'undefined' ? roundCount : 0;
+        const bVelocityZCached = typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40;
+        const speedZCached = Math.abs(bVelocityZCached);
+        const spawnAnimModeCached = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'none';
+        const animationMultiplierCached = Math.max(1.0, gameSpeed * 0.8);
+        const enterSpeedSlideCached = 1 - Math.exp(-12 * animationMultiplierCached * delta);
+        
         for (let ti = 0; ti < tilesCount; ti++) {
             const tile = tiles[ti];
             if (!tile) continue;
@@ -2586,15 +2600,14 @@ function animate() {
 
                 // Cập nhật tỷ lệ scale mượt mà khi gạch thu nhỏ hoặc phóng to
                 let currentScale = tile.userData.scale !== undefined ? tile.userData.scale : 1.0;
-                const targetScale = typeof currentTileScale !== 'undefined' ? currentTileScale : 1.0;
                 let scaleChanged = false;
-                if (Math.abs(currentScale - targetScale) > 0.001) {
-                    currentScale += (targetScale - currentScale) * scaleLerpSpeed;
+                if (Math.abs(currentScale - targetTileScaleCached) > 0.001) {
+                    currentScale += (targetTileScaleCached - currentScale) * scaleLerpSpeed;
                     tile.userData.scale = currentScale;
                     scaleChanged = true;
-                } else if (tile.userData.scale !== targetScale) {
-                    currentScale = targetScale;
-                    tile.userData.scale = targetScale;
+                } else if (tile.userData.scale !== targetTileScaleCached) {
+                    currentScale = targetTileScaleCached;
+                    tile.userData.scale = targetTileScaleCached;
                     scaleChanged = true;
                 }
 
@@ -2605,9 +2618,8 @@ function animate() {
                 // Cập nhật hitbox cho gạch nếu cơ chế Show Hitbox bật
                 if (tile.userData.hitboxMesh) {
                     const hitboxMesh = tile.userData.hitboxMesh;
-                    const isHitboxVisible = typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled;
-                    hitboxMesh.visible = isHitboxVisible;
-                    if (isHitboxVisible) {
+                    if (hitboxMesh.visible !== isHitboxVisibleCached) hitboxMesh.visible = isHitboxVisibleCached;
+                    if (isHitboxVisibleCached) {
                         const scaleX = tileWidth + (ballRadius * 2.5 / currentScale);
                         const scaleY = tileLength + (ballRadius * 1.64 / currentScale);
                         hitboxMesh.scale.set(scaleX, scaleY, 0.4);
@@ -2617,20 +2629,18 @@ function animate() {
 
             // Xử lý xuất hiện trễ (giảm dần thời gian phản xạ theo Round ở tốc độ 1x: Warmup & Round 1 = 1.0s, chia đều 10 Round tới min 0.25s ở Round 10)
             if (tile.userData.isDelayedAppearance) {
-                const tileRound = (tile.userData && typeof tile.userData.roundValue !== 'undefined') ? tile.userData.roundValue : (typeof roundCount !== 'undefined' ? roundCount : 0);
+                const tileRound = (tile.userData && typeof tile.userData.roundValue !== 'undefined') ? tile.userData.roundValue : currentRoundCached;
                 let reactionTime = 1.0;
                 if (tileRound > 1) {
                     reactionTime = Math.max(0.25, 1.0 - (tileRound - 1) * (0.75 / 9));
                 }
 
-                const bVelocityZ = typeof baseBallVelocityZ !== 'undefined' ? baseBallVelocityZ : -40;
-                const speedZ = Math.abs(bVelocityZ); // Luôn xử lý khoảng cách ở tốc độ 1x chuẩn
-                const triggerDistance = speedZ * reactionTime;
+                const triggerDistance = speedZCached * reactionTime;
                 if (ball.position.z <= tile.userData.targetZ + triggerDistance) {
                     tile.visible = true;
                     tile.userData.isDelayedAppearance = false;
 
-                    if (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') {
+                    if (spawnAnimModeCached === 'slide' || spawnAnimModeCached === 'mix') {
                         tile.position.z = tile.userData.targetZ - 40;
                         tile.userData.isEntering = true;
                     } else {
@@ -2642,12 +2652,9 @@ function animate() {
 
             // Animation spawn
             if (tile.userData.isEntering) {
-                const animationMultiplier = Math.max(1.0, gameSpeed * 0.8);
-                const enterSpeed = 1 - Math.exp(-12 * animationMultiplier * delta);
-
-                if (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') {
+                if (spawnAnimModeCached === 'slide' || spawnAnimModeCached === 'mix') {
                     const targetZ = tile.userData.targetZ;
-                    tile.position.z += (targetZ - tile.position.z) * enterSpeed;
+                    tile.position.z += (targetZ - tile.position.z) * enterSpeedSlideCached;
 
                     // Tạm tắt distToTargetZ < 15 (auto instant) để slide mượt ngay cả khi nhịp dồn dập
                     if (ball.position.z < tile.position.z || Math.abs(tile.position.z - targetZ) < 0.1) {
@@ -2961,16 +2968,6 @@ function animate() {
             if (!isFalling) {
                 ball.position.z = jumpStartRawZ + ballVelocityZ * jumpElapsedTime;
                 ball.position.y = jumpStartRawY + currentBounceVelocityY * jumpElapsedTime + 0.5 * currentGravity * jumpElapsedTime * jumpElapsedTime;
-
-                const targetAudioSpeed = Math.min(3.0, gameSpeed);
-                if (audio && !isFailTransition) {
-                    const diff = targetAudioSpeed - audio.playbackRate;
-                    if (Math.abs(diff) > 0.01) {
-                        audio.playbackRate += diff * Math.min(1.0, 4.0 * delta);
-                    } else if (audio.playbackRate !== targetAudioSpeed) {
-                        audio.playbackRate = targetAudioSpeed;
-                    }
-                }
             }
         } else {
             let slowMoFactor = 1.0;
