@@ -433,6 +433,32 @@ async function changeSong(index, autoStart = false) {
 
     if (autoStart) {
         updateMusicLoadingProgress(0);
+        
+        // Kiểm tra update ngầm trong lúc đang hiện Loading Overlay
+        if (typeof window.checkSongUpdateWithBackend === 'function') {
+            if (typeof updateLoadingStatus === 'function') {
+                // Hiển thị trạng thái đang kiểm tra
+                const rawChecking = typeof t === 'function' ? t('msg_checking_map') : 'Checking map data...';
+                const currentLang = typeof activeLang !== 'undefined' ? activeLang : 'en';
+                const checkingText = rawChecking === 'msg_checking_map' ? (currentLang === 'vi' ? 'Đang kiểm tra dữ liệu...' : 'Checking map data...') : rawChecking;
+                const musicStatus = document.getElementById('loading-music-status');
+                if (musicStatus) musicStatus.innerText = checkingText;
+            }
+            
+            const changed = await window.checkSongUpdateWithBackend(index);
+            
+            if (changed && typeof updateLoadingStatus === 'function') {
+                const rawUpdating = typeof t === 'function' ? t('msg_updating_map') : 'Updating map...';
+                const currentLang = typeof activeLang !== 'undefined' ? activeLang : 'en';
+                const updatingText = rawUpdating === 'msg_updating_map' ? (currentLang === 'vi' ? 'Đang tải bản đồ mới...' : 'Updating map...') : rawUpdating;
+                const musicStatus = document.getElementById('loading-music-status');
+                if (musicStatus) musicStatus.innerText = updatingText;
+                
+                // Nghỉ 500ms để user kịp đọc thông báo update (tạo cảm giác mượt mà)
+                await new Promise(r => setTimeout(r, 500));
+            }
+        }
+
         if (typeof updateLoadingStatus === 'function') {
             updateLoadingStatus('msg_map_downloading');
         }

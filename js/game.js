@@ -2522,14 +2522,26 @@ function animate() {
         const tilesCount = tiles.length;
         const camZForCulling = typeof camera !== 'undefined' && camera ? camera.position.z : (typeof ball !== 'undefined' && ball ? ball.position.z + 10 : 0);
         
+        // Tối ưu: Tính toán trước các hệ số cho lò xo nhún của gạch
+        const springDt = Math.min(delta, 0.03);
+        const springK = 250; // Độ cứng lò xo
+        const springC = 12;  // Hệ số cản / Damping
+        const springMass = 1;
+        const scaleLerpSpeed = Math.min(1.0, 10 * delta);
+        
         for (let ti = 0; ti < tilesCount; ti++) {
             const tile = tiles[ti];
             if (!tile) continue;
             
             const isVisible = tile.position.z < camZForCulling + 30 && tile.position.z > camZForCulling - 250;
             
-            if (isVisible && dynamicColorsEnabled && currentFrameHex !== undefined) {
-                tile.userData.themeColor = currentFrameHex;
+            // Tối ưu hiệu năng: Bỏ qua tính toán vật lý, đổi màu, và hitbox cho các tile không nằm trong khung nhìn
+            if (!isVisible) continue;
+
+            if (dynamicColorsEnabled && currentFrameHex !== undefined) {
+                if (tile.userData.themeColor !== currentFrameHex) {
+                    tile.userData.themeColor = currentFrameHex;
+                }
             }
 
             if (tile.userData.centerMeshFade && tile.userData.centerMesh && tile.userData.centerMesh.material) {
@@ -2544,21 +2556,15 @@ function animate() {
             if (tile.userData.springY !== undefined && tile.userData.springVelocityY !== undefined) {
                 let springY = tile.userData.springY;
                 let springVelocityY = tile.userData.springVelocityY;
+                let didSpringChange = false;
 
                 if (springY !== 0 || springVelocityY !== 0) {
-                    const k = 250; // Độ cứng lò xo
-                    const c = 12;  // Hệ số cản / Damping
-                    const mass = 1;
+                    const springForce = -springK * springY;
+                    const dampingForce = -springC * springVelocityY;
+                    const acceleration = (springForce + dampingForce) / springMass;
 
-                    // Giới hạn delta time tránh giật lag nhảy nổ vật lý
-                    const dt = Math.min(delta, 0.03);
-
-                    const springForce = -k * springY;
-                    const dampingForce = -c * springVelocityY;
-                    const acceleration = (springForce + dampingForce) / mass;
-
-                    springVelocityY += acceleration * dt;
-                    springY += springVelocityY * dt;
+                    springVelocityY += acceleration * springDt;
+                    springY += springVelocityY * springDt;
 
                     if (Math.abs(springY) < 0.001 && Math.abs(springVelocityY) < 0.01) {
                         springY = 0;
@@ -2567,21 +2573,23 @@ function animate() {
 
                     tile.userData.springY = springY;
                     tile.userData.springVelocityY = springVelocityY;
+                    didSpringChange = true;
                 }
 
                 if (tile.userData.baseY === undefined) {
                     tile.userData.baseY = 0;
                 }
 
-                // Cập nhật vị trí Y (chỉ nhún xuống theo trục Y)
-                tile.position.y = tile.userData.baseY + springY;
+                if (didSpringChange || tile.position.y !== tile.userData.baseY + springY) {
+                    tile.position.y = tile.userData.baseY + springY;
+                }
 
                 // Cập nhật tỷ lệ scale mượt mà khi gạch thu nhỏ hoặc phóng to
                 let currentScale = tile.userData.scale !== undefined ? tile.userData.scale : 1.0;
                 const targetScale = typeof currentTileScale !== 'undefined' ? currentTileScale : 1.0;
                 let scaleChanged = false;
                 if (Math.abs(currentScale - targetScale) > 0.001) {
-                    currentScale += (targetScale - currentScale) * Math.min(1.0, 10 * delta);
+                    currentScale += (targetScale - currentScale) * scaleLerpSpeed;
                     tile.userData.scale = currentScale;
                     scaleChanged = true;
                 } else if (tile.userData.scale !== targetScale) {
@@ -2590,7 +2598,7 @@ function animate() {
                     scaleChanged = true;
                 }
 
-                if (scaleChanged || springY !== 0) {
+                if (scaleChanged || didSpringChange || tile.scale.x !== currentScale) {
                     tile.scale.set(currentScale, currentScale, 1.0);
                 }
 
@@ -2875,7 +2883,9 @@ function animate() {
                         const landedTile = tiles[currentTileIndex + 1];
                         if (landedTile && landedTile.userData) {
                             if (tileBounceEnabled) {
-                                landedTile.userData.springVelocityY = -14.0;
+                                // Tăng cường độ nhún nhẹ theo gameSpeed, max +30% lực nhún
+                                const bounceIntensity = typeof gameSpeed !== 'undefined' ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15 : 1.0;
+                                landedTile.userData.springVelocityY = -14.0 * bounceIntensity;
                             }
                         }
                         jumpStartRawZ = landedTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? landedTile.userData.targetZ : landedTile.position.z;
@@ -3065,7 +3075,8 @@ function animate() {
                     }
 
                     if (tileBounceEnabled) {
-                        targetTile.userData.springVelocityY = -14.0;
+                        const bounceIntensity = typeof gameSpeed !== 'undefined' ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15 : 1.0;
+                        targetTile.userData.springVelocityY = -14.0 * bounceIntensity;
                     }
 
                     // Zero-velocity stutter fix: Dùng vị trí bóng lúc chạm (P_impact) thay vì tâm gạch

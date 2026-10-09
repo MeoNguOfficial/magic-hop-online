@@ -457,7 +457,8 @@ window.mergeIntoPlaylist = function (newMaps) {
             date_show: dayShow,
             time_hide: dayHide,
             is_available: item.is_available ?? true,
-            warning_alert: item.warning_alert || null
+            warning_alert: item.warning_alert || null,
+            updated_at: item.updated_at || null
         };
     });
 
@@ -489,7 +490,7 @@ window.mergeIntoPlaylist = function (newMaps) {
             const dbFields = [
                 'name', 'title', 'artist', 'url', 'genre', 'bpm', 'speed',
                 'copyright_status', 'warning_alert', 'is_available', 'no_fake_block',
-                'day_show', 'day_hide', 'date_show', 'time_hide'
+                'day_show', 'day_hide', 'date_show', 'time_hide', 'updated_at'
             ];
 
             dbFields.forEach(field => {
@@ -501,6 +502,17 @@ window.mergeIntoPlaylist = function (newMaps) {
 
             if (validLazyUrl && validLazyUrl !== existing.lazyUrl) {
                 updatedFields.lazyUrl = validLazyUrl;
+                hasChanged = true;
+            }
+
+            // Nếu DB có trường updated_at và nó khác với cache hiện tại,
+            // nghĩa là backend đã thay đổi beat hoặc file, ta cần xóa cache cũ để tải lại.
+            if (newMap.updated_at && existing.updated_at && newMap.updated_at !== existing.updated_at) {
+                if (typeof deleteSongCache === 'function') {
+                    console.log(`[Playlist] Bài hát ${existing.name} đã được cập nhật trên server, tiến hành xóa cache cũ...`);
+                    deleteSongCache(existing.url, existing.lazyUrl);
+                }
+                updatedFields.loaded = false; // Bắt buộc load lại khi chơi
                 hasChanged = true;
             }
 
@@ -875,3 +887,77 @@ async function checkMapVersionInBackground(index, isBlocking = false) {
         }
     } catch (e) { }
 }
+
+// Thêm hàm kiểm tra cập nhật bài hát với backend (cho dự phòng)
+async function checkSongUpdateWithBackend(index) {
+    const song = playlist[index];
+    if (!song || !song.id) return false;
+    
+    // Nếu đang offline thì bỏ qua
+    if (!navigator.onLine) return false;
+
+    try {
+        if (window.ApiService && typeof ApiService.getBeatmapDetails === 'function') {
+            const response = await ApiService.getBeatmapDetails(song.id, { headers: { 'X-Force-Refresh': 'true' }});
+            const freshData = response.data?.data || response.data;
+            if (freshData) {
+                let isOutdated = false;
+                
+                // Kiểm tra bằng updated_at (nếu cache cũ đã có lưu)
+                if (song.updated_at && freshData.updated_at && freshData.updated_at !== song.updated_at) {
+                    isOutdated = true;
+                }
+                
+                // Nếu cache cũ chưa từng lưu updated_at, ta kiểm tra trực tiếp nội dung mảng beats
+                if (!isOutdated && !song.updated_at && freshData.beats) {
+                    const freshNormalized = typeof normalizeBeats === 'function' ? normalizeBeats(freshData.beats) : null;
+                    // Bỏ qua nếu mảng rỗng và mảng hiện tại đang mặc định [0,1,2,3]
+                    const isBothEmptyOrMocks = (!freshNormalized || freshNormalized.length === 0) && (!song.beats || song.beats.length <= 4);
+                    
+                    if (!isBothEmptyOrMocks && freshNormalized && JSON.stringify(freshNormalized) !== JSON.stringify(song.beats)) {
+                        isOutdated = true;
+                    }
+                }
+
+                if (isOutdated) {
+                    console.log(`[checkSongUpdateWithBackend] Phát hiện phiên bản mới cho bài ${song.name}, đang xóa cache...`);
+                    if (typeof deleteSongCache === 'function') {
+                        await deleteSongCache(song.url, song.lazyUrl);
+                    }
+                    if (freshData.updated_at) song.updated_at = freshData.updated_at;
+                    let updatedFromApi = false;
+                    if (freshData.beats) {
+                        const normalized = typeof normalizeBeats === 'function' ? normalizeBeats(freshData.beats) : null;
+                        if (normalized && normalized.length > 0) {
+                            song.beats = normalized;
+                            song.loaded = true;
+                            updatedFromApi = true;
+                            if (typeof cacheJson === 'function' && song.lazyUrl) {
+                                await cacheJson(song.lazyUrl, freshData);
+                            }
+                        }
+                    } 
+                    
+                    if (!updatedFromApi) {
+                        song.loaded = false;
+                        song.beats = [0, 1, 2, 3];
+                        // Vượt qua HTTP Cache của trình duyệt
+                        if (song.lazyUrl && !song.lazyUrl.includes('t=')) {
+                            song.lazyUrl = song.lazyUrl + (song.lazyUrl.includes('?') ? '&' : '?') + 't=' + Date.now();
+                        }
+                    }
+                    return true; // Báo hiệu là đã có thay đổi
+                } else {
+                    // Cập nhật updated_at vào cache để lần sau có thể so sánh nhanh
+                    if (freshData.updated_at && !song.updated_at) {
+                        song.updated_at = freshData.updated_at;
+                    }
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[checkSongUpdateWithBackend] Lỗi khi kiểm tra cập nhật:', e);
+    }
+    return false;
+}
+window.checkSongUpdateWithBackend = checkSongUpdateWithBackend;

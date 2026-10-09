@@ -505,6 +505,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         const playSongAction = async () => {
             if (typeof playGameStartSound === 'function') playGameStartSound();
             playlistRenderStartIndex = 0;
+            
             let isPassed = await checkSongPassedStatus(song, originalIndex);
             const isHelperMode = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
 
@@ -636,6 +637,16 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         
                         // Play preview automatically
                         if (typeof togglePreview === 'function') {
+                            if (typeof window.checkSongUpdateWithBackend === 'function') {
+                                // Kiểm tra ngầm, không chặn UI quá lâu
+                                window.checkSongUpdateWithBackend(originalIndex).then((changed) => {
+                                    if (changed) {
+                                        // Nếu phát hiện mới thì preview có thể đang chạy bản cũ,
+                                        // log ra hoặc xử lý nhẹ nhàng, lần sau nó sẽ chuẩn
+                                        console.log(`[Preview] Nhạc đã đổi trên server, sẽ tự động tải bản mới...`);
+                                    }
+                                });
+                            }
                             togglePreview(originalIndex);
                         }
                     } else {
