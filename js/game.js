@@ -2102,10 +2102,10 @@ function recycleEnvironmentObjects(cameraZ) {
         }
         if (updated) {
             cityInstancedMesh.instanceMatrix.needsUpdate = true;
-            cityInstancedMesh.computeBoundingSphere();
+            cityInstancedMesh.frustumCulled = false;
             if (window.cityWireframeInstancedMesh) {
                 window.cityWireframeInstancedMesh.instanceMatrix.needsUpdate = true;
-                window.cityWireframeInstancedMesh.computeBoundingSphere();
+                window.cityWireframeInstancedMesh.frustumCulled = false;
             }
         }
     }
@@ -2122,7 +2122,7 @@ function recycleEnvironmentObjects(cameraZ) {
         }
         if (updated) {
             riceFieldInstancedMesh.instanceMatrix.needsUpdate = true;
-            riceFieldInstancedMesh.computeBoundingSphere();
+            riceFieldInstancedMesh.frustumCulled = false;
         }
         
         if (riceGroundPlane) {
@@ -2248,6 +2248,24 @@ let fpsHudEl = null;
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 window.IS_MOBILE = IS_MOBILE;
 
+let _lastSetClearColorHex = -1;
+
+function syncSharedMaterial(mat, currentFrameHex, tempColor) {
+    if (!mat) return;
+    if (mat.color && mat.color.getHex() !== currentFrameHex) {
+        mat.color.setHex(currentFrameHex);
+    }
+    if (mat.emissive) mat.emissive.copy(tempColor).multiplyScalar(0.2);
+}
+
+function syncSharedGlow(glowMat, currentFrameHex) {
+    if (!glowMat) return;
+    if (glowMat.uniforms && glowMat.uniforms.color) {
+        glowMat.uniforms.color.value.setHex(currentFrameHex);
+    } else if (glowMat.color) {
+        glowMat.color.setHex(currentFrameHex);
+    }
+}
 
 function animate() {
     requestAnimationFrame(animate);
@@ -2297,11 +2315,11 @@ function animate() {
     }
 
     let delta = clock.getDelta();
+    let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
 
     // --- THUẬT TOÁN ĐỒNG BỘ NHẠC (AUDIO SYNC CORRECTION) ---
     // Liên tục kiểm tra tiến độ bài hát và bù trừ khung hình delta để ép game khớp với nhạc
     if (isPlaying && !isFalling && !isFailTransition && audio && !audio.paused) {
-        let currentAudioTime = audio.currentTime;
         let drift = currentAudioTime - accumulatedSongTime;
 
         // Tốc độ thực tế của nhạc chỉ đạt tối đa 2.6x, ta đồng bộ thời gian theo tốc độ này
@@ -2374,7 +2392,7 @@ function animate() {
                     } else if (beatmapBeats && beatmapBeats.length > 1) {
                         const firstBeat = beatmapBeats[0] || 0;
                         const lastBeat = beatmapBeats[beatmapBeats.length - 1];
-                        const curTime = audio.currentTime || accumulatedSongTime || 0;
+                        const curTime = currentAudioTime || accumulatedSongTime || 0;
                         x = Math.min(1.0, Math.max(0.0, (curTime - firstBeat) / Math.max(0.001, lastBeat - firstBeat)));
                     }
 
@@ -2439,10 +2457,16 @@ function animate() {
 
         // --- CẬP NHẬT BIÊN (BOUNDARIES) ---
         if (leftBoundaryLine && rightBoundaryLine && camera) {
-            leftBoundaryLine.position.z = camera.position.z - 150;
-            rightBoundaryLine.position.z = camera.position.z - 150;
-            leftBoundaryLine.position.y = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02;
-            rightBoundaryLine.position.y = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02;
+            const targetBoundaryZ = camera.position.z - 150;
+            const targetBoundaryY = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02;
+            if (leftBoundaryLine.position.z !== targetBoundaryZ) {
+                leftBoundaryLine.position.z = targetBoundaryZ;
+                rightBoundaryLine.position.z = targetBoundaryZ;
+            }
+            if (leftBoundaryLine.position.y !== targetBoundaryY) {
+                leftBoundaryLine.position.y = targetBoundaryY;
+                rightBoundaryLine.position.y = targetBoundaryY;
+            }
 
             if (dynamicColorsEnabled) {
                 const nowTime = clock.getElapsedTime();
@@ -2450,7 +2474,7 @@ function animate() {
                 tempColor.setHSL(hue, 0.8, 0.5);
                 leftBoundaryLine.material.color.copy(tempColor);
                 rightBoundaryLine.material.color.copy(tempColor);
-            } else {
+            } else if (leftBoundaryLine.material.color.getHex() !== 0x00ffff) {
                 leftBoundaryLine.material.color.setHex(0x00ffff);
                 rightBoundaryLine.material.color.setHex(0x00ffff);
             }
@@ -2468,19 +2492,11 @@ function animate() {
             const hue = (time * 0.2) % 1;
             tempColor.setHSL(hue, 0.8, 0.5);
             currentFrameHex = tempColor.getHex();
-            
-            const syncMaterial = (mat) => {
-                if (!mat) return;
-                if (mat.color && mat.color.getHex() !== currentFrameHex) {
-                    mat.color.setHex(currentFrameHex);
-                }
-                if (mat.emissive) mat.emissive.copy(tempColor).multiplyScalar(0.2);
-            };
 
-            syncMaterial(window.globalTileMatCyan);
-            syncMaterial(window.globalTileMatMagenta);
-            syncMaterial(window.globalTileDimmedMatCyan);
-            syncMaterial(window.globalTileDimmedMatMagenta);
+            syncSharedMaterial(window.globalTileMatCyan, currentFrameHex, tempColor);
+            syncSharedMaterial(window.globalTileMatMagenta, currentFrameHex, tempColor);
+            syncSharedMaterial(window.globalTileDimmedMatCyan, currentFrameHex, tempColor);
+            syncSharedMaterial(window.globalTileDimmedMatMagenta, currentFrameHex, tempColor);
 
             if (window.globalBorderMatCyan && window.globalBorderMatCyan.color.getHex() !== (isWebGPUCached ? 0xffffff : currentFrameHex)) {
                 window.globalBorderMatCyan.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
@@ -2489,38 +2505,8 @@ function animate() {
                 window.globalBorderMatMagenta.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
             }
 
-            const syncGlow = (glowMat) => {
-                if (!glowMat) return;
-                if (glowMat.uniforms && glowMat.uniforms.color) {
-                    glowMat.uniforms.color.value.setHex(currentFrameHex);
-                } else if (glowMat.color) {
-                    glowMat.color.setHex(currentFrameHex);
-                }
-            };
-            syncGlow(window.globalTileGlowMatCyan);
-            syncGlow(window.globalTileGlowMatMagenta);
-            // Update fake tile colors explicitly if they have cloned materials
-            if (typeof FakeBlocksManager !== 'undefined' && Array.isArray(FakeBlocksManager.fakeTiles)) {
-                const fTiles = FakeBlocksManager.fakeTiles;
-                for (let j = 0; j < fTiles.length; j++) {
-                    const fTile = fTiles[j];
-                    if (fTile && fTile.visible) {
-                        if (fTile.material) fTile.material.color.setHex(currentFrameHex);
-                        if (fTile.userData && fTile.userData.borderLine && fTile.userData.borderLine.material) {
-                            fTile.userData.borderLine.material.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
-                        }
-                        const glowMesh = fTile.getObjectByName('glowMesh');
-                        if (glowMesh && glowMesh.material) {
-                            const mat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                            if (mat && mat.uniforms && mat.uniforms.color) {
-                                mat.uniforms.color.value.setHex(currentFrameHex);
-                            } else if (mat && mat.color) {
-                                mat.color.setHex(currentFrameHex);
-                            }
-                        }
-                    }
-                }
-            }
+            syncSharedGlow(window.globalTileGlowMatCyan, currentFrameHex);
+            syncSharedGlow(window.globalTileGlowMatMagenta, currentFrameHex);
         }
 
         const tilesCount = tiles.length;
@@ -2547,6 +2533,13 @@ function animate() {
             const tile = tiles[ti];
             if (!tile) continue;
             
+            const tileTargetZ = tile.userData.targetZ !== undefined ? tile.userData.targetZ : tile.position.z;
+            if (tileTargetZ <= camZForCulling - 250) {
+                // Do mảng tiles được xếp đơn điệu giảm dần theo Z, toàn bộ các tile tiếp theo
+                // chắc chắn đã vượt khỏi khoảng nhìn culling -> thoát sớm vòng lặp để tiết kiệm CPU
+                break;
+            }
+
             const isVisible = tile.position.z < camZForCulling + 30 && tile.position.z > camZForCulling - 250;
             
             // Tối ưu hiệu năng: Bỏ qua tính toán vật lý, đổi màu, và hitbox cho các tile không nằm trong khung nhìn
@@ -2594,8 +2587,9 @@ function animate() {
                     tile.userData.baseY = 0;
                 }
 
-                if (didSpringChange || tile.position.y !== tile.userData.baseY + springY) {
-                    tile.position.y = tile.userData.baseY + springY;
+                const targetTileY = tile.userData.baseY + springY;
+                if (didSpringChange || tile.position.y !== targetTileY) {
+                    tile.position.y = targetTileY;
                 }
 
                 // Cập nhật tỷ lệ scale mượt mà khi gạch thu nhỏ hoặc phóng to
@@ -2611,7 +2605,7 @@ function animate() {
                     scaleChanged = true;
                 }
 
-                if (scaleChanged || didSpringChange || tile.scale.x !== currentScale) {
+                if (scaleChanged || tile.scale.x !== currentScale) {
                     tile.scale.set(currentScale, currentScale, 1.0);
                 }
 
@@ -2619,7 +2613,8 @@ function animate() {
                 if (tile.userData.hitboxMesh) {
                     const hitboxMesh = tile.userData.hitboxMesh;
                     if (hitboxMesh.visible !== isHitboxVisibleCached) hitboxMesh.visible = isHitboxVisibleCached;
-                    if (isHitboxVisibleCached) {
+                    if (isHitboxVisibleCached && (scaleChanged || !tile.userData._hitboxInit)) {
+                        tile.userData._hitboxInit = true;
                         const scaleX = tileWidth + (ballRadius * 2.5 / currentScale);
                         const scaleY = tileLength + (ballRadius * 1.64 / currentScale);
                         hitboxMesh.scale.set(scaleX, scaleY, 0.4);
@@ -2702,6 +2697,10 @@ function animate() {
                 // Khởi tạo exitOpacity từ borderLine (luôn visible dù body đã bị dim)
                 const bl = et.userData.borderLine;
                 et.userData.exitOpacity = (bl && bl.material) ? (bl.material.opacity || 1.0) : 1.0;
+                // Đưa scale về bình thường 1 lần khi bắt đầu exit
+                if (et.scale.x !== 1 || et.scale.y !== 1 || et.scale.z !== 1) {
+                    et.scale.set(1, 1, 1);
+                }
             }
 
             // Tăng tốc dần về phía sau (hướng camera) — ease-in
@@ -2712,10 +2711,6 @@ function animate() {
             const fadeDelta = 2.2 * delta;
             et.userData.exitOpacity = Math.max(0, et.userData.exitOpacity - fadeDelta);
             const op = et.userData.exitOpacity;
-
-            // Đưa scale về bình thường, block sẽ chỉ trượt (slide) về phía sau và tự động bị culling khi ra khỏi tầm nhìn camera
-            // như logic slide nguyên bản, thay vì bị thu nhỏ.
-            et.scale.set(1, 1, 1);
 
             // Center dot (vật liệu này đã được clone riêng nên có thể fade độc lập)
             if (et.userData.centerMesh && et.userData.centerMesh.material) {
@@ -3221,27 +3216,6 @@ function animate() {
             ball.rotation.x -= (currentSpeedZ * delta) / ballRadius;
         }
 
-        // --- CẬP NHẬT MÀU BÓNG (THEO COMBO HOẶC TÙY CHỈNH) ---
-        if (ball && ball.material) {
-            if (selectedBallColor === 'dynamic') {
-                let targetBallColor = 0x00ffff; // Cyan mặc định
-                let targetEmissiveColor = 0x0088cc;
-
-                if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
-                else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
-                else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
-
-                if (ball.material.color.getHex() !== targetBallColor) {
-                    tempColor.setHex(targetBallColor);
-                    ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
-                    if (ball.material.emissive) {
-                        tempColor.setHex(targetEmissiveColor);
-                        ball.material.emissive.lerp(tempColor, 15 * delta);
-                    }
-                }
-            }
-        }
-
         // --- CẬP NHẬT PHÁT SÁNG BÓNG (BALL GLOW) ---
         if (typeof ballGlowMesh !== 'undefined' && ballGlowMesh && typeof ballGlowLight !== 'undefined' && ballGlowLight) {
             let targetGlowOpacity = 0;
@@ -3299,8 +3273,12 @@ function animate() {
         if (scene && scene.fog) {
             scene.fog.color.copy(currentBgColor);
         }
-        if (renderer) {
-            renderer.setClearColor(scene.fog.color);
+        if (renderer && scene && scene.fog) {
+            const fogHex = scene.fog.color.getHex();
+            if (_lastSetClearColorHex !== fogHex) {
+                _lastSetClearColorHex = fogHex;
+                renderer.setClearColor(scene.fog.color);
+            }
         }
     }
 

@@ -363,7 +363,8 @@ window.GameEffectsManager = {
                 sw.mesh.position.z = sw.targetTile.position.z;
             }
 
-            const fadeFactor = Math.pow(Math.cos(progress * Math.PI / 2), 2.0);
+            const cosVal = Math.cos(progress * 1.5707963267948966);
+            const fadeFactor = cosVal * cosVal;
             sw.mesh.material.opacity = fadeFactor;
 
             if (progress >= 1.0 || fadeFactor <= 0.001) {
@@ -393,7 +394,8 @@ window.GameEffectsManager = {
         const yPos = surfaceY - 0.02; // Bằng đúng chiều cao của Boundary Line
         const maxDistance = 140;
 
-        [-6.75, 6.75].forEach(xPos => {
+        for (let side = 0; side < 2; side++) {
+            const xPos = side === 0 ? -6.75 : 6.75;
             let pMesh;
             if (this.boundaryPulsePool.length > 0) {
                 pMesh = this.boundaryPulsePool.pop();
@@ -416,7 +418,7 @@ window.GameEffectsManager = {
             pData.opacity = 0.85;
 
             this.boundaryPulses.push(pData);
-        });
+        }
     },
 
     updateBoundaryPulses: function (delta, gameSpeed) {
@@ -693,10 +695,15 @@ window.GameEffectsManager = {
                     this.ballTrailInstancedMesh.setColorAt(i, seg.color);
                 }
             }
-            for (let i = this.ballTrailSegments.length; i < this.MAX_TRAIL_INSTANCES; i++) {
+            const activeCount = this.ballTrailSegments.length;
+            const lastActive = this._lastActiveTrailCount || this.MAX_TRAIL_INSTANCES;
+            if (activeCount < lastActive) {
                 this.trailDummyMatrix.makeScale(0, 0, 0);
-                this.ballTrailInstancedMesh.setMatrixAt(i, this.trailDummyMatrix);
+                for (let i = activeCount; i < lastActive; i++) {
+                    this.ballTrailInstancedMesh.setMatrixAt(i, this.trailDummyMatrix);
+                }
             }
+            this._lastActiveTrailCount = activeCount;
             this.ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
             if (this.ballTrailInstancedMesh.instanceColor) this.ballTrailInstancedMesh.instanceColor.needsUpdate = true;
         }

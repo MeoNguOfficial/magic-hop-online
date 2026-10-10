@@ -167,13 +167,12 @@ window.MovingBlocksManager = {
      * @param {number} ballZ - Vị trí Z của quả bóng để lọc các khối đã vượt qua
      * @param {number} [frameHex] - Màu động đã được tính trước ở khung hình (tùy chọn)
      */
-    processedTilesSet: new Set(),
+    _updateFrameId: 0,
 
     update: function (delta, gameSpeed, ballZ, frameHex) {
         // TỐC ĐỘ DI CHUYỂN NGANG QUA LẠI: Tỉ lệ thuận với tốc độ game
         const speedFactor = gameSpeed; 
-        const processedTiles = this.processedTilesSet;
-        processedTiles.clear();
+        const frameId = (++this._updateFrameId);
         
         const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
@@ -181,7 +180,7 @@ window.MovingBlocksManager = {
             const tile = this.allMovingTiles[i];
 
             // Loại khỏi danh sách khi block đã bị thu hồi về pool (parent = null), không phải khối di chuyển hoặc đã cập nhật trong frame
-            if (!tile || !tile.userData || !tile.userData.isMoving || !tile.parent || tile.position.z > ballZ + 30 || processedTiles.has(tile)) {
+            if (!tile || !tile.userData || !tile.userData.isMoving || !tile.parent || tile.position.z > ballZ + 30 || tile.userData._lastMoveFrame === frameId) {
                 if (tile && tile.userData && tile.userData.isClone) {
                     if (typeof scene !== 'undefined' && scene) {
                         scene.remove(tile);
@@ -195,7 +194,7 @@ window.MovingBlocksManager = {
                 continue;
             }
 
-            processedTiles.add(tile);
+            tile.userData._lastMoveFrame = frameId;
 
             // Thực hiện tính toán di chuyển hình Sin tuần hoàn dựa trên moveTime riêng biệt của từng khối
             if (tile.userData.isMoving) {

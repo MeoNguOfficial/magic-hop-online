@@ -55,19 +55,36 @@ window.VisualizerManager = {
         const height = this.canvas.height;
         this.ctx.clearRect(0, 0, width, height);
 
-        const centerY = height * 0.25;
-        const numBars = Math.floor(width / 24);
-        const barSpacing = width / numBars;
-        const barWidth = Math.max(6, barSpacing - 8);
+        if (this._cachedW !== width || this._cachedH !== height) {
+            this._cachedW = width;
+            this._cachedH = height;
+            this._centerY = height * 0.25;
+            this._numBars = Math.max(1, Math.floor(width / 24));
+            this._barSpacing = width / this._numBars;
+            this._barWidth = Math.max(6, this._barSpacing - 8);
+            this._maxBlocks = 12;
+            this._blockHeight = Math.max(4, (height * 0.15) / this._maxBlocks);
+            this._blockGap = 3;
+            this._halfNumBars = this._numBars / 2;
+            this._barX = new Float32Array(this._numBars);
+            for (let i = 0; i < this._numBars; i++) {
+                this._barX[i] = i * this._barSpacing + (this._barSpacing - this._barWidth) / 2;
+            }
+        }
 
-        const maxBlocks = 12;
-        const blockHeight = Math.max(4, (height * 0.15) / maxBlocks);
-        const blockGap = 3;
+        const numBars = this._numBars;
+        const centerY = this._centerY;
+        const blockHeight = this._blockHeight;
+        const blockGap = this._blockGap;
+        const barWidth = this._barWidth;
+        const halfNumBars = this._halfNumBars;
+        const maxBlocks = this._maxBlocks;
+        const barX = this._barX;
 
         this.cachedBarData.length = numBars;
         for (let i = 0; i < numBars; i++) {
-            let centerDist = Math.abs(i - numBars / 2);
-            let dataIdx = Math.floor((centerDist / (numBars / 2)) * (bufferLength * 0.6));
+            let centerDist = Math.abs(i - halfNumBars);
+            let dataIdx = Math.floor((centerDist / halfNumBars) * (bufferLength * 0.6));
             let v = this.visDataArray[dataIdx] / 255.0;
             if (v > 0.1) v = v * (0.8 + Math.random() * 0.2);
             this.cachedBarData[i] = Math.ceil(v * maxBlocks);
@@ -78,7 +95,7 @@ window.VisualizerManager = {
         for (let i = 0; i < numBars; i++) {
             const activeBlocks = this.cachedBarData[i];
             if (activeBlocks === 0) continue;
-            const x = i * barSpacing + (barSpacing - barWidth) / 2;
+            const x = barX[i];
             for (let b = 0; b < activeBlocks; b++) {
                 const y = centerY - (b + 1) * (blockHeight + blockGap) + blockGap;
                 this.ctx.rect(x, y, barWidth, blockHeight);

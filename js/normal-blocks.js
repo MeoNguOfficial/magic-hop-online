@@ -201,7 +201,7 @@ function createRoundLabel(round) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     const key = `${round}_${fontFamily}`;
     
-    if (roundSpriteCache.has(key)) return roundSpriteCache.get(key);
+    if (roundSpriteCache.has(key)) return roundSpriteCache.get(key).clone();
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -224,7 +224,7 @@ function createRoundLabel(round) {
     sprite.position.z = 1.5;
     
     roundSpriteCache.set(key, sprite);
-    return sprite;
+    return sprite.clone();
 }
 
 // Tạo nhãn 3D cho phần trăm tiến độ Warm-up
@@ -232,7 +232,7 @@ function createPercentLabel(percent) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     const key = `${percent}_${fontFamily}`;
     
-    if (percentSpriteCache.has(key)) return percentSpriteCache.get(key);
+    if (percentSpriteCache.has(key)) return percentSpriteCache.get(key).clone();
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -255,11 +255,11 @@ function createPercentLabel(percent) {
     sprite.position.z = 1.2;
     
     percentSpriteCache.set(key, sprite);
-    return sprite;
+    return sprite.clone();
 }
 
 function createStarLabel() {
-    if (starSpriteCache) return starSpriteCache;
+    if (starSpriteCache) return starSpriteCache.clone();
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -284,7 +284,7 @@ function createStarLabel() {
     sprite.position.z = 1.2;
     
     starSpriteCache = sprite;
-    return sprite;
+    return sprite.clone();
 }
 
 // --- THỰC HIỆN GIẢI PHÓNG BỘ NHỚ CHO GẠCH BỊ HUỶ (ĐỂ TRÁNH LEAK GPU/RAM) ---
@@ -421,17 +421,21 @@ function getTileFromPool(forceNew = false) {
                 // Không dispose() sprite vì chúng đã được cache và tái sử dụng
             }
         }
-        // Xóa các thuộc tính game-state tạm thời của userData để tránh lỗi tái sử dụng (vd: isFinalStarTile)
+        // Xóa các thuộc tính game-state tạm thời của userData để tránh lỗi tái sử dụng (vd: isFinalStarTile) (Zero-Allocation)
         const u = tile.userData;
-        tile.userData = {
-            borderLine: u.borderLine,
-            centerMesh: u.centerMesh,
-            glowMesh: u.glowMesh,
-            bodyMesh: u.bodyMesh,
-            edgeMesh: u.edgeMesh,
-            innerBorderLine: u.innerBorderLine,
-            hitboxMesh: u.hitboxMesh
-        };
+        u.isFinalStarTile = false;
+        u.isRoundStart = false;
+        u.isDelayedAppearance = false;
+        u.isEntering = false;
+        u.isExiting = false;
+        u.isMoving = false;
+        u.springY = 0;
+        u.springVelocityY = 0;
+        u.baseY = 0;
+        u.originShifted = false;
+        u.centerMeshFade = false;
+        u.isDimmed = false;
+        u.scale = 1.0;
     } else {
         const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
 
@@ -766,7 +770,7 @@ function spawnTile(isFirst = false) {
         tile.userData.borderLine.material = (activeColor === 0xff00ff) ? window.globalBorderMatMagenta : window.globalBorderMatCyan;
     }
 
-    const poolGlowMesh = tile.getObjectByName('glowMesh');
+    const poolGlowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : tile.getObjectByName('glowMesh');
     if (poolGlowMesh && Array.isArray(poolGlowMesh.material)) {
         poolGlowMesh.material = [poolGlowMesh.material[0], (activeColor === 0xff00ff) ? window.globalTileGlowMatMagenta : window.globalTileGlowMatCyan];
     }
@@ -848,7 +852,7 @@ function spawnTile(isFirst = false) {
         window.MovingBlocksManager.processTile(tile, canBeMoving, roundCount, timeDiff);
     }
 
-    const glowMesh = tile.getObjectByName("glowMesh");
+    const glowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : tile.getObjectByName("glowMesh");
     if (glowMesh) {
         const glowEnabled = isGlowEnabled();
         glowMesh.visible = glowEnabled;

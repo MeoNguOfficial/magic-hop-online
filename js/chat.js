@@ -6,6 +6,7 @@
 let currentActiveRoomId = null;
 let chatIntervalTimer = null;
 let activeAdminFilter = 'all'; // Trạng thái bộ lọc của Admin: 'all', 'pending', 'open', 'resolved', 'closed'
+let _lastRenderedSignature = '';
 
 // Hàm thu hồi dọn dẹp chat khi chuyển Tab
 function deactivateChat() {
@@ -14,6 +15,7 @@ function deactivateChat() {
         chatIntervalTimer = null;
     }
     currentActiveRoomId = null;
+    _lastRenderedSignature = '';
 }
 
 async function initChatModule(isAdmin, currentUser) {
@@ -326,7 +328,10 @@ async function enterAdminChatRoom(room) {
 
 async function loadConversationMessages() {
     if (!currentActiveRoomId) return;
+    // Bỏ qua polling khi đang chơi game để tránh nghẽn mạng & Garbage Collection stutter
+    if (typeof isPlaying !== 'undefined' && isPlaying) return;
     const bodyArea = document.getElementById('chat-body-area');
+    if (!bodyArea) return;
 
     try {
         const res = await window.ApiService.getChatRoom(currentActiveRoomId, { forceRefresh: true });
@@ -341,10 +346,20 @@ async function loadConversationMessages() {
         const currentUserId = getAuthUser()?.id;
 
         if (messages.length === 0) {
-            bodyArea.innerHTML = `<p class="text-center text-gray-600 py-6 font-orbitron" data-i18n="chat_conversation_empty">${t('chat_conversation_empty')}</p>`;
-            if (typeof applyTranslations === 'function') applyTranslations();
+            if (_lastRenderedSignature !== 'empty') {
+                _lastRenderedSignature = 'empty';
+                bodyArea.innerHTML = `<p class="text-center text-gray-600 py-6 font-orbitron" data-i18n="chat_conversation_empty">${t('chat_conversation_empty')}</p>`;
+                if (typeof applyTranslations === 'function') applyTranslations();
+            }
             return;
         }
+
+        const lastMsg = messages[messages.length - 1];
+        const newSig = `${messages.length}_${lastMsg?.id || ''}_${lastMsg?.updated_at || lastMsg?.created_at || ''}`;
+        if (newSig === _lastRenderedSignature) {
+            return; // Dữ liệu tin nhắn không thay đổi, tránh xóa & tái tạo DOM gây GC spike
+        }
+        _lastRenderedSignature = newSig;
 
         // Lưu vị trí cuộn chuột trước khi vẽ
         const shouldScrollToBottom = bodyArea.scrollHeight - bodyArea.scrollTop <= bodyArea.clientHeight + 40;

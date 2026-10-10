@@ -1457,10 +1457,3 @@ function promptPlayModeSelection(onSelect) {
         };
     }
 }
-
-// Initialize listeners
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSongContextMenu);
-} else {
-    initSongContextMenu();
-}

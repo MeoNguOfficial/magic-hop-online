@@ -209,7 +209,8 @@ window.FakeBlocksManager = {
 
         const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
-        positionsToSpawn.forEach(posX => {
+        for (let pIdx = 0; pIdx < positionsToSpawn.length; pIdx++) {
+            const posX = positionsToSpawn[pIdx];
             let fakeTile;
             
             if (this.fakeTilePool.length > 0) {
@@ -306,7 +307,7 @@ window.FakeBlocksManager = {
             }
             
             this.fakeTiles.push(fakeTile);
-        });
+        }
     },
 
     _recycleTile: function(t) {
@@ -317,28 +318,39 @@ window.FakeBlocksManager = {
         t.scale.set(1, 1, 1);
 
         const bLine = t.userData ? t.userData.borderLine : null;
-        const gMesh = t.userData ? (t.userData.glowMesh || t.getObjectByName('glowMesh')) : null;
+        const gMesh = t.userData ? (t.userData.glowMesh || (t.userData.glowMesh = t.getObjectByName('glowMesh'))) : null;
         const bMesh = t.userData ? t.userData.bodyMesh : null;
         const eMesh = t.userData ? t.userData.edgeMesh : null;
 
-        // Reset toàn bộ cờ trạng thái di động, trượt thoát, rơi vỡ
-        t.userData = {
-            borderLine: bLine || null,
-            glowMesh: gMesh || null,
-            bodyMesh: bMesh || null,
-            edgeMesh: eMesh || null,
-            centerMesh: null,
-            isFake: true,
-            isBroken: false,
-            isExiting: false,
-            isEntering: false,
-            isDelayedAppearance: false,
-            isMoving: false,
-            fallSpeed: 0,
-            springY: 0,
-            springVelocityY: 0,
-            baseY: 0
-        };
+        // Reset toàn bộ cờ trạng thái di động, trượt thoát, rơi vỡ (in-place không cấp phát mới)
+        let ud = t.userData;
+        if (!ud) {
+            ud = t.userData = {};
+        }
+        ud.borderLine = bLine || null;
+        ud.glowMesh = gMesh || null;
+        ud.bodyMesh = bMesh || null;
+        ud.edgeMesh = eMesh || null;
+        ud.centerMesh = null;
+        ud.isFake = true;
+        ud.isBroken = false;
+        ud.isExiting = false;
+        ud.isEntering = false;
+        ud.isDelayedAppearance = false;
+        ud.isMoving = false;
+        ud.fallSpeed = 0;
+        ud.springY = 0;
+        ud.springVelocityY = 0;
+        ud.baseY = 0;
+        delete ud.exitVelZ;
+        delete ud.exitStartZ;
+        delete ud.exitOpacity;
+        delete ud.moveSpeed;
+        delete ud.movePattern;
+        delete ud.moveTime;
+        delete ud.amplitude;
+        delete ud.baseX;
+        delete ud.originX;
 
         const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
         if (t.material) {
@@ -905,7 +917,7 @@ window.FakeBlocksManager = {
                 }
 
                 // Glow
-                const glowMesh = fTile.userData.glowMesh || fTile.getObjectByName("glowMesh");
+                const glowMesh = fTile.userData.glowMesh || (fTile.userData.glowMesh = fTile.getObjectByName("glowMesh"));
                 if (glowMesh && glowMesh.material) {
                     const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                     if (glowMat) {
@@ -948,7 +960,7 @@ window.FakeBlocksManager = {
                     if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
                         fTile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
                     }
-                    const glowMesh = fTile.userData.glowMesh || fTile.getObjectByName("glowMesh");
+                    const glowMesh = fTile.userData.glowMesh || (fTile.userData.glowMesh = fTile.getObjectByName("glowMesh"));
                     if (glowMesh && glowMesh.material) {
                         const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                         if (glowMat) {
