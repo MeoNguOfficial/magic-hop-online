@@ -56,6 +56,10 @@ window.MovingBlocksManager = {
         }
 
         let isMovingThisTile = false;
+        const isEasyMode = (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled);
+        const isAsianMode = (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled);
+        const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
+        const spawnChance = isEasyMode ? 0.05 : (isAsianMode ? 0.25 : 0.15);
 
         // Tiếp tục nhóm di chuyển hiện tại
         if (this.movingGroupCount > 0 && canBeMoving) { 
@@ -66,21 +70,12 @@ window.MovingBlocksManager = {
             }
         } 
         // Cơ hội bắt đầu một nhóm di chuyển mới (nếu đã hết thời gian nghỉ)
-        const isEasyMode = (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled);
-        const isAsianMode = (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled);
-        const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
-        const spawnChance = isEasyMode ? 0.05 : (isAsianMode ? 0.25 : 0.15);
-        if (canBeMoving && this.cooldownCount <= 0 && (typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomRange(0, 1) : Math.random()) < spawnChance) { 
-            // SPAWN THÔNG MINH: Giới hạn số lượng khối di chuyển dựa trên tốc độ nhịp nhạc
-            let maxAllowed = Math.min(8, roundCount + 2);
-            const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
+        else if (canBeMoving && this.cooldownCount <= 0 && (typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomRange(0, 1) : Math.random()) < spawnChance) { 
+            // SPAWN THEO CÔNG THỨC: 2 + số round (Endless), riêng round 1 max chuỗi là 2, tăng dần tối đa 12
+            const currentRound = (typeof roundCount !== 'undefined' && roundCount > 0) ? roundCount : 1;
+            let maxAllowed = (currentRound <= 1) ? 2 : Math.min(12, 2 + currentRound);
             if (isEasyMode) {
                 maxAllowed = 2;
-            } else if (isHardMode || isAsianMode) {
-                maxAllowed = 10;
-            } else {
-                if (timeDiff < 0.3) maxAllowed = Math.min(3, maxAllowed);
-                else if (timeDiff < 0.4) maxAllowed = Math.min(5, maxAllowed);
             }
             
             this.movingGroupCount = Math.floor(Math.random() * maxAllowed) + 1;
@@ -100,7 +95,7 @@ window.MovingBlocksManager = {
             isMovingThisTile = true;
             this.movingGroupCount--;
             if (this.movingGroupCount === 0) {
-                this.cooldownCount = Math.floor(Math.random() * 3) + 2;
+                this.cooldownCount = typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomInt(2, 4) : Math.floor(Math.random() * 3) + 2;
             }
         } 
         else {

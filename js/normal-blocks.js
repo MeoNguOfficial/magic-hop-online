@@ -845,7 +845,9 @@ function spawnTile(isFirst = false) {
         let threshold = 0.2;
         if (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled) {
             threshold = window.EasyModeManager.getMovingBlockThreshold();
-        } else if (typeof window.HardModeManager !== 'undefined') {
+        } else if (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled) {
+            threshold = window.AsianModeManager.getMovingBlockThreshold();
+        } else if (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled) {
             threshold = window.HardModeManager.getMovingBlockThreshold();
         }
         let canBeMoving = isEndlessMode && !isInitialWarmup && !isTooClose && (timeDiff >= threshold) && (nextTimeDiff >= threshold);
