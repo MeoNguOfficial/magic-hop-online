@@ -613,7 +613,7 @@ async function cachePlaylistToDB(maps, customKey = null) {
                 const updatedSong = { ...oldSong };
                 const fieldsToCheck = [
                     'name', 'title', 'artist', 'url', 'genre', 'bpm', 'speed',
-                    'copyright_status', 'warning_alert', 'is_available', 'no_fake_block',
+                    'copyright_status', 'verified', 'warning_alert', 'is_available', 'no_fake_block',
                     'day_show', 'day_hide', 'date_show', 'time_hide'
                 ];
 

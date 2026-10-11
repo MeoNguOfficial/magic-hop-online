@@ -24,9 +24,9 @@ function setupCopyrightCheck(songName, songArtist, copyrightStatus) {
             if (typeof showCyberModal === 'function') {
                 let statusColorClass = 'text-yellow-400';
                 if (copyrightStatus) {
-                    if (statusLower.includes('no copyright') || statusLower.includes('free') || statusLower.includes('safe') || statusLower.includes('non-copyright')) {
+                    if (statusLower.includes('no copyright') || statusLower.includes('free') || statusLower.includes('safe') || statusLower.includes('non-copyright') || statusLower === 'verified') {
                         statusColorClass = 'text-green-400';
-                    } else if (statusLower.includes('copyright') || statusLower.includes('credit need')) {
+                    } else if (statusLower.includes('copyright') || statusLower.includes('credit need') || statusLower.includes('claimed')) {
                         statusColorClass = 'text-red-400';
                     }
                 }

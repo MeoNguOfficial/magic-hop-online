@@ -444,6 +444,12 @@ window.mergeIntoPlaylist = function (newMaps) {
         const dayShow = item.day_show ?? item.date_show ?? null;
         const dayHide = item.day_hide ?? item.time_hide ?? null;
 
+        const isVerified = item.verified === true || item.verified === 1 || item.verified === 'true' || item.verified === 'verified';
+        let copyrightStatus = item.copyright_status || null;
+        if (isVerified && (!copyrightStatus || copyrightStatus.toLowerCase() === 'verified')) {
+            copyrightStatus = 'No copyright';
+        }
+
         return {
             ...item,
             id: songId,
@@ -458,6 +464,8 @@ window.mergeIntoPlaylist = function (newMaps) {
             time_hide: dayHide,
             is_available: item.is_available ?? true,
             warning_alert: item.warning_alert || null,
+            copyright_status: copyrightStatus,
+            verified: isVerified,
             updated_at: item.updated_at || null
         };
     });
@@ -489,7 +497,7 @@ window.mergeIntoPlaylist = function (newMaps) {
 
             const dbFields = [
                 'name', 'title', 'artist', 'url', 'genre', 'bpm', 'speed',
-                'copyright_status', 'warning_alert', 'is_available', 'no_fake_block',
+                'copyright_status', 'verified', 'warning_alert', 'is_available', 'no_fake_block',
                 'day_show', 'day_hide', 'date_show', 'time_hide', 'updated_at'
             ];
 

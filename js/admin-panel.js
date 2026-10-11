@@ -1122,21 +1122,43 @@ async function loadBeatmaps() {
         if (!Array.isArray(maps)) throw new Error('Invalid beatmaps data format');
 
         // Lọc phía Client nếu Backend chưa trả về kết quả lọc chính xác
+        if (adminBmSearchTerm) {
+            const term = adminBmSearchTerm.toLowerCase().trim();
+            maps = maps.filter(m => {
+                const title = (m.title || m.name || '').toLowerCase();
+                const artist = (m.artist || '').toLowerCase();
+                const genre = (m.genre || '').toLowerCase();
+                return title.includes(term) || artist.includes(term) || genre.includes(term);
+            });
+        }
         if (window.adminSelectedArtist) {
-            maps = maps.filter(m => m.artist && m.artist.toLowerCase() === window.adminSelectedArtist.toLowerCase());
+            const artistFilter = window.adminSelectedArtist.toLowerCase().trim();
+            maps = maps.filter(m => {
+                const songArtist = (m.artist || '').toLowerCase();
+                return songArtist.includes(artistFilter) || artistFilter.includes(songArtist);
+            });
         }
         if (window.adminSelectedGenre) {
-            maps = maps.filter(m => m.genre && m.genre.toLowerCase() === window.adminSelectedGenre.toLowerCase());
+            const genreFilter = window.adminSelectedGenre.toLowerCase().trim();
+            maps = maps.filter(m => {
+                const songGenre = (m.genre || '').toLowerCase();
+                return songGenre.includes(genreFilter) || genreFilter.includes(songGenre);
+            });
         }
         if (window.adminSelectedCopyright) {
+            const filterVal = window.adminSelectedCopyright.toLowerCase().trim();
             maps = maps.filter(m => {
-                const copyright = (m.copyright_status || '').toLowerCase();
-                if (window.adminSelectedCopyright === 'free') {
-                    return !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không');
-                } else if (window.adminSelectedCopyright === 'claimed') {
-                    return copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không');
+                const isMVerified = m.verified === true || m.verified === 1 || m.verified === 'true' || m.verified === 'verified';
+                let copyright = (m.copyright_status || '').toLowerCase().trim();
+                if (!copyright && isMVerified) {
+                    copyright = 'no copyright';
                 }
-                return true;
+                if (filterVal === 'free' || filterVal === 'no copyright') {
+                    return isMVerified || !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không') || copyright.includes('verified');
+                } else if (filterVal === 'claimed') {
+                    return !isMVerified && copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không') && !copyright.includes('verified');
+                }
+                return copyright === filterVal || (filterVal.includes('verified') && isMVerified);
             });
         }
 
@@ -1189,21 +1211,43 @@ async function loadMoreBeatmapsFromAPI() {
         let newMaps = res.data?.data || [];
 
         // Lọc phía Client nếu Backend chưa trả về kết quả lọc chính xác
+        if (adminBmSearchTerm) {
+            const term = adminBmSearchTerm.toLowerCase().trim();
+            newMaps = newMaps.filter(m => {
+                const title = (m.title || m.name || '').toLowerCase();
+                const artist = (m.artist || '').toLowerCase();
+                const genre = (m.genre || '').toLowerCase();
+                return title.includes(term) || artist.includes(term) || genre.includes(term);
+            });
+        }
         if (window.adminSelectedArtist) {
-            newMaps = newMaps.filter(m => m.artist && m.artist.toLowerCase() === window.adminSelectedArtist.toLowerCase());
+            const artistFilter = window.adminSelectedArtist.toLowerCase().trim();
+            newMaps = newMaps.filter(m => {
+                const songArtist = (m.artist || '').toLowerCase();
+                return songArtist.includes(artistFilter) || artistFilter.includes(songArtist);
+            });
         }
         if (window.adminSelectedGenre) {
-            newMaps = newMaps.filter(m => m.genre && m.genre.toLowerCase() === window.adminSelectedGenre.toLowerCase());
+            const genreFilter = window.adminSelectedGenre.toLowerCase().trim();
+            newMaps = newMaps.filter(m => {
+                const songGenre = (m.genre || '').toLowerCase();
+                return songGenre.includes(genreFilter) || genreFilter.includes(songGenre);
+            });
         }
         if (window.adminSelectedCopyright) {
+            const filterVal = window.adminSelectedCopyright.toLowerCase().trim();
             newMaps = newMaps.filter(m => {
-                const copyright = (m.copyright_status || '').toLowerCase();
-                if (window.adminSelectedCopyright === 'free') {
-                    return !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không');
-                } else if (window.adminSelectedCopyright === 'claimed') {
-                    return copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không');
+                const isMVerified = m.verified === true || m.verified === 1 || m.verified === 'true' || m.verified === 'verified';
+                let copyright = (m.copyright_status || '').toLowerCase().trim();
+                if (!copyright && isMVerified) {
+                    copyright = 'no copyright';
                 }
-                return true;
+                if (filterVal === 'free' || filterVal === 'no copyright') {
+                    return isMVerified || !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không') || copyright.includes('verified');
+                } else if (filterVal === 'claimed') {
+                    return !isMVerified && copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không') && !copyright.includes('verified');
+                }
+                return copyright === filterVal || (filterVal.includes('verified') && isMVerified);
             });
         }
 
@@ -1318,22 +1362,59 @@ let _adminFilterArtistInited = false;
 let _adminFilterGenreInited  = false;
 
 function populateAdminFilterDropdowns() {
-    let artists, genres;
+    let artists, genres, copyrights;
 
     // Ưu tiên dùng filter_options từ API (toàn bộ DB) nếu có
     if (window.adminApiFilterOptions) {
         artists = (window.adminApiFilterOptions.artists || []).filter(a => a && a !== 'Unknown').map(a => a.trim()).sort();
         genres  = (window.adminApiFilterOptions.genres  || []).filter(g => g).map(g => g.trim()).sort();
+        copyrights = (window.adminApiFilterOptions.copyright_statuses || window.adminApiFilterOptions.copyrights || []).filter(c => c).map(c => c.trim());
     } else {
         // Fallback: scan local globalBeatmapsList (chưa có dữ liệu API)
         const artistSet = new Set();
         const genreSet  = new Set();
+        const copyrightSet = new Set();
         globalBeatmapsList.forEach(m => {
             if (m.artist && m.artist !== 'Unknown') artistSet.add(m.artist.trim());
             if (m.genre) genreSet.add(m.genre.trim());
+            const isMVerified = m.verified === true || m.verified === 1 || m.verified === 'true' || m.verified === 'verified';
+            let cp = m.copyright_status ? m.copyright_status.trim() : (isMVerified ? 'No copyright' : '');
+            if (cp) copyrightSet.add(cp);
         });
         artists = Array.from(artistSet).sort();
         genres  = Array.from(genreSet).sort();
+        copyrights = Array.from(copyrightSet).sort();
+    }
+
+    // Cập nhật các options cho dropdown bản quyền từ DB nếu có
+    const copyrightSelect = document.getElementById('admin-filter-copyright');
+    if (copyrightSelect) {
+        const currentVal = copyrightSelect.value;
+        const defaultOptions = [
+            { value: '', text: 'BẢN QUYỀN: TẤT CẢ' },
+            { value: 'free', text: 'MIỄN PHÍ / KHÔNG BẢN QUYỀN' },
+            { value: 'claimed', text: 'CÓ BẢN QUYỀN' }
+        ];
+        copyrightSelect.innerHTML = '';
+        defaultOptions.forEach(optData => {
+            const opt = document.createElement('option');
+            opt.value = optData.value;
+            opt.textContent = optData.text;
+            copyrightSelect.appendChild(opt);
+        });
+
+        if (Array.isArray(copyrights)) {
+            copyrights.forEach(cp => {
+                const lower = cp.toLowerCase();
+                if (lower !== 'free' && lower !== 'claimed' && lower !== 'no copyright' && lower !== 'không bản quyền' && lower !== 'none') {
+                    const opt = document.createElement('option');
+                    opt.value = cp;
+                    opt.textContent = cp.toUpperCase();
+                    copyrightSelect.appendChild(opt);
+                }
+            });
+        }
+        copyrightSelect.value = currentVal;
     }
 
     // Khởi tạo dropdown lần đầu
@@ -1709,11 +1790,36 @@ function renderAdminBeatmapsTable() {
         const absoluteIndex = adminBmRenderStartIndex + index;
         const statusClass = m.is_available ? 'text-green-400' : 'text-gray-500';
         const statusText = m.is_available ? t('admin_status_active') : t('admin_status_hidden');
+
+        const isMVerified = m.verified === true || m.verified === 1 || m.verified === 'true' || m.verified === 'verified';
+        let cpStatus = m.copyright_status || '';
+        if (!cpStatus && isMVerified) {
+            cpStatus = 'No copyright';
+        }
+        const lowerCp = cpStatus.toLowerCase();
+        let cpBadge = '';
+        if (isMVerified) {
+            cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30" title="Đã xác minh (Verified)">✓ Verified</span> `;
+        }
+        if (cpStatus) {
+            if (lowerCp.includes('no') || lowerCp.includes('free') || lowerCp.includes('không')) {
+                cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="Bản quyền: ${cpStatus}">Free</span>`;
+            } else {
+                cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30" title="Bản quyền: ${cpStatus}">Claimed</span>`;
+            }
+        }
+
         tbody.innerHTML += `
                     <tr class="hover:bg-cyan-950/30 transition-colors">
                         <td class="p-4 border-b border-cyan-500/10">${absoluteIndex + 1}</td>
-                        <td class="p-4 border-b border-cyan-500/10 font-bold text-white">${m.title || m.name || 'Untitled'}</td>
-                        <td class="p-4 border-b border-cyan-500/10 text-gray-400">${m.artist}</td>
+                        <td class="p-4 border-b border-cyan-500/10">
+                            <div class="font-bold text-white flex items-center gap-2 flex-wrap">
+                                <span>${m.title || m.name || 'Untitled'}</span>
+                                ${cpBadge}
+                            </div>
+                            ${m.genre ? `<div class="text-[11px] text-gray-500 mt-0.5 font-orbitron">${m.genre}</div>` : ''}
+                        </td>
+                        <td class="p-4 border-b border-cyan-500/10 text-gray-400">${m.artist || 'Unknown'}</td>
                         <td class="p-4 border-b border-cyan-500/10 ${statusClass}">${statusText}</td>
                         <td class="p-4 border-b border-cyan-500/10 text-right space-x-3">
                             <button class="text-green-400 hover:text-green-300 btn-preview-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" data-url="${m.file_url || m.url}" title="${t('admin_action_preview') || 'Nghe thử'}">
@@ -2247,7 +2353,14 @@ function openEditBeatmapModal(id) {
     if (editBmGenreEl) editBmGenreEl.value = bm.genre || '';
     if (editBmBpmEl) editBmBpmEl.value = bm.bpm || 120;
     if (editBmSpeedEl) editBmSpeedEl.value = bm.speed || 0;
-    if (editBmCopyrightEl) editBmCopyrightEl.value = bm.copyright_status || '';
+
+    // Nếu có trường verified thì mặc định là No copyright nếu chưa có trạng thái cụ thể
+    const isMVerified = bm.verified === true || bm.verified === 1 || bm.verified === 'true' || bm.verified === 'verified';
+    let copyrightVal = bm.copyright_status || '';
+    if (!copyrightVal && isMVerified) {
+        copyrightVal = 'No copyright';
+    }
+    if (editBmCopyrightEl) editBmCopyrightEl.value = copyrightVal;
     if (editBmWarningEl) editBmWarningEl.value = bm.warning_alert || '';
     if (editBmAvailableEl) editBmAvailableEl.checked = bm.is_available !== false;
     if (editBmNofakeEl) editBmNofakeEl.checked = !!bm.no_fake_block;

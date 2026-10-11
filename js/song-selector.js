@@ -249,24 +249,55 @@ function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
         });
     }
 
-    // Áp dụng bộ lọc ca sĩ, thể loại và bản quyền phía Client
+    // Lọc theo từ khóa tìm kiếm (kiểu LIKE / có chứa)
+    if (newFilterTerm) {
+        filteredIndices = filteredIndices.filter(i => {
+            const s = playlist[i];
+            if (!s) return false;
+            const name = (s.name || s.title || '').toLowerCase();
+            const artist = (s.artist || '').toLowerCase();
+            const genre = (s.genre || '').toLowerCase();
+            return name.includes(newFilterTerm) || artist.includes(newFilterTerm) || genre.includes(newFilterTerm);
+        });
+    }
+
+    // Áp dụng bộ lọc ca sĩ, thể loại (kiểu LIKE / có chứa) và bản quyền phía Client
     if (window.selectedArtistFilter) {
-        filteredIndices = filteredIndices.filter(i => playlist[i] && playlist[i].artist && playlist[i].artist.toLowerCase() === window.selectedArtistFilter.toLowerCase());
+        const artistFilter = window.selectedArtistFilter.toLowerCase().trim();
+        filteredIndices = filteredIndices.filter(i => {
+            const song = playlist[i];
+            if (!song || !song.artist) return false;
+            const songArtist = song.artist.toLowerCase();
+            return songArtist.includes(artistFilter) || artistFilter.includes(songArtist);
+        });
     }
     if (window.selectedGenreFilter) {
-        filteredIndices = filteredIndices.filter(i => playlist[i] && playlist[i].genre && playlist[i].genre.toLowerCase() === window.selectedGenreFilter.toLowerCase());
+        const genreFilter = window.selectedGenreFilter.toLowerCase().trim();
+        filteredIndices = filteredIndices.filter(i => {
+            const song = playlist[i];
+            if (!song || !song.genre) return false;
+            const songGenre = song.genre.toLowerCase();
+            return songGenre.includes(genreFilter) || genreFilter.includes(songGenre);
+        });
     }
     if (window.selectedCopyrightFilter) {
+        const filterVal = window.selectedCopyrightFilter.toLowerCase().trim();
         filteredIndices = filteredIndices.filter(i => {
             const song = playlist[i];
             if (!song) return false;
-            const copyright = (song.copyright_status || '').toLowerCase();
-            if (window.selectedCopyrightFilter === 'free') {
-                return !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không');
-            } else if (window.selectedCopyrightFilter === 'claimed') {
-                return copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không');
+            const isSongVerified = song.verified === true || song.verified === 1 || song.verified === 'true' || song.verified === 'verified';
+            let copyright = (song.copyright_status || '').toLowerCase().trim();
+            if (!copyright && isSongVerified) {
+                copyright = 'no copyright';
             }
-            return true;
+
+            if (filterVal === 'free' || filterVal === 'no copyright') {
+                return isSongVerified || !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không') || copyright.includes('verified');
+            } else if (filterVal === 'claimed') {
+                return !isSongVerified && copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không') && !copyright.includes('verified');
+            }
+
+            return copyright === filterVal || (filterVal.includes('verified') && isSongVerified);
         });
     }
     
@@ -1208,22 +1239,36 @@ function initSearchableFilterDropdown(cfg) {
 
 // Khởi tạo 3 dropdown searchable/custom cho game
 function populateFilterDropdowns() {
-    let artists, genres;
+    let artists, genres, copyrights;
 
     // Ưu tiên dùng filter_options từ API (toàn bộ DB) nếu có
     if (window.apiFilterOptions) {
         artists = (window.apiFilterOptions.artists || []).filter(a => a && a !== 'Unknown').map(a => a.trim()).sort();
         genres  = (window.apiFilterOptions.genres  || []).filter(g => g).map(g => g.trim()).sort();
+        copyrights = (window.apiFilterOptions.copyright_statuses || window.apiFilterOptions.copyrights || []).filter(c => c).map(c => c.trim()).sort();
     } else {
         // Fallback: scan local playlist (offline hoặc chưa load xong)
         const artistSet = new Set();
         const genreSet  = new Set();
+        const copyrightSet = new Set();
         playlist.forEach(song => {
             if (song.artist && song.artist !== 'Unknown') artistSet.add(song.artist.trim());
             if (song.genre) genreSet.add(song.genre.trim());
+            const cp = song.copyright_status || ((song.verified === true || song.verified === 1 || song.verified === 'true') ? 'No copyright' : null);
+            if (cp && cp.trim()) copyrightSet.add(cp.trim());
         });
         artists = Array.from(artistSet).sort();
         genres  = Array.from(genreSet).sort();
+        copyrights = Array.from(copyrightSet).sort();
+    }
+
+    if (!copyrights || copyrights.length === 0) {
+        const copyrightSet = new Set();
+        playlist.forEach(song => {
+            const cp = song.copyright_status || ((song.verified === true || song.verified === 1 || song.verified === 'true') ? 'No copyright' : null);
+            if (cp && cp.trim()) copyrightSet.add(cp.trim());
+        });
+        copyrights = Array.from(copyrightSet).sort();
     }
 
     // Khởi tạo dropdown lần đầu
@@ -1277,11 +1322,6 @@ function populateFilterDropdowns() {
             labelId:    'song-filter-copyright-label',
             allKey:     'filter_all_copyright',
             allLabel:   typeof t === 'function' ? t('filter_all_copyright') : 'BẢN QUYỀN: TẤT CẢ',
-            staticOptions: [
-                { value: '', labelKey: 'filter_all_copyright', defaultText: 'BẢN QUYỀN: TẤT CẢ' },
-                { value: 'free', labelKey: 'filter_copyright_free', defaultText: 'MIỄN PHÍ' },
-                { value: 'claimed', labelKey: 'filter_copyright_claimed', defaultText: 'CÓ BẢN QUYỀN' }
-            ],
             onSelect: (value) => {
                 window.selectedCopyrightFilter = value;
                 playlistRenderStartIndex = 0;
@@ -1298,7 +1338,7 @@ function populateFilterDropdowns() {
     const copyrightBtn = document.getElementById('song-filter-copyright-btn');
     if (artistBtn && artistBtn._updateItems) artistBtn._updateItems(artists);
     if (genreBtn  && genreBtn._updateItems)  genreBtn._updateItems(genres);
-    if (copyrightBtn && copyrightBtn._refreshLabel) copyrightBtn._refreshLabel();
+    if (copyrightBtn && copyrightBtn._updateItems) copyrightBtn._updateItems(copyrights.length > 0 ? copyrights : ['No copyright', 'Claimed']);
 }
 
 function resetSongFilters() {

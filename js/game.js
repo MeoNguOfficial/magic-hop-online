@@ -1188,14 +1188,20 @@ function createBall() {
     const ballGeo = new THREE.SphereGeometry(ballRadius, segments, segments);
     const ballMat = currentGraphicsQuality === 'simple' ?
         new THREE.MeshBasicMaterial({ color: 0x00ffff }) :
-        new THREE.MeshPhongMaterial({ color: 0x00ffff, emissive: 0x0088cc, shininess: 100 });
+        new THREE.MeshPhongMaterial({
+            color: 0x00ffff,
+            emissive: 0x003355,
+            specular: 0x445566,
+            shininess: 32
+        });
 
     ball = new THREE.Mesh(ballGeo, ballMat);
     ball.frustumCulled = false;
     ball.position.set(0, minFloor, 0);
 
     // --- HIỆU ỨNG PHÁT SÁNG BÓNG (BALL GLOW) ---
-    const glowGeo = new THREE.SphereGeometry(ballRadius * 1.15, segments, segments);
+    // Tăng bán kính lên 1.2x để tạo aura hào quang viền ngoài, không bọc quá sát đè lên hoa văn bề mặt
+    const glowGeo = new THREE.SphereGeometry(ballRadius * 1.2, segments, segments);
     const glowMat = new THREE.MeshBasicMaterial({
         color: 0xffaa00,
         transparent: true,
@@ -1206,7 +1212,7 @@ function createBall() {
     ballGlowMesh = new THREE.Mesh(glowGeo, glowMat);
     ball.add(ballGlowMesh);
 
-    ballGlowLight = new THREE.PointLight(0xffaa00, 0, 8);
+    ballGlowLight = new THREE.PointLight(0xffaa00, 0, 6);
     ball.add(ballGlowLight);
 
     initBallTrail();
@@ -1300,8 +1306,11 @@ async function initThree() {
         }
     }
 
-    let ambientIntensity = 2.0;
-    let dirIntensity = 2.5;
+    const isWebGPU = !!(THREE.ColorManagement);
+    let ambientIntensity = isWebGPU ? 0.45 : 0.85;
+    let dirIntensity = isWebGPU ? 0.9 : 1.15;
+    let hemiIntensity = isWebGPU ? 0.45 : 0.85;
+    let fillIntensity = isWebGPU ? 0.3 : 0.5;
 
     // WebGL 2 runs on r128 (no ColorManagement). WebGPU runs on r171 (has ColorManagement).
     if (THREE.ColorManagement) {
@@ -1309,9 +1318,6 @@ async function initThree() {
         if (renderer) {
             renderer.outputColorSpace = THREE.SRGBColorSpace || 'srgb';
         }
-        // Scale down light intensities for WebGPU (r171) physically-based lighting to prevent washouts
-        ambientIntensity = 0.55;
-        dirIntensity = 1.0;
     }
 
     renderer.setSize(container.clientWidth, container.clientHeight);
@@ -1325,12 +1331,24 @@ async function initThree() {
         visualizerCtx = bgVisualizerCanvas.getContext('2d');
     }
 
-    const ambientLight = new THREE.AmbientLight(0x220044, ambientIntensity);
+    // Ánh sáng môi trường dịu nhẹ, cân bằng phổ RGB tránh làm mất màu/đen ngòm nửa dưới quả bóng
+    const ambientLight = new THREE.AmbientLight(0x3a4866, ambientIntensity);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0x00ffff, dirIntensity);
-    dirLight.position.set(5, 25, 10);
+    // Ánh sáng bán cầu (HemisphereLight): Trời dịu chiếu xuống, mặt sàn neon hắt lên đáy bóng khử sạch bóng đen
+    const hemiLight = new THREE.HemisphereLight(0x7799cc, 0x334466, hemiIntensity);
+    hemiLight.position.set(0, 20, 0);
+    scene.add(hemiLight);
+
+    // Ánh sáng định hướng chính: Chiếu xiên tự nhiên từ trước-trên xuống, ánh sáng trắng ngả xanh dịu, không chói gắt
+    const dirLight = new THREE.DirectionalLight(0xe8f6ff, dirIntensity);
+    dirLight.position.set(5, 16, 12);
     scene.add(dirLight);
+
+    // Ánh sáng phụ (Fill Light): Bù sáng nhẹ từ phía dưới-trước để nửa dưới quả bóng luôn rõ ràng, chuyển sắc mượt mà
+    const fillLight = new THREE.DirectionalLight(0x335577, fillIntensity);
+    fillLight.position.set(-5, -8, 8);
+    scene.add(fillLight);
 
     // --- KHỞI TẠO CÁC MANAGER HIỆU ỨNG & CAMERA ---
     if (typeof GameEffectsManager !== 'undefined') GameEffectsManager.init(scene);
@@ -2215,16 +2233,22 @@ function updateBallCustomization() {
     // Nếu không phải là Dynamic Color, gán màu ngay lập tức
     if (selectedBallColor !== 'dynamic') {
         let hexColor = 0x00ffff;
-        let emissiveColor = 0x0088cc;
+        let emissiveColor = 0x003355;
         
-        if (selectedBallColor === 'cyan') { hexColor = 0x00ffff; emissiveColor = 0x0088cc; }
-        else if (selectedBallColor === 'pink') { hexColor = 0xff00ff; emissiveColor = 0xaa00aa; }
-        else if (selectedBallColor === 'yellow') { hexColor = 0xffff00; emissiveColor = 0xaaaa00; }
-        else if (selectedBallColor === 'white') { hexColor = 0xffffff; emissiveColor = 0xcccccc; }
+        if (selectedBallColor === 'cyan') { hexColor = 0x00ffff; emissiveColor = 0x003355; }
+        else if (selectedBallColor === 'pink') { hexColor = 0xff00ff; emissiveColor = 0x550055; }
+        else if (selectedBallColor === 'yellow') { hexColor = 0xffff00; emissiveColor = 0x555500; }
+        else if (selectedBallColor === 'white') { hexColor = 0xffffff; emissiveColor = 0x333333; }
 
         ball.material.color.setHex(hexColor);
         if (ball.material.emissive) {
             ball.material.emissive.setHex(emissiveColor);
+        }
+        if (ball.material.specular) {
+            ball.material.specular.setHex(0x445566);
+        }
+        if (typeof ball.material.shininess !== 'undefined') {
+            ball.material.shininess = 32;
         }
     }
 }
@@ -2437,11 +2461,11 @@ function animate() {
         if (ball && ball.material) {
             if (selectedBallColor === 'dynamic') {
                 let targetBallColor = 0x00ffff; // Cyan mặc định
-                let targetEmissiveColor = 0x0088cc;
+                let targetEmissiveColor = 0x003355;
 
-                if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0xaa00aa; } // Tím
-                else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0xaa5500; } // Cam
-                else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0xaaaa00; } // Vàng
+                if (comboCount >= 15) { targetBallColor = 0xff00ff; targetEmissiveColor = 0x550055; } // Tím
+                else if (comboCount >= 8) { targetBallColor = 0xffaa00; targetEmissiveColor = 0x553300; } // Cam
+                else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0x555500; } // Vàng
 
                 if (ball.material.color.getHex() !== targetBallColor) {
                     tempColor.setHex(targetBallColor);
@@ -3229,10 +3253,11 @@ function animate() {
                 ballGlowMesh.material.color.setHex(glowColor);
                 ballGlowLight.color.setHex(glowColor);
 
-                targetGlowOpacity = 0.45 + Math.sin(time * 20) * 0.15; // Hiệu ứng thở (chớp nháy), dịu hơn
-                targetGlowIntensity = 2.5 + Math.sin(time * 20) * 1.0;
+                // Giảm opacity và intensity xuống mức êm dịu để hào quang tỏa quanh bóng mà không lấn át hoa văn bề mặt
+                targetGlowOpacity = 0.18 + Math.sin(time * 15) * 0.05; // Dao động 0.13 - 0.23: mỏng nhẹ, giữ trọn độ tương phản hoa văn
+                targetGlowIntensity = 0.6 + Math.sin(time * 15) * 0.2;  // Dao động 0.4 - 0.8: ánh sáng dịu, không gây lóa mắt
 
-                const scalePulse = 1.0 + Math.sin(time * 25) * 0.03; // Mạch đập nhẹ nhàng hơn
+                const scalePulse = 1.0 + Math.sin(time * 15) * 0.02; // Mạch đập nhẹ nhàng, mềm mại
                 ballGlowMesh.scale.set(scalePulse, scalePulse, scalePulse);
             }
 
@@ -4897,16 +4922,17 @@ function showTapToOverlay(type = 'start') {
     let copyrightHoverTextClass = 'hover:text-yellow-400';
     let copyrightShadowClass = 'shadow-[0_0_10px_rgba(234,179,8,0.2)]';
 
-    if (song.copyright_status) {
-        const statusLower = song.copyright_status.toLowerCase();
-        if (statusLower === 'verified') {
+    const hasVerified = song.verified === true || song.verified === 1 || song.verified === 'true';
+    if (song.copyright_status || hasVerified) {
+        const statusLower = (song.copyright_status || '').toLowerCase();
+        if (hasVerified || statusLower === 'verified' || statusLower.includes('no copyright') || statusLower.includes('free') || statusLower.includes('safe') || statusLower.includes('không')) {
             copyrightColorClass = 'text-green-500';
             copyrightBgClass = 'bg-green-900/30';
             copyrightBorderClass = 'border-green-500/40';
             copyrightHoverBgClass = 'hover:bg-green-800/50';
             copyrightHoverTextClass = 'hover:text-green-400';
             copyrightShadowClass = 'shadow-[0_0_10px_rgba(34,197,94,0.2)]';
-        } else if (statusLower.includes('copyright')) {
+        } else if (statusLower.includes('copyright') || statusLower.includes('claimed')) {
             copyrightColorClass = 'text-red-500';
             copyrightBgClass = 'bg-red-900/30';
             copyrightBorderClass = 'border-red-500/40';
