@@ -37,6 +37,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'invertControlsEnabled',
     'hiddenBlockEnabled',
     'settingsFontSize',
+    'scrollbarMode',
     'tileDetailScale',
     'maxFps',
     'blocksAheadLimit',
@@ -232,6 +233,10 @@ let relaxModeEnabled = JSON.parse(localStorage.getItem('relaxModeEnabled')) === 
 let invertControlsEnabled = JSON.parse(localStorage.getItem('invertControlsEnabled')) === true;
 let hiddenBlockEnabled = JSON.parse(localStorage.getItem('hiddenBlockEnabled')) === true;
 let settingsFontSize = localStorage.getItem('settingsFontSize') || 'medium';
+let scrollbarMode = (localStorage.getItem('scrollbarMode') === 'hidden') ? 'hidden' : 'auto';
+if (typeof document !== 'undefined' && document.documentElement) {
+    document.documentElement.setAttribute('data-scrollbar-mode', scrollbarMode);
+}
 let tileDetailScale = localStorage.getItem('tileDetailScale') !== null ? parseFloat(localStorage.getItem('tileDetailScale')) : 1.0;
 let maxFps = localStorage.getItem('maxFps') !== null ? parseInt(localStorage.getItem('maxFps')) : 0;
 window.maxFps = maxFps;
@@ -1473,6 +1478,14 @@ function applySettings() {
         panelHome.classList.add('theme-font-' + settingsFontSize);
     }
 
+    // Chế độ thanh cuộn
+    if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.setAttribute('data-scrollbar-mode', scrollbarMode);
+    }
+    if (typeof updateAllFloatingScrollbars === 'function') {
+        updateAllFloatingScrollbars();
+    }
+
     if (typeof window.adjustTabsKerning === 'function') {
         window.adjustTabsKerning();
     }
@@ -1702,6 +1715,16 @@ document.addEventListener('DOMContentLoaded', () => {
         fontSizeSelect.addEventListener('change', (e) => {
             settingsFontSize = e.target.value;
             localStorage.setItem('settingsFontSize', settingsFontSize);
+            applySettings();
+        });
+    }
+
+    const scrollbarModeSelect = document.getElementById('settings-scrollbar-mode-select');
+    if (scrollbarModeSelect) {
+        scrollbarModeSelect.value = scrollbarMode;
+        scrollbarModeSelect.addEventListener('change', (e) => {
+            scrollbarMode = e.target.value;
+            localStorage.setItem('scrollbarMode', scrollbarMode);
             applySettings();
         });
     }
@@ -2859,4 +2882,134 @@ window.adjustTabsKerning = function () {
         }, 100);
     }
 };
+
+// ============================================================
+//  HỆ THỐNG THANH CUỘN NỔI FADE IN / FADE OUT (FLOATING SCROLLBAR)
+//  Tự động xuất hiện khi cuộn, mượt mà mờ dần khi dừng
+// ============================================================
+const floatingScrollbarUpdaters = [];
+
+function attachFloatingScrollbar(containerId, thumbId) {
+    const container = document.getElementById(containerId);
+    const thumb = document.getElementById(thumbId);
+    if (!container || !thumb) return;
+
+    let fadeTimer = null;
+    let isDragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+
+    function updateThumb(forceShow = false) {
+        const mode = document.documentElement.getAttribute('data-scrollbar-mode') || 'auto';
+        if (mode === 'hidden') {
+            thumb.style.display = 'none';
+            return;
+        }
+
+        const clientHeight = container.clientHeight;
+        const scrollHeight = container.scrollHeight;
+        const scrollTop = container.scrollTop;
+
+        if (scrollHeight <= clientHeight + 4) {
+            thumb.style.display = 'none';
+            return;
+        }
+
+        thumb.style.display = 'block';
+        const thumbHeight = Math.max(24, Math.round((clientHeight / scrollHeight) * clientHeight));
+        const maxScroll = scrollHeight - clientHeight;
+        const top = maxScroll > 0 ? (scrollTop / maxScroll) * (clientHeight - thumbHeight) : 0;
+
+        thumb.style.height = `${thumbHeight}px`;
+        thumb.style.transform = `translateY(${top}px)`;
+
+        if (forceShow || !isDragging) {
+            thumb.style.opacity = '1';
+            if (fadeTimer) clearTimeout(fadeTimer);
+            fadeTimer = setTimeout(() => {
+                if (!isDragging) {
+                    thumb.style.opacity = '0';
+                }
+            }, 800);
+        }
+    }
+
+    container.addEventListener('scroll', () => updateThumb(true), { passive: true });
+
+    // Hỗ trợ kéo chuột trực tiếp trên thanh cuộn
+    thumb.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        isDragging = true;
+        thumb.classList.add('is-dragging');
+        startY = e.clientY;
+        startScrollTop = container.scrollTop;
+        thumb.style.opacity = '1';
+        if (fadeTimer) clearTimeout(fadeTimer);
+        document.body.style.userSelect = 'none';
+
+        function onMouseMove(moveEvent) {
+            if (!isDragging) return;
+            const deltaY = moveEvent.clientY - startY;
+            const clientHeight = container.clientHeight;
+            const scrollHeight = container.scrollHeight;
+            const thumbHeight = Math.max(24, Math.round((clientHeight / scrollHeight) * clientHeight));
+            const maxTop = clientHeight - thumbHeight;
+            const maxScroll = scrollHeight - clientHeight;
+            if (maxTop > 0) {
+                container.scrollTop = startScrollTop + (deltaY / maxTop) * maxScroll;
+            }
+        }
+
+        function onMouseUp() {
+            isDragging = false;
+            thumb.classList.remove('is-dragging');
+            document.body.style.userSelect = '';
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+            if (fadeTimer) clearTimeout(fadeTimer);
+            fadeTimer = setTimeout(() => {
+                thumb.style.opacity = '0';
+            }, 800);
+        }
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mouseup', onMouseUp);
+    });
+
+    if (window.ResizeObserver) {
+        const ro = new ResizeObserver(() => {
+            updateThumb(false);
+        });
+        ro.observe(container);
+    }
+
+    if (window.MutationObserver) {
+        const mo = new MutationObserver(() => {
+            updateThumb(false);
+        });
+        mo.observe(container, { childList: true, subtree: true });
+    }
+
+    floatingScrollbarUpdaters.push(updateThumb);
+    setTimeout(() => updateThumb(false), 150);
+}
+
+function updateAllFloatingScrollbars() {
+    floatingScrollbarUpdaters.forEach(fn => fn(false));
+}
+window.updateAllFloatingScrollbars = updateAllFloatingScrollbars;
+
+// Khởi tạo các thanh cuộn nổi chính
+function initAllFloatingScrollbars() {
+    attachFloatingScrollbar('song-selector', 'song-selector-scrollbar');
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAllFloatingScrollbars);
+} else {
+    initAllFloatingScrollbars();
+}
+
+
 
