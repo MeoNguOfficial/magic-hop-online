@@ -959,7 +959,7 @@ window.FakeBlocksManager = {
                     tempColor.setHSL(hue, 0.8, 0.5);
                     hex = tempColor.getHex();
                 }
-                if (hex !== undefined) {
+                if (hex !== undefined && fTile.userData.themeColor !== hex) {
                     fTile.userData.themeColor = hex;
                     if (fTile.material) {
                         fTile.material.color.setHex(hex);

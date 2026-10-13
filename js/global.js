@@ -1306,25 +1306,28 @@ document.addEventListener('contextmenu', (event) => {
     }
 });
 
-// --- AUTO-SCROLL MARQUEE FOR SONG TITLES ---
-window.applyMarquee = function(element) {
-    if (!element) return;
-    
-    // Reset properties and classes first
-    element.classList.remove('marquee-active');
-    const container = element.parentElement;
-    if (container) {
-        container.classList.remove('overflowing');
-    }
-    element.style.transform = '';
-    element.style.removeProperty('--scroll-distance');
-    element.style.removeProperty('--scroll-duration');
-    
-    // Slight delay to ensure element dimensions are calculated properly by the browser
-    setTimeout(() => {
+// --- AUTO-SCROLL MARQUEE FOR SONG TITLES (BATCHED TO PREVENT LAYOUT THRASHING) ---
+const _pendingMarqueeElements = new Set();
+let _marqueeRafId = null;
+
+function _flushMarquees() {
+    _marqueeRafId = null;
+    if (_pendingMarqueeElements.size === 0) return;
+
+    // Phase 1: BATCHED READ (Zero layout thrashing - all DOM measurements in 1 pass)
+    const measurements = [];
+    for (const element of _pendingMarqueeElements) {
+        if (!element || !element.isConnected) continue;
+        const container = element.parentElement;
         const textWidth = element.scrollWidth;
         const containerWidth = container ? container.clientWidth : 0;
-        
+        measurements.push({ element, container, textWidth, containerWidth });
+    }
+    _pendingMarqueeElements.clear();
+
+    // Phase 2: BATCHED WRITE (All DOM mutations grouped together)
+    for (let i = 0; i < measurements.length; i++) {
+        const { element, container, textWidth, containerWidth } = measurements[i];
         if (textWidth > containerWidth && containerWidth > 0) {
             if (container) {
                 container.classList.add('overflowing');
@@ -1339,7 +1342,26 @@ window.applyMarquee = function(element) {
             
             element.classList.add('marquee-active');
         }
-    }, 100);
+    }
+}
+
+window.applyMarquee = function(element) {
+    if (!element) return;
+    
+    // Reset properties and classes first
+    element.classList.remove('marquee-active');
+    const container = element.parentElement;
+    if (container) {
+        container.classList.remove('overflowing');
+    }
+    element.style.transform = '';
+    element.style.removeProperty('--scroll-distance');
+    element.style.removeProperty('--scroll-duration');
+    
+    _pendingMarqueeElements.add(element);
+    if (!_marqueeRafId) {
+        _marqueeRafId = requestAnimationFrame(_flushMarquees);
+    }
 };
 
 // --- CHẶN PHÓNG TO / THU NHỎ TRÌNH DUYỆT (ANTI-ZOOM) ---

@@ -781,9 +781,9 @@ function spawnTile(isFirst = false) {
         tile.userData.borderLine.material = (activeColor === 0xff00ff) ? window.globalBorderMatMagenta : window.globalBorderMatCyan;
     }
 
-    const poolGlowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : tile.getObjectByName('glowMesh');
+    const poolGlowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : (tile.userData.glowMesh = tile.getObjectByName('glowMesh'));
     if (poolGlowMesh && Array.isArray(poolGlowMesh.material)) {
-        poolGlowMesh.material = [poolGlowMesh.material[0], (activeColor === 0xff00ff) ? window.globalTileGlowMatMagenta : window.globalTileGlowMatCyan];
+        poolGlowMesh.material[1] = (activeColor === 0xff00ff) ? window.globalTileGlowMatMagenta : window.globalTileGlowMatCyan;
     }
 
     let isEntering = !isFirst && spawnAnimationMode !== 'none';

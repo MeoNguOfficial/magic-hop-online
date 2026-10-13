@@ -517,7 +517,10 @@ function triggerPerfectComboUI(comboCount) {
     if (comboEl.textContent !== newText) {
         comboEl.textContent = newText;
     }
-    comboEl.className = COMBO_CLASS_CACHE[comboCount] || COMBO_CLASS_CACHE[MAX_COMBO_PRECACHE - 1];
+    const newClass = COMBO_CLASS_CACHE[comboCount] || COMBO_CLASS_CACHE[MAX_COMBO_PRECACHE - 1];
+    if (comboEl.className !== newClass) {
+        comboEl.className = newClass;
+    }
 
     // 2. Smooth Zoom Out tự động sau 1.5 giây khi nghỉ nhịp
     comboHideTimer = setTimeout(() => {
@@ -2291,15 +2294,17 @@ function syncSharedMaterial(mat, currentFrameHex, tempColor) {
     if (!mat) return;
     if (mat.color && mat.color.getHex() !== currentFrameHex) {
         mat.color.setHex(currentFrameHex);
+        if (mat.emissive && tempColor) mat.emissive.copy(tempColor).multiplyScalar(0.2);
     }
-    if (mat.emissive) mat.emissive.copy(tempColor).multiplyScalar(0.2);
 }
 
 function syncSharedGlow(glowMat, currentFrameHex) {
     if (!glowMat) return;
     if (glowMat.uniforms && glowMat.uniforms.color) {
-        glowMat.uniforms.color.value.setHex(currentFrameHex);
-    } else if (glowMat.color) {
+        if (glowMat.uniforms.color.value.getHex() !== currentFrameHex) {
+            glowMat.uniforms.color.value.setHex(currentFrameHex);
+        }
+    } else if (glowMat.color && glowMat.color.getHex() !== currentFrameHex) {
         glowMat.color.setHex(currentFrameHex);
     }
 }
@@ -2460,10 +2465,21 @@ function animate() {
             const roundedSpeed = Math.round(gameSpeed * 100) / 100;
             const progress = (isWarmup && beatmapBeats && beatmapBeats.length > 0) ? Math.min(100, Math.floor((totalTilesJumped / beatmapBeats.length) * 100)) : 0;
             
-            if (lastDisplayedSpeedValue !== roundedSpeed || lastDisplayedProgress !== progress || lastDisplayedRound !== activeRoundCount) {
+            // Tối ưu hóa: Giới hạn tần suất cập nhật DOM text cho speedEl (~12 FPS / 80ms) trừ khi chuyển Round/Mode
+            // Triệt tiêu hoàn toàn hiện tượng Forced Synchronous Layout / Layout Thrashing trong khung hình WebGL
+            if (typeof lastDisplayedSpeedTime === 'undefined') {
+                window.lastDisplayedSpeedTime = 0;
+                window.lastDisplayedIsWarmup = null;
+            }
+            const speedTimeElapsed = now - window.lastDisplayedSpeedTime;
+            const roundChanged = lastDisplayedRound !== activeRoundCount;
+            const modeChanged = window.lastDisplayedIsWarmup !== isWarmup;
+            if (roundChanged || modeChanged || (speedTimeElapsed >= 80 && (lastDisplayedSpeedValue !== roundedSpeed || lastDisplayedProgress !== progress))) {
+                window.lastDisplayedSpeedTime = now;
                 lastDisplayedSpeedValue = roundedSpeed;
                 lastDisplayedProgress = progress;
                 lastDisplayedRound = activeRoundCount;
+                window.lastDisplayedIsWarmup = isWarmup;
                 const warmupStr = (typeof t === 'function') ? t('warmup') : 'Khởi động';
                 const roundStr = (typeof t === 'function') ? t('round') : 'Màn';
                 const modeText = isWarmup ? `${warmupStr} ${progress}%` : `${roundStr} ${activeRoundCount}`;
@@ -2575,6 +2591,9 @@ function animate() {
                     const aheadTile = tiles[aheadIdx];
                     if (aheadTile && aheadTile.visible && !aheadTile.userData.isEntering) {
                         aheadTile.visible = false;
+                    } else if (aheadTile && !aheadTile.visible && !aheadTile.userData.isEntering) {
+                        // Tile này và các tile tiếp theo đã được ẩn từ các frame trước, thoát ngay
+                        break;
                     }
                 }
                 break;
@@ -3280,12 +3299,17 @@ function animate() {
             let targetGlowIntensity = 0;
 
             if (typeof ballGlowEnabled !== 'undefined' && ballGlowEnabled && comboCount >= 6 && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
-                const time = clock.getElapsedTime();
-                // Đổi màu đồng bộ theo mốc combo (Vàng -> Cam -> Tím)
-                let glowColor = comboCount >= 15 ? 0xff00ff : (comboCount >= 8 ? 0xffaa00 : 0xffff00);
+                if (!ballGlowMesh.visible) ballGlowMesh.visible = true;
+                if (!ballGlowLight.visible) ballGlowLight.visible = true;
 
-                ballGlowMesh.material.color.setHex(glowColor);
-                ballGlowLight.color.setHex(glowColor);
+                const time = clock.getElapsedTime();
+                let glowColor = comboCount >= 15 ? 0xff00ff : (comboCount >= 8 ? 0xffaa00 : 0xffff00);
+                if (ballGlowMesh.material.color.getHex() !== glowColor) {
+                    ballGlowMesh.material.color.setHex(glowColor);
+                }
+                if (ballGlowLight.color.getHex() !== glowColor) {
+                    ballGlowLight.color.setHex(glowColor);
+                }
 
                 // Giảm opacity và intensity xuống mức êm dịu để hào quang tỏa quanh bóng mà không lấn át hoa văn bề mặt
                 targetGlowOpacity = 0.18 + Math.sin(time * 15) * 0.05; // Dao động 0.13 - 0.23: mỏng nhẹ, giữ trọn độ tương phản hoa văn
@@ -3295,8 +3319,25 @@ function animate() {
                 ballGlowMesh.scale.set(scalePulse, scalePulse, scalePulse);
             }
 
-            ballGlowMesh.material.opacity += (targetGlowOpacity - ballGlowMesh.material.opacity) * 10 * delta;
-            ballGlowLight.intensity += (targetGlowIntensity - ballGlowLight.intensity) * 10 * delta;
+            if (targetGlowOpacity > 0 || ballGlowMesh.material.opacity > 0.001) {
+                ballGlowMesh.material.opacity += (targetGlowOpacity - ballGlowMesh.material.opacity) * 10 * delta;
+                if (targetGlowOpacity === 0 && ballGlowMesh.material.opacity <= 0.001) {
+                    ballGlowMesh.material.opacity = 0;
+                    ballGlowMesh.visible = false;
+                }
+            } else if (ballGlowMesh.visible) {
+                ballGlowMesh.visible = false;
+            }
+
+            if (targetGlowIntensity > 0 || ballGlowLight.intensity > 0.001) {
+                ballGlowLight.intensity += (targetGlowIntensity - ballGlowLight.intensity) * 10 * delta;
+                if (targetGlowIntensity === 0 && ballGlowLight.intensity <= 0.001) {
+                    ballGlowLight.intensity = 0;
+                    ballGlowLight.visible = false;
+                }
+            } else if (ballGlowLight.visible) {
+                ballGlowLight.visible = false;
+            }
         }
 
         // --- CAMERA ---

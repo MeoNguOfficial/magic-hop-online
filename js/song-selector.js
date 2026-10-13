@@ -146,6 +146,14 @@ async function preloadBackendAndPassedStatusOnStartup() {
                         db = typeof getDB === 'function' ? await getDB() : (typeof initDB === 'function' ? await initDB() : null);
                     } catch(e){}
 
+                    let store = null;
+                    if (db) {
+                        try {
+                            const tx = db.transaction("highScores", "readwrite");
+                            store = tx.objectStore("highScores");
+                        } catch(e){}
+                    }
+
                     scoresData.forEach(item => {
                         const rawBeatmapId = item.beatmap_id ?? item.beatmapId ?? item.song_id ?? item.songId ?? item.map_id ?? item.beatmap?.id ?? item.song?.id ?? item.beatmap?.beatmap_id;
                         const targetBeatmapId = (rawBeatmapId !== undefined && rawBeatmapId !== null) ? String(rawBeatmapId) : null;
@@ -175,10 +183,8 @@ async function preloadBackendAndPassedStatusOnStartup() {
                                 if (isAsianPass) targetSong.is_asian_mode_passed = true;
                                 if (isEasyPass || isNormalPass || isHardPass || isAsianPass) targetSong.is_passed = true;
 
-                                if (db) {
+                                if (store) {
                                     try {
-                                        const tx = db.transaction("highScores", "readwrite");
-                                        const store = tx.objectStore("highScores");
                                         const req = store.get(songIndex);
                                         req.onsuccess = () => {
                                             const rec = req.result || { songIndex };
@@ -221,91 +227,83 @@ if (document.readyState === 'loading') {
 
 function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
     const newFilterTerm = term === null ? '' : term.toLowerCase().trim();
+    currentFilterTerm = newFilterTerm;
     
-    if (specificIndices !== null) {
-        currentFilterTerm = newFilterTerm;
-        filteredIndices = [...specificIndices];
-    } else {
-        currentFilterTerm = newFilterTerm;
-        filteredIndices = typeof currentPlaylistIndices !== 'undefined' ? [...currentPlaylistIndices] : [];
-    }
+    const sourceIndices = (specificIndices !== null) 
+        ? specificIndices 
+        : (typeof currentPlaylistIndices !== 'undefined' ? currentPlaylistIndices : []);
 
     const todayStr = new Date().toISOString().split('T')[0];
     const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
+    const artistFilter = window.selectedArtistFilter ? window.selectedArtistFilter.toLowerCase().trim() : '';
+    const genreFilter = window.selectedGenreFilter ? window.selectedGenreFilter.toLowerCase().trim() : '';
+    const copyrightFilter = window.selectedCopyrightFilter ? window.selectedCopyrightFilter.toLowerCase().trim() : '';
 
-    // Nếu KHÔNG PHẢI ADMIN: Lọc bỏ các bài hát bị ẩn/tắt hoặc chưa đến ngày hiện / đã qua ngày ẩn
-    // Nếu LÀ ADMIN: Vẫn giữ lại toàn bộ bài hát để admin quản lý, xem và chơi thử
-    if (!isAdmin) {
-        filteredIndices = filteredIndices.filter(i => {
-            const song = playlist[i];
-            if (!song) return false;
+    // Tối ưu hóa: Gộp 5 vòng lặp .filter() chuỗi liên tiếp thành 1 vòng lặp duy nhất O(N) với short-circuit
+    filteredIndices = sourceIndices.filter(i => {
+        const song = playlist[i];
+        if (!song) return false;
 
-            // Trạng thái khả dụng
+        // 1. Phân quyền Admin & Ngày khả dụng
+        if (!isAdmin) {
             if (song.is_available === false || song.is_available === 0) return false;
-
-            // Ngày hiện (day_show)
             const dayShow = song.day_show || song.date_show;
             if (dayShow && dayShow > todayStr) return false;
-
-            // Ngày ẩn (day_hide)
             const dayHide = song.day_hide || song.time_hide;
             if (dayHide && dayHide < todayStr) return false;
+        }
 
-            return true;
-        });
-    }
+        // 2. Lọc theo từ khóa tìm kiếm (Tên, Ca sĩ, Thể loại)
+        if (newFilterTerm) {
+            const name = (song.name || song.title || '').toLowerCase();
+            const artist = (song.artist || '').toLowerCase();
+            const genre = (song.genre || '').toLowerCase();
+            if (!name.includes(newFilterTerm) && !artist.includes(newFilterTerm) && !genre.includes(newFilterTerm)) {
+                return false;
+            }
+        }
 
-    // Lọc theo từ khóa tìm kiếm (kiểu LIKE / có chứa)
-    if (newFilterTerm) {
-        filteredIndices = filteredIndices.filter(i => {
-            const s = playlist[i];
-            if (!s) return false;
-            const name = (s.name || s.title || '').toLowerCase();
-            const artist = (s.artist || '').toLowerCase();
-            const genre = (s.genre || '').toLowerCase();
-            return name.includes(newFilterTerm) || artist.includes(newFilterTerm) || genre.includes(newFilterTerm);
-        });
-    }
-
-    // Áp dụng bộ lọc ca sĩ, thể loại (kiểu LIKE / có chứa) và bản quyền phía Client
-    if (window.selectedArtistFilter) {
-        const artistFilter = window.selectedArtistFilter.toLowerCase().trim();
-        filteredIndices = filteredIndices.filter(i => {
-            const song = playlist[i];
-            if (!song || !song.artist) return false;
+        // 3. Lọc theo ca sĩ
+        if (artistFilter) {
+            if (!song.artist) return false;
             const songArtist = song.artist.toLowerCase();
-            return songArtist.includes(artistFilter) || artistFilter.includes(songArtist);
-        });
-    }
-    if (window.selectedGenreFilter) {
-        const genreFilter = window.selectedGenreFilter.toLowerCase().trim();
-        filteredIndices = filteredIndices.filter(i => {
-            const song = playlist[i];
-            if (!song || !song.genre) return false;
+            if (!songArtist.includes(artistFilter) && !artistFilter.includes(songArtist)) {
+                return false;
+            }
+        }
+
+        // 4. Lọc theo thể loại
+        if (genreFilter) {
+            if (!song.genre) return false;
             const songGenre = song.genre.toLowerCase();
-            return songGenre.includes(genreFilter) || genreFilter.includes(songGenre);
-        });
-    }
-    if (window.selectedCopyrightFilter) {
-        const filterVal = window.selectedCopyrightFilter.toLowerCase().trim();
-        filteredIndices = filteredIndices.filter(i => {
-            const song = playlist[i];
-            if (!song) return false;
+            if (!songGenre.includes(genreFilter) && !genreFilter.includes(songGenre)) {
+                return false;
+            }
+        }
+
+        // 5. Lọc theo bản quyền
+        if (copyrightFilter) {
             const isSongVerified = song.verified === true || song.verified === 1 || song.verified === 'true' || song.verified === 'verified';
             let copyright = (song.copyright_status || '').toLowerCase().trim();
-            if (!copyright && isSongVerified) {
-                copyright = 'no copyright';
-            }
+            if (!copyright && isSongVerified) copyright = 'no copyright';
 
-            if (filterVal === 'free' || filterVal === 'no copyright') {
-                return isSongVerified || !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không') || copyright.includes('verified');
-            } else if (filterVal === 'claimed') {
-                return !isSongVerified && copyright && !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không') && !copyright.includes('verified');
+            if (copyrightFilter === 'free' || copyrightFilter === 'no copyright') {
+                if (!isSongVerified && (!copyright || !copyright.includes('no') && !copyright.includes('free') && !copyright.includes('không') && !copyright.includes('verified'))) {
+                    return false;
+                }
+            } else if (copyrightFilter === 'claimed') {
+                if (isSongVerified || !copyright || copyright.includes('no') || copyright.includes('free') || copyright.includes('không') || copyright.includes('verified')) {
+                    return false;
+                }
+            } else {
+                if (copyright !== copyrightFilter && (!copyrightFilter.includes('verified') || !isSongVerified)) {
+                    return false;
+                }
             }
+        }
 
-            return copyright === filterVal || (filterVal.includes('verified') && isSongVerified);
-        });
-    }
+        return true;
+    });
     
     if (!currentFilterTerm && !window.selectedArtistFilter && !window.selectedGenreFilter && !window.selectedCopyrightFilter && playlist[selectedSongIndex]) {
         const selectedSong = playlist[selectedSongIndex];
@@ -449,6 +447,8 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
     const todayStr = new Date().toISOString().split('T')[0];
     const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
+
+    const songCardsFragment = document.createDocumentFragment();
 
     displayIndices.forEach((originalIndex, i) => {
         const song = playlist[originalIndex];
@@ -616,7 +616,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
                     if (details.classList.contains('hidden')) {
                         // Close other opened options
-                        document.querySelectorAll('.song-option-details').forEach(el => {
+                        selector.querySelectorAll('.song-option-details').forEach(el => {
                             if (!el.classList.contains('hidden') && el !== details) {
                                 if (isAnimEnabled && typeof anime !== 'undefined') {
                                     el.style.overflow = 'hidden';
@@ -641,7 +641,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                                 }
                             }
                         });
-                        document.querySelectorAll('.expand-icon').forEach(icon => {
+                        selector.querySelectorAll('.expand-icon').forEach(icon => {
                             if (icon !== expandIcon) icon.classList.remove('rotate-180');
                         });
 
@@ -716,7 +716,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             }, 250);
         });
 
-        selector.appendChild(opt);
+        songCardsFragment.appendChild(opt);
 
         // Apply auto-scroll marquee for long song title
         const songTitleText = opt.querySelector('.marquee-text');
@@ -724,30 +724,42 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             window.applyMarquee(songTitleText);
         }
 
-        // Tối ưu thuật toán: Lazy load kiểm tra Cache cả audio và JSON beatmap
-        const audioPromise = typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
-        const beatmapKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl || (song.id ? `beatmap_${song.id}.json` : null);
-        const jsonPromise = (typeof isBeatmapCached === 'function')
-            ? isBeatmapCached(song)
-            : ((beatmapKey && typeof isJsonCached === 'function') ? isJsonCached(beatmapKey) : Promise.resolve(false));
-        
-        Promise.all([audioPromise, jsonPromise]).then(([isAudioCached, isJsonCached]) => {
-            if (currentRenderId !== renderId) return;
-            const isCached = isAudioCached || isJsonCached || (song.beats && song.beats.length > 4);
-            opt.dataset.isCached = isCached;
-            if (isCached) {
-                const statusDiv = document.getElementById(`cache-status-${originalIndex}`);
-                if (statusDiv) {
-                    statusDiv.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400 self-center my-auto shrink-0 inline-block align-middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
-                }
-                const details = opt.querySelector('.song-option-details');
-                const cBtn = opt.querySelector('.clear-cache-btn');
-                if (details && !details.classList.contains('hidden') && cBtn) {
-                    cBtn.classList.remove('hidden');
-                }
+        // Tối ưu thuật toán: Kiểm tra nhanh trạng thái Cache cả audio và JSON beatmap (đồng bộ trước, async dự phòng)
+        const isKnownCached = (song.loaded && song.beats && song.beats.length > 4) || song._isCached === true;
+        if (isKnownCached) {
+            opt.dataset.isCached = 'true';
+            const statusDiv = opt.querySelector(`#cache-status-${originalIndex}`);
+            if (statusDiv) {
+                statusDiv.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400 self-center my-auto shrink-0 inline-block align-middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
             }
-        });
+        } else {
+            const audioPromise = typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
+            const beatmapKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl || (song.id ? `beatmap_${song.id}.json` : null);
+            const jsonPromise = (typeof isBeatmapCached === 'function')
+                ? isBeatmapCached(song)
+                : ((beatmapKey && typeof isJsonCached === 'function') ? isJsonCached(beatmapKey) : Promise.resolve(false));
+            
+            Promise.all([audioPromise, jsonPromise]).then(([isAudioCached, isJsonCached]) => {
+                if (currentRenderId !== renderId) return;
+                const isCached = isAudioCached || isJsonCached || (song.beats && song.beats.length > 4);
+                if (isCached) {
+                    song._isCached = true;
+                    opt.dataset.isCached = 'true';
+                    const statusDiv = document.getElementById(`cache-status-${originalIndex}`);
+                    if (statusDiv) {
+                        statusDiv.innerHTML = `<svg class="w-3.5 h-3.5 text-green-400 self-center my-auto shrink-0 inline-block align-middle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path></svg>`;
+                    }
+                    const details = opt.querySelector('.song-option-details');
+                    const cBtn = opt.querySelector('.clear-cache-btn');
+                    if (details && !details.classList.contains('hidden') && cBtn) {
+                        cBtn.classList.remove('hidden');
+                    }
+                }
+            });
+        }
     });
+
+    selector.appendChild(songCardsFragment);
 
     // Xóa nút "Tải thêm" cũ nếu có
     const oldLoadMoreBtn = document.getElementById('load-more-btn');
@@ -1248,7 +1260,16 @@ function initSearchableFilterDropdown(cfg) {
 }
 
 // Khởi tạo 3 dropdown searchable/custom cho game
-function populateFilterDropdowns() {
+let _lastPopulatedPlaylistLen = -1;
+let _lastPopulatedApiOptions = null;
+
+function populateFilterDropdowns(force = false) {
+    if (!force && _lastPopulatedPlaylistLen === playlist.length && _lastPopulatedApiOptions === window.apiFilterOptions && _songFilterArtistInited && _songFilterGenreInited && _songFilterCopyrightInited) {
+        return; // Dữ liệu không thay đổi, bỏ qua việc rescan và rebuild DOM dropdown
+    }
+    _lastPopulatedPlaylistLen = playlist.length;
+    _lastPopulatedApiOptions = window.apiFilterOptions;
+
     let artists, genres, copyrights;
 
     // Ưu tiên dùng filter_options từ API (toàn bộ DB) nếu có
