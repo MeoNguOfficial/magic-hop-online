@@ -364,11 +364,12 @@ function pushTileToPool(tile) {
             t.userData.isMoving = false;
             t.userData.isExiting = false;
             t.userData.isEntering = false;
-            delete t.userData.moveSpeed;
-            delete t.userData.moveTime;
-            delete t.userData.amplitude;
-            delete t.userData.baseX;
-            delete t.userData.moveType;
+            t.userData.moveSpeed = 0;
+            t.userData.moveTime = 0;
+            t.userData.amplitude = 0;
+            t.userData.baseX = 0;
+            t.userData.moveType = null;
+            t.userData.nudgeTimer = 0;
         }
     };
     
@@ -513,6 +514,8 @@ function getTileFromPool(forceNew = false) {
         const borderLine = new THREE.Mesh(cachedBorderGeo, window.globalBorderMatCyan);
         borderLine.name = "borderLine";
         borderLine.position.z = surfaceZ + 0.01;
+        borderLine.matrixAutoUpdate = false;
+        borderLine.updateMatrix();
         tile.add(borderLine);
         tile.userData.borderLine = borderLine;
 
@@ -527,6 +530,8 @@ function getTileFromPool(forceNew = false) {
         const centerMesh = new THREE.Mesh(cachedCenterGeo, window.globalCenterMat.clone());
         centerMesh.name = "centerMesh";
         centerMesh.position.z = surfaceZ + 0.015;
+        centerMesh.matrixAutoUpdate = false;
+        centerMesh.updateMatrix();
         tile.add(centerMesh);
         tile.userData.centerMesh = centerMesh;
 
@@ -555,15 +560,21 @@ function getTileFromPool(forceNew = false) {
         const bevelOffset = (typeof currentBevelEnabled !== 'undefined' && currentBevelEnabled) ? currentBevelThickness : 0;
         glowMesh.position.z = -currentTileThickness / 2 - bevelOffset - glowHeight / 2;
         glowMesh.visible = isGlowEnabled();
+        glowMesh.matrixAutoUpdate = false;
+        glowMesh.updateMatrix();
         tile.add(glowMesh);
         tile.userData.glowMesh = glowMesh;
 
-        // Tạo hitbox cho gạch
-        const hitboxMesh = createHitboxMesh();
-        hitboxMesh.position.set(0, 0, surfaceZ);
-        hitboxMesh.visible = typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled;
-        tile.add(hitboxMesh);
-        tile.userData.hitboxMesh = hitboxMesh;
+        // Tạo hitbox cho gạch (Tối ưu GPU: Chỉ khởi tạo khi Debug Hitbox được kích hoạt để loại bỏ 2 sub-mesh rỗng)
+        if (typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled) {
+            const hitboxMesh = createHitboxMesh();
+            hitboxMesh.position.set(0, 0, surfaceZ);
+            hitboxMesh.visible = true;
+            tile.add(hitboxMesh);
+            tile.userData.hitboxMesh = hitboxMesh;
+        } else {
+            tile.userData.hitboxMesh = null;
+        }
 
         scene.add(tile);
     }

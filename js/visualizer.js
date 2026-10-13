@@ -53,7 +53,7 @@ window.VisualizerManager = {
 
         const width = this.canvas.width;
         const height = this.canvas.height;
-        this.ctx.clearRect(0, 0, width, height);
+        this.ctx.clearRect(0, 0, width, Math.ceil(height * 0.35));
 
         if (this._cachedW !== width || this._cachedH !== height) {
             this._cachedW = width;
@@ -97,8 +97,8 @@ window.VisualizerManager = {
             if (activeBlocks === 0) continue;
             const x = barX[i];
             for (let b = 0; b < activeBlocks; b++) {
-                const y = centerY - (b + 1) * (blockHeight + blockGap) + blockGap;
-                this.ctx.rect(x, y, barWidth, blockHeight);
+                const y = (centerY - (b + 1) * (blockHeight + blockGap) + blockGap) | 0;
+                this.ctx.rect(x | 0, y, barWidth | 0, blockHeight | 0);
             }
         }
         this.ctx.fill();

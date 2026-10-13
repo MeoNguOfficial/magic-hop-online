@@ -292,15 +292,15 @@ window.FakeBlocksManager = {
             fud.isDelayedAppearance = realTile.userData.isDelayedAppearance || false;
             
             // Xóa sạch các cờ động vận tốc của chu kỳ sống trước
-            delete fud.exitVelZ;
-            delete fud.exitStartZ;
-            delete fud.exitOpacity;
-            delete fud.moveSpeed;
-            delete fud.movePattern;
-            delete fud.moveTime;
-            delete fud.amplitude;
-            delete fud.baseX;
-            delete fud.originX;
+            fud.exitVelZ = 0;
+            fud.exitStartZ = 0;
+            fud.exitOpacity = 0;
+            fud.moveSpeed = 0;
+            fud.movePattern = null;
+            fud.moveTime = 0;
+            fud.amplitude = 0;
+            fud.baseX = 0;
+            fud.originX = 0;
             
             if (fakeTile.userData.isDelayedAppearance) {
                 fakeTile.visible = false;
@@ -342,15 +342,15 @@ window.FakeBlocksManager = {
         ud.springY = 0;
         ud.springVelocityY = 0;
         ud.baseY = 0;
-        delete ud.exitVelZ;
-        delete ud.exitStartZ;
-        delete ud.exitOpacity;
-        delete ud.moveSpeed;
-        delete ud.movePattern;
-        delete ud.moveTime;
-        delete ud.amplitude;
-        delete ud.baseX;
-        delete ud.originX;
+        ud.exitVelZ = 0;
+        ud.exitStartZ = 0;
+        ud.exitOpacity = 0;
+        ud.moveSpeed = 0;
+        ud.movePattern = null;
+        ud.moveTime = 0;
+        ud.amplitude = 0;
+        ud.baseX = 0;
+        ud.originX = 0;
 
         const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
         if (t.material) {
@@ -941,6 +941,16 @@ window.FakeBlocksManager = {
                 continue;
             }
             
+            // --- TỐI ƯU CULLING KHỐI GIẢ NGOÀI VÙNG NHÌN ---
+            const camZForFake = typeof camera !== 'undefined' && camera ? camera.position.z : ballZ + 10;
+            const isFakeVisible = fTile.position.z < camZForFake + 30 && fTile.position.z > camZForFake - 250;
+            if (!isFakeVisible) {
+                if (fTile.visible && !fTile.userData.isEntering) fTile.visible = false;
+                continue;
+            } else {
+                if (!fTile.visible && !fTile.userData.isDelayedAppearance) fTile.visible = true;
+            }
+
             // --- ĐỒNG BỘ MÀU SẮC ĐỘNG NHƯ KHỐI THẬT ---
             if (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled) {
                 let hex = frameHex;

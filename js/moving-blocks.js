@@ -16,10 +16,10 @@ window.MovingBlocksManager = {
         if (tile.userData) {
             tile.userData.isMoving = false;
             tile.userData.moveType = null;
-            delete tile.userData.moveSpeed;
-            delete tile.userData.moveTime;
-            delete tile.userData.amplitude;
-            delete tile.userData.baseX;
+            tile.userData.moveSpeed = 0;
+            tile.userData.moveTime = 0;
+            tile.userData.amplitude = 0;
+            tile.userData.baseX = 0;
         }
         const idx = this.allMovingTiles.indexOf(tile);
         if (idx !== -1) {
@@ -47,10 +47,10 @@ window.MovingBlocksManager = {
         if (tile.userData) {
             tile.userData.isMoving = false;
             tile.userData.moveType = null;
-            delete tile.userData.moveSpeed;
-            delete tile.userData.moveTime;
-            delete tile.userData.amplitude;
-            delete tile.userData.baseX;
+            tile.userData.moveSpeed = 0;
+            tile.userData.moveTime = 0;
+            tile.userData.amplitude = 0;
+            tile.userData.baseX = 0;
         } else {
             tile.userData = {};
         }

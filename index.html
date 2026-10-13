@@ -415,8 +415,7 @@
     <div id="canvas-container" class="absolute inset-0 w-full h-full z-0"></div>
 
     <!-- Visualizer Canvas -->
-    <canvas id="bg-visualizer" class="absolute inset-0 w-full h-full z-[5] pointer-events-none opacity-60"
-        style="filter: drop-shadow(0 0 10px rgba(255,255,255,0.25));"></canvas>
+    <canvas id="bg-visualizer" class="absolute inset-0 w-full h-full z-[5] pointer-events-none opacity-75"></canvas>
 
     <!-- Top Left HUD -->
     <div class="absolute top-6 left-6 z-10 pointer-events-none flex flex-col gap-0.5">
@@ -644,21 +643,30 @@
                     </button>
                 </div>
 
-                <!-- Mobile / Small View (Active tab indicator + Hamburger Button) -->
+                <!-- Mobile / Small View (Active tab indicator + Connection status dot + Hamburger Button) -->
                 <div class="hidden w-full justify-between items-center px-4 py-2 bg-black/25" id="nav-menu-wrapper">
                     <!-- Current Active Tab -->
                     <div class="flex items-center gap-2 text-cyan-400 font-bold font-orbitron uppercase text-xs">
                         <span id="active-tab-icon" class="flex items-center justify-center"></span>
                         <span id="active-tab-text" class="tracking-widest font-black" data-i18n="nav_home">HOME</span>
                     </div>
-                    <!-- Hamburger Toggle Button -->
-                    <button id="nav-menu-toggle"
-                        class="p-1.5 border border-cyan-500/30 rounded text-cyan-400 hover:bg-cyan-950/40 hover:text-cyan-300 transition-all cursor-pointer">
-                        <svg class="w-4 h-4" style="width: 16px; height: 16px;" fill="none" stroke="currentColor"
-                            stroke-width="2" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                    </button>
+                    <!-- Right Actions: Connection Status Dot + Hamburger Button -->
+                    <div class="flex items-center gap-2">
+                        <div id="mobile-connection-status"
+                            class="connection-status-badge flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-black/40 border border-emerald-500/40 text-[8px] font-orbitron font-bold uppercase transition-all duration-300 shadow-[0_0_8px_rgba(16,185,129,0.15)] cursor-pointer select-none"
+                            title="Nguồn dữ liệu: Đang kết nối trực tiếp từ Server">
+                            <span class="connection-status-dot w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#10b981] animate-pulse"></span>
+                            <span class="connection-status-text text-emerald-400 tracking-wider">SERVER</span>
+                        </div>
+                        <!-- Hamburger Toggle Button -->
+                        <button id="nav-menu-toggle"
+                            class="p-1.5 border border-cyan-500/30 rounded text-cyan-400 hover:bg-cyan-950/40 hover:text-cyan-300 transition-all cursor-pointer">
+                            <svg class="w-4 h-4" style="width: 16px; height: 16px;" fill="none" stroke="currentColor"
+                                stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Dropdown Menu list for Small View -->
@@ -721,8 +729,17 @@
             <!-- Home Panel: Song Selection -->
             <div id="panel-home" class="flex-1 p-6 flex flex-col justify-between overflow-hidden">
                 <div class="flex flex-col h-full overflow-hidden max-w-3xl mx-auto w-full">
-                    <h2 class="text-2xl font-black text-cyan-400 font-orbitron tracking-wider uppercase mb-1"
-                        data-i18n="select_song">CHỌN BÀI HÁT</h2>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <h2 class="text-2xl font-black text-cyan-400 font-orbitron tracking-wider uppercase"
+                            data-i18n="select_song">CHỌN BÀI HÁT</h2>
+                        <!-- Connection Status Dot (Xanh: Server, Vàng: Cache) -->
+                        <div id="connection-status-indicator"
+                            class="connection-status-badge flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 border border-emerald-500/40 text-[9px] font-orbitron font-bold uppercase transition-all duration-300 shadow-[0_0_10px_rgba(16,185,129,0.15)] cursor-pointer select-none"
+                            title="Nguồn dữ liệu: Đang kết nối trực tiếp từ Server (Nhấp để kiểm tra lại)">
+                            <span id="connection-status-dot" class="connection-status-dot w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] animate-pulse transition-all duration-300"></span>
+                            <span id="connection-status-text" class="connection-status-text text-emerald-400 tracking-wider transition-colors duration-300">SERVER</span>
+                        </div>
+                    </div>
 
                     <p class="text-[9px] sm:text-[10px] text-yellow-400 font-bold mb-3 font-orbitron uppercase tracking-widest leading-relaxed bg-yellow-900/20 border border-yellow-500/30 p-2 rounded shadow-[0_0_10px_rgba(234,179,8,0.1)] text-center animate-pulse" data-i18n="mobile_optimize_notice">
                         Khuyến nghị chơi trên thiết bị cấu hình trung bình cao trở lên

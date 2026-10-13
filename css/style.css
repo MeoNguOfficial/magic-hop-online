@@ -543,4 +543,37 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
 @keyframes magic-pulse-core {
     0%, 100% { transform: scale(0.8); opacity: 0.6; }
     50% { transform: scale(1.4); opacity: 1; }
-}
+}
+
+/* ============================================================
+   GPU-FIRST COMPOSITING & ZERO-LAYOUT-THRASHING HUD OPTIMIZATION
+   ============================================================ */
+#canvas-container,
+#canvas-container canvas,
+#bg-visualizer {
+    contain: strict;
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+    backface-visibility: hidden;
+}
+
+#speed,
+#fps-hud,
+#perfect-streak-hud,
+#score,
+#combo-ui-wrapper {
+    contain: layout style paint;
+    transform: translate3d(0, 0, 0);
+    will-change: transform, opacity;
+    isolation: isolate;
+    backface-visibility: hidden;
+}
+
+/* Ensure HUD overlays are separate hardware layers to eliminate Canvas repaint */
+.hud-layer {
+    contain: layout style paint;
+    transform: translate3d(0, 0, 0);
+    isolation: isolate;
+    pointer-events: none;
+}
+

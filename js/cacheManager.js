@@ -526,7 +526,16 @@ async function isJsonCached(url) {
     if (!url) return false;
     try {
         if (hasOPFS) {
-            return await existsInOPFS('json', url);
+            const exists = await existsInOPFS('json', url);
+            if (exists) return true;
+            const match = url.match(/(\d+)/);
+            if (match) {
+                const alt1 = `beatmap_${match[1]}.json`;
+                const alt2 = `beatmap/music_${match[1]}.json`;
+                if (alt1 !== url && await existsInOPFS('json', alt1)) return true;
+                if (alt2 !== url && await existsInOPFS('json', alt2)) return true;
+            }
+            return false;
         }
         const db = await getDB();
         const tx = db.transaction(STORE_JSON, 'readonly');
@@ -536,7 +545,29 @@ async function isJsonCached(url) {
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
-        return !!data;
+        if (data) return true;
+        const match = url.match(/(\d+)/);
+        if (match) {
+            const alt1 = `beatmap_${match[1]}.json`;
+            const alt2 = `beatmap/music_${match[1]}.json`;
+            if (alt1 !== url) {
+                const altData1 = await new Promise((resolve) => {
+                    const req2 = store.get(alt1);
+                    req2.onsuccess = () => resolve(req2.result);
+                    req2.onerror = () => resolve(null);
+                });
+                if (altData1) return true;
+            }
+            if (alt2 !== url) {
+                const altData2 = await new Promise((resolve) => {
+                    const req3 = store.get(alt2);
+                    req3.onsuccess = () => resolve(req3.result);
+                    req3.onerror = () => resolve(null);
+                });
+                if (altData2) return true;
+            }
+        }
+        return false;
     } catch (e) { return false; }
 }
 
@@ -544,17 +575,54 @@ async function getCachedJson(url) {
     if (!url) return null;
     try {
         if (hasOPFS) {
-            return await readJsonFromOPFS('json', url);
+            let data = await readJsonFromOPFS('json', url);
+            if (data) return data;
+            const match = url.match(/(\d+)/);
+            if (match) {
+                const alt1 = `beatmap_${match[1]}.json`;
+                const alt2 = `beatmap/music_${match[1]}.json`;
+                if (alt1 !== url) {
+                    data = await readJsonFromOPFS('json', alt1);
+                    if (data) return data;
+                }
+                if (alt2 !== url) {
+                    data = await readJsonFromOPFS('json', alt2);
+                    if (data) return data;
+                }
+            }
+            return null;
         }
         const db = await getDB();
         const tx = db.transaction(STORE_JSON, 'readonly');
         const store = tx.objectStore(STORE_JSON);
-        const data = await new Promise((resolve, reject) => {
+        let data = await new Promise((resolve, reject) => {
             const req = store.get(url);
             req.onsuccess = () => resolve(req.result);
             req.onerror = () => reject(req.error);
         });
-        return data || null;
+        if (data) return data;
+        const match = url.match(/(\d+)/);
+        if (match) {
+            const alt1 = `beatmap_${match[1]}.json`;
+            const alt2 = `beatmap/music_${match[1]}.json`;
+            if (alt1 !== url) {
+                data = await new Promise((resolve) => {
+                    const req2 = store.get(alt1);
+                    req2.onsuccess = () => resolve(req2.result);
+                    req2.onerror = () => resolve(null);
+                });
+                if (data) return data;
+            }
+            if (alt2 !== url) {
+                data = await new Promise((resolve) => {
+                    const req3 = store.get(alt2);
+                    req3.onsuccess = () => resolve(req3.result);
+                    req3.onerror = () => resolve(null);
+                });
+                if (data) return data;
+            }
+        }
+        return null;
     } catch (e) { }
     return null;
 }
@@ -697,12 +765,15 @@ async function getApiCache(key, options = {}) {
     if (!key) return null;
     const todayStr = new Date().toISOString().split('T')[0];
     const isBeatmaps = key.includes('/beatmaps');
+    const isDbOffline = (typeof window.isDatabaseOnline !== 'undefined' && window.isDatabaseOnline === false) ||
+                        (typeof window.ApiService !== 'undefined' && typeof window.ApiService.isDbHealthy === 'function' && !window.ApiService.isDbHealthy());
 
     if (apiMemoryCache.has(key)) {
         const entry = apiMemoryCache.get(key);
         if (entry && typeof entry === 'object' && 'data' in entry) {
-            if (isBeatmaps && entry.cached_date && entry.cached_date !== todayStr && !options.allowExpired) {
-                apiMemoryCache.delete(key);
+            // Nếu DB offline hoặc có cờ allowExpired: Trả về cache ngay lập tức
+            if (isBeatmaps && entry.cached_date && entry.cached_date !== todayStr && !options.allowExpired && !isDbOffline) {
+                // Giữ lại trong memory để làm fallback nếu Backend/DB gặp sự cố
             } else {
                 return entry.data;
             }
@@ -723,12 +794,10 @@ async function getApiCache(key, options = {}) {
             const data = (record.data !== undefined) ? record.data : record;
             const cachedDate = record.cached_date;
 
-            if (isBeatmaps && cachedDate && cachedDate !== todayStr && !options.allowExpired) {
-                console.log('[CacheManager] Cache beatmap đã cũ (khác ngày hiện tại), tự động làm mới từ Backend:', key);
-                try {
-                    const writeTx = db.transaction(STORE_API_CACHE, 'readwrite');
-                    writeTx.objectStore(STORE_API_CACHE).delete(key);
-                } catch (err) {}
+            // Nếu DB offline hoặc có cờ allowExpired: Tự động dùng cache ngay!
+            if (isBeatmaps && cachedDate && cachedDate !== todayStr && !options.allowExpired && !isDbOffline) {
+                console.log('[CacheManager] Cache beatmap đã cũ (khác ngày hiện tại), ưu tiên làm mới từ Backend:', key);
+                // TUYỆT ĐỐI KHÔNG XÓA KHỎI INDEXEDDB! Giữ lại làm fallback khi Backend hoặc Database offline!
                 return null;
             }
 
@@ -935,6 +1004,21 @@ async function deleteSongCache(url, lazyUrl) {
                 await deleteFromOPFS('json', lazyUrl);
             }
             localStorage.removeItem(`map_etag_${lazyUrl}`);
+
+            // Xóa kèm các biến thể format key nếu có ID
+            const match = lazyUrl.match(/(\d+)/);
+            if (match) {
+                const alt1 = `beatmap_${match[1]}.json`;
+                const alt2 = `beatmap/music_${match[1]}.json`;
+                tx.objectStore(STORE_JSON).delete(alt1);
+                tx.objectStore(STORE_JSON).delete(alt2);
+                if (hasOPFS) {
+                    await deleteFromOPFS('json', alt1);
+                    await deleteFromOPFS('json', alt2);
+                }
+                localStorage.removeItem(`map_etag_${alt1}`);
+                localStorage.removeItem(`map_etag_${alt2}`);
+            }
         }
         console.log(`[CacheManager] Đã xóa cache bài hát: ${url} / ${lazyUrl}`);
     } catch (e) {

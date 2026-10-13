@@ -35,9 +35,12 @@ async function checkBackendOnlineStatusWith60sCache() {
     }
 
     try {
-        if (window.ApiService && typeof apiClient !== 'undefined') {
-            await apiClient.get('/beatmaps', { timeout: 3000, params: { limit: 1 } });
-            cachedBackendOnlineState = true;
+        if (window.ApiService && typeof window.ApiService.checkHealth === 'function') {
+            const healthRes = await window.ApiService.checkHealth({ timeout: 3500, cacheTtl: 60000 });
+            cachedBackendOnlineState = !!healthRes.isHealthy;
+        } else if (typeof apiClient !== 'undefined') {
+            const res = await apiClient.get('/health', { timeout: 3500, skipRetry: true, validateStatus: (s) => s < 600 });
+            cachedBackendOnlineState = res.status === 200 && (res.data?.database_status === 'online' || res.data?.status === 'healthy');
         } else {
             cachedBackendOnlineState = false;
         }
@@ -576,7 +579,8 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         type: 'confirm',
                         onConfirm: async () => {
                             if (typeof deleteSongCache === 'function') {
-                                await deleteSongCache(song.url, song.lazyUrl);
+                                const bmKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl;
+                                await deleteSongCache(song.url, bmKey);
                             }
                             song.loaded = false;
                             song.beats = [0, 1, 2, 3];
@@ -719,7 +723,8 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
         // Tối ưu thuật toán: Lazy load kiểm tra Cache cả audio và JSON beatmap
         const audioPromise = typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
-        const jsonPromise = (song.lazyUrl && typeof isJsonCached === 'function') ? isJsonCached(song.lazyUrl) : Promise.resolve(false);
+        const beatmapKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl || (song.id ? `beatmap_${song.id}.json` : null);
+        const jsonPromise = (beatmapKey && typeof isJsonCached === 'function') ? isJsonCached(beatmapKey) : Promise.resolve(false);
         
         Promise.all([audioPromise, jsonPromise]).then(([isAudioCached, isJsonCached]) => {
             if (currentRenderId !== renderId) return;

@@ -333,7 +333,7 @@ window.GameEffectsManager = {
         for (let i = this.shockwaves.length - 1; i >= 0; i--) {
             const sw = this.shockwaves[i];
 
-            const isTileInactive = sw.targetTile && (!sw.targetTile.parent || !sw.targetTile.visible);
+            const isTileInactive = sw.targetTile && (!sw.targetTile.parent || sw.targetTile.userData.isExiting);
             const isBehindCam = sw.mesh.position.z > camZ + 5;
 
             if (isTileInactive || isBehindCam) {
@@ -750,8 +750,8 @@ window.GameEffectsManager = {
 
         for (let i = 0; i < this.boundaryPulses.length; i++) {
             const pulse = this.boundaryPulses[i];
-            if (pulse.mesh && this.scene) {
-                this.scene.remove(pulse.mesh);
+            if (pulse.mesh) {
+                pulse.mesh.visible = false;
                 this.boundaryPulsePool.push(pulse.mesh);
             }
             this.boundaryPulseDataPool.push(pulse);
