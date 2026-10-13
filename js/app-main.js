@@ -1,14 +1,102 @@
 // ============================================================
-// app-main.js — Easy Cheat bởi MeoTN Gaming
+// app-main.js — Security Gateway & Anti-Cheat bởi MeoTN Gaming
 // ============================================================
 
 (function() {
-    // 1. Kiểm tra Bypass URL (tkName tương đương)
-    // Cú pháp bypass: ?devmode=true
+    // --- BƯỚC 1: XÁC MINH TÀI KHOẢN ADMIN (CRASH-PROOF & ĐA NGUỒN) ---
+    function checkUserIsAdmin(u) {
+        if (!u || typeof u !== 'object') return false;
+        return !!(
+            u.role === 'admin' ||
+            u.is_admin === 1 ||
+            u.is_admin === true ||
+            u.is_admin === '1' ||
+            u.id === 1 ||
+            u.id === '1' ||
+            u.username === 'admin' ||
+            (typeof u.email === 'string' && u.email.toLowerCase() === 'admin@gmail.com')
+        );
+    }
+
+    function isUserAdmin() {
+        try {
+            if (typeof window.isCurrentUserAdmin === 'function') {
+                if (window.isCurrentUserAdmin()) return true;
+            }
+            if (typeof window.getAuthUser === 'function') {
+                const u = window.getAuthUser();
+                if (checkUserIsAdmin(u)) return true;
+            }
+            const rawUser = localStorage.getItem('auth_user');
+            if (rawUser) {
+                // 1. Thử parse trực tiếp JSON
+                let user = null;
+                try {
+                    user = JSON.parse(rawUser);
+                } catch (e) {}
+
+                // 2. Thử giải mã Base64 + URL decode
+                if (!user) {
+                    try {
+                        let decoded = atob(rawUser);
+                        if (decoded.includes('%')) decoded = decodeURIComponent(decoded);
+                        user = JSON.parse(decoded);
+                    } catch (e) {}
+                }
+
+                // 3. Thử giải mã XOR cipher MEO_ của game
+                if (!user && rawUser.startsWith('MEO_')) {
+                    try {
+                        let cleanRaw = rawUser.substring(4);
+                        let decodedBase64 = atob(cleanRaw);
+                        const xorKey = "MeoTNCyberHop2024";
+                        let unxored = '';
+                        for (let i = 0; i < decodedBase64.length; i++) {
+                            unxored += String.fromCharCode(decodedBase64.charCodeAt(i) ^ xorKey.charCodeAt(i % xorKey.length));
+                        }
+                        if (unxored.includes('%')) unxored = decodeURIComponent(unxored);
+                        user = JSON.parse(unxored);
+                    } catch (e) {}
+                }
+
+                if (checkUserIsAdmin(user)) return true;
+            }
+        } catch (e) {}
+        return false;
+    }
+    window.isUserAdmin = isUserAdmin;
+
+    function isConsoleAllowed() {
+        // QUY TẮC BẮT BUỘC: Tất cả console log CHỈ CÓ THỂ nhìn thấy khi đăng nhập bằng account Admin
+        return isUserAdmin() === true;
+    }
+    window.isConsoleAllowed = isConsoleAllowed;
+
+    // --- BƯỚC 2: KHÓA TOÀN BỘ CÁC PHƯƠNG THỨC CONSOLE (CHỈ ADMIN MỚI THẤY) ---
+    const consoleMethods = [
+        'log', 'info', 'warn', 'error', 'debug', 'trace',
+        'dir', 'dirxml', 'table', 'group', 'groupCollapsed', 'groupEnd',
+        'count', 'countReset', 'assert', 'time', 'timeLog', 'timeEnd'
+    ];
+
+    const originalConsole = {};
+    window.__originalConsole = originalConsole;
+
+    consoleMethods.forEach(method => {
+        if (typeof console[method] === 'function') {
+            originalConsole[method] = console[method].bind(console);
+            console[method] = function(...args) {
+                if (isConsoleAllowed()) {
+                    originalConsole[method](...args);
+                }
+            };
+        }
+    });
+
+    // --- BƯỚC 3: KIỂM TRA DEV MODE & BYPASS ---
     const urlParams = new URLSearchParams(window.location.search);
     const isBypass = urlParams.get('devmode') === 'true'; 
-    
-    // 1.5 Kiểm tra cấu hình lưu trữ 7 ngày (Persisted Bypass)
+
     const now = new Date().getTime();
     let isPersistedBypass = false;
 
@@ -25,59 +113,60 @@
             }
         } catch(e) {}
     }
-    
+
     let devModeAllowed = isBypass || isPersistedBypass;
     let intervalDebugger = null;
 
-    // --- LỚP 1: KẾT HỢP THƯ VIỆN DISABLE-DEVTOOL ---
-    if (typeof DisableDevtool !== 'undefined') {
-        DisableDevtool({
-            url: 'warning.html',      // Chuyển hướng ngay lập tức khi mở F12
-            timeOutUrl: 'warning.html', // Chuyển hướng khi bị ai đó cố tình chặn script/chặn debugger
-            tkName: 'devmode',        // Trùng khớp với param bypass ở trên
-            clearLog: true,           // Xóa sạch console log khi bật tab ẩn danh
-            disableMenu: false,       // Giữ nguyên Menu để trải nghiệm game mobile không bị lỗi touch
-            disableSelect: false,
-            disableCopy: false,
-            disableCut: false,
-            disablePaste: false,
-            seo: true
-        });
-        
-        // Đồng bộ trạng thái ban đầu
-        DisableDevtool.isSuspend = devModeAllowed;
-    } else {
-        // --- LỚP 2: KIỂM TRA BỊ THIẾU SCRIPT CHÍNH (THƯ VIỆN BỊ CHẶN) ---
-        if (!devModeAllowed) {
-            console.warn("Anti-DevTool core missing or blocked! Using fallback Native Defense.");
-            // Do hỗ trợ PWA offline, đôi khi mạng lag script chưa load kịp, nên không chuyển hướng ngay.
-            // Thay vào đó kích hoạt hệ thống chặn Native mạnh mẽ bên dưới.
-        }
+    function isAllowedBypass() {
+        return isUserAdmin() === true || devModeAllowed === true;
     }
 
-    // --- LỚP 3: CHẶN PHÍM TẮT, BẪY DEBUGGER THUẦN VÀ 3RD PARTY TOOLS ---
-    function startNativeAntiDev() {
-        if (devModeAllowed) return;
-
-        // 1. Chặn phím tắt mở DevTools và xem Source
-        window.addEventListener('keydown', preventKeys);
-
-        // 2. Bẫy debugger chỉ kích hoạt khi nghi vấn mở cửa sổ kích thước bất thường (Zero GC overhead)
-        if (!intervalDebugger) {
-            // Không chạy dynamic eval Function('debugger') liên tục 100ms để giữ nguyên 144 FPS mượt mà cho game loop
+    // --- BƯỚC 4: TÍCH HỢP DISABLE-DEVTOOL (THƯ VIỆN CHỐNG F12) ---
+    function setupDisableDevtool() {
+        if (typeof DisableDevtool !== 'undefined') {
+            try {
+                DisableDevtool({
+                    url: 'warning.html',      // Chuyển hướng ngay lập tức khi mở F12
+                    timeOutUrl: 'warning.html', // Chuyển hướng khi bị ai đó cố tình chặn script
+                    tkName: 'devmode',
+                    clearLog: false,          // Không xóa log của admin khi mở DevTools
+                    disableMenu: false,       // Giữ nguyên Menu để trải nghiệm game mobile không bị lỗi touch
+                    disableSelect: false,
+                    disableCopy: false,
+                    disableCut: false,
+                    disablePaste: false,
+                    seo: true,
+                    ondevtoolopen: (type, next) => {
+                        if (isAllowedBypass()) return;
+                        next();
+                    }
+                });
+                DisableDevtool.isSuspend = isAllowedBypass();
+                return true;
+            } catch (e) {}
         }
+        return false;
+    }
 
-        // 3. Quét các công cụ gian lận/debug bên thứ ba (vConsole, Eruda)
+    if (!setupDisableDevtool()) {
+        window.addEventListener('DOMContentLoaded', setupDisableDevtool);
+        window.addEventListener('load', setupDisableDevtool);
+    }
+
+    // --- BƯỚC 5: NATIVE DEFENSE (CHẶN PHÍM TẮT & CÔNG CỤ DEBUG BÊN THỨ 3) ---
+    function startNativeAntiDev() {
+        if (isAllowedBypass()) return;
+        window.addEventListener('keydown', preventKeys);
         checkThirdPartyTools();
     }
 
     function checkThirdPartyTools() {
         setInterval(() => {
-            if (devModeAllowed) return;
+            if (isAllowedBypass()) return;
             if (document.getElementById('__vconsole') || document.getElementById('eruda') || window.vConsole || window.eruda) {
                 window.location.href = 'warning.html';
             }
-        }, 1500); // Quét mỗi 1.5 giây
+        }, 1500);
     }
 
     function stopNativeAntiDev() {
@@ -89,6 +178,7 @@
     }
 
     function preventKeys(e) {
+        if (isAllowedBypass()) return;
         // Chặn F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
         if (
             e.keyCode === 123 || 
@@ -101,56 +191,9 @@
         }
     }
 
-    // --- KHỞI CHẠY HỆ THỐNG BẢO VỆ ---
     startNativeAntiDev();
 
-    // --- QUẢN LÝ HIỂN THỊ CONSOLE LOG (Chỉ hiện khi Dev Mode ON hoặc Admin) ---
-    function isUserAdmin() {
-        try {
-            const rawUser = localStorage.getItem('auth_user');
-            if (rawUser) {
-                const user = JSON.parse(rawUser);
-                if (user && (user.role === 'admin' || user.is_admin === 1 || user.is_admin === true || user.id === 1)) {
-                    return true;
-                }
-            }
-        } catch (e) {}
-        return false;
-    }
-
-    function isConsoleAllowed() {
-        return devModeAllowed === true || isUserAdmin() === true;
-    }
-
-    const originalConsole = {
-        log: console.log.bind(console),
-        info: console.info.bind(console),
-        warn: console.warn.bind(console),
-        error: console.error.bind(console),
-        debug: console.debug.bind(console),
-        trace: console.trace.bind(console)
-    };
-
-    console.log = function(...args) {
-        if (isConsoleAllowed()) originalConsole.log(...args);
-    };
-    console.info = function(...args) {
-        if (isConsoleAllowed()) originalConsole.info(...args);
-    };
-    console.warn = function(...args) {
-        if (isConsoleAllowed()) originalConsole.warn(...args);
-    };
-    console.error = function(...args) {
-        if (isConsoleAllowed()) originalConsole.error(...args);
-    };
-    console.debug = function(...args) {
-        if (isConsoleAllowed()) originalConsole.debug(...args);
-    };
-    console.trace = function(...args) {
-        if (isConsoleAllowed()) originalConsole.trace(...args);
-    };
-
-    // --- QUẢN LÝ ĐỒNG BỘ TRẠNG THÁI ADMIN (DEV MODE) ---
+    // --- BƯỚC 6: QUẢN LÝ ĐỒNG BỘ TRẠNG THÁI ADMIN (DEV MODE) ---
     window.setDevMode = function(state, persistDays = 0) {
         devModeAllowed = state;
         
@@ -161,13 +204,11 @@
             localStorage.removeItem('MeoTNDevModeExp');
         }
 
-        // Cập nhật cho thư viện DisableDevtool
         if (typeof DisableDevtool !== 'undefined') {
-            DisableDevtool.isSuspend = state; 
+            DisableDevtool.isSuspend = state || isUserAdmin(); 
         }
         
-        // Cập nhật cho bộ chặn thuần (Native)
-        if (state) {
+        if (state || isUserAdmin()) {
             stopNativeAntiDev();
             if (typeof hideWarning === 'function') hideWarning();
         } else {

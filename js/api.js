@@ -72,6 +72,21 @@ async function checkDatabaseHealth(options = {}) {
     const cacheTtl = options.cacheTtl || DB_HEALTH_CHECK_TTL;
     const now = Date.now();
 
+    // 0. Kiểm tra trạng thái mạng của trình duyệt trước
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        isDatabaseOnlineState = false;
+        window.isDatabaseOnline = false;
+        lastDbHealthCheckTimestamp = now;
+        updateConnectionStatusIndicator('cache');
+        return {
+            isHealthy: false,
+            status: 'offline',
+            database_status: 'offline',
+            message: 'Trình duyệt đang ngoại tuyến (Network Offline)',
+            httpStatus: 0
+        };
+    }
+
     // Dùng kết quả đã cache nếu còn hạn và không bị ép kiểm tra lại
     if (!force && lastDbHealthCheckTimestamp > 0 && (now - lastDbHealthCheckTimestamp < cacheTtl)) {
         return {
@@ -201,10 +216,12 @@ if (typeof document !== 'undefined') {
         window.addEventListener('offline', () => {
             isDatabaseOnlineState = false;
             window.isDatabaseOnline = false;
+            lastDbHealthCheckTimestamp = 0;
             updateConnectionStatusIndicator('cache');
         });
 
         window.addEventListener('online', () => {
+            lastDbHealthCheckTimestamp = 0;
             checkDatabaseHealth({ force: true });
         });
 
@@ -235,17 +252,50 @@ apiClient.get = async function (url, config = {}) {
     const isForceRefresh = config.forceRefresh === true || (config.headers && config.headers['X-Force-Refresh'] === 'true');
     const cacheKey = buildApiCacheKey(url, config.params);
 
-    // TRƯỜNG HỢP 1: Database đang offline (health check false) -> TỰ ĐỘNG DÙNG CACHE NGAY
-    if (!isDatabaseOnlineState) {
+    const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const isDbOffline = !isDatabaseOnlineState || isBrowserOffline;
+
+    // TRƯỜNG HỢP 1: Database hoặc Mạng đang offline -> TỰ ĐỘNG DÙNG CACHE NGAY
+    if (isDbOffline) {
+        // Nếu là endpoint /beatmaps danh sách (không phải chi tiết /beatmaps/{id}), ưu tiên lấy danh sách đầy đủ từ getCachedPlaylistFromDB
+        if (typeof url === 'string' && url.includes('/beatmaps') && !url.includes('/beatmaps/') && typeof window.getCachedPlaylistFromDB === 'function') {
+            try {
+                const dbPlaylist = await window.getCachedPlaylistFromDB();
+                if (dbPlaylist && Array.isArray(dbPlaylist) && dbPlaylist.length > 0) {
+                    let useDb = true;
+                    if (typeof window.getApiCache === 'function') {
+                        const cachedData = await window.getApiCache(cacheKey, { allowExpired: true });
+                        const cachedList = cachedData?.data?.data || (Array.isArray(cachedData?.data) ? cachedData.data : (Array.isArray(cachedData) ? cachedData : []));
+                        if (cachedList.length > dbPlaylist.length) {
+                            useDb = false;
+                        }
+                    }
+                    if (useDb) {
+                        console.warn(`[ApiCache] Database/Mạng offline: Tự động dùng ${dbPlaylist.length} bài hát từ Playlist Cache.`);
+                        updateConnectionStatusIndicator('cache');
+                        return {
+                            data: { data: dbPlaylist, meta: { has_more: false } },
+                            status: 200,
+                            statusText: 'OK (Full Playlist Cache - Offline)',
+                            headers: {},
+                            config: config,
+                            isCached: true,
+                            isDbOffline: true
+                        };
+                    }
+                }
+            } catch (e) {}
+        }
+
         if (typeof window.getApiCache === 'function') {
             const cachedData = await window.getApiCache(cacheKey, { allowExpired: true });
             if (cachedData !== null && cachedData !== undefined) {
-                console.warn('[ApiCache] Database offline (check false): Tự động dùng Cache cho:', cacheKey);
+                console.warn('[ApiCache] Database/Mạng offline: Tự động dùng Cache cho:', cacheKey);
                 updateConnectionStatusIndicator('cache');
                 return {
                     data: cachedData,
                     status: 200,
-                    statusText: 'OK (Auto Cache - DB Offline)',
+                    statusText: 'OK (Auto Cache - Offline)',
                     headers: {},
                     config: config,
                     isCached: true,
@@ -254,27 +304,7 @@ apiClient.get = async function (url, config = {}) {
             }
         }
 
-        // Nếu là endpoint /beatmaps mà chưa có trong api_cache, tự động lấy từ IndexedDB STORE_PLAYLIST
-        if (typeof url === 'string' && url.includes('/beatmaps') && !url.includes('/beatmaps/') && typeof window.getCachedPlaylistFromDB === 'function') {
-            try {
-                const dbPlaylist = await window.getCachedPlaylistFromDB();
-                if (dbPlaylist && Array.isArray(dbPlaylist) && dbPlaylist.length > 0) {
-                    console.warn('[ApiCache] Database offline: Tự động dùng danh sách bài hát từ IndexedDB STORE_PLAYLIST.');
-                    updateConnectionStatusIndicator('cache');
-                    return {
-                        data: { data: dbPlaylist, meta: { has_more: false } },
-                        status: 200,
-                        statusText: 'OK (IndexedDB Playlist - DB Offline)',
-                        headers: {},
-                        config: config,
-                        isCached: true,
-                        isDbOffline: true
-                    };
-                }
-            } catch (e) {}
-        }
-
-        // HỖ TRỢ LAZY LOADING BEATMAP TỪ CACHE KHI DB OFFLINE: /beatmaps/{id}
+        // HỖ TRỢ LAZY LOADING BEATMAP TỪ CACHE KHI OFFLINE: /beatmaps/{id}
         if (typeof url === 'string' && url.includes('/beatmaps/')) {
             const bmMatch = url.match(/\/beatmaps\/(\d+)/);
             if (bmMatch) {
@@ -310,12 +340,12 @@ apiClient.get = async function (url, config = {}) {
                 }
 
                 if (beatmapDetails) {
-                    console.warn(`[ApiCache] Database offline: Tự động dùng chi tiết beatmap #${songId} từ Cache (Lazy Load).`);
+                    console.warn(`[ApiCache] Database/Mạng offline: Tự động dùng chi tiết beatmap #${songId} từ Cache.`);
                     updateConnectionStatusIndicator('cache');
                     return {
                         data: { data: beatmapDetails },
                         status: 200,
-                        statusText: 'OK (Cached Beatmap Details - DB Offline)',
+                        statusText: 'OK (Cached Beatmap Details - Offline)',
                         headers: {},
                         config: config,
                         isCached: true,
@@ -326,29 +356,14 @@ apiClient.get = async function (url, config = {}) {
         }
     }
 
-    // TRƯỜNG HỢP 2: Nếu KHÔNG có cờ làm mới thủ công, kiểm tra cache trước
-    if (!isForceRefresh && typeof window.getApiCache === 'function') {
-        const cachedData = await window.getApiCache(cacheKey);
-        if (cachedData !== null && cachedData !== undefined) {
-            console.log('[ApiCache] Trả về dữ liệu từ Cache/IndexedDB cho:', cacheKey);
-            updateConnectionStatusIndicator('cache');
-            return {
-                data: cachedData,
-                status: 200,
-                statusText: 'OK (Cached)',
-                headers: {},
-                config: config,
-                isCached: true
-            };
-        }
-    }
-
-    // TRƯỜNG HỢP 3: Gửi request thực tới backend
+    // TRƯỜNG HỢP 2 (SERVER TRƯỚC): Gửi request thực tới backend khi Online
     try {
         const response = await originalGet(url, config);
         if (response && response.status >= 200 && response.status < 300 && typeof window.setApiCache === 'function') {
-            await window.setApiCache(cacheKey, response.data);
-            console.log('[ApiCache] Đã lưu dữ liệu mới từ Backend vào Cache/IndexedDB cho:', cacheKey);
+            const hasChanged = await window.setApiCache(cacheKey, response.data);
+            if (hasChanged) {
+                console.log('[ApiCache] [Server First] Dữ liệu Backend có thay đổi, đã cập nhật Cache:', cacheKey);
+            }
             isDatabaseOnlineState = true;
             window.isDatabaseOnline = true;
             updateConnectionStatusIndicator('server');
@@ -530,7 +545,8 @@ apiClient.interceptors.response.use(
         // Nếu request gặp lỗi mạng/timeout/503 (thường xảy ra khi Render Free đang spin-up), tự động retry 1 lần sau 3s
         // KHÔNG retry nếu đây là lỗi DATABASE_CONNECTION_ERROR hoặc request /health hoặc có skipRetry
         const isHealthCheck = config?.url?.includes('/health');
-        if (config && !config._retry && !config.skipRetry && !isHealthCheck && !isDbOfflineError && (!error.response || error.response.status === 503 || error.code === 'ECONNABORTED')) {
+        const isClientOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        if (config && !config._retry && !config.skipRetry && !isHealthCheck && !isDbOfflineError && !isClientOffline && (!error.response || error.response.status === 503 || error.code === 'ECONNABORTED')) {
             config._retry = true;
             console.warn('[API] Render API có thể đang khởi động (spin-up). Đang tự động thử lại sau 3 giây...');
             await new Promise(resolve => setTimeout(resolve, 3000));

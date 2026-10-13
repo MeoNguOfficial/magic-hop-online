@@ -595,14 +595,27 @@ async function isJsonCached(url) {
     } catch (e) { return false; }
 }
 
+const jsonMemoryCache = new Map();
+
 async function getCachedJson(url) {
     if (!url) return null;
     try {
         const keys = getBeatmapLookupKeys(url);
+        for (const k of keys) {
+            if (jsonMemoryCache.has(k)) {
+                try {
+                    const data = jsonMemoryCache.get(k);
+                    return typeof data === 'string' ? JSON.parse(data) : data;
+                } catch (e) {}
+            }
+        }
         if (hasOPFS) {
             for (const k of keys) {
                 const data = await readJsonFromOPFS('json', k);
-                if (data) return data;
+                if (data) {
+                    try { jsonMemoryCache.set(k, JSON.stringify(data)); } catch (e) {}
+                    return data;
+                }
             }
         }
         const db = await getDB();
@@ -614,7 +627,10 @@ async function getCachedJson(url) {
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => resolve(null);
             });
-            if (data) return data;
+            if (data) {
+                try { jsonMemoryCache.set(k, JSON.stringify(data)); } catch (e) {}
+                return data;
+            }
         }
 
         // Fallback kiểm tra trong STORE_API_CACHE nếu có ID
@@ -635,33 +651,87 @@ async function getCachedJson(url) {
 }
 
 async function cacheJson(url, data) {
-    if (!url || !data) return;
+    if (!url || !data) return false;
     try {
-        if (hasOPFS) {
-            await writeToOPFS('json', url, JSON.stringify(data));
-            const match = String(url).match(/(\d+)/);
-            if (match) {
-                const alt = `beatmap_${match[1]}.json`;
-                if (alt !== url) {
-                    await writeToOPFS('json', alt, JSON.stringify(data));
-                }
-            }
-            console.log('[CacheManager] [OPFS] Đã cache beatmap JSON:', url);
-            return;
+        const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+
+        // 1. Kiểm tra nhanh qua Memory Cache: nếu dữ liệu giống hệt, bỏ qua cập nhật
+        if (jsonMemoryCache.has(url) && jsonMemoryCache.get(url) === dataStr) {
+            return false;
         }
+
+        // 2. So sánh với nội dung đã có trong OPFS hoặc IndexedDB
+        let existingJson = null;
+        if (hasOPFS) {
+            existingJson = await readJsonFromOPFS('json', url);
+        }
+        if (!existingJson) {
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_JSON, 'readonly');
+                const store = tx.objectStore(STORE_JSON);
+                existingJson = await new Promise((resolve) => {
+                    const req = store.get(url);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (e) {}
+        }
+
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+
+        if (existingJson) {
+            const existingBeats = Array.isArray(existingJson.beats) ? existingJson.beats : (Array.isArray(existingJson) ? existingJson : null);
+            const newBeats = Array.isArray(parsedData.beats) ? parsedData.beats : (Array.isArray(parsedData) ? parsedData : null);
+
+            const isBeatsEqual = existingBeats && newBeats && (
+                existingBeats === newBeats ||
+                (existingBeats.length === newBeats.length && JSON.stringify(existingBeats) === JSON.stringify(newBeats))
+            );
+            const isBpmEqual = (existingJson.bpm || null) === (parsedData.bpm || null);
+            const isSpeedEqual = (existingJson.speed || null) === (parsedData.speed || null);
+            const isFakeEqual = (existingJson.no_fake_block === true) === (parsedData.no_fake_block === true);
+
+            if (isBeatsEqual && isBpmEqual && isSpeedEqual && isFakeEqual) {
+                // DB và Cache không có gì thay đổi, lưu vào memory để tra cứu nhanh và bỏ qua ghi đĩa
+                jsonMemoryCache.set(url, dataStr);
+                const match = String(url).match(/(\d+)/);
+                if (match) {
+                    jsonMemoryCache.set(`beatmap_${match[1]}.json`, dataStr);
+                }
+                return false;
+            }
+        }
+
+        // 3. Có sự thay đổi hoặc chưa từng cache, tiến hành ghi vào Cache
+        jsonMemoryCache.set(url, dataStr);
+        const match = String(url).match(/(\d+)/);
+        const alt = match ? `beatmap_${match[1]}.json` : null;
+        if (alt) {
+            jsonMemoryCache.set(alt, dataStr);
+        }
+
+        if (hasOPFS) {
+            await writeToOPFS('json', url, dataStr);
+            if (alt && alt !== url) {
+                await writeToOPFS('json', alt, dataStr);
+            }
+            console.log('[CacheManager] [OPFS] Đã cập nhật beatmap JSON mới:', url);
+            return true;
+        }
+
         const db = await getDB();
         const tx = db.transaction(STORE_JSON, 'readwrite');
         const store = tx.objectStore(STORE_JSON);
-        store.put(data, url);
-        const match = String(url).match(/(\d+)/);
-        if (match) {
-            const alt = `beatmap_${match[1]}.json`;
-            if (alt !== url) {
-                store.put(data, alt);
-            }
+        store.put(parsedData, url);
+        if (alt && alt !== url) {
+            store.put(parsedData, alt);
         }
-        console.log('[CacheManager] [IndexedDB] Đã cache beatmap JSON:', url);
-    } catch (e) { }
+        console.log('[CacheManager] [IndexedDB] Đã cập nhật beatmap JSON mới:', url);
+        return true;
+    } catch (e) {
+        return false;
+    }
 }
 
 /**
@@ -699,27 +769,33 @@ async function getCachedBeatmap(songOrId) {
         if (match) id = match[1];
     }
 
-    if (id) {
-        try {
-            const dbPlaylist = await getCachedPlaylistFromDB();
-            if (dbPlaylist && Array.isArray(dbPlaylist)) {
-                const found = dbPlaylist.find(s => String(s.id) === String(id));
-                if (found && found.beats && Array.isArray(found.beats) && found.beats.length > 4) {
-                    return {
-                        id: found.id,
-                        title: found.title || found.name,
-                        name: found.name || found.title,
-                        artist: found.artist,
-                        bpm: found.bpm,
-                        speed: found.speed,
-                        beats: found.beats,
-                        url: found.url || found.file_url,
-                        no_fake_block: found.no_fake_block === true
-                    };
+    try {
+        const dbPlaylist = await getCachedPlaylistFromDB();
+        if (dbPlaylist && Array.isArray(dbPlaylist)) {
+            const found = dbPlaylist.find(s => {
+                if (id && (String(s.id) === String(id) || s.id === id)) return true;
+                if (typeof songOrId === 'object' && songOrId !== null) {
+                    if (songOrId.url && s.url === songOrId.url) return true;
+                    if (songOrId.beatmapUrl && (s.beatmapUrl === songOrId.beatmapUrl || s.beatmap_url === songOrId.beatmapUrl)) return true;
+                    if (songOrId.name && (s.name === songOrId.name || s.title === songOrId.name)) return true;
                 }
+                return false;
+            });
+            if (found && found.beats && Array.isArray(found.beats) && found.beats.length > 4) {
+                return {
+                    id: found.id,
+                    title: found.title || found.name,
+                    name: found.name || found.title,
+                    artist: found.artist,
+                    bpm: found.bpm,
+                    speed: found.speed,
+                    beats: found.beats,
+                    url: found.url || found.file_url,
+                    no_fake_block: found.no_fake_block === true
+                };
             }
-        } catch (e) {}
-    }
+        }
+    } catch (e) {}
 
     return null;
 }
@@ -739,17 +815,23 @@ async function isBeatmapCached(songOrId) {
         const match = String(songOrId).match(/(\d+)/);
         if (match) id = match[1];
     }
-    if (id) {
-        try {
-            const dbPlaylist = await getCachedPlaylistFromDB();
-            if (dbPlaylist && Array.isArray(dbPlaylist)) {
-                const found = dbPlaylist.find(s => String(s.id) === String(id));
-                if (found && found.beats && Array.isArray(found.beats) && found.beats.length > 4) {
-                    return true;
+    try {
+        const dbPlaylist = await getCachedPlaylistFromDB();
+        if (dbPlaylist && Array.isArray(dbPlaylist)) {
+            const found = dbPlaylist.find(s => {
+                if (id && (String(s.id) === String(id) || s.id === id)) return true;
+                if (typeof songOrId === 'object' && songOrId !== null) {
+                    if (songOrId.url && s.url === songOrId.url) return true;
+                    if (songOrId.beatmapUrl && (s.beatmapUrl === songOrId.beatmapUrl || s.beatmap_url === songOrId.beatmapUrl)) return true;
+                    if (songOrId.name && (s.name === songOrId.name || s.title === songOrId.name)) return true;
                 }
+                return false;
+            });
+            if (found && found.beats && Array.isArray(found.beats) && found.beats.length > 4) {
+                return true;
             }
-        } catch (e) {}
-    }
+        }
+    } catch (e) {}
     return false;
 }
 window.isBeatmapCached = isBeatmapCached;
@@ -772,6 +854,20 @@ async function updateCachedSongInPlaylistDB(songId, updatedFields) {
         });
 
         if (idx !== -1) {
+            let hasChanged = false;
+            for (const key of Object.keys(updatedFields)) {
+                if (key === 'beats') {
+                    if (JSON.stringify(pl[idx].beats) !== JSON.stringify(updatedFields.beats)) {
+                        hasChanged = true;
+                        break;
+                    }
+                } else if (pl[idx][key] !== updatedFields[key]) {
+                    hasChanged = true;
+                    break;
+                }
+            }
+            if (!hasChanged) return; // Dữ liệu không thay đổi, bỏ qua ghi đĩa
+
             Object.assign(pl[idx], updatedFields);
             if (hasOPFS) {
                 await writeToOPFS('playlist', storeKey, JSON.stringify(pl));
@@ -872,75 +968,151 @@ async function cachePlaylistToDB(maps, customKey = null) {
 
         if (hasOPFS) {
             await writeToOPFS('playlist', storeKey, JSON.stringify(maps));
-            return;
         }
         const db = await getDB();
         const tx = db.transaction(STORE_PLAYLIST, 'readwrite');
         const store = tx.objectStore(STORE_PLAYLIST);
         store.put(maps, storeKey);
+
+        // Nếu lưu admin_playlist, đồng bộ thêm các bài public vào public_playlist để người chơi offline không bị thiếu bài
+        if (storeKey === 'admin_playlist') {
+            const publicOnly = maps.filter(m => m.is_available !== false && m.is_available !== 0);
+            if (publicOnly.length > 0) {
+                if (hasOPFS) {
+                    await writeToOPFS('playlist', 'public_playlist', JSON.stringify(publicOnly)).catch(() => {});
+                }
+                const txPub = db.transaction(STORE_PLAYLIST, 'readwrite');
+                txPub.objectStore(STORE_PLAYLIST).put(publicOnly, 'public_playlist');
+            }
+        }
     } catch (e) {
         console.warn('[CacheManager] Lỗi lưu cache playlist:', e);
     }
 }
 
 async function getCachedPlaylistFromDB(customKey = null, options = {}) {
-    const storeKey = customKey || ((typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin()) ? 'admin_playlist' : 'public_playlist');
-    try {
-        let res = null;
-        if (hasOPFS) {
-            res = await readJsonFromOPFS('playlist', storeKey);
-            // Fallback sang public_playlist nếu admin_playlist chưa có
-            if (!res && storeKey === 'admin_playlist') {
-                res = await readJsonFromOPFS('playlist', 'public_playlist');
+    const isAdmin = typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin();
+    const primaryKey = customKey || (isAdmin ? 'admin_playlist' : 'public_playlist');
+    const secondaryKey = primaryKey === 'admin_playlist' ? 'public_playlist' : 'admin_playlist';
+
+    const getSongKey = (item) => {
+        if (!item) return null;
+        if (typeof getBeatmapIdFromSong === 'function') {
+            const id = getBeatmapIdFromSong(item);
+            if (id) return id;
+        }
+        if (item.id !== undefined && item.id !== null && item.id !== '') return `id_${item.id}`;
+        if (item.beatmapUrl) return `bm_${item.beatmapUrl}`;
+        if (item.beatmap_url) return `bm_${item.beatmap_url}`;
+        if (item.url) return `url_${item.url}`;
+        return `meta_${item.name || item.title || ''}_${item.artist || ''}`;
+    };
+
+    const mergeSongLists = (targetList, sourceList) => {
+        if (!Array.isArray(sourceList) || sourceList.length === 0) return targetList;
+        const keyMap = new Map();
+        targetList.forEach((s, idx) => {
+            const k = getSongKey(s);
+            if (k) keyMap.set(k, idx);
+        });
+
+        sourceList.forEach(item => {
+            if (!item) return;
+            const k = getSongKey(item);
+            if (!k) return;
+            if (keyMap.has(k)) {
+                const existing = targetList[keyMap.get(k)];
+                // Giữ lại nốt nhạc beats nếu item mới có beats mà existing chưa có
+                if ((!existing.beats || existing.beats.length <= 4) && item.beats && item.beats.length > 4) {
+                    existing.beats = item.beats;
+                    existing.loaded = true;
+                }
+                if (!existing.url && (item.url || item.file_url)) existing.url = item.url || item.file_url;
+                if (!existing.bpm && item.bpm) existing.bpm = item.bpm;
+                if (!existing.speed && item.speed) existing.speed = item.speed;
+                if (existing.is_available === undefined && item.is_available !== undefined) existing.is_available = item.is_available;
+            } else {
+                keyMap.set(k, targetList.length);
+                targetList.push(item);
             }
-        } else {
+        });
+        return targetList;
+    };
+
+    try {
+        let combined = [];
+
+        // 1. Đọc từ OPFS
+        let primaryOpfs = null;
+        let secondaryOpfs = null;
+        if (hasOPFS) {
+            primaryOpfs = await readJsonFromOPFS('playlist', primaryKey).catch(() => null);
+            secondaryOpfs = await readJsonFromOPFS('playlist', secondaryKey).catch(() => null);
+        }
+
+        // 2. Đọc từ IndexedDB STORE_PLAYLIST
+        let primaryIdb = null;
+        let secondaryIdb = null;
+        try {
             const db = await getDB();
             const tx = db.transaction(STORE_PLAYLIST, 'readonly');
             const store = tx.objectStore(STORE_PLAYLIST);
-            res = await new Promise((resolve) => {
-                const req = store.get(storeKey);
-                req.onsuccess = () => resolve(req.result);
-                req.onerror = () => resolve(null);
+            primaryIdb = await new Promise(r => {
+                const req = store.get(primaryKey);
+                req.onsuccess = () => r(req.result);
+                req.onerror = () => r(null);
             });
-            if (!res && storeKey === 'admin_playlist') {
-                res = await new Promise((resolve) => {
-                    const req = store.get('public_playlist');
-                    req.onsuccess = () => resolve(req.result);
-                    req.onerror = () => resolve(null);
-                });
-            }
-        }
+            secondaryIdb = await new Promise(r => {
+                const req = store.get(secondaryKey);
+                req.onsuccess = () => r(req.result);
+                req.onerror = () => r(null);
+            });
+        } catch (e) {}
 
-        // Tự động gộp thêm playlistSource (70 bài gốc) nếu cache offline chưa có hoặc bị thiếu bài
+        const primaryList = (Array.isArray(primaryOpfs) && primaryOpfs.length > 0) ? primaryOpfs : (Array.isArray(primaryIdb) ? primaryIdb : []);
+        const secondaryList = (Array.isArray(secondaryOpfs) && secondaryOpfs.length > 0) ? secondaryOpfs : (Array.isArray(secondaryIdb) ? secondaryIdb : []);
+
+        combined = [...primaryList];
+        mergeSongLists(combined, secondaryList);
+
+        // 3. Quét thêm toàn bộ beatmaps từ STORE_API_CACHE (tất cả các response /beatmaps từng được tải về)
+        try {
+            const db = await getDB();
+            const tx = db.transaction(STORE_API_CACHE, 'readonly');
+            const store = tx.objectStore(STORE_API_CACHE);
+            const allApiRecords = await new Promise(r => {
+                if (typeof store.getAll === 'function') {
+                    const req = store.getAll();
+                    req.onsuccess = () => r(req.result || []);
+                    req.onerror = () => r([]);
+                } else {
+                    r([]);
+                }
+            });
+
+            const apiMaps = [];
+            for (const record of allApiRecords) {
+                const data = (record && record.data !== undefined) ? record.data : record;
+                if (!data) continue;
+                if (Array.isArray(data.data) && data.data.length > 0 && (data.data[0].id || data.data[0].title || data.data[0].name)) {
+                    apiMaps.push(...data.data);
+                } else if (Array.isArray(data) && data.length > 0 && (data[0].id || data[0].title || data[0].name)) {
+                    apiMaps.push(...data);
+                } else if (data.data && typeof data.data === 'object' && (data.data.id || data.data.title || data.data.name)) {
+                    apiMaps.push(data.data);
+                }
+            }
+            if (apiMaps.length > 0) {
+                mergeSongLists(combined, apiMaps);
+            }
+        } catch (e) {}
+
+        // 4. Bổ sung các bài hát mặc định (playlistSource) nếu chưa có
         if (!options.rawOnly && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource) && playlistSource.length > 0) {
-            const currentList = Array.isArray(res) ? [...res] : [];
-            const getSongKey = (item) => {
-                if (!item) return null;
-                if (typeof getBeatmapIdFromSong === 'function') {
-                    const id = getBeatmapIdFromSong(item);
-                    if (id) return id;
-                }
-                if (item.id !== undefined && item.id !== null && item.id !== '') return `id_${item.id}`;
-                if (item.beatmapUrl) return `bm_${item.beatmapUrl}`;
-                if (item.url) return `url_${item.url}`;
-                return `meta_${item.name || item.title || ''}_${item.artist || ''}`;
-            };
-            const existingKeys = new Set(currentList.map(getSongKey).filter(Boolean));
-            let hasAdded = false;
-            playlistSource.forEach(sourceSong => {
-                const key = getSongKey(sourceSong);
-                if (key && !existingKeys.has(key)) {
-                    currentList.push(sourceSong);
-                    existingKeys.add(key);
-                    hasAdded = true;
-                }
-            });
-            if (hasAdded) {
-                res = currentList;
-            }
+            mergeSongLists(combined, playlistSource);
         }
 
-        return res;
+        return combined.length > 0 ? combined : null;
     } catch (e) { return null; }
 }
 
@@ -951,14 +1123,15 @@ async function getApiCache(key, options = {}) {
     if (!key) return null;
     const todayStr = new Date().toISOString().split('T')[0];
     const isBeatmaps = key.includes('/beatmaps');
-    const isDbOffline = (typeof window.isDatabaseOnline !== 'undefined' && window.isDatabaseOnline === false) ||
-                        (typeof window.ApiService !== 'undefined' && typeof window.ApiService.isDbHealthy === 'function' && !window.ApiService.isDbHealthy());
+    const isOffline = (typeof navigator !== 'undefined' && !navigator.onLine) ||
+                      (typeof window.isDatabaseOnline !== 'undefined' && window.isDatabaseOnline === false) ||
+                      (typeof window.ApiService !== 'undefined' && typeof window.ApiService.isDbHealthy === 'function' && !window.ApiService.isDbHealthy());
 
     if (apiMemoryCache.has(key)) {
         const entry = apiMemoryCache.get(key);
         if (entry && typeof entry === 'object' && 'data' in entry) {
-            // Nếu DB offline hoặc có cờ allowExpired: Trả về cache ngay lập tức
-            if (isBeatmaps && entry.cached_date && entry.cached_date !== todayStr && !options.allowExpired && !isDbOffline) {
+            // Nếu offline hoặc có cờ allowExpired: Trả về cache ngay lập tức dù khác ngày
+            if (isBeatmaps && entry.cached_date && entry.cached_date !== todayStr && !options.allowExpired && !isOffline) {
                 // Giữ lại trong memory để làm fallback nếu Backend/DB gặp sự cố
             } else {
                 return entry.data;
@@ -980,10 +1153,9 @@ async function getApiCache(key, options = {}) {
             const data = (record.data !== undefined) ? record.data : record;
             const cachedDate = record.cached_date;
 
-            // Nếu DB offline hoặc có cờ allowExpired: Tự động dùng cache ngay!
-            if (isBeatmaps && cachedDate && cachedDate !== todayStr && !options.allowExpired && !isDbOffline) {
+            // Nếu offline hoặc có cờ allowExpired: Tự động dùng cache ngay!
+            if (isBeatmaps && cachedDate && cachedDate !== todayStr && !options.allowExpired && !isOffline) {
                 console.log('[CacheManager] Cache beatmap đã cũ (khác ngày hiện tại), ưu tiên làm mới từ Backend:', key);
-                // TUYỆT ĐỐI KHÔNG XÓA KHỎI INDEXEDDB! Giữ lại làm fallback khi Backend hoặc Database offline!
                 return null;
             }
 
@@ -997,16 +1169,37 @@ async function getApiCache(key, options = {}) {
 }
 
 async function setApiCache(key, data) {
-    if (!key || data === undefined) return;
+    if (!key || data === undefined) return false;
     try {
         const todayStr = new Date().toISOString().split('T')[0];
-        const existing = apiMemoryCache.get(key);
+        let existing = apiMemoryCache.get(key);
+        if (!existing) {
+            try {
+                const db = await getDB();
+                const tx = db.transaction(STORE_API_CACHE, 'readonly');
+                const store = tx.objectStore(STORE_API_CACHE);
+                existing = await new Promise((resolve) => {
+                    const req = store.get(key);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
+                });
+                if (existing) {
+                    apiMemoryCache.set(key, existing);
+                }
+            } catch (e) {}
+        }
 
-        // Nếu dữ liệu không thay đổi, chỉ cập nhật timestamp và bỏ qua ghi đĩa
-        const isDataEqual = existing && existing.data && JSON.stringify(existing.data) === JSON.stringify(data);
-        if (isDataEqual && existing.cached_date === todayStr) {
-            existing.updated_at = Date.now();
-            return;
+        const dataStr = JSON.stringify(data);
+        const existingData = existing ? (existing.data !== undefined ? existing.data : existing) : null;
+        const existingDataStr = existingData ? JSON.stringify(existingData) : null;
+
+        // Nếu dữ liệu Server và Cache hoàn toàn giống hệt nhau:
+        if (existingDataStr && existingDataStr === dataStr) {
+            if (existing && existing.cached_date !== todayStr) {
+                existing.cached_date = todayStr;
+                existing.updated_at = Date.now();
+            }
+            return false; // Không thay đổi, bỏ qua ghi đè!
         }
 
         const record = {
@@ -1019,8 +1212,10 @@ async function setApiCache(key, data) {
         const tx = db.transaction(STORE_API_CACHE, 'readwrite');
         const store = tx.objectStore(STORE_API_CACHE);
         store.put(record, key);
+        return true; // Có thay đổi thực sự
     } catch (e) {
         console.warn('[CacheManager] Lỗi ghi API Cache:', e);
+        return false;
     }
 }
 

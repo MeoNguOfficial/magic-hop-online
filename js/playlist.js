@@ -416,7 +416,9 @@ async function refreshPlaylist(search = '', forceRefresh = true, options = {}) {
 
     // Chỉ xóa cache API nếu DB thực sự Online. Nếu DB offline/check false, giữ nguyên cache để không mất nhạc!
     let isDbHealthy = true;
-    if (window.ApiService && typeof window.ApiService.checkHealth === 'function') {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        isDbHealthy = false;
+    } else if (window.ApiService && typeof window.ApiService.checkHealth === 'function') {
         const health = await window.ApiService.checkHealth().catch(() => ({ isHealthy: false }));
         isDbHealthy = !!health.isHealthy;
     }
@@ -532,7 +534,9 @@ window.mergeIntoPlaylist = function (newMaps) {
 
             // Nếu DB có trường updated_at và nó khác với cache hiện tại,
             // nghĩa là backend đã thay đổi beat hoặc file, ta cần xóa cache cũ để tải lại.
-            if (newMap.updated_at && existing.updated_at && newMap.updated_at !== existing.updated_at) {
+            // QUAN TRỌNG: Chỉ xóa cache khi ONLINE. Tuyệt đối không xóa khi OFFLINE!
+            const isOnlineMode = typeof navigator === 'undefined' || navigator.onLine;
+            if (isOnlineMode && newMap.updated_at && existing.updated_at && newMap.updated_at !== existing.updated_at) {
                 if (typeof deleteSongCache === 'function') {
                     console.log(`[Playlist] Bài hát ${existing.name} đã được cập nhật trên server, tiến hành xóa cache cũ...`);
                     deleteSongCache(existing.url, existing.lazyUrl);
@@ -581,121 +585,107 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
     currentSearchTerm = search;
     const isAdmin = isCurrentUserAdmin();
 
-    // 1. Khởi động tức thì (0ms): Nạp trước từ Cache Offline nếu bộ nhớ RAM chưa có dữ liệu và không phải đang tìm kiếm
-    if (!search && playlist.length === 0 && typeof getCachedPlaylistFromDB === 'function' && !forceRefresh) {
-        try {
-            const initialCached = await getCachedPlaylistFromDB();
-            if (initialCached && Array.isArray(initialCached) && initialCached.length > 0) {
-                indices = window.mergeIntoPlaylist(initialCached);
-                console.log("[Playlist] Đã nạp nhanh từ Offline Cache (" + initialCached.length + " bài).");
-            }
-        } catch (e) {}
+    // THÔNG QUA HEALTH BACKEND: Kiểm tra sức khỏe máy chủ & DB trước
+    let isDbHealthy = true;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        isDbHealthy = false;
+    } else if (window.ApiService && typeof window.ApiService.checkHealth === 'function') {
+        const health = await window.ApiService.checkHealth().catch(() => ({ isHealthy: false }));
+        isDbHealthy = !!health.isHealthy;
     }
 
-    // 2. Đồng bộ dữ liệu qua API (sử dụng ApiCache nếu còn hạn trong ngày, gọi Server nếu hết hạn hoặc forceRefresh)
-    try {
-        if (window.ApiService) {
-            // Kiểm tra trạng thái máy chủ / DB nếu chưa có kết quả gần đây
-            let isDbHealthy = true;
-            if (typeof window.ApiService.checkHealth === 'function') {
-                const health = await window.ApiService.checkHealth().catch(() => ({ isHealthy: false }));
-                isDbHealthy = !!health.isHealthy;
+    // 1. SERVER TRƯỚC: Nếu Health Backend Online, ưu tiên gọi API Server
+    if (isDbHealthy && window.ApiService) {
+        try {
+            const params = { limit: 100 };
+            if (isAdmin) {
+                params.mode = 'admin';
+            }
+            if (search) params.search = search;
+            if (window.selectedArtistFilter) params.artist = window.selectedArtistFilter;
+            if (window.selectedGenreFilter) params.genre = window.selectedGenreFilter;
+            if (window.selectedCopyrightFilter) params.copyright_status = window.selectedCopyrightFilter;
+
+            const options = forceRefresh ? { forceRefresh: true, headers: { 'X-Force-Refresh': 'true' } } : {};
+            const apiResponse = await ApiService.getPublicBeatmaps(params, options);
+            if (apiResponse.data?.meta) {
+                nextCursor = apiResponse.data.meta.next_cursor;
+                hasMore = apiResponse.data.meta.has_more;
             }
 
-            if (!isDbHealthy) {
-                console.warn("[Playlist] Database health check false (offline): Tự động nạp danh sách bài hát từ Cache!");
+            // Lưu filter_options từ API vào biến toàn cục để dropdown dùng
+            if (
+                apiResponse.data?.filter_options &&
+                !search &&
+                !window.selectedArtistFilter &&
+                !window.selectedGenreFilter &&
+                !window.selectedCopyrightFilter
+            ) {
+                window.apiFilterOptions = apiResponse.data.filter_options;
+            }
+
+            const newMaps = apiResponse.data?.data || apiResponse.data || [];
+            if (newMaps.length > 0) {
+                indices = window.mergeIntoPlaylist(newMaps);
+                const sourceText = apiResponse.isCached ? "Cache/IndexedDB" : "Server API";
+                console.log(`[Playlist] [Server First] Đã đồng bộ playlist từ ${sourceText}.` + (isAdmin ? " (Mode Admin)" : ""));
                 if (typeof window.updateConnectionStatusIndicator === 'function') {
-                    window.updateConnectionStatusIndicator('cache');
-                }
-                if (typeof getCachedPlaylistFromDB === 'function' && !search) {
-                    const cachedMaps = await getCachedPlaylistFromDB();
-                    if (cachedMaps && cachedMaps.length > 0) {
-                        indices = window.mergeIntoPlaylist(cachedMaps);
-                        console.log(`[Playlist] Đã tự động nạp ${cachedMaps.length} bài từ Offline Cache do DB offline.`);
-                    }
-                }
-            } else {
-                const params = { limit: 100 };
-                if (isAdmin) {
-                    params.mode = 'admin';
-                }
-                if (search) params.search = search;
-                if (window.selectedArtistFilter) params.artist = window.selectedArtistFilter;
-                if (window.selectedGenreFilter) params.genre = window.selectedGenreFilter;
-                if (window.selectedCopyrightFilter) params.copyright_status = window.selectedCopyrightFilter;
-
-                const options = forceRefresh ? { forceRefresh: true, headers: { 'X-Force-Refresh': 'true' } } : {};
-                const apiResponse = await ApiService.getPublicBeatmaps(params, options);
-                if (apiResponse.data?.meta) {
-                    nextCursor = apiResponse.data.meta.next_cursor;
-                    hasMore = apiResponse.data.meta.has_more;
+                    window.updateConnectionStatusIndicator(apiResponse.isCached ? 'cache' : 'server');
                 }
 
-                // Lưu filter_options từ API vào biến toàn cục để dropdown dùng
-                if (
-                    apiResponse.data?.filter_options &&
-                    !search &&
-                    !window.selectedArtistFilter &&
-                    !window.selectedGenreFilter &&
-                    !window.selectedCopyrightFilter
-                ) {
-                    window.apiFilterOptions = apiResponse.data.filter_options;
+                // Lưu/cập nhật vào IndexedDB & OPFS để dùng khi offline
+                if (typeof cachePlaylistToDB === 'function' && !search) {
+                    cachePlaylistToDB(newMaps);
                 }
 
-                const newMaps = apiResponse.data?.data || apiResponse.data || [];
-                if (newMaps.length > 0) {
-                    indices = window.mergeIntoPlaylist(newMaps);
-                    const sourceText = apiResponse.isCached ? "Cache/IndexedDB" : "Server API";
-                    console.log(`[Playlist] Đã đồng bộ playlist từ ${sourceText}.` + (isAdmin ? " (Mode Admin)" : ""));
-                    if (typeof window.updateConnectionStatusIndicator === 'function') {
-                        window.updateConnectionStatusIndicator(apiResponse.isCached ? 'cache' : 'server');
-                    }
-
-                    // Lưu/cập nhật vào IndexedDB & OPFS để dùng khi offline
-                    if (typeof cachePlaylistToDB === 'function' && !search) {
-                        cachePlaylistToDB(newMaps);
-                    }
-
-                    // Tự động đồng bộ beatmaps có beats vào OPFS json và IndexedDB json_cache
-                    if (typeof cacheJson === 'function') {
-                        newMaps.forEach(m => {
-                            if (m.beats && (m.id || m.beatmap_url || m.beatmapUrl)) {
-                                const normalized = normalizeBeats(m.beats);
-                                if (normalized && normalized.length > 4) {
-                                    const isExt = typeof m.beatmap_url === 'string' && (m.beatmap_url.startsWith('http://') || m.beatmap_url.startsWith('https://')) && m.beatmap_url.includes('.json');
-                                    const bmKey = isExt ? m.beatmap_url : (m.id ? `beatmap_${m.id}.json` : (m.beatmap_url || null));
-                                    if (bmKey) {
-                                        cacheJson(bmKey, {
-                                            beats: normalized,
-                                            bpm: m.bpm,
-                                            speed: m.speed,
-                                            no_fake_block: m.no_fake_block === true
-                                        });
-                                    }
+                // Tự động đồng bộ beatmaps có beats vào OPFS json và IndexedDB json_cache
+                if (typeof cacheJson === 'function') {
+                    newMaps.forEach(m => {
+                        if (m.beats && (m.id || m.beatmap_url || m.beatmapUrl)) {
+                            const normalized = normalizeBeats(m.beats);
+                            if (normalized && normalized.length > 4) {
+                                const isExt = typeof m.beatmap_url === 'string' && (m.beatmap_url.startsWith('http://') || m.beatmap_url.startsWith('https://')) && m.beatmap_url.includes('.json');
+                                const bmKey = isExt ? m.beatmap_url : (m.id ? `beatmap_${m.id}.json` : (m.beatmap_url || null));
+                                if (bmKey) {
+                                    cacheJson(bmKey, {
+                                        beats: normalized,
+                                        bpm: m.bpm,
+                                        speed: m.speed,
+                                        no_fake_block: m.no_fake_block === true
+                                    });
                                 }
                             }
-                        });
-                    }
+                        }
+                    });
+                }
 
-                    // Đồng bộ cờ passed từ server cho các bài nhạc vừa tải
-                    if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
-                        window.preloadBackendAndPassedStatusOnStartup();
-                    }
+                // Đồng bộ cờ passed từ server cho các bài nhạc vừa tải
+                if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
+                    window.preloadBackendAndPassedStatusOnStartup();
                 }
             }
+        } catch (e) {
+            syncError = e;
+            console.warn("[Playlist] Gọi Server API thất bại, chuyển sang nạp Cache sau:", e);
         }
-    } catch (e) {
-        syncError = e;
-        console.warn("[Playlist] Không thể tải playlist từ API, thử tải từ DB Offline:", e);
+    }
+
+    // 2. CACHE SAU: Nếu Health Backend báo Offline HOẶC gọi Server API thất bại, nạp từ Cache Offline
+    if (!isDbHealthy || syncError || indices.length === 0) {
         if (typeof window.updateConnectionStatusIndicator === 'function') {
             window.updateConnectionStatusIndicator('cache');
         }
-        if (typeof getCachedPlaylistFromDB === 'function' && !search && indices.length === 0) {
-            const cachedMaps = await getCachedPlaylistFromDB();
-            if (cachedMaps && cachedMaps.length > 0) {
-                indices = window.mergeIntoPlaylist(cachedMaps);
-                console.log("[Playlist] Đã tải playlist từ IndexedDB (Offline).");
-            }
+        if (typeof getCachedPlaylistFromDB === 'function') {
+            try {
+                const cachedMaps = await getCachedPlaylistFromDB();
+                if (cachedMaps && cachedMaps.length > 0) {
+                    indices = window.mergeIntoPlaylist(cachedMaps);
+                    console.log(`[Playlist] [Cache Fallback] Đã nạp ${cachedMaps.length} bài từ Offline Cache (${!isDbHealthy ? 'Health Backend Offline' : 'Server Error'}).`);
+                    // Toàn bộ danh sách đã nạp vào bộ nhớ, vô hiệu hóa cờ hasMore của API
+                    hasMore = false;
+                    nextCursor = null;
+                }
+            } catch (e) {}
         }
     }
 
@@ -761,12 +751,33 @@ async function loadMoreSongs() {
             window.preloadBackendAndPassedStatusOnStartup();
         }
 
-        // Cập nhật thêm vào cache offline để tránh mất dữ liệu mới kéo (chỉ lưu cho người chơi thường)
-        if (typeof cachePlaylistToDB === 'function' && !currentSearchTerm && !isAdmin && typeof getCachedPlaylistFromDB === 'function') {
+        // Cập nhật thêm vào cache offline để tránh mất dữ liệu mới kéo (lưu cho cả admin và khách)
+        if (typeof cachePlaylistToDB === 'function' && !currentSearchTerm && typeof getCachedPlaylistFromDB === 'function') {
             const existingMaps = await getCachedPlaylistFromDB() || [];
             const existingIds = new Set(existingMaps.map(m => m.id));
             const mapsToCache = [...existingMaps, ...newMaps.filter(m => !existingIds.has(m.id))];
             cachePlaylistToDB(mapsToCache);
+        }
+
+        // Tự động đồng bộ beatmaps có beats vào OPFS json và IndexedDB json_cache
+        if (typeof cacheJson === 'function') {
+            newMaps.forEach(m => {
+                if (m.beats && (m.id || m.beatmap_url || m.beatmapUrl)) {
+                    const normalized = normalizeBeats(m.beats);
+                    if (normalized && normalized.length > 4) {
+                        const isExt = typeof m.beatmap_url === 'string' && (m.beatmap_url.startsWith('http://') || m.beatmap_url.startsWith('https://')) && m.beatmap_url.includes('.json');
+                        const bmKey = isExt ? m.beatmap_url : (m.id ? `beatmap_${m.id}.json` : (m.beatmap_url || null));
+                        if (bmKey) {
+                            cacheJson(bmKey, {
+                                beats: normalized,
+                                bpm: m.bpm,
+                                speed: m.speed,
+                                no_fake_block: m.no_fake_block === true
+                            });
+                        }
+                    }
+                }
+            });
         }
 
         // QUAN TRỌNG: Cần gán false cho cờ tải TRƯỚC KHI gọi hàm render giao diện.

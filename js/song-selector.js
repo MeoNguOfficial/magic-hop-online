@@ -53,8 +53,11 @@ async function checkBackendOnlineStatusWith60sCache() {
 
 function isDevModeActive() {
     try {
+        const isAdmin = (typeof window.isUserAdmin === 'function' && window.isUserAdmin()) ||
+                        (typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin());
+        if (!isAdmin) return false;
         if (typeof window.getDevMode === 'function' && window.getDevMode() === true) return true;
-        if (localStorage.getItem('MeoTNDevModeExp') === 'true') return true;
+        if (localStorage.getItem('MeoTNDevModeExp')) return true;
         if (localStorage.getItem('dev_mode') === 'true') return true;
         if (window.isDevMode === true) return true;
     } catch (e) {}
