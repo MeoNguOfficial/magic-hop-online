@@ -51,7 +51,7 @@
                             </div>
 
                             <p class="text-[10px] text-cyan-400 font-bold bg-cyan-950/30 border border-cyan-500/20 p-2 rounded-lg text-center mt-2">
-                                Thời gian bảo trì dự kiến: 08:00 ngày 04/07/2026 đến 22:00 ngày 06/07/2026.
+                                Thời gian bảo trì dự kiến: 08:00 ngày 14/10/2026 đến 22:00 ngày 14/10/2026.
                             </p>
                         </div>
                     `,
@@ -88,7 +88,7 @@
                             </div>
 
                             <p class="text-[10px] text-cyan-400 font-bold bg-cyan-950/30 border border-cyan-500/20 p-2 rounded-lg text-center mt-2">
-                                Estimated maintenance window: 08:00 July 4, 2026 to 22:00 July 6, 2026.
+                                Estimated maintenance window: 08:00 14th October, 2026 to 22:00 14th October, 2026.
                             </p>
                         </div>
                     `,
