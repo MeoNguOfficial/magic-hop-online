@@ -2222,7 +2222,9 @@ async function renderStorageList() {
         // 2. Kiểm tra trạng thái cache thực tế cho tất cả bài hát trong danh mục
         for (const song of catalog) {
             const audioPromise = song.url && typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
-            const jsonPromise = song.lazyUrl && typeof isJsonCached === 'function' ? isJsonCached(song.lazyUrl) : Promise.resolve(false);
+            const jsonPromise = typeof isBeatmapCached === 'function'
+                ? isBeatmapCached(song)
+                : (song.lazyUrl && typeof isJsonCached === 'function' ? isJsonCached(song.lazyUrl) : Promise.resolve(false));
 
             const [hasAudio, hasJson] = await Promise.all([audioPromise, jsonPromise]);
 
@@ -2357,7 +2359,8 @@ async function renderStorageList() {
                                     await dir.removeEntry(song.url);
                                 } catch (e) { }
                             } else if (typeof deleteSongCache === 'function') {
-                                await deleteSongCache(song.url, song.lazyUrl);
+                                const bmKey = song.lazyUrl || (song.id ? `beatmap_${song.id}.json` : null);
+                                await deleteSongCache(song.url, bmKey);
                             }
 
                             // Re-render storage list & update storage statistics bar

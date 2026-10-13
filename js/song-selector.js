@@ -579,7 +579,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         type: 'confirm',
                         onConfirm: async () => {
                             if (typeof deleteSongCache === 'function') {
-                                const bmKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl;
+                                const bmKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl || (song.id ? `beatmap_${song.id}.json` : null);
                                 await deleteSongCache(song.url, bmKey);
                             }
                             song.loaded = false;
@@ -724,11 +724,13 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         // Tối ưu thuật toán: Lazy load kiểm tra Cache cả audio và JSON beatmap
         const audioPromise = typeof isAudioCached === 'function' ? isAudioCached(song.url) : Promise.resolve(false);
         const beatmapKey = (typeof window.getSongBeatmapKey === 'function' ? window.getSongBeatmapKey(song) : null) || song.lazyUrl || (song.id ? `beatmap_${song.id}.json` : null);
-        const jsonPromise = (beatmapKey && typeof isJsonCached === 'function') ? isJsonCached(beatmapKey) : Promise.resolve(false);
+        const jsonPromise = (typeof isBeatmapCached === 'function')
+            ? isBeatmapCached(song)
+            : ((beatmapKey && typeof isJsonCached === 'function') ? isJsonCached(beatmapKey) : Promise.resolve(false));
         
         Promise.all([audioPromise, jsonPromise]).then(([isAudioCached, isJsonCached]) => {
             if (currentRenderId !== renderId) return;
-            const isCached = isAudioCached || isJsonCached;
+            const isCached = isAudioCached || isJsonCached || (song.beats && song.beats.length > 4);
             opt.dataset.isCached = isCached;
             if (isCached) {
                 const statusDiv = document.getElementById(`cache-status-${originalIndex}`);

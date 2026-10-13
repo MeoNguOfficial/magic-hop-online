@@ -273,6 +273,57 @@ apiClient.get = async function (url, config = {}) {
                 }
             } catch (e) {}
         }
+
+        // HỖ TRỢ LAZY LOADING BEATMAP TỪ CACHE KHI DB OFFLINE: /beatmaps/{id}
+        if (typeof url === 'string' && url.includes('/beatmaps/')) {
+            const bmMatch = url.match(/\/beatmaps\/(\d+)/);
+            if (bmMatch) {
+                const songId = bmMatch[1];
+                let beatmapDetails = null;
+
+                if (typeof window.getCachedBeatmap === 'function') {
+                    beatmapDetails = await window.getCachedBeatmap(songId);
+                } else if (typeof window.getCachedJson === 'function') {
+                    beatmapDetails = await window.getCachedJson(`beatmap_${songId}.json`);
+                }
+
+                if (!beatmapDetails && typeof window.getCachedPlaylistFromDB === 'function') {
+                    try {
+                        const dbPlaylist = await window.getCachedPlaylistFromDB();
+                        if (dbPlaylist && Array.isArray(dbPlaylist)) {
+                            const target = dbPlaylist.find(s => String(s.id) === String(songId));
+                            if (target && target.beats && Array.isArray(target.beats) && target.beats.length > 4) {
+                                beatmapDetails = {
+                                    id: target.id,
+                                    name: target.name || target.title,
+                                    title: target.title || target.name,
+                                    artist: target.artist,
+                                    bpm: target.bpm,
+                                    speed: target.speed,
+                                    beats: target.beats,
+                                    url: target.url || target.file_url,
+                                    no_fake_block: target.no_fake_block === true
+                                };
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (beatmapDetails) {
+                    console.warn(`[ApiCache] Database offline: Tự động dùng chi tiết beatmap #${songId} từ Cache (Lazy Load).`);
+                    updateConnectionStatusIndicator('cache');
+                    return {
+                        data: { data: beatmapDetails },
+                        status: 200,
+                        statusText: 'OK (Cached Beatmap Details - DB Offline)',
+                        headers: {},
+                        config: config,
+                        isCached: true,
+                        isDbOffline: true
+                    };
+                }
+            }
+        }
     }
 
     // TRƯỜNG HỢP 2: Nếu KHÔNG có cờ làm mới thủ công, kiểm tra cache trước
@@ -352,6 +403,58 @@ apiClient.get = async function (url, config = {}) {
                     };
                 }
             } catch (e) {}
+        }
+
+        // Hỗ trợ fallback chi tiết beatmap /beatmaps/{id} khi Backend gặp sự cố / Timeout
+        if (typeof url === 'string' && url.includes('/beatmaps/')) {
+            const bmMatch = url.match(/\/beatmaps\/(\d+)/);
+            if (bmMatch) {
+                const songId = bmMatch[1];
+                let beatmapDetails = null;
+
+                if (typeof window.getCachedBeatmap === 'function') {
+                    beatmapDetails = await window.getCachedBeatmap(songId);
+                } else if (typeof window.getCachedJson === 'function') {
+                    beatmapDetails = await window.getCachedJson(`beatmap_${songId}.json`);
+                }
+
+                if (!beatmapDetails && typeof window.getCachedPlaylistFromDB === 'function') {
+                    try {
+                        const dbPlaylist = await window.getCachedPlaylistFromDB();
+                        if (dbPlaylist && Array.isArray(dbPlaylist)) {
+                            const target = dbPlaylist.find(s => String(s.id) === String(songId));
+                            if (target && target.beats && Array.isArray(target.beats) && target.beats.length > 4) {
+                                beatmapDetails = {
+                                    id: target.id,
+                                    name: target.name || target.title,
+                                    title: target.title || target.name,
+                                    artist: target.artist,
+                                    bpm: target.bpm,
+                                    speed: target.speed,
+                                    beats: target.beats,
+                                    url: target.url || target.file_url,
+                                    no_fake_block: target.no_fake_block === true
+                                };
+                            }
+                        }
+                    } catch (e) {}
+                }
+
+                if (beatmapDetails) {
+                    console.warn(`[ApiCache] Request /beatmaps/${songId} thất bại, tự động fallback dùng beatmap Cache:`, error);
+                    updateConnectionStatusIndicator('cache');
+                    return {
+                        data: { data: beatmapDetails },
+                        status: 200,
+                        statusText: 'OK (Cached Beatmap Details Fallback)',
+                        headers: {},
+                        config: config,
+                        isCached: true,
+                        isStale: true,
+                        isDbOffline: isDbError
+                    };
+                }
+            }
         }
 
         throw error;

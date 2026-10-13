@@ -443,9 +443,10 @@ window.mergeIntoPlaylist = function (newMaps) {
         
         // Kiểm tra đúng link JSON của beatmap, tuyệt đối không dùng link mp3 của audio (file_url) làm beatmapUrl
         const beatmapCandidate = item.beatmap_url || item.beatmapUrl;
-        const isExternalJsonBeatmap = typeof beatmapCandidate === 'string' && (beatmapCandidate.startsWith('http://') || beatmapCandidate.startsWith('https://')) && beatmapCandidate.includes('.json');
-        // Định danh key lưu trữ trong OPFS / IndexedDB (chuẩn hóa dạng beatmap_ID.json, không dùng fake path cục bộ)
-        const finalBeatmapUrl = isExternalJsonBeatmap ? beatmapCandidate : (songId ? `beatmap_${songId}.json` : (beatmapCandidate || null));
+        const isDeadLocalhost = typeof beatmapCandidate === 'string' && (beatmapCandidate.includes('127.0.0.1') || beatmapCandidate.includes('localhost') || beatmapCandidate.includes(':9091'));
+        const isExternalJsonBeatmap = !isDeadLocalhost && typeof beatmapCandidate === 'string' && (beatmapCandidate.startsWith('http://') || beatmapCandidate.startsWith('https://')) && beatmapCandidate.includes('.json');
+        // Định danh key lưu trữ trong OPFS / IndexedDB (chuẩn hóa dạng beatmap_ID.json, loại bỏ hoàn toàn link localhost giả lập)
+        const finalBeatmapUrl = isExternalJsonBeatmap ? beatmapCandidate : (songId ? `beatmap_${songId}.json` : (isDeadLocalhost ? null : (beatmapCandidate || null)));
 
         const dayShow = item.day_show ?? item.date_show ?? null;
         const dayHide = item.day_hide ?? item.time_hide ?? null;
@@ -802,14 +803,18 @@ function updateLoadingStatus(key) {
 
 function getSongBeatmapKey(song) {
     if (!song) return null;
-    if (song.lazyUrl && (song.lazyUrl.startsWith('http://') || song.lazyUrl.startsWith('https://'))) {
+    const isLocalOrDead = (url) => {
+        if (!url || typeof url !== 'string') return true;
+        return url.includes('127.0.0.1') || url.includes('localhost') || url.includes(':9091') || url.includes(':8000');
+    };
+    if (song.lazyUrl && (song.lazyUrl.startsWith('http://') || song.lazyUrl.startsWith('https://')) && !isLocalOrDead(song.lazyUrl)) {
         return song.lazyUrl;
     }
     if (song.id !== undefined && song.id !== null && song.id !== '') {
         return `beatmap_${song.id}.json`;
     }
-    if (song.lazyUrl) return song.lazyUrl;
-    if (song.beatmapUrl) return song.beatmapUrl;
+    if (song.lazyUrl && !isLocalOrDead(song.lazyUrl)) return song.lazyUrl;
+    if (song.beatmapUrl && !isLocalOrDead(song.beatmapUrl)) return song.beatmapUrl;
     return null;
 }
 window.getSongBeatmapKey = getSongBeatmapKey;
@@ -844,25 +849,39 @@ async function ensureSongLoaded(index, forceCheck = false) {
         return playlist[index];
     }
 
-    // 2. Kiểm tra Cache địa phương (OPFS 'json' hoặc IndexedDB 'json_cache') TRƯỚC TIÊN!
-    if (beatmapKey && typeof getCachedJson === 'function') {
-        const cachedData = await getCachedJson(beatmapKey);
-        if (cachedData) {
-            console.log(`[Playlist] Đã nạp beatmap cho "${song.name}" từ OPFS/IndexedDB Cache (${beatmapKey}).`);
-            if (Array.isArray(cachedData)) {
-                song.beats = normalizeBeats(cachedData) || [0, 1, 2, 3];
-            } else if (cachedData && typeof cachedData === 'object') {
-                if (cachedData.beats) {
-                    song.beats = normalizeBeats(cachedData.beats) || [0, 1, 2, 3];
-                }
-                if (cachedData.bpm && !song.bpm) song.bpm = cachedData.bpm;
-                if (cachedData.speed && !song.speed) song.speed = cachedData.speed;
-                if (cachedData.no_fake_block !== undefined) song.no_fake_block = cachedData.no_fake_block;
+    // 2. Kiểm tra Cache địa phương (OPFS 'json', IndexedDB 'json_cache', API Cache, STORE_PLAYLIST) TRƯỚC TIÊN!
+    let cachedData = null;
+    if (typeof getCachedBeatmap === 'function') {
+        cachedData = await getCachedBeatmap(song);
+    } else if (beatmapKey && typeof getCachedJson === 'function') {
+        cachedData = await getCachedJson(beatmapKey);
+    }
+
+    if (cachedData) {
+        console.log(`[Playlist] [Lazy Load Cache] Đã nạp beatmap cho "${song.name}" từ Cache.`);
+        if (Array.isArray(cachedData)) {
+            song.beats = normalizeBeats(cachedData) || [0, 1, 2, 3];
+        } else if (cachedData && typeof cachedData === 'object') {
+            if (cachedData.beats) {
+                song.beats = normalizeBeats(cachedData.beats) || [0, 1, 2, 3];
             }
-            song.loaded = true;
-            if (song.beats && song.beats.length > 4) {
-                return song;
+            if (cachedData.bpm && !song.bpm) song.bpm = cachedData.bpm;
+            if (cachedData.speed && !song.speed) song.speed = cachedData.speed;
+            if (cachedData.no_fake_block !== undefined) song.no_fake_block = cachedData.no_fake_block;
+            if (cachedData.url && !song.url) song.url = cachedData.url;
+        }
+        song.loaded = true;
+        if (song.beats && song.beats.length > 4) {
+            if (song.id && typeof updateCachedSongInPlaylistDB === 'function') {
+                updateCachedSongInPlaylistDB(song.id, {
+                    beats: song.beats,
+                    bpm: song.bpm,
+                    speed: song.speed,
+                    no_fake_block: song.no_fake_block,
+                    loaded: true
+                });
             }
+            return song;
         }
     }
 
@@ -897,6 +916,17 @@ async function ensureSongLoaded(index, forceCheck = false) {
                     console.log(`[Playlist] Đã lưu beatmap "${song.name}" vào OPFS/IndexedDB (${beatmapKey}).`);
                 }
 
+                // Cập nhật đồng bộ vào STORE_PLAYLIST
+                if (song.id && typeof updateCachedSongInPlaylistDB === 'function') {
+                    updateCachedSongInPlaylistDB(song.id, {
+                        beats: song.beats,
+                        bpm: song.bpm,
+                        speed: song.speed,
+                        no_fake_block: song.no_fake_block,
+                        loaded: true
+                    });
+                }
+
                 if (song.beats && song.beats.length > 4) {
                     return song;
                 }
@@ -908,8 +938,14 @@ async function ensureSongLoaded(index, forceCheck = false) {
         }
     }
 
-    // 4. Nếu là link HTTP(S) JSON thực sự ở bên ngoài
-    const isHttpJson = typeof song.lazyUrl === 'string' && (song.lazyUrl.startsWith('http://') || song.lazyUrl.startsWith('https://')) && song.lazyUrl.includes('.json');
+    // 4. Nếu là link HTTP(S) JSON thực sự ở bên ngoài (loại bỏ localhost/127.0.0.1)
+    const isHttpJson = typeof song.lazyUrl === 'string' &&
+        (song.lazyUrl.startsWith('http://') || song.lazyUrl.startsWith('https://')) &&
+        song.lazyUrl.includes('.json') &&
+        !song.lazyUrl.includes('127.0.0.1') &&
+        !song.lazyUrl.includes('localhost') &&
+        !song.lazyUrl.includes(':9091');
+
     if (isHttpJson) {
         updateLoadingStatus('msg_map_downloading');
         return await downloadBeatmap(index);
@@ -926,7 +962,12 @@ async function downloadBeatmap(index, forceEtag = null) {
     if (!song) return song;
 
     const beatmapKey = getSongBeatmapKey(song);
-    const isHttpJson = typeof song.lazyUrl === 'string' && (song.lazyUrl.startsWith('http://') || song.lazyUrl.startsWith('https://')) && song.lazyUrl.includes('.json');
+    const isHttpJson = typeof song.lazyUrl === 'string' &&
+        (song.lazyUrl.startsWith('http://') || song.lazyUrl.startsWith('https://')) &&
+        song.lazyUrl.includes('.json') &&
+        !song.lazyUrl.includes('127.0.0.1') &&
+        !song.lazyUrl.includes('localhost') &&
+        !song.lazyUrl.includes(':9091');
 
     // Nếu có song.id và không phải URL HTTP JSON ngoại vi, tải từ Backend API
     if (song.id && !isHttpJson && window.ApiService && typeof window.ApiService.getBeatmapDetails === 'function') {
@@ -948,6 +989,15 @@ async function downloadBeatmap(index, forceEtag = null) {
                         bpm: song.bpm,
                         speed: song.speed,
                         no_fake_block: song.no_fake_block === true
+                    });
+                }
+                if (song.id && typeof updateCachedSongInPlaylistDB === 'function') {
+                    updateCachedSongInPlaylistDB(song.id, {
+                        beats: song.beats,
+                        bpm: song.bpm,
+                        speed: song.speed,
+                        no_fake_block: song.no_fake_block,
+                        loaded: true
                     });
                 }
             }
