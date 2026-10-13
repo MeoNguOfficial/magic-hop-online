@@ -45,20 +45,32 @@ window.StorageManager = {
                 }
             } catch (e) {}
 
-            // 2. Quét thư mục 'json' trong OPFS
+            // 2. Quét thư mục 'json' trong OPFS (khử trùng lặp alias file lưu đôi, vd: beatmap_1.json và beatmap%2Fmusic_1.json)
             try {
                 const jsonDirHandle = await root.getDirectoryHandle('json', { create: false });
+                const uniqueBeatmapKeys = new Set();
+                let rawJsonFiles = 0;
                 for await (const entry of jsonDirHandle.values()) {
                     if (entry.kind === 'file') {
-                        jsonCount++;
+                        rawJsonFiles++;
+                        let key = entry.name;
+                        const match = entry.name.match(/(?:music_|beatmap_|^)(\d+)/i);
+                        if (match) {
+                            key = `id_${match[1]}`;
+                        } else {
+                            key = entry.name.replace(/\.json$/i, '').toLowerCase();
+                        }
+                        uniqueBeatmapKeys.add(key);
                     }
                 }
+                jsonCount = uniqueBeatmapKeys.size > 0 ? uniqueBeatmapKeys.size : rawJsonFiles;
+                return { hasOPFS: true, totalAudioBytes, audioCount, jsonCount, rawJsonCount: rawJsonFiles };
             } catch (e) {}
         } catch (e) {
             console.warn('[StorageManager] Lỗi kiểm tra OPFS:', e);
         }
 
-        return { hasOPFS: true, totalAudioBytes, audioCount, jsonCount };
+        return { hasOPFS: true, totalAudioBytes, audioCount, jsonCount, rawJsonCount: jsonCount };
     },
 
     // --- 3. TÍNH TOÁN CHI TIẾT BỘ NHỚ INDEXEDDB (ESTIMATE INDEXEDDB USAGE) ---
@@ -165,6 +177,9 @@ window.StorageManager = {
             if (opfsBeatmapStats) {
                 if (opfsStats.hasOPFS) {
                     opfsBeatmapStats.innerText = `${opfsStats.jsonCount} map`;
+                    if (opfsStats.rawJsonCount && opfsStats.rawJsonCount > opfsStats.jsonCount) {
+                        opfsBeatmapStats.title = `Đã khử trùng lặp: ${opfsStats.jsonCount} map từ ${opfsStats.rawJsonCount} file trong OPFS`;
+                    }
                 } else {
                     opfsBeatmapStats.innerText = 'Không hỗ trợ';
                 }

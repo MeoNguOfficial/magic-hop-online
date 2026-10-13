@@ -615,7 +615,7 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
                     }
                 }
             } else {
-                const params = {};
+                const params = { limit: 100 };
                 if (isAdmin) {
                     params.mode = 'admin';
                 }
@@ -699,8 +699,14 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
         }
     }
 
-    if (indices.length === 0 && !search && playlist.length === 0) {
-        indices = window.mergeIntoPlaylist(playlistSource);
+    // Luôn đảm bảo nạp đủ 70 bài hát mặc định (playlistSource) nếu danh sách đang thiếu khi offline/khởi động
+    if (!search && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
+        if (indices.length < playlistSource.length || playlist.length < playlistSource.length) {
+            const sourceIndices = window.mergeIntoPlaylist(playlistSource);
+            if (sourceIndices && sourceIndices.length > 0) {
+                indices = [...new Set([...indices, ...sourceIndices])];
+            }
+        }
     }
 
     currentPlaylistIndices = indices.length > 0 ? indices : currentPlaylistIndices;

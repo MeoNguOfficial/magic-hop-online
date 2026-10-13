@@ -813,8 +813,10 @@ async function cachePlaylistToDB(maps, customKey = null) {
             });
 
             let hasAnyChange = false;
+            const visitedKeys = new Set();
             const merged = maps.map(newSong => {
                 const key = getSongKey(newSong);
+                if (key) visitedKeys.add(key);
                 const oldSong = key ? existingMapById.get(key) : null;
                 if (!oldSong) {
                     hasAnyChange = true;
@@ -851,8 +853,17 @@ async function cachePlaylistToDB(maps, customKey = null) {
                 return oldSong;
             });
 
+            // Giữ lại tất cả các bài hát đã có trong existing mà không có trong maps mới tải về
+            // (tránh tình trạng chỉ tải page 1 có 20 bài làm xóa mất hàng chục bài nhạc đã lưu ngoại tuyến!)
+            existing.forEach(oldSong => {
+                const key = getSongKey(oldSong);
+                if (key && !visitedKeys.has(key)) {
+                    merged.push(oldSong);
+                }
+            });
+
             // Nếu không có bất kỳ thay đổi nào và số lượng bài hát giữ nguyên, bỏ qua ghi để tối ưu hiệu năng
-            if (!hasAnyChange && existing.length === maps.length) {
+            if (!hasAnyChange && existing.length === merged.length) {
                 return;
             }
 
@@ -872,33 +883,63 @@ async function cachePlaylistToDB(maps, customKey = null) {
     }
 }
 
-async function getCachedPlaylistFromDB(customKey = null) {
+async function getCachedPlaylistFromDB(customKey = null, options = {}) {
     const storeKey = customKey || ((typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin()) ? 'admin_playlist' : 'public_playlist');
     try {
+        let res = null;
         if (hasOPFS) {
-            const data = await readJsonFromOPFS('playlist', storeKey);
-            if (data) return data;
+            res = await readJsonFromOPFS('playlist', storeKey);
             // Fallback sang public_playlist nếu admin_playlist chưa có
-            if (storeKey === 'admin_playlist') {
-                return await readJsonFromOPFS('playlist', 'public_playlist');
+            if (!res && storeKey === 'admin_playlist') {
+                res = await readJsonFromOPFS('playlist', 'public_playlist');
             }
-            return null;
-        }
-        const db = await getDB();
-        const tx = db.transaction(STORE_PLAYLIST, 'readonly');
-        const store = tx.objectStore(STORE_PLAYLIST);
-        let res = await new Promise((resolve) => {
-            const req = store.get(storeKey);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => resolve(null);
-        });
-        if (!res && storeKey === 'admin_playlist') {
+        } else {
+            const db = await getDB();
+            const tx = db.transaction(STORE_PLAYLIST, 'readonly');
+            const store = tx.objectStore(STORE_PLAYLIST);
             res = await new Promise((resolve) => {
-                const req = store.get('public_playlist');
+                const req = store.get(storeKey);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => resolve(null);
             });
+            if (!res && storeKey === 'admin_playlist') {
+                res = await new Promise((resolve) => {
+                    const req = store.get('public_playlist');
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => resolve(null);
+                });
+            }
         }
+
+        // Tự động gộp thêm playlistSource (70 bài gốc) nếu cache offline chưa có hoặc bị thiếu bài
+        if (!options.rawOnly && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource) && playlistSource.length > 0) {
+            const currentList = Array.isArray(res) ? [...res] : [];
+            const getSongKey = (item) => {
+                if (!item) return null;
+                if (typeof getBeatmapIdFromSong === 'function') {
+                    const id = getBeatmapIdFromSong(item);
+                    if (id) return id;
+                }
+                if (item.id !== undefined && item.id !== null && item.id !== '') return `id_${item.id}`;
+                if (item.beatmapUrl) return `bm_${item.beatmapUrl}`;
+                if (item.url) return `url_${item.url}`;
+                return `meta_${item.name || item.title || ''}_${item.artist || ''}`;
+            };
+            const existingKeys = new Set(currentList.map(getSongKey).filter(Boolean));
+            let hasAdded = false;
+            playlistSource.forEach(sourceSong => {
+                const key = getSongKey(sourceSong);
+                if (key && !existingKeys.has(key)) {
+                    currentList.push(sourceSong);
+                    existingKeys.add(key);
+                    hasAdded = true;
+                }
+            });
+            if (hasAdded) {
+                res = currentList;
+            }
+        }
+
         return res;
     } catch (e) { return null; }
 }
