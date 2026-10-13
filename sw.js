@@ -65,6 +65,7 @@ const CORE_ASSETS = [
     './js/admin-panel.js',
     './js/pwa-installer.js',
     './js/tos-warning.js',
+    './js/alert.js',
     'https://flagcdn.io/flags/4x3/vn.svg',
     'https://flagcdn.io/flags/4x3/us.svg',
     'https://flagcdn.io/flags/4x3/fr.svg',
