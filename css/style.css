@@ -576,4 +576,11 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     isolation: isolate;
     pointer-events: none;
 }
+
+#fps-graph-canvas {
+    contain: strict;
+    transform: translate3d(0, 0, 0);
+    will-change: contents;
+}
+
 

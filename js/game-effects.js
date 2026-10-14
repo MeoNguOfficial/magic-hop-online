@@ -576,10 +576,7 @@ window.GameEffectsManager = {
         if (!this.ballTrailInstancedMesh && this.scene) {
             const bRad = (typeof window.ballRadius !== 'undefined' ? window.ballRadius : 0.45);
             const geo = new THREE.TetrahedronGeometry(bRad * 0.6);
-            const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-            const mat = isWebGPU
-                ? new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false })
-                : new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+            const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
 
             this.ballTrailInstancedMesh = new THREE.InstancedMesh(geo, mat, this.MAX_TRAIL_INSTANCES);
             this.ballTrailInstancedMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);

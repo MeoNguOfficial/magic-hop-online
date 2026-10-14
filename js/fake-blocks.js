@@ -207,8 +207,6 @@ window.FakeBlocksManager = {
             }
         }
 
-        const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-
         for (let pIdx = 0; pIdx < positionsToSpawn.length; pIdx++) {
             const posX = positionsToSpawn[pIdx];
             let fakeTile;
@@ -226,7 +224,7 @@ window.FakeBlocksManager = {
                     fakeMat.color.copy(realMat.color);
                     if (fakeMat.emissive && realMat.emissive) fakeMat.emissive.copy(realMat.emissive);
                     // Quay lại dùng opacity nguyên bản của fake block
-                    fakeMat.opacity = isWebGPUForFake ? 0.3 : 0.25;
+                    fakeMat.opacity = 0.25;
                     fakeMat.transparent = true;
                     fakeMat.depthWrite = false;
                 }
@@ -352,9 +350,8 @@ window.FakeBlocksManager = {
         ud.baseX = 0;
         ud.originX = 0;
 
-        const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
         if (t.material) {
-            t.material.opacity = isWebGPUForFake ? 0.3 : 0.25;
+            t.material.opacity = 0.25;
             t.material.transparent = true;
             t.material.depthWrite = false;
         }
@@ -726,13 +723,12 @@ window.FakeBlocksManager = {
     },
 
     _createTileMesh: function(realTile) {
-        const isWebGPUForFake = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
         const fakeTile = realTile.clone();
         
         fakeTile.material = realTile.material.clone();
-        fakeTile.material.opacity = isWebGPUForFake ? 0.3 : 0.25; 
+        fakeTile.material.opacity = 0.25; 
         fakeTile.material.transparent = true;
-        fakeTile.material.depthWrite = isWebGPUForFake ? false : realTile.material.depthWrite;
+        fakeTile.material.depthWrite = realTile.material.depthWrite;
         
         for (let i = fakeTile.children.length - 1; i >= 0; i--) {
             const child = fakeTile.children[i];
@@ -884,8 +880,6 @@ window.FakeBlocksManager = {
         const bRadius = typeof ballRadius !== 'undefined' ? ballRadius : 0.75;
         const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
         
-        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-        
         for (let i = this.fakeTiles.length - 1; i >= 0; i--) {
             const fTile = this.fakeTiles[i];
 
@@ -968,7 +962,7 @@ window.FakeBlocksManager = {
                         }
                     }
                     if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
-                        fTile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
+                        fTile.userData.borderLine.material.color.setHex(hex);
                     }
                     const glowMesh = fTile.userData.glowMesh || (fTile.userData.glowMesh = fTile.getObjectByName("glowMesh"));
                     if (glowMesh && glowMesh.material) {

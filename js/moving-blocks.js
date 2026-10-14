@@ -169,8 +169,6 @@ window.MovingBlocksManager = {
         const speedFactor = gameSpeed; 
         const frameId = (++this._updateFrameId);
         
-        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-
         for (let i = this.allMovingTiles.length - 1; i >= 0; i--) {
             const tile = this.allMovingTiles[i];
 
@@ -220,7 +218,7 @@ window.MovingBlocksManager = {
                         }
                         // Cập nhật màu viền (borderLine)
                         if (tile.userData.borderLine && tile.userData.borderLine.material) {
-                            tile.userData.borderLine.material.color.setHex(isWebGPU ? 0xffffff : hex);
+                            tile.userData.borderLine.material.color.setHex(hex);
                         }
                         // Cập nhật màu glowMesh
                         if (tile.userData.glowMesh === undefined) {

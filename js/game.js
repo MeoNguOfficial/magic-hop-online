@@ -278,14 +278,7 @@ async function saveBestScore(songIndex, score, isPassed = false) {
 // --- LÀM MỜ TILE SAU KHI BÓNG ĐÃ CHẠM ---
 function dimLandedTile(tile) {
     if (!tile || !tile.userData) return;
-    const isWebGPU = typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu');
-    // Chỉ áp dụng dim cho WebGPU API
-    if (!isWebGPU) return;
-
     tile.userData.isDimmed = true;
-    if (window.globalTileDimmedMat) {
-        tile.material = window.globalTileDimmedMat;
-    }
 }
 
 // --- HIỆU ỨNG SÓNG XUNG KÍCH ---
@@ -937,58 +930,45 @@ function initParticles() {
     particlesGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     particlesGeo.setAttribute('color', new THREE.BufferAttribute(pColors, 3));
 
-    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
+    starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 45.0 : 35.0) * (isMobile ? 0.85 : 1.0);
+    starFieldUniforms.uCamZ.value = camZ;
+    starFieldUniforms.uZOffset.value = 0.0;
 
-    if (isWebGPU) {
-        particlesMat = new THREE.PointsMaterial({
-            size: (currentGraphicsQuality === 'simple' ? 3.5 : 2.5) * (isMobile ? 0.85 : 1.0),
-            vertexColors: true,
-            transparent: true,
-            opacity: 0.65,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-    } else {
-        starFieldUniforms.uParticleSize.value = (currentGraphicsQuality === 'simple' ? 45.0 : 35.0) * (isMobile ? 0.85 : 1.0);
-        starFieldUniforms.uCamZ.value = camZ;
-        starFieldUniforms.uZOffset.value = 0.0;
+    particlesMat = new THREE.ShaderMaterial({
+        uniforms: starFieldUniforms,
+        vertexShader: `
+            uniform float uZOffset;
+            uniform float uCamZ;
+            uniform float uParticleSize;
+            attribute vec3 color;
+            varying vec3 vColor;
 
-        particlesMat = new THREE.ShaderMaterial({
-            uniforms: starFieldUniforms,
-            vertexShader: `
-                uniform float uZOffset;
-                uniform float uCamZ;
-                uniform float uParticleSize;
-                attribute vec3 color;
-                varying vec3 vColor;
+            void main() {
+                vColor = color;
+                vec3 pos = position;
+                float relZ = pos.z - uCamZ + uZOffset;
+                float rangeZ = 810.0;
+                relZ = mod(relZ + 800.0, rangeZ) - 800.0;
+                vec3 worldPos = vec3(pos.x, pos.y, uCamZ + relZ);
+                vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
+                gl_PointSize = uParticleSize * (10.0 / -mvPosition.z);
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `,
+        fragmentShader: `
+            varying vec3 vColor;
 
-                void main() {
-                    vColor = color;
-                    vec3 pos = position;
-                    float relZ = pos.z - uCamZ + uZOffset;
-                    float rangeZ = 810.0;
-                    relZ = mod(relZ + 800.0, rangeZ) - 800.0;
-                    vec3 worldPos = vec3(pos.x, pos.y, uCamZ + relZ);
-                    vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
-                    gl_PointSize = uParticleSize * (10.0 / -mvPosition.z);
-                    gl_Position = projectionMatrix * mvPosition;
-                }
-            `,
-            fragmentShader: `
-                varying vec3 vColor;
-
-                void main() {
-                    float dist = length(gl_PointCoord - vec2(0.5));
-                    if (dist > 0.5) discard;
-                    float alpha = (1.0 - dist * 2.0) * 0.6;
-                    gl_FragColor = vec4(vColor, alpha);
-                }
-            `,
-            transparent: true,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false
-        });
-    }
+            void main() {
+                float dist = length(gl_PointCoord - vec2(0.5));
+                if (dist > 0.5) discard;
+                float alpha = (1.0 - dist * 2.0) * 0.6;
+                gl_FragColor = vec4(vColor, alpha);
+            }
+        `,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false
+    });
 
     starField = new THREE.Points(particlesGeo, particlesMat);
     starField.frustumCulled = false;
@@ -1251,81 +1231,38 @@ async function initThree() {
     camera = new THREE.PerspectiveCamera(aspect < 1 ? 75 : 60, aspect, 0.1, 1000);
     camera.position.set(0, 6.8, 13.2);
 
-    const rawApi = localStorage.getItem('graphicsAPI') || 'webgl';
-    const currentApi = (rawApi === 'd2ViZ3B1' || rawApi === 'webgpu') ? 'webgpu' : 'webgl';
-    console.log("[Renderer] Selected graphics API setting:", currentApi);
     const activePowerPref = (typeof preferDiscreteGpu !== 'undefined' ? preferDiscreteGpu : (localStorage.getItem('preferDiscreteGpu') !== 'false')) ? "high-performance" : "default";
 
-    if (currentApi === 'webgpu') {
-        try {
-            const RendererClass = THREE.WebGPURenderer || THREE.Renderer;
-            if (!RendererClass) {
-                throw new Error("Three.js WebGPU/Renderer constructor not found.");
-            }
-            renderer = new RendererClass({
-                antialias: antialiasingEnabled,
-                powerPreference: activePowerPref,
-                alpha: false,
-                stencil: false
-            });
-            await renderer.init();
+    const isAntialias = typeof antialiasingEnabled !== 'undefined' ? antialiasingEnabled : false;
+    const canvas = document.createElement('canvas');
+    const glOptions = {
+        antialias: isAntialias,
+        powerPreference: activePowerPref,
+        alpha: false,
+        stencil: false
+    };
+    const context = canvas.getContext('webgl2', glOptions);
 
-            if (renderer.backend && renderer.backend.isWebGPUBackend) {
-                console.log("%c[Renderer] Using WebGPU backend", "color: #00ffff; font-weight: bold;");
-            } else {
-                console.log("%c[Renderer] WebGPU not supported. Falling back to WebGL 2 backend", "color: #ff00ff; font-weight: bold;");
-            }
-            if (typeof window.updateGpuDetectionUI === 'function') {
-                window.updateGpuDetectionUI();
-            }
-        } catch (e) {
-            console.warn("WebGPU initialization failed, falling back to WebGL 2:", e);
-            initWebGLRenderer();
-        }
-    } else {
-        initWebGLRenderer();
+    renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        context: context,
+        antialias: isAntialias,
+        powerPreference: activePowerPref,
+        alpha: false,
+        stencil: false
+    });
+    renderer.shadowMap.enabled = false;
+
+    console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
+
+    if (typeof window.updateGpuDetectionUI === 'function') {
+        window.updateGpuDetectionUI();
     }
 
-    function initWebGLRenderer() {
-        const canvas = document.createElement('canvas');
-        const glOptions = {
-            antialias: antialiasingEnabled,
-            powerPreference: activePowerPref,
-            alpha: false,
-            stencil: false
-        };
-        const context = canvas.getContext('webgl2', glOptions);
-
-        renderer = new THREE.WebGLRenderer({
-            canvas: canvas,
-            context: context,
-            antialias: antialiasingEnabled,
-            powerPreference: activePowerPref,
-            alpha: false,
-            stencil: false
-        });
-        renderer.shadowMap.enabled = false;
-
-        console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
-
-        if (typeof window.updateGpuDetectionUI === 'function') {
-            window.updateGpuDetectionUI();
-        }
-    }
-
-    const isWebGPU = !!(THREE.ColorManagement);
-    let ambientIntensity = isWebGPU ? 0.45 : 0.85;
-    let dirIntensity = isWebGPU ? 0.9 : 1.15;
-    let hemiIntensity = isWebGPU ? 0.45 : 0.85;
-    let fillIntensity = isWebGPU ? 0.3 : 0.5;
-
-    // WebGL 2 runs on r128 (no ColorManagement). WebGPU runs on r171 (has ColorManagement).
-    if (THREE.ColorManagement) {
-        THREE.ColorManagement.enabled = true;
-        if (renderer) {
-            renderer.outputColorSpace = THREE.SRGBColorSpace || 'srgb';
-        }
-    }
+    const ambientIntensity = 0.85;
+    const dirIntensity = 1.15;
+    const hemiIntensity = 0.85;
+    const fillIntensity = 0.5;
 
     renderer.setSize(container.clientWidth, container.clientHeight);
     updatePixelRatio();
@@ -1708,10 +1645,7 @@ async function initThree() {
     const qualityRadio = document.querySelector(`input[name="graphics-quality"][value="${currentGraphicsQuality}"]`);
     if (qualityRadio) qualityRadio.checked = true;
 
-    const rawApiVal = typeof graphicsAPI !== 'undefined' ? graphicsAPI : (localStorage.getItem('graphicsAPI') || 'webgl');
-    const resolvedApiVal = (rawApiVal === 'd2ViZ3B1' || rawApiVal === 'webgpu') ? 'webgpu' : 'webgl';
-    const apiRadio = document.querySelector(`input[name="graphics-api"][value="${resolvedApiVal}"]`);
-    if (apiRadio) apiRadio.checked = true;
+
 
 
 
@@ -2321,6 +2255,13 @@ function animate() {
         lastFrameTime = now;
     }
 
+    let delta = clock.getDelta();
+    let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
+
+    if (window.AdaptivePerformanceManager) {
+        window.AdaptivePerformanceManager.tick(now, isPlaying);
+    }
+
     if (typeof recycleEnvironmentObjects === 'function' && camera) {
         recycleEnvironmentObjects(camera.position.z);
     }
@@ -2328,7 +2269,7 @@ function animate() {
     if (typeof showFpsEnabled !== 'undefined' && showFpsEnabled) {
         fpsFrameCount++;
         const elapsedFps = now - fpsLastTime;
-        if (elapsedFps >= 500) {
+        if (elapsedFps >= 100) {
             let fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
             if (fpsValue >= 140 && fpsValue <= 146) fpsValue = 144;
             else if (fpsValue >= 118 && fpsValue <= 122) fpsValue = 120;
@@ -2337,19 +2278,29 @@ function animate() {
 
             fpsFrameCount = 0;
             fpsLastTime = now;
-            if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
-            if (fpsHudEl) {
-                if (typeof window.lastDisplayedFps === 'undefined') window.lastDisplayedFps = -1;
-                if (window.lastDisplayedFps !== fpsValue) {
-                    fpsHudEl.textContent = `FPS: ${fpsValue}`;
-                    window.lastDisplayedFps = fpsValue;
+
+            if (window.FPSGraphManager) {
+                window.FPSGraphManager.record(now, fpsValue, delta);
+            } else {
+                const fpsTextEl = document.getElementById('fps-value-text');
+                if (fpsTextEl) {
+                    if (window.lastDisplayedFps !== fpsValue) {
+                        fpsTextEl.textContent = `FPS: ${fpsValue}`;
+                        window.lastDisplayedFps = fpsValue;
+                    }
+                } else {
+                    if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
+                    if (fpsHudEl) {
+                        if (typeof window.lastDisplayedFps === 'undefined') window.lastDisplayedFps = -1;
+                        if (window.lastDisplayedFps !== fpsValue) {
+                            fpsHudEl.textContent = `FPS: ${fpsValue}`;
+                            window.lastDisplayedFps = fpsValue;
+                        }
+                    }
                 }
             }
         }
     }
-
-    let delta = clock.getDelta();
-    let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
 
     // --- THUẬT TOÁN ĐỒNG BỘ NHẠC (AUDIO SYNC CORRECTION) ---
     // Liên tục kiểm tra tiến độ bài hát và bù trừ khung hình delta để ép game khớp chuẩn xác từng nhịp beat
@@ -2502,7 +2453,6 @@ function animate() {
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
         const time = clock.getElapsedTime();
-        const isWebGPUCached = typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu');
         
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
@@ -2539,11 +2489,11 @@ function animate() {
             syncSharedMaterial(window.globalTileDimmedMatCyan, currentFrameHex, tempColor);
             syncSharedMaterial(window.globalTileDimmedMatMagenta, currentFrameHex, tempColor);
 
-            if (window.globalBorderMatCyan && window.globalBorderMatCyan.color.getHex() !== (isWebGPUCached ? 0xffffff : currentFrameHex)) {
-                window.globalBorderMatCyan.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
+            if (window.globalBorderMatCyan && window.globalBorderMatCyan.color.getHex() !== currentFrameHex) {
+                window.globalBorderMatCyan.color.setHex(currentFrameHex);
             }
-            if (window.globalBorderMatMagenta && window.globalBorderMatMagenta.color.getHex() !== (isWebGPUCached ? 0xffffff : currentFrameHex)) {
-                window.globalBorderMatMagenta.color.setHex(isWebGPUCached ? 0xffffff : currentFrameHex);
+            if (window.globalBorderMatMagenta && window.globalBorderMatMagenta.color.getHex() !== currentFrameHex) {
+                window.globalBorderMatMagenta.color.setHex(currentFrameHex);
             }
 
             syncSharedGlow(window.globalTileGlowMatCyan, currentFrameHex);
@@ -2851,7 +2801,7 @@ function animate() {
                     starFieldUniforms.uCamZ.value = typeof camera !== 'undefined' ? camera.position.z : 10;
                 }
             } else if (starField.geometry && starField.geometry.attributes.position && moveZ !== 0) {
-                // Tối ưu hoá fallback (WebGPU/Mobile/CPU): tự xử lý reposition/wrap-around
+                // Tối ưu hoá fallback (CPU): tự xử lý reposition/wrap-around
                 const posArr = starField.geometry.attributes.position.array;
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : 10;
                 const rangeZ = 810.0;
@@ -3351,11 +3301,10 @@ function animate() {
         }
 
         const baseGray = 0.015;
-        tempColor.setHex(tileColorHex).multiplyScalar(0.035);
-        tempColor.r += baseGray;
-        tempColor.g += baseGray;
-        tempColor.b += baseGray;
-        targetBgColor.copy(tempColor);
+        targetBgColor.setHex(tileColorHex).multiplyScalar(0.035);
+        targetBgColor.r += baseGray;
+        targetBgColor.g += baseGray;
+        targetBgColor.b += baseGray;
 
         const lerpSpeed = 3.0;
         const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
@@ -3378,6 +3327,9 @@ function animate() {
 
 // --- DỌN DẸP ĐỐI TƯỢNG CŨ ---
 function cleanUpOldObjects() {
+    if (window.AdaptivePerformanceManager) {
+        window.AdaptivePerformanceManager.reset();
+    }
     if (typeof GameEffectsManager !== 'undefined') {
         GameEffectsManager.reset();
     }
@@ -4737,6 +4689,9 @@ function startGame() {
 }
 
 function setupGameStates() {
+    if (window.AdaptivePerformanceManager) {
+        window.AdaptivePerformanceManager.reset();
+    }
     jumpElapsedTime = 0;
     isFalling = false;
     isRescuing = false;

@@ -24,6 +24,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'advancedBoundariesEnabled',
     'showHitboxEnabled',
     'showFpsEnabled',
+    'showFpsGraphEnabled',
     'uiAnimationsEnabled',
     'spawnAnimationMode',
     'sensitivity',
@@ -197,9 +198,10 @@ if (rawPerfMode !== null) {
     }
 }
 let currentGraphicsQuality = localStorage.getItem('graphicsQuality') || 'fhd';
-let rawAPI = localStorage.getItem('graphicsAPI') || 'webgl';
-let graphicsAPI = (rawAPI === 'd2ViZ3B1' || rawAPI === 'webgpu') ? 'webgpu' : 'webgl';
-window.isWebGPUCache = (graphicsAPI === 'webgpu');
+let rawAPI = 'webgl';
+let graphicsAPI = 'webgl';
+window.isWebGPUCache = false;
+try { localStorage.removeItem('graphicsAPI'); } catch (_) {}
 let preferDiscreteGpu = JSON.parse(localStorage.getItem('preferDiscreteGpu')) !== false;
 let isRelativePC = JSON.parse(localStorage.getItem('isRelativePC')) === true;
 let rawInputEnabled = JSON.parse(localStorage.getItem('rawInputEnabled')) === true;
@@ -216,6 +218,7 @@ let showBoundariesEnabled = JSON.parse(localStorage.getItem('showBoundariesEnabl
 let advancedBoundariesEnabled = JSON.parse(localStorage.getItem('advancedBoundariesEnabled')) !== false;
 let showHitboxEnabled = JSON.parse(localStorage.getItem('showHitboxEnabled')) === true;
 let showFpsEnabled = JSON.parse(localStorage.getItem('showFpsEnabled')) === true;
+let showFpsGraphEnabled = JSON.parse(localStorage.getItem('showFpsGraphEnabled')) !== false;
 let uiAnimationsEnabled = JSON.parse(localStorage.getItem('uiAnimationsEnabled')) !== false;
 let spawnAnimationMode = localStorage.getItem('spawnAnimationMode') || 'slide';
 if (spawnAnimationMode === 'fall') {
@@ -281,7 +284,7 @@ function detectActiveGPU() {
         let gl = null;
         let isTemp = false;
 
-        // 1. Kiểm tra từ Three.js WebGPURenderer hoặc WebGLRenderer đang chạy
+        // 1. Kiểm tra từ Three.js WebGLRenderer đang chạy
         if (typeof renderer !== 'undefined' && renderer) {
             if (renderer.backend) {
                 gl = renderer.backend.gl || renderer.backend.context;
@@ -365,32 +368,9 @@ function applyGpuInfoToDOM(gpuInfo) {
     }
 }
 
-async function updateGpuDetectionUI() {
-    // 1. Áp dụng ngay lập tức qua WebGL
+function updateGpuDetectionUI() {
     let gpuInfo = detectActiveGPU();
     applyGpuInfoToDOM(gpuInfo);
-
-    // 2. Thử truy vấn WebGPU Adapter nếu hỗ trợ để cập nhật chính xác thêm
-    if (navigator.gpu && typeof navigator.gpu.requestAdapter === 'function') {
-        try {
-            const powerPref = (typeof preferDiscreteGpu !== 'undefined' ? preferDiscreteGpu : (localStorage.getItem('preferDiscreteGpu') !== 'false')) ? 'high-performance' : 'default';
-            const adapter = await navigator.gpu.requestAdapter({ powerPreference: powerPref });
-            if (adapter && adapter.info) {
-                let infoName = adapter.info.description || adapter.info.device || adapter.info.architecture || "";
-                if (adapter.info.vendor && !infoName.toLowerCase().includes(adapter.info.vendor.toLowerCase())) {
-                    infoName = `${adapter.info.vendor.toUpperCase()} ${infoName}`;
-                }
-                if (infoName) {
-                    const cleanName = formatGPUName(infoName);
-                    const lowerGpu = (infoName + " " + cleanName).toLowerCase();
-                    const isDedicated = lowerGpu.includes('nvidia') || lowerGpu.includes('geforce') || lowerGpu.includes('rtx') || lowerGpu.includes('gtx') || lowerGpu.includes('quadro') || lowerGpu.includes('radeon') || lowerGpu.includes('rx ') || (lowerGpu.includes('arc') && (lowerGpu.includes('intel') || lowerGpu.includes('a770') || lowerGpu.includes('a750') || lowerGpu.includes('a580') || lowerGpu.includes('a380') || lowerGpu.includes('a350') || lowerGpu.includes('a370') || lowerGpu.includes('b580') || lowerGpu.includes('b570') || lowerGpu.includes('pro'))) || (lowerGpu.includes('amd') && !lowerGpu.includes('radeon(tm) graphics') && !lowerGpu.includes('vega')) || (lowerGpu.includes('apple') && (lowerGpu.includes('pro') || lowerGpu.includes('max') || lowerGpu.includes('ultra')));
-                    gpuInfo = { gpuName: cleanName, rawGpuName: infoName, isDedicated };
-                    cachedGpuInfo = gpuInfo;
-                    applyGpuInfoToDOM(gpuInfo);
-                }
-            }
-        } catch (_) {}
-    }
 }
 window.updateGpuDetectionUI = updateGpuDetectionUI;
 
@@ -831,84 +811,6 @@ function applySettings() {
             localStorage.setItem('graphicsQuality', currentGraphicsQuality);
         }
 
-        const selectedApiNode = document.querySelector('input[name="graphics-api"]:checked');
-        if (selectedApiNode) {
-            const oldApi = graphicsAPI;
-            graphicsAPI = selectedApiNode.value;
-            localStorage.setItem('graphicsAPI', graphicsAPI);
-            if (oldApi !== graphicsAPI) {
-                if (graphicsAPI === 'webgpu' && !navigator.gpu) {
-                    let msgKey = "webgpu_unsupported_msg";
-                    let msg = "Trình duyệt hoặc thiết bị của bạn không hỗ trợ WebGPU. Trò chơi sẽ tự động chuyển sang WebGL 2 làm phương án dự phòng.";
-                    if (!isSecure && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-                        msgKey = "webgpu_insecure_msg";
-                        msg = "WebGPU chỉ được phép hoạt động trên kết nối bảo mật (HTTPS) hoặc localhost. Bạn đang chạy dưới HTTP không bảo mật, do đó WebGPU bị chặn và game sẽ tự động đưa về WebGL 2 làm phương án dự phòng.";
-                    } else {
-                        msgKey = "webgpu_disabled_msg";
-                        msg = "Trình duyệt hoặc card đồ họa của bạn chưa được bật WebGPU (hoặc tính năng Tăng tốc phần cứng - Hardware Acceleration đang tắt). Game sẽ tự động chuyển sang WebGL 2 làm phương án dự phòng.";
-                    }
-                    if (typeof showCyberModal === 'function') {
-                        showCyberModal({
-                            title: typeof t === 'function' ? t('webgpu_warning_title') : "CẢNH BÁO WEB-GPU",
-                            message: (typeof t === 'function' ? t(msgKey) : msg) + " " + (typeof t === 'function' ? t('msg_confirm_reload') : "Bạn vẫn muốn tiếp tục tải lại trang?"),
-                            type: 'confirm',
-                            confirmText: typeof t === 'function' ? t('btn_confirm') : "TIẾP TỤC",
-                            cancelText: typeof t === 'function' ? t('btn_cancel') : "HỦY",
-                            onConfirm: () => {
-                                if (typeof playEndSceneAndReload === 'function') {
-                                    playEndSceneAndReload(() => location.reload());
-                                } else {
-                                    location.reload();
-                                }
-                            },
-                            onCancel: () => {
-                                const prevRadio = document.querySelector(`input[name="graphics-api"][value="${oldApi}"]`);
-                                if (prevRadio) {
-                                    prevRadio.checked = true;
-                                    graphicsAPI = oldApi;
-                                    localStorage.setItem('graphicsAPI', oldApi);
-                                    applySettings();
-                                }
-                            }
-                        });
-                        return;
-                    }
-                }
-
-                if (typeof showCyberModal === 'function') {
-                    showCyberModal({
-                        title: typeof t === 'function' ? t('graphics_api_change_title') : "THAY ĐỔI API ĐỒ HỌA",
-                        message: typeof t === 'function' ? t('graphics_api_change_desc') : "Thay đổi API đồ họa đòi hỏi tải lại trang để áp dụng. Tải lại ngay?",
-                        type: 'confirm',
-                        confirmText: typeof t === 'function' ? t('btn_confirm') : "TIẾP TỤC",
-                        cancelText: typeof t === 'function' ? t('btn_cancel') : "HỦY",
-                        onConfirm: () => {
-                            if (typeof playEndSceneAndReload === 'function') {
-                                playEndSceneAndReload(() => location.reload());
-                            } else {
-                                location.reload();
-                            }
-                        },
-                        onCancel: () => {
-                            const prevRadio = document.querySelector(`input[name="graphics-api"][value="${oldApi}"]`);
-                            if (prevRadio) {
-                                prevRadio.checked = true;
-                                graphicsAPI = oldApi;
-                                localStorage.setItem('graphicsAPI', oldApi);
-                                applySettings();
-                            }
-                        }
-                    });
-                } else {
-                    if (typeof playEndSceneAndReload === 'function') {
-                        playEndSceneAndReload(() => location.reload());
-                    } else {
-                        location.reload();
-                    }
-                }
-            }
-        }
-
     }
 
     // Gọi các hàm khởi tạo lại từ game.js nếu đã tồn tại
@@ -1005,10 +907,7 @@ function applySettings() {
         const initialBevelEnabled = currentBevelEnabled && (initialDetailScale >= 0.3);
         const initialBevelThickness = initialBevelEnabled ? currentBevelThickness * Math.min(1.0, initialDetailScale) : 0;
 
-        const rawApiValY = localStorage.getItem('graphicsAPI') || 'webgl';
-        const isWebGPUModeY = (rawApiValY === 'd2ViZ3B1' || rawApiValY === 'webgpu');
-
-        surfaceY = isWebGPUModeY ? (currentTileThickness / 2 + initialBevelThickness) : (currentTileThickness / 2);
+        surfaceY = currentTileThickness / 2;
         minFloor = surfaceY + ballRadius;
 
         // Re-calculate geometry nếu game.js đã load helper
@@ -1066,18 +965,10 @@ function applySettings() {
                 cachedGlowGeo.center();
             }
 
-            const rawApiVal = localStorage.getItem('graphicsAPI') || 'webgl';
-            const isWebGPUMode = (rawApiVal === 'd2ViZ3B1' || rawApiVal === 'webgpu');
-
             const updateMesh = (t) => {
                 if (!t) return;
                 if (t.geometry && typeof cachedTileGeo !== 'undefined' && cachedTileGeo) t.geometry = cachedTileGeo;
-                const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
-                const bevelEnabled = currentBevelEnabled && (detailScale >= 0.3);
-                const actualBevelThickness = bevelEnabled ? currentBevelThickness * Math.min(1.0, detailScale) : 0;
-                const surfaceZ = isWebGPUMode
-                    ? (currentTileThickness / 2 + actualBevelThickness)
-                    : (currentTileThickness / 2);
+                const surfaceZ = currentTileThickness / 2;
 
                 const border = t.getObjectByName("borderLine") || (t.userData && t.userData.borderLine);
                 if (border && border.position) {
@@ -1446,24 +1337,7 @@ function applySettings() {
         }
     });
 
-    if (typeof graphicsApiOptions !== 'undefined' && graphicsApiOptions) {
-        const radioApiLabels = graphicsApiOptions.querySelectorAll('label');
-        radioApiLabels.forEach(label => {
-            const input = label.querySelector('input');
-            const span = label.querySelector('span');
-            if (input.checked) {
-                label.classList.add('border-cyan-400', 'shadow-[0_0_10px_rgba(6,182,212,0.1)]');
-                label.classList.remove('border-cyan-500/20');
-                span.classList.add('text-cyan-400');
-                span.classList.remove('text-gray-300');
-            } else {
-                label.classList.remove('border-cyan-400', 'shadow-[0_0_10px_rgba(6,182,212,0.1)]');
-                label.classList.add('border-cyan-500/20');
-                span.classList.remove('text-cyan-400');
-                span.classList.add('text-gray-300');
-            }
-        });
-    }
+
 
 
     // Kích cỡ chữ hiển thị
@@ -1683,26 +1557,49 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const toggleShowFps = document.getElementById('toggle-show-fps');
+    const toggleShowFpsGraph = document.getElementById('toggle-show-fps-graph');
+    const labelShowFpsGraph = document.getElementById('label-show-fps-graph');
     const fpsHud = document.getElementById('fps-hud');
-    if (fpsHud) {
-        if (showFpsEnabled) {
-            fpsHud.classList.remove('hidden');
-        } else {
-            fpsHud.classList.add('hidden');
+
+    function syncFpsHudAndSettings() {
+        if (typeof FPSGraphManager !== 'undefined') {
+            FPSGraphManager.setVisible(showFpsEnabled);
+            FPSGraphManager.setGraphVisible(showFpsGraphEnabled);
+        } else if (fpsHud) {
+            if (showFpsEnabled) {
+                fpsHud.classList.remove('hidden');
+                fpsHud.style.display = 'flex';
+            } else {
+                fpsHud.classList.add('hidden');
+                fpsHud.style.display = 'none';
+            }
+        }
+        if (labelShowFpsGraph) {
+            if (showFpsEnabled) {
+                labelShowFpsGraph.classList.remove('opacity-40', 'pointer-events-none');
+            } else {
+                labelShowFpsGraph.classList.add('opacity-40', 'pointer-events-none');
+            }
         }
     }
+
+    syncFpsHudAndSettings();
+
     if (toggleShowFps) {
         toggleShowFps.checked = showFpsEnabled;
         toggleShowFps.addEventListener('change', (e) => {
             showFpsEnabled = e.target.checked;
             localStorage.setItem('showFpsEnabled', showFpsEnabled);
-            if (fpsHud) {
-                if (showFpsEnabled) {
-                    fpsHud.classList.remove('hidden');
-                } else {
-                    fpsHud.classList.add('hidden');
-                }
-            }
+            syncFpsHudAndSettings();
+        });
+    }
+
+    if (toggleShowFpsGraph) {
+        toggleShowFpsGraph.checked = showFpsGraphEnabled;
+        toggleShowFpsGraph.addEventListener('change', (e) => {
+            showFpsGraphEnabled = e.target.checked;
+            localStorage.setItem('showFpsGraphEnabled', showFpsGraphEnabled);
+            syncFpsHudAndSettings();
         });
     }
 
@@ -1758,9 +1655,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    if (typeof graphicsApiOptions !== 'undefined' && graphicsApiOptions) {
-        graphicsApiOptions.addEventListener('change', applySettings);
-    }
+
 
     const toggleDiscreteGpu = document.getElementById('toggle-discrete-gpu');
     if (toggleDiscreteGpu) {

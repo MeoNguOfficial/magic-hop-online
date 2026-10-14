@@ -184,9 +184,8 @@ let cachedGlowGeo = null;
 let currentGlowHeight = 1.0;
 const trailPool = [];
 
-// Tối ưu: Biến cache kiểm tra WebGPU để tránh đọc localStorage liên tục trong render loop
-const _rawApiGlobal = localStorage.getItem('graphicsAPI') || 'webgl';
-window.isWebGPUCache = (_rawApiGlobal === 'd2ViZ3B1' || _rawApiGlobal === 'webgpu');
+// WebGPU tạm dừng phát triển, cố định sử dụng WebGL 2 hiệu năng cao
+window.isWebGPUCache = false;
 
 // Tối ưu: Dùng lại đối tượng để tránh Garbage Collector
 const tempColor = new THREE.Color();

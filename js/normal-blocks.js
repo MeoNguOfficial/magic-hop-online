@@ -130,50 +130,25 @@ function initGlowMaterials() {
         capMaterial = new THREE.MeshBasicMaterial({ visible: false });
     }
     if (!baseGlowMaterial) {
-        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-        if (isWebGPU) {
-            const texture = getSharedGlowTexture();
-            baseGlowMaterial = new THREE.MeshBasicMaterial({
-                color: 0x00ffff,
-                map: texture,
-                transparent: true,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                side: THREE.FrontSide
-            });
-        } else {
-            baseGlowMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    color: { value: new THREE.Color(0x00ffff) },
-                    opacityMultiplier: { value: 1.0 },
-                    glowHeight: { value: 1.5 }
-                },
-                vertexShader: glowVertexShader,
-                fragmentShader: glowFragmentShader,
-                transparent: true,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                side: THREE.FrontSide
-            });
-        }
-    }
-}
-
-function createTileGlowMaterial(activeColor) {
-    initGlowMaterials();
-    const hex = (activeColor !== undefined && activeColor !== null) ? activeColor : 0x00ffff;
-    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-
-    if (isWebGPU) {
-        return new THREE.MeshBasicMaterial({
-            color: hex,
-            map: getSharedGlowTexture(),
+        baseGlowMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                color: { value: new THREE.Color(0x00ffff) },
+                opacityMultiplier: { value: 1.0 },
+                glowHeight: { value: 1.5 }
+            },
+            vertexShader: glowVertexShader,
+            fragmentShader: glowFragmentShader,
             transparent: true,
             blending: THREE.AdditiveBlending,
             depthWrite: false,
             side: THREE.FrontSide
         });
     }
+}
+
+function createTileGlowMaterial(activeColor) {
+    initGlowMaterials();
+    const hex = (activeColor !== undefined && activeColor !== null) ? activeColor : 0x00ffff;
 
     return new THREE.ShaderMaterial({
         uniforms: {
@@ -410,7 +385,6 @@ window.prewarmTilePool = prewarmTilePool;
 // --- OBJECT POOL: LẤY / TẠO MESH CHO GẠCH ---
 function getTileFromPool(forceNew = false) {
     let tile;
-    const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
 
     if (!forceNew && tilePool.length > 0) {
         tile = tilePool.pop();
@@ -462,14 +436,10 @@ function getTileFromPool(forceNew = false) {
             cachedTileGeo.center();
         }
 
-        const isWebGPU = (typeof window.isWebGPUCache !== 'undefined' ? window.isWebGPUCache : (typeof graphicsAPI !== 'undefined' && graphicsAPI === 'webgpu'));
-
         if (!window.globalTileMatCyan) {
-            window.globalTileMatCyan = isWebGPU
-                ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.8, depthWrite: false, color: 0x00ffff })
-                : (currentGraphicsQuality === 'simple'
-                    ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, color: 0x00ffff })
-                    : new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.45, shininess: 120, depthWrite: false, color: 0x00ffff, emissive: 0x001122 }));
+            window.globalTileMatCyan = (currentGraphicsQuality === 'simple'
+                ? new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.6, depthWrite: false, color: 0x00ffff })
+                : new THREE.MeshPhongMaterial({ transparent: true, opacity: 0.45, shininess: 120, depthWrite: false, color: 0x00ffff, emissive: 0x001122 }));
         }
         if (!window.globalTileMatMagenta) {
             window.globalTileMatMagenta = window.globalTileMatCyan.clone();
@@ -490,11 +460,7 @@ function getTileFromPool(forceNew = false) {
 
         if (!tile.userData) tile.userData = {};
 
-        const bevelEnabled = currentBevelEnabled && (detailScale >= 0.3);
-        const actualBevelThickness = bevelEnabled ? currentBevelThickness * Math.min(1.0, detailScale) : 0;
-        const surfaceZ = isWebGPU
-            ? (currentTileThickness / 2 + actualBevelThickness)
-            : (currentTileThickness / 2);
+        const surfaceZ = currentTileThickness / 2;
 
         // Tạo viền
         if (!cachedBorderGeo) {
@@ -506,10 +472,10 @@ function getTileFromPool(forceNew = false) {
             cachedBorderGeo = new THREE.ShapeGeometry(shape, Math.max(1, Math.round(baseCurve * detailScale)));
         }
         if (!window.globalBorderMatCyan) {
-            window.globalBorderMatCyan = new THREE.MeshBasicMaterial({ color: isWebGPU ? 0xffffff : 0x00ffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            window.globalBorderMatCyan = new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
         }
         if (!window.globalBorderMatMagenta) {
-            window.globalBorderMatMagenta = new THREE.MeshBasicMaterial({ color: isWebGPU ? 0xffffff : 0xff00ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            window.globalBorderMatMagenta = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
         }
         const borderLine = new THREE.Mesh(cachedBorderGeo, window.globalBorderMatCyan);
         borderLine.name = "borderLine";
