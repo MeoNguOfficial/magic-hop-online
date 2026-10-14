@@ -897,8 +897,9 @@ window.FakeBlocksManager = {
                 fTile.userData.exitVelZ += 60 * delta;
                 fTile.position.z += fTile.userData.exitVelZ * delta;
 
-                // Fade tất cả các phần hiển thị
-                const fadeDelta = 2.2 * delta;
+                // Fade tất cả các phần hiển thị (tỷ lệ thuận theo tốc độ game)
+                const fadeSpeedMult = Math.max(1.0, Math.min(3.0, (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * 0.95));
+                const fadeDelta = 2.2 * delta * fadeSpeedMult;
                 fTile.userData.exitOpacity = Math.max(0, fTile.userData.exitOpacity - fadeDelta);
                 const op = fTile.userData.exitOpacity;
 

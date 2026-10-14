@@ -31,6 +31,8 @@
             isApplied: false
         },
 
+        _cappedForSpeed: false,
+
         init: function () {
             this.reset();
         },
@@ -42,6 +44,7 @@
             this.fpsHistory = [];
             this.frameCount = 0;
             this.maxDetectedFps = 60;
+            this._cappedForSpeed = false;
             this.lastTime = performance.now();
             this.restore();
         },
@@ -50,12 +53,29 @@
          * Được gọi mỗi frame từ hàm animate() trong game.js
          * @param {number} now - performance.now()
          * @param {boolean} isPlaying - game đang trong trạng thái chơi
+         * @param {number} [gameSpeed=1.0] - tốc độ hiện tại của game
          */
-        tick: function (now, isPlaying) {
+        tick: function (now, isPlaying, gameSpeed = 1.0) {
             if (!this.enabled || !isPlaying) {
                 this.frameCount = 0;
                 this.lastTime = now;
                 return;
+            }
+
+            // Bảo vệ băng thông Fillrate khi tốc độ game cao (gameSpeed >= 1.35)
+            // Trên màn hình DPI cao (Windows scaling 125%/150% hoặc Retina), pixelRatio > 1.0
+            // làm GPU phải render lượng pixel gấp 1.5x - 2.25x gây drop FPS sâu khi tốc độ tăng cao.
+            if (gameSpeed >= 1.35 && typeof renderer !== 'undefined' && renderer) {
+                if (renderer.getPixelRatio() > 1.0) {
+                    this.saveOriginalState();
+                    renderer.setPixelRatio(1.0);
+                    this._cappedForSpeed = true;
+                }
+            } else if (this._cappedForSpeed && gameSpeed < 1.15 && this.currentLevel === 0) {
+                this._cappedForSpeed = false;
+                if (typeof updatePixelRatio === 'function') {
+                    updatePixelRatio();
+                }
             }
 
             this.frameCount++;
@@ -100,15 +120,17 @@
                 targetFps = 120;
             }
 
-            const lowThreshold = targetFps * 0.82;   // Drop hơn 18% dưới target (VD: < 118 FPS trên màn 144Hz)
-            const highThreshold = targetFps * 0.94;  // Đạt >= 94% target (VD: >= 135 FPS trên màn 144Hz)
+            const criticalThreshold = targetFps * 0.75; // Sụt giảm sâu > 25% (VD: < 108 FPS trên 144Hz)
+            const lowThreshold = targetFps * 0.85;      // Drop hơn 15% dưới target (VD: < 122 FPS trên 144Hz)
+            const highThreshold = targetFps * 0.94;     // Đạt >= 94% target (VD: >= 135 FPS trên 144Hz)
 
             // Nếu FPS tụt dưới ngưỡng cho phép
             if (avgFps < lowThreshold) {
-                this.lowFpsDuration += intervalSec;
+                // Nếu sụt sâu, tích lũy thời gian nhanh gấp đôi để can thiệp kịp thời sau 0.5s thay vì chờ 1.0s
+                this.lowFpsDuration += (avgFps < criticalThreshold) ? (intervalSec * 2.0) : intervalSec;
                 this.highFpsDuration = 0;
 
-                // Nếu FPS thấp liên tục trong 1.0 giây
+                // Nếu FPS thấp liên tục trong 1.0 giây (hoặc 0.5s khi drop sâu)
                 if (this.lowFpsDuration >= 1.0) {
                     this.lowFpsDuration = 0;
                     this.escalateThrottling();

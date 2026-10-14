@@ -247,6 +247,19 @@ window.GameEffectsManager = {
         if (typeof shockwavesEnabled !== 'undefined' && !shockwavesEnabled) return;
         if (!tile || !this.scene) return;
 
+        // Giới hạn số lượng sóng xung kích đồng thời tối đa (tối ưu hóa fillrate khi nhịp dồn dập ở tốc độ cao)
+        const maxActiveWaves = Math.min(this.maxShockwaves || 8, 8);
+        while (this.shockwaves.length >= maxActiveWaves) {
+            const oldest = this.shockwaves.shift();
+            oldest.mesh.visible = false;
+            if (oldest.isDiamondBurst) {
+                this.diamondShockwavePool.push(oldest.mesh);
+            } else {
+                this.shockwavePool.push(oldest.mesh);
+            }
+            this.shockwaveDataPool.push(oldest);
+        }
+
         const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
 
         if (comboCount >= 6 && this.cachedDiamondShockwaveGeo) {
@@ -328,6 +341,7 @@ window.GameEffectsManager = {
     },
 
     updateShockwaves: function (delta, camZ) {
+        const speedScale = Math.max(1.0, Math.min(2.5, (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * 0.85));
         for (let i = this.shockwaves.length - 1; i >= 0; i--) {
             const sw = this.shockwaves[i];
 
@@ -352,7 +366,7 @@ window.GameEffectsManager = {
             const startScale = sw.startScale || 1.0;
             const progress = Math.min(1.0, (sw.scale - startScale) / (sw.maxScale - startScale + 0.001));
 
-            const currentSpeed = sw.speed * (1.0 - progress * 0.45);
+            const currentSpeed = sw.speed * speedScale * (1.0 - progress * 0.45);
             sw.scale += currentSpeed * delta;
             sw.mesh.scale.set(sw.scale, sw.scale, 1);
 
@@ -665,10 +679,11 @@ window.GameEffectsManager = {
         if (this.ballTrailInstancedMesh) {
             const mArray = this.ballTrailInstancedMesh.instanceMatrix.array;
             let colorsNeedUpdate = false;
+            const trailFadeRate = 1.8 + Math.min(1.5, (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * 0.6);
 
             for (let i = this.ballTrailSegments.length - 1; i >= 0; i--) {
                 const seg = this.ballTrailSegments[i];
-                seg.life -= delta * 2.0;
+                seg.life -= delta * trailFadeRate;
                 if (seg.life <= 0) {
                     this.ballTrailPool.push(seg);
                     const last = this.ballTrailSegments.pop();

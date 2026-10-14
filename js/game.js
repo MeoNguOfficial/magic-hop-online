@@ -392,6 +392,7 @@ function getBoundaryPulseData(mesh, speed, startZ, maxDistance, opacity) {
     return { mesh, speed, startZ, maxDistance, opacity };
 }
 
+let lastBoundaryPulseSpawnTime = 0;
 function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale = 1.0) {
     if (typeof GameEffectsManager !== 'undefined') {
         GameEffectsManager.triggerShockwave(tile, themeColor, customOffsetScale, tileScale, typeof comboCount !== 'undefined' ? comboCount : 0);
@@ -405,7 +406,12 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
             if (activeDifficulty === 'hard') activeColor = 0xff0055;
             else if (activeDifficulty === 'asian') activeColor = 0xaa00ff;
         }
-        GameEffectsManager.spawnBoundaryPulses(camZ, furthestZ, activeColor);
+        // Tối ưu hóa: Giới hạn tần suất xung nhịp biên ở tốc độ cao (tối thiểu 240ms) để chống nghẽn fillrate
+        const nowMs = performance.now();
+        if (nowMs - lastBoundaryPulseSpawnTime >= 240) {
+            lastBoundaryPulseSpawnTime = nowMs;
+            GameEffectsManager.spawnBoundaryPulses(camZ, furthestZ, activeColor);
+        }
     }
 }
 
@@ -497,13 +503,10 @@ const SPARK_COLORS_TIER4 = ['#f0abfc', '#d946ef', '#a855f7', '#38bdf8', '#ffffff
 const SPARK_COLORS_TIER3 = ['#ff5500', '#ff0055', '#ffaa00', '#ffffff'];
 const SPARK_COLORS_TIER2 = ['#ffaa00', '#ffee00', '#38bdf8', '#ffffff'];
 
+let comboHideDeadline = 0;
+
 function triggerPerfectComboUI(comboCount) {
     if (!comboEl) return;
-
-    if (comboHideTimer) {
-        clearTimeout(comboHideTimer);
-        comboHideTimer = null;
-    }
 
     // 1. Gán Text & Class từ Cache O(1) không tốn bộ nhớ (Zero Allocation)
     const newText = COMBO_TEXT_CACHE[comboCount] || ('PERFECT x' + comboCount);
@@ -515,15 +518,14 @@ function triggerPerfectComboUI(comboCount) {
         comboEl.className = newClass;
     }
 
-    // 2. Smooth Zoom Out tự động sau 1.5 giây khi nghỉ nhịp
-    comboHideTimer = setTimeout(() => {
-        clearPerfectComboUI();
-    }, 1500);
+    // 2. Smooth Zoom Out tự động sau 1.5 giây bằng deadline frame-driven (Zero GC timer)
+    comboHideDeadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 1500;
 }
 
 function clearPerfectComboUI() {
     if (!comboEl) return;
 
+    comboHideDeadline = 0;
     if (comboHideTimer) {
         clearTimeout(comboHideTimer);
         comboHideTimer = null;
@@ -635,6 +637,8 @@ function calculateRescueParabola(currentTargetIndex) {
     // Yêu cầu: Tốc độ cứu bóng không được nhanh hơn cũng không được chậm hơn -> Giữ nguyên standardFlightTime
     targetFlightTime = standardFlightTime;
 
+    // Tắt vi chỉnh tốc độ nhạc đột ngột khi cứu bóng mép để tránh hiện tượng méo tiếng / lợn cợn nhịp nhạc
+    /*
     if (typeof audio !== 'undefined' && audio && !audio.paused && nextTile.userData && typeof nextTile.userData.time === 'number') {
         const now = audio.currentTime;
         const targetBeatTime = nextTile.userData.time;
@@ -655,6 +659,7 @@ function calculateRescueParabola(currentTargetIndex) {
             audio.playbackRate = clampedRate;
         }
     }
+    */
 
     flightTime = targetFlightTime;
     ballVelocityZ = -distanceZ / flightTime;
@@ -2259,7 +2264,12 @@ function animate() {
     let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
 
     if (window.AdaptivePerformanceManager) {
-        window.AdaptivePerformanceManager.tick(now, isPlaying);
+        window.AdaptivePerformanceManager.tick(now, isPlaying, typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0);
+    }
+
+    // Zero-GC combo UI auto-hide check
+    if (comboHideDeadline > 0 && now >= comboHideDeadline) {
+        clearPerfectComboUI();
     }
 
     if (typeof recycleEnvironmentObjects === 'function' && camera) {
@@ -2396,10 +2406,22 @@ function animate() {
                     gameSpeed = 1.0;
                 }
                 // Tốc độ game speed có thể lên rất cao, nhưng tốc độ phát nhạc audio.playbackRate vẫn giữ trần 3.0x
-                const targetPlaybackRate = Math.round(Math.min(3.0, gameSpeed) * 100) / 100;
-                // Chỉ set lại playbackRate nếu có sự thay đổi rõ rệt (tránh việc gọi API liên tục gây khựng Audio/Browser)
-                if (Math.abs(audio.playbackRate - targetPlaybackRate) >= 0.01) {
-                    audio.playbackRate = targetPlaybackRate;
+                const targetPlaybackRate = Math.min(3.0, gameSpeed);
+                // Làm mượt tốc độ phát nhạc (Smooth Audio Glissando / Continuous Interpolation)
+                // Cập nhật mượt mà mỗi ~45ms với bước vi chỉnh siêu nhỏ (<= 0.004) để triệt tiêu hoàn toàn méo tiếng / giật nấc
+                if (typeof window._lastAudioPlaybackRateSetTime === 'undefined') {
+                    window._lastAudioPlaybackRateSetTime = 0;
+                }
+                const timeSinceLastRateSet = now - window._lastAudioPlaybackRateSetTime;
+                if (timeSinceLastRateSet >= 45) {
+                    const currentRate = audio.playbackRate;
+                    const diff = targetPlaybackRate - currentRate;
+                    if (Math.abs(diff) >= 0.002) {
+                        const maxStep = 0.004;
+                        const step = Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
+                        audio.playbackRate = Math.round((currentRate + step) * 1000) / 1000;
+                        window._lastAudioPlaybackRateSetTime = now;
+                    }
                 }
             }
 
@@ -2579,13 +2601,18 @@ function animate() {
                 }
             }
 
-            // Cập nhật lò xo nhún cho gạch khi tiếp xúc bóng
-            if (tile.userData.springY !== undefined && tile.userData.springVelocityY !== undefined) {
-                let springY = tile.userData.springY;
-                let springVelocityY = tile.userData.springVelocityY;
+            // Cập nhật lò xo nhún cho gạch khi tiếp xúc bóng (Fast-path: bỏ qua tính toán cho các khối tĩnh đang nghỉ)
+            const uData = tile.userData;
+            const hasSpring = (uData.springY !== 0 && uData.springY !== undefined) || (uData.springVelocityY !== 0 && uData.springVelocityY !== undefined);
+            const needsScale = uData.scale !== targetTileScaleCached;
+            const needsHitbox = uData.hitboxMesh && (!uData._hitboxInit || uData.hitboxMesh.visible !== isHitboxVisibleCached);
+
+            if (hasSpring || needsScale || needsHitbox) {
+                let springY = uData.springY || 0;
+                let springVelocityY = uData.springVelocityY || 0;
                 let didSpringChange = false;
 
-                if (springY !== 0 || springVelocityY !== 0) {
+                if (hasSpring) {
                     const springForce = -springK * springY;
                     const dampingForce = -springC * springVelocityY;
                     const acceleration = (springForce + dampingForce) / springMass;
@@ -2598,30 +2625,30 @@ function animate() {
                         springVelocityY = 0;
                     }
 
-                    tile.userData.springY = springY;
-                    tile.userData.springVelocityY = springVelocityY;
+                    uData.springY = springY;
+                    uData.springVelocityY = springVelocityY;
                     didSpringChange = true;
                 }
 
-                if (tile.userData.baseY === undefined) {
-                    tile.userData.baseY = 0;
+                if (uData.baseY === undefined) {
+                    uData.baseY = 0;
                 }
 
-                const targetTileY = tile.userData.baseY + springY;
+                const targetTileY = uData.baseY + springY;
                 if (didSpringChange || tile.position.y !== targetTileY) {
                     tile.position.y = targetTileY;
                 }
 
                 // Cập nhật tỷ lệ scale mượt mà khi gạch thu nhỏ hoặc phóng to
-                let currentScale = tile.userData.scale !== undefined ? tile.userData.scale : 1.0;
+                let currentScale = uData.scale !== undefined ? uData.scale : 1.0;
                 let scaleChanged = false;
                 if (Math.abs(currentScale - targetTileScaleCached) > 0.001) {
                     currentScale += (targetTileScaleCached - currentScale) * scaleLerpSpeed;
-                    tile.userData.scale = currentScale;
+                    uData.scale = currentScale;
                     scaleChanged = true;
-                } else if (tile.userData.scale !== targetTileScaleCached) {
+                } else if (uData.scale !== targetTileScaleCached) {
                     currentScale = targetTileScaleCached;
-                    tile.userData.scale = targetTileScaleCached;
+                    uData.scale = targetTileScaleCached;
                     scaleChanged = true;
                 }
 
@@ -2630,11 +2657,11 @@ function animate() {
                 }
 
                 // Cập nhật hitbox cho gạch nếu cơ chế Show Hitbox bật
-                if (tile.userData.hitboxMesh) {
-                    const hitboxMesh = tile.userData.hitboxMesh;
+                if (uData.hitboxMesh) {
+                    const hitboxMesh = uData.hitboxMesh;
                     if (hitboxMesh.visible !== isHitboxVisibleCached) hitboxMesh.visible = isHitboxVisibleCached;
-                    if (isHitboxVisibleCached && (scaleChanged || !tile.userData._hitboxInit)) {
-                        tile.userData._hitboxInit = true;
+                    if (isHitboxVisibleCached && (scaleChanged || !uData._hitboxInit)) {
+                        uData._hitboxInit = true;
                         const scaleX = tileWidth + (ballRadius * 2.5 / currentScale);
                         const scaleY = tileLength + (ballRadius * 1.64 / currentScale);
                         hitboxMesh.scale.set(scaleX, scaleY, 0.4);
@@ -2707,6 +2734,18 @@ function animate() {
             currentTileIndex--;
         }
 
+        // Tối ưu hóa: Giới hạn tối đa 3 exitingTiles cùng lúc để tránh tích tụ draw call/overdraw ở tốc độ cao
+        while (exitingTiles.length > 3) {
+            const oldest = exitingTiles.shift();
+            oldest.userData.exitVelZ = undefined;
+            oldest.userData.exitStartZ = undefined;
+            oldest.userData.exitOpacity = undefined;
+            pushTileToPool(oldest);
+        }
+
+        const fadeSpeedMult = Math.max(1.0, Math.min(3.0, gameSpeed * 0.95));
+        const fadeDelta = 2.2 * delta * fadeSpeedMult;
+
         for (let i = exitingTiles.length - 1; i >= 0; i--) {
             const et = exitingTiles[i];
 
@@ -2728,7 +2767,6 @@ function animate() {
             et.position.z += et.userData.exitVelZ * delta;
 
             // Cập nhật biến tính toán thời điểm thu hồi (mô phỏng opacity để giữ logic thu hồi cũ)
-            const fadeDelta = 2.2 * delta;
             et.userData.exitOpacity = Math.max(0, et.userData.exitOpacity - fadeDelta);
             const op = et.userData.exitOpacity;
 
