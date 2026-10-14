@@ -1207,8 +1207,8 @@ function createBall() {
         new THREE.MeshPhongMaterial({
             color: 0x00ffff,
             emissive: 0x003355,
-            specular: 0x445566,
-            shininess: 32
+            specular: 0x000000,
+            shininess: 0
         });
 
     ball = new THREE.Mesh(ballGeo, ballMat);
@@ -1294,12 +1294,7 @@ async function initThree() {
             alpha: false,
             stencil: false
         };
-        let context = canvas.getContext('webgl2', glOptions);
-        let usingWebGL2 = true;
-        if (!context) {
-            context = canvas.getContext('webgl', glOptions) || canvas.getContext('experimental-webgl', glOptions);
-            usingWebGL2 = false;
-        }
+        const context = canvas.getContext('webgl2', glOptions);
 
         renderer = new THREE.WebGLRenderer({
             canvas: canvas,
@@ -1311,11 +1306,7 @@ async function initThree() {
         });
         renderer.shadowMap.enabled = false;
 
-        if (usingWebGL2) {
-            console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
-        } else {
-            console.log("%c[Renderer] WebGL 2 not supported. Using WebGL 1 context (" + activePowerPref + ")", "color: #ff00ff; font-weight: bold;");
-        }
+        console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
 
         if (typeof window.updateGpuDetectionUI === 'function') {
             window.updateGpuDetectionUI();
@@ -2261,10 +2252,10 @@ function updateBallCustomization() {
             ball.material.emissive.setHex(emissiveColor);
         }
         if (ball.material.specular) {
-            ball.material.specular.setHex(0x445566);
+            ball.material.specular.setHex(0x000000);
         }
         if (typeof ball.material.shininess !== 'undefined') {
-            ball.material.shininess = 32;
+            ball.material.shininess = 0;
         }
     }
 }
@@ -5414,12 +5405,11 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) pauseGame();
 });
 
-// --- KIỂM TRA WEBGL SUPPORT ---
+// --- KIỂM TRA WEBGL 2 SUPPORT ---
 function isWebGLSupported() {
     try {
         const canvas = document.createElement('canvas');
-        return !!(window.WebGL2RenderingContext && canvas.getContext('webgl2')) ||
-            !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+        return !!(window.WebGL2RenderingContext && canvas.getContext('webgl2'));
     } catch (e) {
         return false;
     }

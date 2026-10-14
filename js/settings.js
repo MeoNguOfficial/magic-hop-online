@@ -290,7 +290,7 @@ function detectActiveGPU() {
                 gl = renderer.getContext();
             }
             if (!gl && renderer.domElement && typeof renderer.domElement.getContext === 'function') {
-                gl = renderer.domElement.getContext('webgl2') || renderer.domElement.getContext('webgl');
+                gl = renderer.domElement.getContext('webgl2');
             }
         }
 
@@ -299,7 +299,7 @@ function detectActiveGPU() {
             const testCanvas = document.createElement('canvas');
             const powerPref = (typeof preferDiscreteGpu !== 'undefined' ? preferDiscreteGpu : (localStorage.getItem('preferDiscreteGpu') !== 'false')) ? 'high-performance' : 'default';
             const opts = { powerPreference: powerPref, alpha: false, stencil: false, antialias: false };
-            gl = testCanvas.getContext('webgl2', opts) || testCanvas.getContext('webgl', opts) || testCanvas.getContext('experimental-webgl', opts);
+            gl = testCanvas.getContext('webgl2', opts);
             isTemp = true;
         }
 
