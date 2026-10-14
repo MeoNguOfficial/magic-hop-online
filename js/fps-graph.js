@@ -119,6 +119,19 @@
          * @param {number} currentFps - FPS đo được
          * @param {number} delta - Frame delta seconds
          */
+        reset: function () {
+            const now = performance.now();
+            minMaxResetTime = now;
+            minFps = 60;
+            maxFps = 60;
+            const seedFps = (typeof window.maxFps === 'number' && window.maxFps > 0 && window.maxFps <= 360) ? window.maxFps : 60;
+            for (let i = 0; i < SAMPLES; i++) {
+                fpsBuffer[i] = seedFps;
+            }
+            bufferIndex = 0;
+            lastDrawTime = 0;
+        },
+
         record: function (now, currentFps, delta) {
             if (!isVisible) return;
 
@@ -149,7 +162,7 @@
             }
 
             if (fpsTimeEl) {
-                const safeDelta = (typeof delta === 'number' && !isNaN(delta) && delta > 0) ? delta : (1 / Math.max(1, currentFps));
+                const safeDelta = (typeof delta === 'number' && !isNaN(delta) && delta > 0 && delta <= 0.05) ? delta : (1 / Math.max(1, currentFps));
                 const frameMs = Math.round(safeDelta * 10000) / 10;
                 fpsTimeEl.textContent = `${frameMs.toFixed(1)}ms`;
             }

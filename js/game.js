@@ -2280,31 +2280,38 @@ function animate() {
         fpsFrameCount++;
         const elapsedFps = now - fpsLastTime;
         if (elapsedFps >= 100) {
-            let fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
-            if (fpsValue >= 140 && fpsValue <= 146) fpsValue = 144;
-            else if (fpsValue >= 118 && fpsValue <= 122) fpsValue = 120;
-            else if (fpsValue >= 58 && fpsValue <= 62) fpsValue = 60;
-            else if (fpsValue >= 236 && fpsValue <= 244) fpsValue = 240;
-
-            fpsFrameCount = 0;
-            fpsLastTime = now;
-
-            if (window.FPSGraphManager) {
-                window.FPSGraphManager.record(now, fpsValue, delta);
+            if (elapsedFps > 250) {
+                // Nếu khoảng thời gian đo bị gián đoạn do pause, chuyển tab hoặc hitch OS,
+                // reset bộ đếm để không tính ra mẫu FPS rác (1-10 FPS) làm biến dạng đồ thị.
+                fpsFrameCount = 0;
+                fpsLastTime = now;
             } else {
-                const fpsTextEl = document.getElementById('fps-value-text');
-                if (fpsTextEl) {
-                    if (window.lastDisplayedFps !== fpsValue) {
-                        fpsTextEl.textContent = `FPS: ${fpsValue}`;
-                        window.lastDisplayedFps = fpsValue;
-                    }
+                let fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
+                if (fpsValue >= 140 && fpsValue <= 146) fpsValue = 144;
+                else if (fpsValue >= 118 && fpsValue <= 122) fpsValue = 120;
+                else if (fpsValue >= 58 && fpsValue <= 62) fpsValue = 60;
+                else if (fpsValue >= 236 && fpsValue <= 244) fpsValue = 240;
+
+                fpsFrameCount = 0;
+                fpsLastTime = now;
+
+                if (window.FPSGraphManager) {
+                    window.FPSGraphManager.record(now, fpsValue, delta);
                 } else {
-                    if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
-                    if (fpsHudEl) {
-                        if (typeof window.lastDisplayedFps === 'undefined') window.lastDisplayedFps = -1;
+                    const fpsTextEl = document.getElementById('fps-value-text');
+                    if (fpsTextEl) {
                         if (window.lastDisplayedFps !== fpsValue) {
-                            fpsHudEl.textContent = `FPS: ${fpsValue}`;
+                            fpsTextEl.textContent = `FPS: ${fpsValue}`;
                             window.lastDisplayedFps = fpsValue;
+                        }
+                    } else {
+                        if (!fpsHudEl) fpsHudEl = document.getElementById('fps-hud');
+                        if (fpsHudEl) {
+                            if (typeof window.lastDisplayedFps === 'undefined') window.lastDisplayedFps = -1;
+                            if (window.lastDisplayedFps !== fpsValue) {
+                                fpsHudEl.textContent = `FPS: ${fpsValue}`;
+                                window.lastDisplayedFps = fpsValue;
+                            }
                         }
                     }
                 }
@@ -3624,7 +3631,7 @@ async function gameVictory() {
         textShadow = "0 0 8px rgba(16,185,129,0.6)";
     }
 
-    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} backdrop-blur-md min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
+    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} bg-[#060414]/90 min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
 
     const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
     const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
@@ -4105,7 +4112,7 @@ async function gameOver() {
     if (!gameOverMiniCard) {
         gameOverMiniCard = document.createElement('div');
         gameOverMiniCard.id = 'gameover-mini-music-card';
-        gameOverMiniCard.className = "absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border border-cyan-500/40 bg-cyan-950/80 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none";
+        gameOverMiniCard.className = "absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border border-cyan-500/40 bg-[#060414]/90 shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none";
         gameoverScreen.appendChild(gameOverMiniCard);
     }
 
@@ -4706,29 +4713,26 @@ function startGame() {
         gainNode.gain.value = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
     }
 
-    const startLogic = () => {
-        clock.getDelta();
-        setupGameStates();
-    };
+    clock.getDelta();
+    setupGameStates();
 
-    if (audioCtx && !useAudioContextFallback) {
-        audioCtx.resume().then(() => {
-            let playPromise = audio.play();
-            if (playPromise !== undefined) {
-                playPromise.then(startLogic).catch(startLogic);
-            } else startLogic();
-        });
-    } else {
+    if (audioCtx && !useAudioContextFallback && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+    }
+    if (audio) {
         let playPromise = audio.play();
-        if (playPromise !== undefined) {
-            playPromise.then(startLogic).catch(startLogic);
-        } else startLogic();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch((e) => console.warn('[Audio] Start play error:', e));
+        }
     }
 }
 
 function setupGameStates() {
     if (window.AdaptivePerformanceManager) {
         window.AdaptivePerformanceManager.reset();
+    }
+    if (window.FPSGraphManager && typeof window.FPSGraphManager.reset === 'function') {
+        window.FPSGraphManager.reset();
     }
     jumpElapsedTime = 0;
     isFalling = false;
@@ -4768,6 +4772,11 @@ function setupGameStates() {
     isPlaying = true;
     clock.getDelta();
     clock.getDelta();
+
+    const now = performance.now();
+    lastFrameTime = now;
+    fpsLastTime = now;
+    fpsFrameCount = 0;
 }
 
 function returnToMenu() {
@@ -4865,6 +4874,12 @@ function showTapToOverlay(type = 'start') {
         tapToPlayOverlay.removeEventListener('touchstart', globalHandleTap);
         globalHandleTap = null;
     }
+
+    // Reset ngay bộ đếm frame và clock để transition mở overlay không bị gán nhầm là drop FPS
+    const nowPerf = performance.now();
+    lastFrameTime = nowPerf;
+    fpsLastTime = nowPerf;
+    fpsFrameCount = 0;
     
     tapToPlayOverlay.style.display = 'flex';
     countdownNumber.innerText = type === 'start' ? t('tap_play') : t('tap_resume');
@@ -4922,6 +4937,12 @@ function showTapToOverlay(type = 'start') {
         }
         if (typeof stopPregameMusic === 'function') stopPregameMusic();
 
+        // Reset thời gian đo FPS tại thời điểm nhấp để bỏ qua hoàn toàn độ trễ sự kiện click
+        const tapNow = performance.now();
+        lastFrameTime = tapNow;
+        fpsLastTime = tapNow;
+        fpsFrameCount = 0;
+
         if (type === 'start') {
             startGame();
         } else {
@@ -4931,26 +4952,24 @@ function showTapToOverlay(type = 'start') {
 
     let tapBackBtn = document.getElementById('tap-back-btn');
     if (tapBackBtn) {
-        const newTapBackBtn = tapBackBtn.cloneNode(true);
-        tapBackBtn.parentNode.replaceChild(newTapBackBtn, tapBackBtn);
-        tapBackBtn = newTapBackBtn;
+        if (!tapBackBtn._hasTapListener) {
+            tapBackBtn._hasTapListener = true;
+            const stopProp = (e) => e.stopPropagation();
+            ['mousedown', 'touchstart', 'dblclick'].forEach(evt => tapBackBtn.addEventListener(evt, stopProp));
 
+            tapBackBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                tapToPlayOverlay.style.display = 'none';
+                if (globalHandleTap) {
+                    tapToPlayOverlay.removeEventListener('click', globalHandleTap);
+                    tapToPlayOverlay.removeEventListener('touchstart', globalHandleTap);
+                    globalHandleTap = null;
+                }
+                if (typeof stopPregameMusic === 'function') stopPregameMusic();
+                returnToMenu();
+            });
+        }
         tapBackBtn.style.display = type === 'start' ? 'flex' : 'none';
-
-        const stopProp = (e) => e.stopPropagation();
-        ['mousedown', 'touchstart', 'dblclick'].forEach(evt => tapBackBtn.addEventListener(evt, stopProp));
-
-        tapBackBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            tapToPlayOverlay.style.display = 'none';
-            if (globalHandleTap) {
-                tapToPlayOverlay.removeEventListener('click', globalHandleTap);
-                tapToPlayOverlay.removeEventListener('touchstart', globalHandleTap);
-                globalHandleTap = null;
-            }
-            if (typeof stopPregameMusic === 'function') stopPregameMusic();
-            returnToMenu();
-        });
     }
 
     const relaxWarning = document.getElementById('relax-mode-warning');
@@ -4966,85 +4985,90 @@ function showTapToOverlay(type = 'start') {
     if (!miniCard) {
         miniCard = document.createElement('div');
         miniCard.id = 'tap-mini-music-card';
-        miniCard.className = "absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border border-cyan-500/40 bg-cyan-950/80 backdrop-blur-md shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none";
+        miniCard.className = "absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border border-cyan-500/40 bg-[#060414]/90 shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none";
         tapToPlayOverlay.appendChild(miniCard);
     }
 
-    const song = activePlaylist[selectedSongIndex];
+    const song = (activePlaylist && activePlaylist[selectedSongIndex]) ? activePlaylist[selectedSongIndex] : {};
     const songName = song.name || song.title || "Unknown Track";
     const songArtist = song.artist || "Unknown Artist";
+    const songKey = `${song.id || ''}_${songName}_${songArtist}_${song.copyright_status || ''}_${song.warning_alert || ''}`;
 
-    let copyrightColorClass = 'text-yellow-500';
-    let copyrightBgClass = 'bg-yellow-900/30';
-    let copyrightBorderClass = 'border-yellow-500/40';
-    let copyrightHoverBgClass = 'hover:bg-yellow-800/50';
-    let copyrightHoverTextClass = 'hover:text-yellow-400';
-    let copyrightShadowClass = 'shadow-[0_0_10px_rgba(234,179,8,0.2)]';
+    if (miniCard._lastSongKey !== songKey) {
+        miniCard._lastSongKey = songKey;
 
-    const hasVerified = song.verified === true || song.verified === 1 || song.verified === 'true';
-    if (song.copyright_status || hasVerified) {
-        const statusLower = (song.copyright_status || '').toLowerCase();
-        if (hasVerified || statusLower === 'verified' || statusLower.includes('no copyright') || statusLower.includes('free') || statusLower.includes('safe') || statusLower.includes('không')) {
-            copyrightColorClass = 'text-green-500';
-            copyrightBgClass = 'bg-green-900/30';
-            copyrightBorderClass = 'border-green-500/40';
-            copyrightHoverBgClass = 'hover:bg-green-800/50';
-            copyrightHoverTextClass = 'hover:text-green-400';
-            copyrightShadowClass = 'shadow-[0_0_10px_rgba(34,197,94,0.2)]';
-        } else if (statusLower.includes('copyright') || statusLower.includes('claimed')) {
-            copyrightColorClass = 'text-red-500';
-            copyrightBgClass = 'bg-red-900/30';
-            copyrightBorderClass = 'border-red-500/40';
-            copyrightHoverBgClass = 'hover:bg-red-800/50';
-            copyrightHoverTextClass = 'hover:text-red-400';
-            copyrightShadowClass = 'shadow-[0_0_10px_rgba(239,68,68,0.2)]';
-        }
-    }
+        let copyrightColorClass = 'text-yellow-500';
+        let copyrightBgClass = 'bg-yellow-900/30';
+        let copyrightBorderClass = 'border-yellow-500/40';
+        let copyrightHoverBgClass = 'hover:bg-yellow-800/50';
+        let copyrightHoverTextClass = 'hover:text-yellow-400';
+        let copyrightShadowClass = 'shadow-[0_0_10px_rgba(234,179,8,0.2)]';
 
-    miniCard.innerHTML = `
-        <div class="flex items-center gap-3 w-full">
-            <div class="w-10 h-10 rounded-full bg-cyan-900/50 flex items-center justify-center border border-cyan-500/50 shrink-0">
-                <svg class="w-5 h-5 text-pink-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-            </div>
-            <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
-                <div class="text-cyan-300 font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: 0 0 8px rgba(34,211,238,0.6)">
-                    <span class="marquee-text inline-block">${songName}</span>
-                </div>
-                <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
-            </div>
-        </div>
-        ${song.copyright_status ? `
-        <div id="copyright-check-btn" class="mt-3 w-full py-1.5 px-3 rounded-lg ${copyrightBgClass} border ${copyrightBorderClass} text-[10px] font-orbitron font-bold ${copyrightColorClass} ${copyrightHoverBgClass} ${copyrightHoverTextClass} transition-all flex justify-between items-center cursor-pointer pointer-events-auto ${copyrightShadowClass}">
-            <div id="copyright-text-wrapper" class="flex-1 overflow-hidden whitespace-nowrap min-w-0 max-w-[65vw] sm:max-w-[250px] pr-2">
-                <span>COPYRIGHT: <span class="text-gray-300">${song.copyright_status}</span></span>
-            </div>
-            <svg class="w-3 h-3 ${copyrightColorClass} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-        </div>
-        ` : ''}
-        ${song.warning_alert ? `
-        <div class="mt-3 w-full py-1.5 px-3 rounded-lg bg-red-950/40 border border-red-500/50 text-[10px] font-bold text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.3)] flex items-center justify-center text-center">
-            <span class="animate-pulse whitespace-normal leading-relaxed font-orbitron uppercase drop-shadow-md">⚠️ ${song.warning_alert}</span>
-        </div>
-        ` : ''}
-    `;
-
-    const tapMarquee = miniCard.querySelector('.marquee-text');
-    if (tapMarquee && typeof window.applyMarquee === 'function') {
-        window.applyMarquee(tapMarquee);
-    }
-
-    if (typeof setupCopyrightCheck === 'function') {
-        setupCopyrightCheck(songName, songArtist, song.copyright_status);
-    }
-
-    if (song.copyright_status) {
-        setTimeout(() => {
-            const wrapper = document.getElementById('copyright-text-wrapper');
-            if (wrapper && wrapper.scrollWidth > wrapper.clientWidth + 2) {
-                const textHtml = wrapper.innerHTML;
-                wrapper.innerHTML = '<marquee scrollamount="3" behavior="scroll" direction="left" class="w-full">' + textHtml + '</marquee>';
+        const hasVerified = song.verified === true || song.verified === 1 || song.verified === 'true';
+        if (song.copyright_status || hasVerified) {
+            const statusLower = (song.copyright_status || '').toLowerCase();
+            if (hasVerified || statusLower === 'verified' || statusLower.includes('no copyright') || statusLower.includes('free') || statusLower.includes('safe') || statusLower.includes('không')) {
+                copyrightColorClass = 'text-green-500';
+                copyrightBgClass = 'bg-green-900/30';
+                copyrightBorderClass = 'border-green-500/40';
+                copyrightHoverBgClass = 'hover:bg-green-800/50';
+                copyrightHoverTextClass = 'hover:text-green-400';
+                copyrightShadowClass = 'shadow-[0_0_10px_rgba(34,197,94,0.2)]';
+            } else if (statusLower.includes('copyright') || statusLower.includes('claimed')) {
+                copyrightColorClass = 'text-red-500';
+                copyrightBgClass = 'bg-red-900/30';
+                copyrightBorderClass = 'border-red-500/40';
+                copyrightHoverBgClass = 'hover:bg-red-800/50';
+                copyrightHoverTextClass = 'hover:text-red-400';
+                copyrightShadowClass = 'shadow-[0_0_10px_rgba(239,68,68,0.2)]';
             }
-        }, 100);
+        }
+
+        miniCard.innerHTML = `
+            <div class="flex items-center gap-3 w-full">
+                <div class="w-10 h-10 rounded-full bg-cyan-900/50 flex items-center justify-center border border-cyan-500/50 shrink-0">
+                    <svg class="w-5 h-5 text-pink-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                </div>
+                <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
+                    <div class="text-cyan-300 font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: 0 0 8px rgba(34,211,238,0.6)">
+                        <span class="marquee-text inline-block">${songName}</span>
+                    </div>
+                    <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
+                </div>
+            </div>
+            ${song.copyright_status ? `
+            <div id="copyright-check-btn" class="mt-3 w-full py-1.5 px-3 rounded-lg ${copyrightBgClass} border ${copyrightBorderClass} text-[10px] font-orbitron font-bold ${copyrightColorClass} ${copyrightHoverBgClass} ${copyrightHoverTextClass} transition-all flex justify-between items-center cursor-pointer pointer-events-auto ${copyrightShadowClass}">
+                <div id="copyright-text-wrapper" class="flex-1 overflow-hidden whitespace-nowrap min-w-0 max-w-[65vw] sm:max-w-[250px] pr-2">
+                    <span>COPYRIGHT: <span class="text-gray-300">${song.copyright_status}</span></span>
+                </div>
+                <svg class="w-3 h-3 ${copyrightColorClass} shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            </div>
+            ` : ''}
+            ${song.warning_alert ? `
+            <div class="mt-3 w-full py-1.5 px-3 rounded-lg bg-red-950/40 border border-red-500/50 text-[10px] font-bold text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.3)] flex items-center justify-center text-center">
+                <span class="animate-pulse whitespace-normal leading-relaxed font-orbitron uppercase drop-shadow-md">⚠️ ${song.warning_alert}</span>
+            </div>
+            ` : ''}
+        `;
+
+        const tapMarquee = miniCard.querySelector('.marquee-text');
+        if (tapMarquee && typeof window.applyMarquee === 'function') {
+            window.applyMarquee(tapMarquee);
+        }
+
+        if (typeof setupCopyrightCheck === 'function') {
+            setupCopyrightCheck(songName, songArtist, song.copyright_status);
+        }
+
+        if (song.copyright_status) {
+            setTimeout(() => {
+                const wrapper = document.getElementById('copyright-text-wrapper');
+                if (wrapper && wrapper.scrollWidth > wrapper.clientWidth + 2) {
+                    const textHtml = wrapper.innerHTML;
+                    wrapper.innerHTML = '<marquee scrollamount="3" behavior="scroll" direction="left" class="w-full">' + textHtml + '</marquee>';
+                }
+            }, 100);
+        }
     }
 
     // --- QUICK SETTINGS PANEL ---
@@ -5054,13 +5078,13 @@ function showTapToOverlay(type = 'start') {
     if (!quickSettingsBtn) {
         quickSettingsBtn = document.createElement('button');
         quickSettingsBtn.id = 'tap-quick-settings-btn';
-        quickSettingsBtn.className = "absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-8 bg-cyan-950/80 border-t border-l border-r border-cyan-500/50 rounded-t-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-800 transition-all z-[60] backdrop-blur-sm cursor-pointer shadow-[0_0_10px_rgba(34,211,238,0.2)]";
+        quickSettingsBtn.className = "absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-8 bg-[#060414]/95 border-t border-l border-r border-cyan-500/50 rounded-t-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-800 transition-all z-[60] cursor-pointer shadow-[0_0_10px_rgba(34,211,238,0.2)]";
         quickSettingsBtn.innerHTML = `<svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 21l7-7 7 7"></path></svg>`;
         tapToPlayOverlay.appendChild(quickSettingsBtn);
 
         quickSettingsPanel = document.createElement('div');
         quickSettingsPanel.id = 'tap-quick-settings-panel';
-        quickSettingsPanel.className = "absolute bottom-0 left-0 w-full rounded-t-2xl border-t border-cyan-500/40 bg-cyan-950/95 backdrop-blur-xl shadow-[0_-10px_30px_rgba(34,211,238,0.3)] p-5 flex flex-col gap-3 z-[60] font-rajdhani transform translate-y-full transition-transform duration-300 ease-out";
+        quickSettingsPanel.className = "absolute bottom-0 left-0 w-full rounded-t-2xl border-t border-cyan-500/40 bg-[#060414]/98 shadow-[0_-10px_30px_rgba(34,211,238,0.3)] p-5 flex flex-col gap-3 z-[60] font-rajdhani transform translate-y-full transition-transform duration-300 ease-out";
 
         quickSettingsPanel.innerHTML = `
             <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3 mb-1">
@@ -5348,8 +5372,6 @@ function showTapToOverlay(type = 'start') {
         setCb('qs-show-boundaries', typeof showBoundariesEnabled !== 'undefined' ? showBoundariesEnabled : true);
         setCb('qs-advanced-boundaries', typeof advancedBoundariesEnabled !== 'undefined' ? advancedBoundariesEnabled : true);
 
-        if (typeof applyTranslations === 'function') applyTranslations();
-
         quickSettingsPanel.classList.add('translate-y-full');
         if (quickSettingsBtn) {
             quickSettingsBtn.style.opacity = '1';
@@ -5374,21 +5396,33 @@ function pauseGame() {
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) return;
     isPlaying = false;
     if (audio) audio.pause();
+
+    const now = performance.now();
+    lastFrameTime = now;
+    fpsLastTime = now;
+    fpsFrameCount = 0;
+
     showTapToOverlay('resume');
 }
 
 function resumeGame() {
-    const resumeLogic = () => {
-        isPlaying = true;
-        clock.getDelta();
-    };
+    isPlaying = true;
+    clock.getDelta();
+
+    const now = performance.now();
+    lastFrameTime = now;
+    fpsLastTime = now;
+    fpsFrameCount = 0;
+
+    if (window.AdaptivePerformanceManager) {
+        window.AdaptivePerformanceManager.reset();
+    }
+
     if (audio) {
         let playPromise = audio.play();
-        if (playPromise !== undefined) {
-            playPromise.then(resumeLogic).catch(resumeLogic);
-        } else resumeLogic();
-    } else {
-        resumeLogic();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch((e) => console.warn('[Audio] Resume play error:', e));
+        }
     }
 }
 
