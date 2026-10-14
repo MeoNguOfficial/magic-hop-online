@@ -581,6 +581,7 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     contain: strict;
     transform: translate3d(0, 0, 0);
     will-change: contents;
+    filter: drop-shadow(0 0 3px rgba(0, 240, 255, 0.45));
 }
 
 

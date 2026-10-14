@@ -14,6 +14,7 @@
         lastTime: 0,
         frameCount: 0,
         rollingFps: 60,
+        maxDetectedFps: 60,
         fpsHistory: [],
         maxHistory: 5,
         
@@ -40,6 +41,7 @@
             this.highFpsDuration = 0;
             this.fpsHistory = [];
             this.frameCount = 0;
+            this.maxDetectedFps = 60;
             this.lastTime = performance.now();
             this.restore();
         },
@@ -59,11 +61,15 @@
             this.frameCount++;
             const elapsed = now - this.lastTime;
 
-            // Đo FPS mỗi 600ms để có mẫu đo ổn định, tránh spike tức thời
-            if (elapsed >= 600) {
+            // Đo FPS mỗi 500ms để phản ứng nhanh và chính xác
+            if (elapsed >= 500) {
                 const currentFps = (this.frameCount * 1000) / elapsed;
                 this.frameCount = 0;
                 this.lastTime = now;
+
+                if (currentFps > this.maxDetectedFps) {
+                    this.maxDetectedFps = currentFps;
+                }
 
                 this.fpsHistory.push(currentFps);
                 if (this.fpsHistory.length > this.maxHistory) {
@@ -82,29 +88,44 @@
         },
 
         evaluatePerformance: function (avgFps, intervalSec) {
-            // Nếu FPS tụt dưới 48 (bắt đầu có hiện tượng giật/drop khung hình trên màn hình 60Hz+)
-            if (avgFps < 48) {
+            // Tự động nhận diện tần số quét màn hình (60Hz, 120Hz, 144Hz, 240Hz)
+            let targetFps = 60;
+            if (typeof window.maxFps !== 'undefined' && window.maxFps > 0 && window.maxFps <= 360 && window.maxFps !== 362) {
+                targetFps = window.maxFps;
+            } else if (this.maxDetectedFps > 180) {
+                targetFps = 240;
+            } else if (this.maxDetectedFps > 130) {
+                targetFps = 144;
+            } else if (this.maxDetectedFps > 95) {
+                targetFps = 120;
+            }
+
+            const lowThreshold = targetFps * 0.82;   // Drop hơn 18% dưới target (VD: < 118 FPS trên màn 144Hz)
+            const highThreshold = targetFps * 0.94;  // Đạt >= 94% target (VD: >= 135 FPS trên màn 144Hz)
+
+            // Nếu FPS tụt dưới ngưỡng cho phép
+            if (avgFps < lowThreshold) {
                 this.lowFpsDuration += intervalSec;
                 this.highFpsDuration = 0;
 
-                // Nếu FPS thấp liên tục trong 1.2 giây
-                if (this.lowFpsDuration >= 1.2) {
+                // Nếu FPS thấp liên tục trong 1.0 giây
+                if (this.lowFpsDuration >= 1.0) {
                     this.lowFpsDuration = 0;
                     this.escalateThrottling();
                 }
             } 
-            // Nếu FPS ổn định trên 57 FPS
-            else if (avgFps >= 57) {
+            // Nếu FPS ổn định trên ngưỡng an toàn
+            else if (avgFps >= highThreshold) {
                 this.highFpsDuration += intervalSec;
                 this.lowFpsDuration = 0;
 
-                // Nếu FPS cao ổn định trong 4 giây liên tiếp và đang bị throttle
-                if (this.highFpsDuration >= 4.0 && this.currentLevel > 0) {
+                // Nếu FPS cao ổn định trong 3.5 giây liên tiếp và đang bị throttle
+                if (this.highFpsDuration >= 3.5 && this.currentLevel > 0) {
                     this.highFpsDuration = 0;
                     this.deescalateThrottling();
                 }
             } else {
-                // FPS ở ngưỡng an toàn (48 - 57), giảm dần bộ đếm
+                // FPS ở ngưỡng an toàn, giảm dần bộ đếm
                 this.lowFpsDuration = Math.max(0, this.lowFpsDuration - intervalSec * 0.5);
                 this.highFpsDuration = Math.max(0, this.highFpsDuration - intervalSec * 0.5);
             }

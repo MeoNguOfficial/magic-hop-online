@@ -177,7 +177,7 @@ window.GameEffectsManager = {
     },
 
     prewarmShockwaves: function () {
-        while (this.shockwavePool.length < 30) {
+        while (this.shockwavePool.length < 50) {
             const waveMat = new THREE.MeshBasicMaterial({
                 color: 0x00ffff,
                 transparent: true,
@@ -193,23 +193,23 @@ window.GameEffectsManager = {
         }
 
         if (this.cachedDiamondShockwaveGeo) {
-            while (this.diamondShockwavePool.length < 30) {
-            const waveMat = new THREE.MeshBasicMaterial({
-                color: 0x00ffff,
-                transparent: true,
-                opacity: 1.0,
-                blending: THREE.AdditiveBlending,
-                depthWrite: false,
-                side: THREE.DoubleSide
-            });
-            const wave = new THREE.Mesh(this.cachedDiamondShockwaveGeo, waveMat);
-            wave.visible = false;
-            if (this.scene) this.scene.add(wave);
+            while (this.diamondShockwavePool.length < 50) {
+                const waveMat = new THREE.MeshBasicMaterial({
+                    color: 0x00ffff,
+                    transparent: true,
+                    opacity: 1.0,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.DoubleSide
+                });
+                const wave = new THREE.Mesh(this.cachedDiamondShockwaveGeo, waveMat);
+                wave.visible = false;
+                if (this.scene) this.scene.add(wave);
                 this.diamondShockwavePool.push(wave);
             }
         }
 
-        while (this.shockwaveDataPool.length < 60) {
+        while (this.shockwaveDataPool.length < 80) {
             this.shockwaveDataPool.push({
                 mesh: null,
                 isDiamondBurst: false,
@@ -222,7 +222,7 @@ window.GameEffectsManager = {
             });
         }
         
-        while (this.boundaryPulsePool.length < 40) {
+        while (this.boundaryPulsePool.length < 60) {
             const pMesh = new THREE.Mesh(this.pulseGeometry, this.pulseMaterialTemplate.clone());
             pMesh.visible = false;
             if (this.scene) this.scene.add(pMesh);
@@ -256,17 +256,16 @@ window.GameEffectsManager = {
                 waveMesh.visible = true;
                 waveMesh.material.color.setHex(themeColor);
                 waveMesh.material.opacity = 1.0;
+            } else if (this.shockwaves.length > 0) {
+                // Tái sử dụng sóng xung kích kim cương cũ nhất nếu pool cạn (Tránh scene.add đột ngột)
+                const oldest = this.shockwaves.shift();
+                waveMesh = oldest.mesh;
+                waveMesh.visible = true;
+                waveMesh.material.color.setHex(themeColor);
+                waveMesh.material.opacity = 1.0;
+                this.shockwaveDataPool.push(oldest);
             } else {
-                const waveMat = new THREE.MeshBasicMaterial({
-                    color: themeColor,
-                    transparent: true,
-                    opacity: 1.0,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                    side: THREE.DoubleSide
-                });
-                waveMesh = new THREE.Mesh(this.cachedDiamondShockwaveGeo, waveMat);
-                this.scene.add(waveMesh);
+                return;
             }
 
             waveMesh.position.copy(tile.position);
@@ -288,7 +287,7 @@ window.GameEffectsManager = {
             ));
 
             // Kích hoạt bụi hạt kim cương bung vút lên trời (3D Combo Dust Burst)
-            this.spawnComboBurst(tile, waveMesh.material.color, 6);
+            this.spawnComboBurst(tile, waveMesh.material.color, 4);
         } else {
             let waveLine;
             if (this.shockwavePool.length > 0) {
@@ -296,17 +295,16 @@ window.GameEffectsManager = {
                 waveLine.visible = true;
                 waveLine.material.color.setHex(themeColor);
                 waveLine.material.opacity = 1.0;
+            } else if (this.shockwaves.length > 0) {
+                // Tái sử dụng sóng xung kích cũ nhất
+                const oldest = this.shockwaves.shift();
+                waveLine = oldest.mesh;
+                waveLine.visible = true;
+                waveLine.material.color.setHex(themeColor);
+                waveLine.material.opacity = 1.0;
+                this.shockwaveDataPool.push(oldest);
             } else {
-                const waveMat = new THREE.MeshBasicMaterial({
-                    color: themeColor,
-                    transparent: true,
-                    opacity: 1.0,
-                    blending: THREE.AdditiveBlending,
-                    depthWrite: false,
-                    side: THREE.DoubleSide
-                });
-                waveLine = new THREE.Mesh(this.cachedShockwaveGeo, waveMat);
-                this.scene.add(waveLine);
+                return;
             }
 
             waveLine.position.copy(tile.position);
@@ -403,11 +401,17 @@ window.GameEffectsManager = {
                 pMesh.material.color.setHex(activeColor);
                 pMesh.material.opacity = 0.85;
                 pMesh.visible = true;
-            } else {
-                pMesh = new THREE.Mesh(this.pulseGeometry, this.pulseMaterialTemplate.clone());
+            } else if (this.boundaryPulses.length > 0) {
+                // Tái sử dụng xung cũ nhất nếu pool cạn (Tránh scene.add đột ngột)
+                const oldest = this.boundaryPulses.shift();
+                pMesh = oldest.mesh;
                 pMesh.position.set(xPos, yPos, cameraZ);
                 pMesh.material.color.setHex(activeColor);
-                if (this.scene) this.scene.add(pMesh);
+                pMesh.material.opacity = 0.85;
+                pMesh.visible = true;
+                this.boundaryPulseDataPool.push(oldest);
+            } else {
+                continue;
             }
 
             let pData = this.boundaryPulseDataPool.length > 0 ? this.boundaryPulseDataPool.pop() : {};
@@ -625,6 +629,7 @@ window.GameEffectsManager = {
             } else {
                 seg.color.setHex(0xffaa00);
             }
+            seg._needsColorSync = true;
             this.ballTrailSegments.push(seg);
         }
     },
@@ -651,12 +656,16 @@ window.GameEffectsManager = {
                     } else {
                         seg.color.setHex(0x00ffff);
                     }
+                    seg._needsColorSync = true;
                     this.ballTrailSegments.push(seg);
                 }
             }
         }
 
         if (this.ballTrailInstancedMesh) {
+            const mArray = this.ballTrailInstancedMesh.instanceMatrix.array;
+            let colorsNeedUpdate = false;
+
             for (let i = this.ballTrailSegments.length - 1; i >= 0; i--) {
                 const seg = this.ballTrailSegments[i];
                 seg.life -= delta * 2.0;
@@ -665,6 +674,7 @@ window.GameEffectsManager = {
                     const last = this.ballTrailSegments.pop();
                     if (i < this.ballTrailSegments.length) {
                         this.ballTrailSegments[i] = last;
+                        colorsNeedUpdate = true;
                     }
                     continue;
                 }
@@ -681,28 +691,54 @@ window.GameEffectsManager = {
                 seg.rotY += seg.rotSpeed * delta;
 
                 const curScale = Math.max(0.001, seg.life);
-                this.trailDummyPosition.set(seg.x, seg.y, seg.z);
-                this.trailDummyEuler.set(seg.rotX, seg.rotY, seg.rotZ);
-                this.trailDummyQuaternion.setFromEuler(this.trailDummyEuler);
-                this.trailDummyScale.set(curScale, curScale, curScale);
-                this.trailDummyMatrix.compose(this.trailDummyPosition, this.trailDummyQuaternion, this.trailDummyScale);
+                const offset = i << 4;
 
-                this.ballTrailInstancedMesh.setMatrixAt(i, this.trailDummyMatrix);
-                if (this.ballTrailInstancedMesh.setColorAt && seg.color) {
+                const cY = Math.cos(seg.rotY) * curScale;
+                const sY = Math.sin(seg.rotY) * curScale;
+                const cX = Math.cos(seg.rotX);
+                const sX = Math.sin(seg.rotX);
+
+                mArray[offset + 0] = cY;
+                mArray[offset + 1] = 0;
+                mArray[offset + 2] = -sY;
+                mArray[offset + 3] = 0;
+
+                mArray[offset + 4] = sX * sY;
+                mArray[offset + 5] = cX * curScale;
+                mArray[offset + 6] = sX * cY;
+                mArray[offset + 7] = 0;
+
+                mArray[offset + 8] = cX * sY;
+                mArray[offset + 9] = -sX * curScale;
+                mArray[offset + 10] = cX * cY;
+                mArray[offset + 11] = 0;
+
+                mArray[offset + 12] = seg.x;
+                mArray[offset + 13] = seg.y;
+                mArray[offset + 14] = seg.z;
+                mArray[offset + 15] = 1;
+
+                if (this.ballTrailInstancedMesh.setColorAt && seg.color && seg._needsColorSync) {
                     this.ballTrailInstancedMesh.setColorAt(i, seg.color);
+                    seg._needsColorSync = false;
+                    colorsNeedUpdate = true;
                 }
             }
             const activeCount = this.ballTrailSegments.length;
             const lastActive = this._lastActiveTrailCount || this.MAX_TRAIL_INSTANCES;
             if (activeCount < lastActive) {
-                this.trailDummyMatrix.makeScale(0, 0, 0);
                 for (let i = activeCount; i < lastActive; i++) {
-                    this.ballTrailInstancedMesh.setMatrixAt(i, this.trailDummyMatrix);
+                    const offset = i << 4;
+                    mArray[offset + 0] = 0;
+                    mArray[offset + 5] = 0;
+                    mArray[offset + 10] = 0;
                 }
             }
             this._lastActiveTrailCount = activeCount;
             this.ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
-            if (this.ballTrailInstancedMesh.instanceColor) this.ballTrailInstancedMesh.instanceColor.needsUpdate = true;
+            if (colorsNeedUpdate && this.ballTrailInstancedMesh.instanceColor) {
+                this.ballTrailInstancedMesh.instanceColor.needsUpdate = true;
+            }
         }
     },
 

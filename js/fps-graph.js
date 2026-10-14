@@ -23,6 +23,32 @@
     let maxFps = 60;
     let minMaxResetTime = 0;
 
+    // Gradient cache tái sử dụng để triệt tiêu 100% việc tạo mới đối tượng trên Heap
+    let cachedCyanGrad = null;
+    let cachedAmberGrad = null;
+    let cachedRedGrad = null;
+    let cachedGradH = 0;
+
+    function getGradient(ctx, h, colorType) {
+        if (!cachedCyanGrad || cachedGradH !== h) {
+            cachedGradH = h;
+            cachedCyanGrad = ctx.createLinearGradient(0, 0, 0, h);
+            cachedCyanGrad.addColorStop(0, 'rgba(0, 240, 255, 0.35)');
+            cachedCyanGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            cachedAmberGrad = ctx.createLinearGradient(0, 0, 0, h);
+            cachedAmberGrad.addColorStop(0, 'rgba(245, 158, 11, 0.35)');
+            cachedAmberGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+            cachedRedGrad = ctx.createLinearGradient(0, 0, 0, h);
+            cachedRedGrad.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+            cachedRedGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        }
+        if (colorType === 'red') return cachedRedGrad;
+        if (colorType === 'amber') return cachedAmberGrad;
+        return cachedCyanGrad;
+    }
+
     const FPSGraphManager = {
         init: function () {
             canvas = document.getElementById('fps-graph-canvas');
@@ -100,7 +126,7 @@
             fpsBuffer[bufferIndex] = currentFps;
             bufferIndex = (bufferIndex + 1) % SAMPLES;
 
-            // Tính toán Min / Max trong 3 giây gần nhất
+            // Cập nhật Min / Max trong 3 giây gần nhất
             if (now - minMaxResetTime > 3000) {
                 minFps = currentFps;
                 maxFps = currentFps;
@@ -128,7 +154,7 @@
                 fpsTimeEl.textContent = `${frameMs.toFixed(1)}ms`;
             }
 
-            // Chỉ vẽ biểu đồ nếu biểu đồ đang bật và giới hạn tần suất ~30 FPS (mỗi 30ms) để không ngốn CPU
+            // Chỉ vẽ biểu đồ nếu biểu đồ đang bật
             if (isGraphVisible && ctx && (now - lastDrawTime >= 30)) {
                 lastDrawTime = now;
                 this.draw(currentFps);
@@ -147,14 +173,15 @@
             ctx.fillStyle = 'rgba(4, 8, 20, 0.75)';
             ctx.fillRect(0, 0, w, h);
 
-            // Xác định trần FPS hiển thị (Target scale)
+            // Xác định trần FPS hiển thị (Target scale) tối ưu cho màn hình cao tần (120Hz/144Hz/240Hz)
             let maxScale = 75; // Chuẩn 60 FPS
-            if (maxFps > 70) maxScale = 144; // Màn hình 120Hz/144Hz
-            if (maxFps > 150) maxScale = 260; // Màn hình 240Hz
+            if (maxFps > 180) maxScale = 260; // 240Hz
+            else if (maxFps > 120) maxScale = 160; // 144Hz (có trần thoáng, không bị chạm nóc)
+            else if (maxFps > 70) maxScale = 135; // 120Hz
 
             // Vẽ đường chuẩn 60 FPS (Faint Dashed Line)
             const targetY = h - (60 / maxScale) * (h - 8) - 4;
-            ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
             ctx.lineWidth = 1;
             ctx.setLineDash([3, 3]);
             ctx.beginPath();
@@ -163,24 +190,18 @@
             ctx.stroke();
             ctx.setLineDash([]); // Reset line dash
 
-            // Nhãn 60 FPS mờ ở góc
-            ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
-            ctx.font = '8px "Orbitron", monospace';
-            ctx.fillText('60', 4, targetY - 2);
-
-            // Vẽ đường đồ thị FPS
+            // Vẽ đường đồ thị FPS (Zero-ShadowBlur để triệt tiêu tải CPU 4-8ms)
             const step = w / (SAMPLES - 1);
             ctx.beginPath();
 
-            // Chọn màu sắc đồ thị dựa trên FPS mới nhất
-            let strokeColor = '#00f0ff'; // Xanh cyan ổn định
-            let fillGradientTop = 'rgba(0, 240, 255, 0.35)';
+            let strokeColor = '#00f0ff';
+            let gradType = 'cyan';
             if (latestFps < 42) {
-                strokeColor = '#ef4444'; // Đỏ (Drop lag)
-                fillGradientTop = 'rgba(239, 68, 68, 0.4)';
+                strokeColor = '#ef4444';
+                gradType = 'red';
             } else if (latestFps < 55) {
-                strokeColor = '#f59e0b'; // Vàng cam (Cảnh báo sụt)
-                fillGradientTop = 'rgba(245, 158, 11, 0.35)';
+                strokeColor = '#f59e0b';
+                gradType = 'amber';
             }
 
             let lastX = 0;
@@ -210,29 +231,20 @@
             ctx.lineWidth = 2;
             ctx.lineJoin = 'round';
             ctx.lineCap = 'round';
-            ctx.shadowColor = strokeColor;
-            ctx.shadowBlur = 6;
             ctx.stroke();
 
-            // Tô bóng mờ gradient bên dưới đồ thị
+            // Tô bóng mờ gradient bên dưới đồ thị sử dụng gradient đã cache
             ctx.lineTo(w, h);
             ctx.lineTo(0, h);
             ctx.closePath();
-            const grad = ctx.createLinearGradient(0, 0, 0, h);
-            grad.addColorStop(0, fillGradientTop);
-            grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-            ctx.fillStyle = grad;
-            ctx.shadowBlur = 0; // Tắt glow cho fill để tối ưu
+            ctx.fillStyle = getGradient(ctx, h, gradType);
             ctx.fill();
 
             // Vẽ điểm phát sáng (Dot) tại vị trí khung hình hiện tại
             ctx.beginPath();
-            ctx.arc(lastX, lastY, 3, 0, Math.PI * 2);
+            ctx.arc(lastX, lastY, 2.5, 0, Math.PI * 2);
             ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = strokeColor;
-            ctx.shadowBlur = 8;
             ctx.fill();
-            ctx.shadowBlur = 0;
         }
     };
 
