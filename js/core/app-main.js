@@ -180,11 +180,12 @@
         return (wDiff > thresholdWidth || hDiff > thresholdHeight);
     }
 
-    // Tầng 2: Debugger Timing Loop (Phát hiện DevTools dạng Undocked / Detached hoặc đã mở)
+    // Tầng 2: Debugger Timing Loop (Pre-compiled 1 lần duy nhất, triệt tiêu 100% rác bộ nhớ GC)
+    const fnDebugger = (function() {}.constructor("debugger"));
     function checkDebuggerTiming() {
         if (isAllowedBypass()) return false;
         const t0 = performance.now();
-        (function() {}.constructor("debugger")());
+        fnDebugger();
         return (performance.now() - t0 > 100);
     }
 
@@ -203,7 +204,7 @@
         }
     }
 
-    // Tầng 4: Chặn phím tắt F12, Ctrl+Shift+I/J/C, Ctrl+U, Cmd+Option+I/J/C
+    // Tầng 4: Chặn phím tắt F12, Ctrl+Shift+I/J/C, Ctrl+U, Cmd+Option+I/J/C (Event-driven 0% CPU)
     function preventKeys(e) {
         if (isAllowedBypass()) return;
         const isF12 = (e.keyCode === 123);
@@ -226,29 +227,21 @@
         }
     }
 
-    // Tầng 5: MutationObserver Guard (Phát hiện & Hủy ngay lập tức các bookmarklet/script debug inject vào DOM)
-    let domObserver = null;
-    const SUSPICIOUS_DEBUG_KEYWORDS = [
-        'eruda', 'vconsole', 'chii', 'target.js', 'weinre',
-        'devtools-remote', 'vorlon', 'firebug', 'inject-console'
-    ];
-
-    function isSuspiciousString(str) {
-        if (!str || typeof str !== 'string') return false;
-        const lower = str.toLowerCase();
-        return SUSPICIOUS_DEBUG_KEYWORDS.some(kw => lower.includes(kw));
-    }
+    // Tầng 5: MutationObserver Guard Siêu Tối Ưu (Target Scoping: Chỉ theo dõi head/body cấp 1, không soi subtree)
+    let domObserverHead = null;
+    let domObserverBody = null;
+    const REG_DEBUG_TOOLS = /eruda|vconsole|chii|target\.js|weinre|devtools-remote|vorlon|firebug/i;
 
     function checkInjectedNode(node) {
-        if (!node || node.nodeType !== 1) return; // Chỉ kiểm tra Element node
+        if (!node || node.nodeType !== 1) return; // Bỏ qua text/comment node ngay lập tức
 
-        const tagName = node.tagName.toLowerCase();
+        const tagName = node.tagName;
 
-        // 1. Thẻ script được tiêm vào DOM từ bookmarklet hoặc extension
-        if (tagName === 'script') {
+        // 1. Thẻ script được chèn vào DOM (từ bookmarklet hoặc extension)
+        if (tagName === 'SCRIPT') {
             const src = node.getAttribute('src') || node.src || '';
-            const text = node.textContent || node.innerText || '';
-            if (isSuspiciousString(src) || isSuspiciousString(text)) {
+            const text = node.textContent || '';
+            if (REG_DEBUG_TOOLS.test(src) || (text.length < 500 && REG_DEBUG_TOOLS.test(text))) {
                 try {
                     node.type = 'javascript/blocked';
                     node.removeAttribute('src');
@@ -260,47 +253,81 @@
             }
         }
 
-        // 2. Container DOM hoặc iframe của công cụ debug bên thứ ba
-        const id = (node.id || '').toLowerCase();
-        const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
-        if (
-            id.includes('eruda') || id.includes('vconsole') || id.includes('chii') ||
-            className.includes('eruda') || className.includes('vconsole') || className.includes('chii')
-        ) {
+        // 2. Container giao diện debug (Eruda / vConsole chèn trực tiếp vào body)
+        const id = node.id || '';
+        const className = (typeof node.className === 'string') ? node.className : '';
+        if (REG_DEBUG_TOOLS.test(id) || REG_DEBUG_TOOLS.test(className)) {
             try {
                 if (node.parentNode) node.parentNode.removeChild(node);
                 node.remove();
             } catch(e) {}
             triggerWarningRedirect();
-            return;
-        }
-
-        // 3. Đệ quy kiểm tra các node con nếu có
-        if (node.children && node.children.length > 0) {
-            for (let i = 0; i < node.children.length; i++) {
-                checkInjectedNode(node.children[i]);
-            }
         }
     }
 
     function initDomGuard() {
-        if (typeof MutationObserver === 'undefined' || domObserver) return;
-        try {
-            domObserver = new MutationObserver((mutations) => {
-                if (isAllowedBypass()) return;
-                for (let i = 0; i < mutations.length; i++) {
-                    const mutation = mutations[i];
-                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                        for (let j = 0; j < mutation.addedNodes.length; j++) {
-                            checkInjectedNode(mutation.addedNodes[j]);
-                        }
-                    }
-                }
-            });
+        if (typeof MutationObserver === 'undefined') return;
 
-            const target = document.documentElement || document;
-            domObserver.observe(target, { childList: true, subtree: true });
+        const observerHandler = (mutations) => {
+            if (isAllowedBypass()) return;
+            for (let i = 0; i < mutations.length; i++) {
+                const added = mutations[i].addedNodes;
+                for (let j = 0; j < added.length; j++) {
+                    checkInjectedNode(added[j]);
+                }
+            }
+        };
+
+        try {
+            // Chỉ quan sát con trực tiếp của HEAD (thẻ script được chèn vào)
+            if (document.head && !domObserverHead) {
+                domObserverHead = new MutationObserver(observerHandler);
+                domObserverHead.observe(document.head, { childList: true, subtree: false });
+            }
+
+            // Chỉ quan sát con trực tiếp của BODY (root container của tool debug)
+            // TUYỆT ĐỐI KHÔNG dùng subtree: true để không ảnh hưởng đến DOM/Canvas bên trong Game
+            const attachBodyObserver = () => {
+                if (document.body && !domObserverBody) {
+                    domObserverBody = new MutationObserver(observerHandler);
+                    domObserverBody.observe(document.body, { childList: true, subtree: false });
+                }
+            };
+
+            if (document.body) {
+                attachBodyObserver();
+            } else {
+                document.addEventListener('DOMContentLoaded', attachBodyObserver, { once: true });
+            }
         } catch(e) {}
+    }
+
+    // Tuần tra ngầm an toàn (sử dụng Idle Callback khi có thể, chu kỳ giãn 1800ms)
+    function executePatrolCycle() {
+        if (isAllowedBypass()) return;
+
+        // 1. Kiểm tra kích thước cửa sổ
+        if (checkSizeMismatch()) {
+            triggerWarningRedirect();
+            return;
+        }
+
+        // 2. Kiểm tra timing của debugger
+        if (checkDebuggerTiming()) {
+            triggerWarningRedirect();
+            return;
+        }
+
+        // 3. Kích hoạt trap element console
+        if (originalConsole && typeof originalConsole.log === 'function' && trapElement) {
+            originalConsole.log(trapElement);
+        }
+
+        // 4. Kiểm tra biến toàn cục debug
+        if (document.getElementById('__vconsole') || document.getElementById('eruda') || window.vConsole || window.eruda) {
+            triggerWarningRedirect();
+            return;
+        }
     }
 
     function startNativeAntiDev() {
@@ -324,29 +351,13 @@
                 return;
             }
 
-            // 1. Kiểm tra kích thước cửa sổ
-            if (checkSizeMismatch()) {
-                triggerWarningRedirect();
-                return;
+            // Nếu trình duyệt hỗ trợ requestIdleCallback, tuần tra trong thời gian rảnh của frame
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(executePatrolCycle, { timeout: 1000 });
+            } else {
+                executePatrolCycle();
             }
-
-            // 2. Kiểm tra timing của debugger
-            if (checkDebuggerTiming()) {
-                triggerWarningRedirect();
-                return;
-            }
-
-            // 3. Kích hoạt trap element console qua originalConsole
-            if (originalConsole && typeof originalConsole.log === 'function' && trapElement) {
-                originalConsole.log(trapElement);
-            }
-
-            // 4. Kiểm tra công cụ debug mobile bên thứ ba
-            if (document.getElementById('__vconsole') || document.getElementById('eruda') || window.vConsole || window.eruda) {
-                triggerWarningRedirect();
-                return;
-            }
-        }, 700);
+        }, 1800); // Giãn chu kỳ lên 1800ms vì mọi sự kiện nóng đã có Event-driven xử lý
     }
 
     function stopNativeAntiDev() {
@@ -356,11 +367,13 @@
             clearInterval(nativeInterval);
             nativeInterval = null;
         }
-        if (domObserver) {
-            try {
-                domObserver.disconnect();
-            } catch(e) {}
-            domObserver = null;
+        if (domObserverHead) {
+            try { domObserverHead.disconnect(); } catch(e) {}
+            domObserverHead = null;
+        }
+        if (domObserverBody) {
+            try { domObserverBody.disconnect(); } catch(e) {}
+            domObserverBody = null;
         }
     }
 
