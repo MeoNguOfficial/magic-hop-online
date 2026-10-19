@@ -1664,6 +1664,7 @@ async function initThree() {
     if (toggleVisualizer) toggleVisualizer.checked = visualizerEnabled;
     if (toggleBgParticles) toggleBgParticles.checked = bgParticlesEnabled;
     if (toggleTileBounce) toggleTileBounce.checked = tileBounceEnabled;
+    if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.checked = (typeof dynamicBounceSpeedEnabled !== 'undefined' ? dynamicBounceSpeedEnabled : false);
     if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.checked = (typeof blockShatterEnabled !== 'undefined' ? blockShatterEnabled : true);
     if (typeof toggleUiAnimations !== 'undefined' && toggleUiAnimations) toggleUiAnimations.checked = (typeof uiAnimationsEnabled !== 'undefined' ? uiAnimationsEnabled : true);
     if (spawnAnimationSelect) spawnAnimationSelect.value = spawnAnimationMode;
@@ -1700,6 +1701,7 @@ async function initThree() {
 
     // ĐỒNG BỘ UI SETTINGS TRƯỚC KHI APPLY
     if (toggleTileBounce) toggleTileBounce.checked = tileBounceEnabled;
+    if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.checked = (typeof dynamicBounceSpeedEnabled !== 'undefined' ? dynamicBounceSpeedEnabled : false);
     if (typeof toggleUiAnimations !== 'undefined' && toggleUiAnimations) toggleUiAnimations.checked = (typeof uiAnimationsEnabled !== 'undefined' ? uiAnimationsEnabled : true);
     if (spawnAnimationSelect) spawnAnimationSelect.value = spawnAnimationMode;
     if (typeof limitBeatmapAudioSelect !== 'undefined' && limitBeatmapAudioSelect) limitBeatmapAudioSelect.value = limitBeatmapAudioCount;
@@ -2535,9 +2537,13 @@ function animate() {
         const camZForCulling = typeof camera !== 'undefined' && camera ? camera.position.z : (typeof ball !== 'undefined' && ball ? ball.position.z + 10 : 0);
         
         // Cơ chế Block Bouncy dựa trên Tiles Hop – Remake (Half-sine impulse: -Math.sin(b * Math.PI) * amplitude)
-        // b đếm ngược từ 1.0 về 0 với tốc độ decay tỉ lệ thuận với nhịp độ game
-        const bounceDecaySpeed = 5.0 * (typeof gameSpeed !== 'undefined' ? Math.max(1.0, Math.min(gameSpeed, 3.0)) : 1.0);
-        const baseBounceAmplitude = 0.38; // Tỉ lệ nhún chuẩn theo tỉ lệ thế giới (world units)
+        // b đếm ngược từ 1.0 về 0 với tốc độ decay (cố định hoặc tỉ lệ thuận theo nhịp độ game nếu dynamic bounce speed được bật)
+        const baseDecay = 5.5;
+        const isDynamicBounce = typeof dynamicBounceSpeedEnabled !== 'undefined' && dynamicBounceSpeedEnabled;
+        const bounceDecaySpeed = isDynamicBounce 
+            ? baseDecay * (typeof gameSpeed !== 'undefined' ? Math.max(1.0, Math.min(gameSpeed, 3.0)) : 1.0)
+            : baseDecay;
+        const baseBounceAmplitude = 0.52; // Tăng độ lún của bouncy block xuống 1 tí (từ 0.38 lên 0.52 world units)
         const scaleLerpSpeed = Math.min(1.0, 10 * delta);
         
         // Hoist các biến invariant ra khỏi vòng lặp tiles để triệt tiêu điểm nghẽn
@@ -2944,8 +2950,11 @@ function animate() {
                         const landedTile = tiles[currentTileIndex + 1];
                         if (landedTile && landedTile.userData) {
                             if (tileBounceEnabled) {
-                                // Tăng cường độ nhún nhẹ theo gameSpeed, max +30% lực nhún (Cơ chế Tiles Hop – Remake)
-                                const bounceIntensity = typeof gameSpeed !== 'undefined' ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15 : 1.0;
+                                // Tăng cường độ nhún nhẹ theo gameSpeed nếu dynamicBounceSpeedEnabled được bật, còn lại giữ 1.0 cố định
+                                const isDynamicBounce = typeof dynamicBounceSpeedEnabled !== 'undefined' && dynamicBounceSpeedEnabled;
+                                const bounceIntensity = (isDynamicBounce && typeof gameSpeed !== 'undefined')
+                                    ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15
+                                    : 1.0;
                                 landedTile.userData.b = 1.0;
                                 landedTile.userData.bounceIntensity = bounceIntensity;
                                 landedTile.userData.bounceY = 0;
@@ -3129,7 +3138,10 @@ function animate() {
                     }
 
                     if (tileBounceEnabled) {
-                        const bounceIntensity = typeof gameSpeed !== 'undefined' ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15 : 1.0;
+                        const isDynamicBounce = typeof dynamicBounceSpeedEnabled !== 'undefined' && dynamicBounceSpeedEnabled;
+                        const bounceIntensity = (isDynamicBounce && typeof gameSpeed !== 'undefined')
+                            ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15
+                            : 1.0;
                         targetTile.userData.b = 1.0;
                         targetTile.userData.bounceIntensity = bounceIntensity;
                         targetTile.userData.bounceY = 0;
@@ -5174,6 +5186,10 @@ function showTapToOverlay(type = 'start') {
                                 <input type="checkbox" id="qs-tile-bounce" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
                             </label>
                             <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
+                                <span data-i18n="dynamic_bounce_title" class="text-xs">Nhún theo Speed</span>
+                                <input type="checkbox" id="qs-dynamic-bounce" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
+                            </label>
+                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
                                 <span data-i18n="block_shatter_title" class="text-xs">Vỡ Mảnh</span>
                                 <input type="checkbox" id="qs-block-shatter" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
                             </label>
@@ -5331,6 +5347,7 @@ function showTapToOverlay(type = 'start') {
         };
 
         bindCb('qs-tile-bounce', typeof toggleTileBounce !== 'undefined' ? toggleTileBounce : null, 'tileBounceEnabled', 'tileBounceEnabled');
+        bindCb('qs-dynamic-bounce', typeof toggleDynamicBounceSpeed !== 'undefined' ? toggleDynamicBounceSpeed : null, 'dynamicBounceSpeedEnabled', 'dynamicBounceSpeedEnabled');
         bindCb('qs-block-shatter', typeof toggleBlockShatter !== 'undefined' ? toggleBlockShatter : null, 'blockShatterEnabled', 'blockShatterEnabled');
         bindCb('qs-ball-glow', typeof toggleBallGlow !== 'undefined' ? toggleBallGlow : null, 'ballGlowEnabled', 'ballGlowEnabled');
         bindCb('qs-ball-trail', typeof toggleBallTrail !== 'undefined' ? toggleBallTrail : null, 'ballTrailEnabled', 'ballTrailEnabled');
@@ -5370,6 +5387,7 @@ function showTapToOverlay(type = 'start') {
         };
 
         setCb('qs-tile-bounce', typeof tileBounceEnabled !== 'undefined' ? tileBounceEnabled : true);
+        setCb('qs-dynamic-bounce', typeof dynamicBounceSpeedEnabled !== 'undefined' ? dynamicBounceSpeedEnabled : false);
         setCb('qs-block-shatter', typeof blockShatterEnabled !== 'undefined' ? blockShatterEnabled : true);
         setCb('qs-ball-glow', typeof ballGlowEnabled !== 'undefined' ? ballGlowEnabled : true);
         setCb('qs-ball-trail', typeof ballTrailEnabled !== 'undefined' ? ballTrailEnabled : true);

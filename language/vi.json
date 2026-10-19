@@ -165,6 +165,8 @@
   "particle_desc": "Thêm bụi sáng bay trong không gian (tốn GPU).",
   "anim_title": "Block nhún (Bouncy Blocks)",
   "anim_desc": "Khối gạch lún xuống và nẩy nhẹ khi bóng tiếp xúc.",
+  "dynamic_bounce_title": "Nhún theo speed game (Dynamic Bounce Speed)",
+  "dynamic_bounce_desc": "Tốc độ và lực lún của block tự động biến thiên nhanh hơn khi tốc độ game tăng.",
   "block_shatter_title": "Effect block vỡ (Block Shatter)",
   "block_shatter_desc": "Tạo các mảnh vỡ 3D khi giẫm trúng khối vỡ hoặc khối fake.",
   "ball_aura_title": "Hào quang bóng (Ball Aura)",

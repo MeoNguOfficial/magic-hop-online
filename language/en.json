@@ -165,6 +165,8 @@
   "particle_desc": "Adds floating glowing dust particles in space (GPU intensive).",
   "anim_title": "Bouncy Blocks",
   "anim_desc": "Tiles compress and bounce slightly when touched by the ball.",
+  "dynamic_bounce_title": "Dynamic Bounce Speed",
+  "dynamic_bounce_desc": "Block bounce and recovery speed scale up dynamically with song speed.",
   "block_shatter_title": "Block Shatter Effect",
   "block_shatter_desc": "Spawns 3D debris fragments when hitting broken or fake tiles.",
   "ball_aura_title": "Ball Aura",

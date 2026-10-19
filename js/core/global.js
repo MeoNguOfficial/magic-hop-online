@@ -38,6 +38,7 @@ const toggleVisualizer = document.getElementById('toggle-visualizer');
 const bgVisualizerCanvas = document.getElementById('bg-visualizer');
 const toggleBgParticles = document.getElementById('toggle-bg-particles');
 const toggleTileBounce = document.getElementById('toggle-tile-bounce');
+const toggleDynamicBounceSpeed = document.getElementById('toggle-dynamic-bounce-speed');
 const toggleBlockShatter = document.getElementById('toggle-block-shatter');
 const toggleUiAnimations = document.getElementById('toggle-ui-animations');
 const spawnAnimationSelect = document.getElementById('spawn-animation-mode');

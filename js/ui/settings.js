@@ -17,6 +17,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'dynamicColorsEnabled',
     'visualizerEnabled',
     'tileBounceEnabled',
+    'dynamicBounceSpeedEnabled',
     'blockShatterEnabled',
     'ballGlowEnabled',
     'ballTrailEnabled',
@@ -211,6 +212,7 @@ let shockwavesEnabled = JSON.parse(localStorage.getItem('shockwavesEnabled')) !=
 let dynamicColorsEnabled = JSON.parse(localStorage.getItem('dynamicColorsEnabled')) !== false;
 let visualizerEnabled = JSON.parse(localStorage.getItem('visualizerEnabled')) === true;
 let tileBounceEnabled = JSON.parse(localStorage.getItem('tileBounceEnabled') !== null ? localStorage.getItem('tileBounceEnabled') : localStorage.getItem('tileAnimationsEnabled')) !== false;
+let dynamicBounceSpeedEnabled = JSON.parse(localStorage.getItem('dynamicBounceSpeedEnabled')) === true; // Mặc định false (không biến thiên theo speed)
 let blockShatterEnabled = JSON.parse(localStorage.getItem('blockShatterEnabled')) !== false;
 let ballGlowEnabled = JSON.parse(localStorage.getItem('ballGlowEnabled') !== null ? localStorage.getItem('ballGlowEnabled') : (localStorage.getItem('ballAuraEnabled') !== null ? localStorage.getItem('ballAuraEnabled') : 'true')) !== false;
 let ballTrailEnabled = JSON.parse(localStorage.getItem('ballTrailEnabled')) !== false;
@@ -382,6 +384,7 @@ if (performanceModeEnabled) {
     shockwavesEnabled = false;
     visualizerEnabled = false;
     tileBounceEnabled = false;
+    dynamicBounceSpeedEnabled = false;
     blockShatterEnabled = false;
     ballGlowEnabled = false;
     ballTrailEnabled = false;
@@ -641,6 +644,7 @@ function applySettings() {
                     shockwavesEnabled: localStorage.getItem('shockwavesEnabled') !== 'false',
                     visualizerEnabled: localStorage.getItem('visualizerEnabled') === 'true',
                     tileBounceEnabled: localStorage.getItem('tileBounceEnabled') !== 'false',
+                    dynamicBounceSpeedEnabled: localStorage.getItem('dynamicBounceSpeedEnabled') === 'true',
                     blockShatterEnabled: localStorage.getItem('blockShatterEnabled') !== 'false',
                     ballGlowEnabled: localStorage.getItem('ballGlowEnabled') !== 'false',
                     ballTrailEnabled: localStorage.getItem('ballTrailEnabled') !== 'false',
@@ -686,6 +690,11 @@ function applySettings() {
                             localStorage.setItem('tileBounceEnabled', val);
                             if (toggleTileBounce) toggleTileBounce.checked = val;
                         }
+                        if (backup.dynamicBounceSpeedEnabled !== undefined) {
+                            const val = backup.dynamicBounceSpeedEnabled === true || backup.dynamicBounceSpeedEnabled === 'true';
+                            localStorage.setItem('dynamicBounceSpeedEnabled', val);
+                            if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.checked = val;
+                        }
                         if (backup.blockShatterEnabled !== undefined) {
                             const val = backup.blockShatterEnabled === true || backup.blockShatterEnabled === 'true';
                             localStorage.setItem('blockShatterEnabled', val);
@@ -730,6 +739,7 @@ function applySettings() {
         shockwavesEnabled = false;
         visualizerEnabled = false;
         tileBounceEnabled = false;
+        dynamicBounceSpeedEnabled = false;
         ballGlowEnabled = false;
         ballTrailEnabled = false;
         advancedBoundariesEnabled = false;
@@ -745,6 +755,7 @@ function applySettings() {
         const canvasEl = document.getElementById('bg-visualizer');
         if (canvasEl) canvasEl.style.display = 'none';
         if (toggleTileBounce) toggleTileBounce.checked = false;
+        if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.checked = false;
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.checked = false;
         if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.checked = false;
         if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.checked = false;
@@ -763,6 +774,7 @@ function applySettings() {
         if (toggleShockwaves) toggleShockwaves.disabled = true;
         if (toggleVisualizer) toggleVisualizer.disabled = true;
         if (toggleTileBounce) toggleTileBounce.disabled = true;
+        if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.disabled = true;
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.disabled = true;
         if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.disabled = true;
         if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.disabled = true;
@@ -790,6 +802,7 @@ function applySettings() {
         if (toggleShockwaves) toggleShockwaves.disabled = false;
         if (toggleVisualizer) toggleVisualizer.disabled = false;
         if (toggleTileBounce) toggleTileBounce.disabled = false;
+        if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.disabled = !tileBounceEnabled;
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.disabled = false;
         if (typeof toggleBallGlow !== 'undefined' && toggleBallGlow) toggleBallGlow.disabled = false;
         if (typeof toggleBallTrail !== 'undefined' && toggleBallTrail) toggleBallTrail.disabled = false;
@@ -1061,6 +1074,18 @@ function applySettings() {
     if (toggleTileBounce && !performanceModeEnabled) {
         tileBounceEnabled = toggleTileBounce.checked;
         localStorage.setItem('tileBounceEnabled', tileBounceEnabled);
+    }
+    if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed && !performanceModeEnabled) {
+        dynamicBounceSpeedEnabled = toggleDynamicBounceSpeed.checked;
+        localStorage.setItem('dynamicBounceSpeedEnabled', dynamicBounceSpeedEnabled);
+    }
+    if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) {
+        toggleDynamicBounceSpeed.disabled = !tileBounceEnabled || performanceModeEnabled;
+        const labelDynamic = document.getElementById('label-dynamic-bounce-speed');
+        if (labelDynamic) {
+            labelDynamic.classList.toggle('opacity-40', toggleDynamicBounceSpeed.disabled);
+            labelDynamic.classList.toggle('pointer-events-none', toggleDynamicBounceSpeed.disabled);
+        }
     }
     if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter && !performanceModeEnabled) {
         blockShatterEnabled = toggleBlockShatter.checked;
@@ -1710,6 +1735,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleDynamicColors) toggleDynamicColors.addEventListener('change', applySettings);
     if (toggleVisualizer) toggleVisualizer.addEventListener('change', applySettings);
     if (toggleTileBounce) toggleTileBounce.addEventListener('change', applySettings);
+    if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.addEventListener('change', applySettings);
     if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.addEventListener('change', applySettings);
     if (typeof toggleUiAnimations !== 'undefined' && toggleUiAnimations) toggleUiAnimations.addEventListener('change', applySettings);
     if (spawnAnimationSelect) spawnAnimationSelect.addEventListener('change', applySettings);
