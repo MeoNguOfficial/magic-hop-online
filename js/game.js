@@ -2532,11 +2532,10 @@ function animate() {
         const tilesCount = tiles.length;
         const camZForCulling = typeof camera !== 'undefined' && camera ? camera.position.z : (typeof ball !== 'undefined' && ball ? ball.position.z + 10 : 0);
         
-        // Tối ưu: Tính toán trước các hệ số cho lò xo nhún của gạch
-        const springDt = Math.min(delta, 0.03);
-        const springK = 250; // Độ cứng lò xo
-        const springC = 12;  // Hệ số cản / Damping
-        const springMass = 1;
+        // Cơ chế Block Bouncy dựa trên Tiles Hop – Remake (Half-sine impulse: -Math.sin(b * Math.PI) * amplitude)
+        // b đếm ngược từ 1.0 về 0 với tốc độ decay tỉ lệ thuận với nhịp độ game
+        const bounceDecaySpeed = 5.0 * (typeof gameSpeed !== 'undefined' ? Math.max(1.0, Math.min(gameSpeed, 3.0)) : 1.0);
+        const baseBounceAmplitude = 0.38; // Tỉ lệ nhún chuẩn theo tỉ lệ thế giới (world units)
         const scaleLerpSpeed = Math.min(1.0, 10 * delta);
         
         // Hoist các biến invariant ra khỏi vòng lặp tiles để triệt tiêu điểm nghẽn
@@ -2608,41 +2607,34 @@ function animate() {
                 }
             }
 
-            // Cập nhật lò xo nhún cho gạch khi tiếp xúc bóng (Fast-path: bỏ qua tính toán cho các khối tĩnh đang nghỉ)
+            // Cập nhật block bouncy dựa trên Tiles Hop – Remake (Fast-path: bỏ qua tính toán cho các khối tĩnh đang nghỉ)
             const uData = tile.userData;
-            const hasSpring = (uData.springY !== 0 && uData.springY !== undefined) || (uData.springVelocityY !== 0 && uData.springVelocityY !== undefined);
+            const hasBounce = (uData.b !== undefined && uData.b > 0) || (uData.bounceY !== undefined && uData.bounceY !== 0);
             const needsScale = uData.scale !== targetTileScaleCached;
             const needsHitbox = uData.hitboxMesh && (!uData._hitboxInit || uData.hitboxMesh.visible !== isHitboxVisibleCached);
 
-            if (hasSpring || needsScale || needsHitbox) {
-                let springY = uData.springY || 0;
-                let springVelocityY = uData.springVelocityY || 0;
-                let didSpringChange = false;
+            if (hasBounce || needsScale || needsHitbox) {
+                let didBounceChange = false;
 
-                if (hasSpring) {
-                    const springForce = -springK * springY;
-                    const dampingForce = -springC * springVelocityY;
-                    const acceleration = (springForce + dampingForce) / springMass;
-
-                    springVelocityY += acceleration * springDt;
-                    springY += springVelocityY * springDt;
-
-                    if (Math.abs(springY) < 0.001 && Math.abs(springVelocityY) < 0.01) {
-                        springY = 0;
-                        springVelocityY = 0;
+                if (hasBounce) {
+                    if (uData.b > 0) {
+                        uData.b = Math.max(0, uData.b - delta * bounceDecaySpeed);
+                        const amp = baseBounceAmplitude * (uData.bounceIntensity || 1.0);
+                        uData.bounceY = -Math.sin(uData.b * Math.PI) * amp;
+                        didBounceChange = true;
+                    } else if (uData.bounceY !== 0) {
+                        uData.bounceY = 0;
+                        didBounceChange = true;
                     }
-
-                    uData.springY = springY;
-                    uData.springVelocityY = springVelocityY;
-                    didSpringChange = true;
+                    uData.springY = uData.bounceY; // Đồng bộ an toàn cho các tham chiếu cũ nếu có
                 }
 
                 if (uData.baseY === undefined) {
                     uData.baseY = 0;
                 }
 
-                const targetTileY = uData.baseY + springY;
-                if (didSpringChange || tile.position.y !== targetTileY) {
+                const targetTileY = uData.baseY + (uData.bounceY || 0);
+                if (didBounceChange || tile.position.y !== targetTileY) {
                     tile.position.y = targetTileY;
                 }
 
@@ -2950,9 +2942,13 @@ function animate() {
                         const landedTile = tiles[currentTileIndex + 1];
                         if (landedTile && landedTile.userData) {
                             if (tileBounceEnabled) {
-                                // Tăng cường độ nhún nhẹ theo gameSpeed, max +30% lực nhún
+                                // Tăng cường độ nhún nhẹ theo gameSpeed, max +30% lực nhún (Cơ chế Tiles Hop – Remake)
                                 const bounceIntensity = typeof gameSpeed !== 'undefined' ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15 : 1.0;
-                                landedTile.userData.springVelocityY = -14.0 * bounceIntensity;
+                                landedTile.userData.b = 1.0;
+                                landedTile.userData.bounceIntensity = bounceIntensity;
+                                landedTile.userData.bounceY = 0;
+                                landedTile.userData.springVelocityY = 0;
+                                landedTile.userData.springY = 0;
                             }
                         }
                         jumpStartRawZ = landedTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? landedTile.userData.targetZ : landedTile.position.z;
@@ -3132,7 +3128,11 @@ function animate() {
 
                     if (tileBounceEnabled) {
                         const bounceIntensity = typeof gameSpeed !== 'undefined' ? 1.0 + (Math.max(1.0, Math.min(gameSpeed, 3.0)) - 1.0) * 0.15 : 1.0;
-                        targetTile.userData.springVelocityY = -14.0 * bounceIntensity;
+                        targetTile.userData.b = 1.0;
+                        targetTile.userData.bounceIntensity = bounceIntensity;
+                        targetTile.userData.bounceY = 0;
+                        targetTile.userData.springVelocityY = 0;
+                        targetTile.userData.springY = 0;
                     }
 
                     // Zero-velocity stutter fix: Dùng vị trí bóng lúc chạm (P_impact) thay vì tâm gạch

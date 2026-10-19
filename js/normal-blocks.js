@@ -345,6 +345,11 @@ function pushTileToPool(tile) {
             t.userData.baseX = 0;
             t.userData.moveType = null;
             t.userData.nudgeTimer = 0;
+            t.userData.b = 0;
+            t.userData.bounceY = 0;
+            t.userData.springY = 0;
+            t.userData.springVelocityY = 0;
+            t.position.y = 0;
         }
     };
     
@@ -406,6 +411,9 @@ function getTileFromPool(forceNew = false) {
         u.isMoving = false;
         u.springY = 0;
         u.springVelocityY = 0;
+        u.b = 0;
+        u.bounceY = 0;
+        u.bounceIntensity = 1.0;
         u.baseY = 0;
         u.originShifted = false;
         u.centerMeshFade = false;
@@ -815,6 +823,9 @@ function spawnTile(isFirst = false) {
     ud.targetZ = tileZ;
     ud.springY = 0;
     ud.springVelocityY = 0;
+    ud.b = 0;
+    ud.bounceY = 0;
+    ud.bounceIntensity = 1.0;
     ud.baseY = 0;
 
     // TÍCH HỢP LOGIC KHỐI DI CHUYỂN MỚI
