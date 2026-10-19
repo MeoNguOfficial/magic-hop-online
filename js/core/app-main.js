@@ -87,6 +87,10 @@
             originalConsole[method] = console[method].bind(console);
             console[method] = function(...args) {
                 if (isConsoleAllowed()) {
+                    // Lọc bỏ cảnh báo giả lập từ thư viện disable-devtool nếu người dùng là Admin
+                    if (args.length > 0 && typeof args[0] === 'string' && args[0].includes("You don't have permission to use DEVTOOL!")) {
+                        return;
+                    }
                     originalConsole[method](...args);
                 }
             };
@@ -137,23 +141,31 @@
     function setupDisableDevtool() {
         if (typeof window.DisableDevtool === 'function') {
             try {
-                window.DisableDevtool({
-                    url: 'warning.html',
-                    timeOutUrl: 'warning.html',
-                    tkName: 'devmode',
-                    clearLog: false,
-                    disableMenu: false,
-                    disableSelect: false,
-                    disableCopy: false,
-                    disableCut: false,
-                    disablePaste: false,
-                    seo: true,
-                    detectors: [0, 1, 2, 3, 4, 5, 6, 7],
-                    ondevtoolopen: (type, next) => {
-                        if (isAllowedBypass()) return;
-                        triggerWarningRedirect();
-                    }
-                });
+                // Nếu đã là Admin hoặc bật DevMode, lập tức đình chỉ và KHÔNG khởi chạy detector
+                if (isAllowedBypass()) {
+                    window.DisableDevtool.isSuspend = true;
+                    return true;
+                }
+
+                if (!window.DisableDevtool.isRunning) {
+                    window.DisableDevtool({
+                        url: 'warning.html',
+                        timeOutUrl: 'warning.html',
+                        tkName: 'devmode',
+                        clearLog: false,
+                        disableMenu: false,
+                        disableSelect: false,
+                        disableCopy: false,
+                        disableCut: false,
+                        disablePaste: false,
+                        seo: true,
+                        detectors: [0, 1, 2, 3, 4, 5, 6, 7],
+                        ondevtoolopen: (type, next) => {
+                            if (isAllowedBypass()) return;
+                            triggerWarningRedirect();
+                        }
+                    });
+                }
                 window.DisableDevtool.isSuspend = isAllowedBypass();
                 return true;
             } catch (e) {}
