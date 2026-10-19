@@ -28,7 +28,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
     <link rel="preload" href="resources/MeoTNGaming.png" as="image" type="image/png">
     <link rel="preload" href="resources/MeoTNDigital.png" as="image" type="image/png">
     <title>Cyber Beat Hopper - MeoTN Gaming</title>
@@ -81,22 +80,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="CyberHop">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <!-- Tailwind CSS for futuristic UI layout -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (Precompiled Static Build) -->
+    <link rel="stylesheet" href="css/tailwind.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script>
-        if (window.tailwind) {
-            tailwind.config = {
-                theme: {
-                    extend: {
-                        fontFamily: {
-                            orbitron: ['Orbitron', 'sans-serif'],
-                        }
-                    }
-                }
-            }
-        }
-    </script>
     <!-- Google Fonts for Cyberpunk Aesthetic -->
     <link
         href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap"

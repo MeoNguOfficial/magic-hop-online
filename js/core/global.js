@@ -1069,7 +1069,7 @@ if (typeof cacheStaticResources === 'function') {
         'https://an4sdmu4yskbqrq6.public.blob.vercel-storage.com/FreeGift_collect.ogg',
         'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js',
         'https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js',
-        'https://cdn.tailwindcss.com',
+        'css/tailwind.min.css',
         'https://cdn.jsdelivr.net/npm/disable-devtool@latest/disable-devtool.min.js',
         'https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;600;700&family=Montserrat:wght@400;500;600;700;800;900&display=swap',
         'css/style.css',

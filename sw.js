@@ -4,8 +4,8 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.0.42';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.42';
+const STATIC_CACHE = 'magic-hop-static-v1.0.0.43';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.43';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
@@ -21,6 +21,7 @@ const CORE_ASSETS = [
     './icons/apple-touch-icon.png',
     './icons/favicon-32x32.png',
     './icons/favicon-16x16.png',
+    './css/tailwind.min.css',
     './css/style.css',
     'https://cdn.jsdelivr.net/npm/disable-devtool@latest/disable-devtool.min.js',
     './js/core/config.js',
