@@ -127,8 +127,8 @@
             });
         })();
     </script>
-    <!-- AnimeJS for UI animations -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <!-- AnimeJS for UI animations (Local Vendor) -->
+    <script src="js/libs/anime.min.js"></script>
     <link rel="stylesheet" href="css/style.css">
 
     <style>
@@ -3089,10 +3089,10 @@
     <!-- Three.js (WebGL 2) and classic game scripts loader -->
     <script type="module">
         try {
-            const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js');
+            const THREE = await import('./js/libs/three.module.js');
             window.THREE = THREE;
         } catch (e) {
-            console.error("Failed to load Three.js module:", e);
+            console.error("Failed to load local Three.js module:", e);
         }
 
         const scripts = [
