@@ -226,12 +226,90 @@
         }
     }
 
+    // Tầng 5: MutationObserver Guard (Phát hiện & Hủy ngay lập tức các bookmarklet/script debug inject vào DOM)
+    let domObserver = null;
+    const SUSPICIOUS_DEBUG_KEYWORDS = [
+        'eruda', 'vconsole', 'chii', 'target.js', 'weinre',
+        'devtools-remote', 'vorlon', 'firebug', 'inject-console'
+    ];
+
+    function isSuspiciousString(str) {
+        if (!str || typeof str !== 'string') return false;
+        const lower = str.toLowerCase();
+        return SUSPICIOUS_DEBUG_KEYWORDS.some(kw => lower.includes(kw));
+    }
+
+    function checkInjectedNode(node) {
+        if (!node || node.nodeType !== 1) return; // Chỉ kiểm tra Element node
+
+        const tagName = node.tagName.toLowerCase();
+
+        // 1. Thẻ script được tiêm vào DOM từ bookmarklet hoặc extension
+        if (tagName === 'script') {
+            const src = node.getAttribute('src') || node.src || '';
+            const text = node.textContent || node.innerText || '';
+            if (isSuspiciousString(src) || isSuspiciousString(text)) {
+                try {
+                    node.type = 'javascript/blocked';
+                    node.removeAttribute('src');
+                    if (node.parentNode) node.parentNode.removeChild(node);
+                    node.remove();
+                } catch(e) {}
+                triggerWarningRedirect();
+                return;
+            }
+        }
+
+        // 2. Container DOM hoặc iframe của công cụ debug bên thứ ba
+        const id = (node.id || '').toLowerCase();
+        const className = (typeof node.className === 'string' ? node.className : '').toLowerCase();
+        if (
+            id.includes('eruda') || id.includes('vconsole') || id.includes('chii') ||
+            className.includes('eruda') || className.includes('vconsole') || className.includes('chii')
+        ) {
+            try {
+                if (node.parentNode) node.parentNode.removeChild(node);
+                node.remove();
+            } catch(e) {}
+            triggerWarningRedirect();
+            return;
+        }
+
+        // 3. Đệ quy kiểm tra các node con nếu có
+        if (node.children && node.children.length > 0) {
+            for (let i = 0; i < node.children.length; i++) {
+                checkInjectedNode(node.children[i]);
+            }
+        }
+    }
+
+    function initDomGuard() {
+        if (typeof MutationObserver === 'undefined' || domObserver) return;
+        try {
+            domObserver = new MutationObserver((mutations) => {
+                if (isAllowedBypass()) return;
+                for (let i = 0; i < mutations.length; i++) {
+                    const mutation = mutations[i];
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        for (let j = 0; j < mutation.addedNodes.length; j++) {
+                            checkInjectedNode(mutation.addedNodes[j]);
+                        }
+                    }
+                }
+            });
+
+            const target = document.documentElement || document;
+            domObserver.observe(target, { childList: true, subtree: true });
+        } catch(e) {}
+    }
+
     function startNativeAntiDev() {
         if (isAllowedBypass()) return;
 
         window.addEventListener('keydown', preventKeys, true);
         window.addEventListener('resize', onWindowResize, { passive: true });
         initTrapElement();
+        initDomGuard();
 
         // Kiểm tra ngay lập tức nếu DevTools đã mở sẵn từ trước
         if (checkSizeMismatch()) {
@@ -277,6 +355,12 @@
         if (nativeInterval) {
             clearInterval(nativeInterval);
             nativeInterval = null;
+        }
+        if (domObserver) {
+            try {
+                domObserver.disconnect();
+            } catch(e) {}
+            domObserver = null;
         }
     }
 
