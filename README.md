@@ -1,13 +1,83 @@
-# 🎵 Cyber Beat Hopper (v1.0.3)
+# 🎵 Cyber Beat Hopper (v1.0.4)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.3**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon cực kỳ bắt mắt. Game tiếp tục duy trì kết nối **Online** (bảng xếp hạng, lưu tài khoản), tuy nhiên phiên bản này chính thức chuyển sang mô hình **Mã nguồn đóng (Closed Source)** dành riêng cho **NỘI BỘ (Internal Build)** (dự án **MeoTN Open Source** sẽ được phân tách phát triển riêng ở kho lưu trữ độc lập).
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.4**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA) và hệ thống tùy biến sâu rộng.
 
 ---
-## 🚀 Phiên Bản v1.0.3 Có gì mới?
+## 🚀 Phiên Bản v1.0.4 Có gì mới?
 
-# 🚀 UPDATE LOG: CẬP NHẬT KHU VỰC API, SỬA LỖI MỞ KHÓA CHẾ ĐỘ CHƠI & BẢN NỘI BỘ (RELEASE v1.0.3)
+# 🚀 UPDATE LOG: TỐI ƯU HIỆU NĂNG THÍCH ỨNG, FPS GRAPH CYBERPUNK, VẬT LÝ BOUNCE & BẢO VỆ ĐA TẦNG (RELEASE v1.0.4)
 
-Chào các bạn, bản cập nhật **v1.0.3** tập trung vào việc thay đổi khu vực kết nối API máy chủ, khắc phục triệt để logic mở khóa chế độ chơi và đóng gói phiên bản thử nghiệm nội bộ.
+Chào các bạn, bản cập nhật **v1.0.4** tập trung cải thiện tí hiệu suất, tối ưu lại mã nguồn và tinh chỉnh trải nghiệm gameplay:
+
+---
+
+### ⚡ 1. BỘ ĐIỀU PHỐI HIỆU NĂNG THÍCH ỨNG & BIỂU ĐỒ FPS THỜI GIAN THỰC (ADAPTIVE PERFORMANCE & FPS GRAPH)
+- **Tự động điều tiết thích ứng (`adaptive-performance.js`):** Hệ thống thông minh tự động đo đạc rolling FPS trong thời gian thực. Khi máy yếu hoặc phát hiện drop FPS, hệ thống sẽ tự động hạ tải GPU/CPU (giảm Pixel Ratio, tắt sao nền, giới hạn sóng xung kích shockwaves, culling tầm nhìn khối gạch) nhằm duy trì ổn định 60 FPS mượt mà.
+- **Bảo vệ băng thông Fillrate ở tốc độ cao:** Tự động khóa Pixel Ratio về 1.0 khi `gameSpeed >= 1.35` trên các màn hình có mật độ điểm ảnh cao (High-DPI / Windows Scaling > 100% / Retina), triệt tiêu hoàn toàn hiện tượng tụt khung hình sâu ở các khúc nhạc dồn dập.
+- **HUD & Biểu đồ FPS Cyberpunk Neon (`fps-graph.js`):** Tích hợp công cụ theo dõi FPS và Frametime trực quan, vẽ biểu đồ dạng sóng canvas 60 frame theo thời gian thực với công nghệ zero-allocation (tái sử dụng gradient, không sinh rác GC). Cho phép click vào HUD để bật/tắt nhanh biểu đồ.
+- **Tùy chọn đồ họa chuyên sâu & Nhận diện GPU:** Mở rộng các mức đồ họa `Simple`, `HD`, `FHD`, `QHD`, `UHD`. Thêm tùy chọn ưu tiên GPU rời (`preferDiscreteGpu`) và tự động nhận diện phần cứng đồ họa (NVIDIA, AMD Radeon, Intel Arc, Apple Silicon...).
+
+---
+
+### 🎯 2. ĐỘ LÚN GẠCH & TÙY CHỌN TỐC ĐỘ NẢY ĐỘNG (DYNAMIC BOUNCE DYNAMICS)
+- **Tùy chọn Dynamic Bounce Speed (`dynamicBounceSpeedEnabled`):** Thêm tính năng cho phép tốc độ hồi/đàn hồi của khối gạch nảy (Bouncy Block) biến thiên linh hoạt tỉ lệ thuận theo tốc độ game (`gameSpeed`), hoặc giữ tốc độ suy giảm cố định theo ý muốn người chơi.
+- **Tăng độ lún Bouncy Block:** Gia tăng độ lún sâu của khối gạch từ 0.38 lên 0.52 world units, áp dụng công thức xung lực Half-sine wave (-sin(b * π) * amplitude) đem lại cảm giác nảy cực kỳ đã tay và chân thực theo nhịp điệu.
+- **Tối ưu hóa culling gạch (Z-Culling):** Thuật toán duyệt gạch ngắt sớm toàn bộ các khối nằm ngoài khoảng nhìn camera, giảm đáng kể chi phí duyệt cây Three.js.
+
+---
+
+### 🏗️ 3. TÁI CẤU TRÚC MÔ-ĐUN HÓA & BIÊN DỊCH CỤC BỘ (MODULAR ARCHITECTURE & LOCAL MIGRATION)
+- **Kiến trúc thư mục JavaScript chuẩn hóa:** Tách biệt và tổ chức toàn diện mã nguồn thành các module chuyên biệt:
+  - `js/audio/`: Quản lý AudioContext, Beatmap Worker, Music Player, Playlist và Visualizer.
+  - `js/core/`: Quản lý vòng đời ứng dụng (`app-main.js`), cấu hình (`config.js`), biến toàn cục và đa ngôn ngữ (`i18n.js`).
+  - `js/engine/`: Engine 3D cốt lõi, camera, hiệu ứng Three.js, FPS graph và adaptive performance.
+  - `js/game/`: Phân tách rõ ràng các cơ chế bổ trợ (Autoplay, Bot Assist), quản lý khối gạch (Normal, Moving, Fake blocks) và chế độ chơi (Easy, Hard, Asian).
+  - `js/libs/`: Lưu trữ các thư viện cục bộ độc lập (`three.module.js`, `anime.min.js`, `disable-devtool.min.js`).
+  - `js/services/`: Dịch vụ gọi API backend, kiểm tra bản quyền, quản lý bộ nhớ đệm và lưu trữ.
+  - `js/ui/`: Các thành phần giao diện người dùng (Cài đặt, tài khoản, chat, cảnh báo, tùy biến cá nhân).
+- **Loại bỏ hoàn toàn CDN bên ngoài:**
+  - Chuyển sang sử dụng **Tailwind CSS precompiled cục bộ** (`css/tailwind.min.css`) xây dựng thông qua `@tailwindcss/cli`, tối ưu hóa kích thước và loại bỏ độ trễ tải mạng.
+  - Chuyển Three.js và AnimeJS từ CDN sang ES Module cục bộ, đảm bảo tính ổn định và khả năng hoạt động offline 100%.
+
+---
+
+### 💾 4. LƯU TRỮ THẾ HỆ MỚI VỚI OPFS & QUẢN LÝ BỘ NHỚ TOÀN DIỆN (STORAGE MANAGER & OPFS)
+- **Tích hợp OPFS (Origin Private File System):** Hỗ trợ lưu trữ các file nhạc MP3/OGG và dữ liệu Beatmap JSON trực tiếp vào hệ thống tệp riêng tư tốc độ cao của trình duyệt, phá vỡ rào cản giới hạn bộ nhớ của IndexedDB truyền thống.
+- **Nâng cấp IndexedDB v3 (`MagicHopDB`):** Hỗ trợ đầy đủ các Object Store: `audio_cache`, `json_cache`, `playlist_cache`, `highScores`, `api_cache`.
+- **Trung tâm StorageManager & Dọn dẹp LRU:** Bổ sung giao diện trực quan trong Cài đặt hiển thị dung lượng sử dụng theo thời gian thực (OPFS, Cache, IndexedDB, LocalStorage). Thuật toán LRU tự động bảo vệ các tệp SFX và nhạc menu gốc khi dọn dẹp bài hát cũ.
+
+---
+
+### 🛡️ 5. BẢO MỆT ĐA TẦNG & CHỐNG CAN THIỆP (MEOTN EASY ANTICHEAT)
+- **Bảo vệ Anti-Dev Engine đa tầng siêu nhẹ:**
+  - **Tầng 1 (Size Mismatch):** Phát hiện việc mở DevTools dạng docked (gắn liền cửa sổ) trên mọi trình duyệt.
+  - **Tầng 2 (Debugger Timing Loop):** Sử dụng hàm kiểm tra thời gian thực thi debugger được biên dịch sẵn, triệt tiêu 100% rác bộ nhớ GC.
+  - **Tầng 3 (Element Trap):** Bẫy getter trên thuộc tính ID phát hiện khi tab Elements hoặc Console được kiểm tra.
+  - **Tầng 4 (Event-driven Keys):** Chặn các tổ hợp phím tắt kiểm tra mã (F12, Ctrl+Shift+I/J/C, Ctrl+U, Cmd+Option+I/J/C) với 0% chi phí CPU.
+  - **Tầng 5 (Target Scoping MutationObserver):** Tối ưu hóa bộ giám sát DOM chỉ theo dõi các thẻ script và container cấp 1 của `head`/`body`, lập tức triệt tiêu các công cụ chèn ngoài (Eruda, vConsole, Chii...) mà không gây ảnh hưởng đến hiệu năng render.
+- **Trang Cảnh Báo Cyberpunk Glitch (`warning.html`):** Tự động điều hướng và đồng bộ kiểm tra trạng thái đóng công cụ để đưa người chơi trở lại game an toàn. Tự động lọc thông báo khi người dùng là Admin.
+
+---
+
+### 🌐 6. MỞ RỘNG ĐA NGÔN NGỮ (10 QUỐC GIA - i18n)
+- Mở rộng hệ thống bản địa hóa hỗ trợ **10 ngôn ngữ**: Tiếng Việt (vi), Tiếng Anh (en), Tiếng Pháp (fr), Tiếng Trung Giản thể (zh-CN), Tiếng Trung Phồn thể (zh-TW), Tiếng Hàn (ko), Tiếng Nhật (ja), Tiếng Tây Ban Nha (es), Tiếng Bồ Đào Nha (pt), Tiếng Nga (ru).
+- Lưu trữ ngôn ngữ bảo mật với mã hóa chống can thiệp.
+
+---
+
+### 🎨 7. NÂNG CẤP GIAO DIỆN & TIỆN ÍCH (UI/UX & QoL)
+- Thiết kế lại thanh Cài đặt nhanh (Quick Settings) tinh gọn, đẹp mắt hơn.
+- Hoán đổi vị trí nút "Chơi ngay" (Play Now) và "Bảng xếp hạng" (Leaderboard) thuận tiện thao tác một tay.
+- Hoàn thiện và tích hợp công cụ chỉnh sửa Beatmap (`beat_editor.html`).
+- Tối ưu bộ nhớ đệm Service Worker lên phiên bản `v1.0.0.46` đảm bảo tài nguyên luôn được cập nhật mới nhất.
+
+---
+
+## 🚀 Bản trước đó: Phiên Bản v1.0.3 Có gì mới?
+
+# 🚀 UPDATE LOG: CẬP NHẬT KHU VỰC API & SỬA LỖI MỞ KHÓA CHẾ ĐỘ CHƠI (RELEASE v1.0.3)
+
+Chào các bạn, bản cập nhật **v1.0.3** tập trung vào việc thay đổi khu vực kết nối API máy chủ và khắc phục triệt để logic mở khóa chế độ chơi.
 
 ---
 
@@ -24,13 +94,6 @@ Chào các bạn, bản cập nhật **v1.0.3** tập trung vào việc thay đ�
 
 ### ⚡ 3. TỐI ƯU PWA & SERVICE WORKER (v1.0.0.3)
 - **Nâng cấp Cache Version:** Cập nhật Service Worker lên phiên bản `v1.0.0.3`, tự động làm tươi bộ nhớ đệm và đồng bộ mã nguồn mới nhất trên thiết bị.
-
----
-
-### 🔒 4. MÃ NGUỒN ĐÓNG & BẢN NỘI BỘ (CLOSED SOURCE & MEOTN OPEN SOURCE)
-- **Vẫn duy trì kết nối Online:** Game tiếp tục nâng cấp hệ thống kết nối Online (tài khoản, bảng xếp hạng, lưu dữ liệu server).
-- **Mã nguồn đóng (Closed Source):** Dự án hiện chuyển sang mô hình mã nguồn đóng dành riêng cho phát triển & thử nghiệm nội bộ. Dự án **MeoTN Open Source** sẽ được phân tách và phát triển riêng ở kho lưu trữ khác.
-- **Ẩn giấy phép công khai:** Thông tin về **Giấy phép MeoTN Open Source** (MeoTN Open Source License) tạm thời được ẩn trong phần Credits đối với bản phát hành này.
 
 ---
 
@@ -274,28 +337,34 @@ Nhưng bù lại tất cả bài hát sẽ được mở khóa cho bạn thoải
 
 ## 🌟 Tính năng nổi bật
 
-- **Đồ họa 3D Cyberpunk:** Hiệu ứng hình ảnh rực rỡ với các hạt bụi không gian (Particles), Sóng xung kích (Shockwaves), và khối gạch tự đổi màu động (Dynamic Colors).
-- **Âm nhạc đa dạng:** Tích hợp một danh sách bài hát nhiều thể loại (EDM, Rock, Pop, Chill...) với nhịp điệu (beatmap) được căn chỉnh thủ công khớp với từng khối gạch.
-- **Tối ưu hóa đa thiết bị:** Người chơi có thể tự do tùy chỉnh chất lượng đồ họa (Simple, HD, FHD) và vô hiệu hóa hiệu ứng để phù hợp từ thiết bị cấu hình thấp đến máy chơi game chuyên dụng.
-- **Lưu trữ Offline Toàn diện (PWA):** Tích hợp Service Worker và CacheManager tự động tải ngầm game, tính năng mở rộng và bài hát. Cho phép trải nghiệm game trọn vẹn không cần Internet.
-- **Đa ngôn ngữ (i18n):** Hỗ trợ chuyển đổi nhanh giữa Tiếng Việt và Tiếng Anh.
+- **Đồ họa 3D Cyberpunk & Object Pooling:** Hiệu ứng hình ảnh rực rỡ với các hạt bụi không gian (Particles), Sóng xung kích bo tròn (Shockwaves), Xung nhịp đường biên (Boundary Pulses), Bụi lửa độ khó (Boundary Flames) và Đuôi bóng 3D (`InstancedMesh`) triệt tiêu hoàn toàn rác bộ nhớ (GC).
+- **Điều phối Hiệu năng Thích ứng (Adaptive Performance):** Tự động giám sát khung hình và tiết giảm tải CPU/GPU khi máy yếu, kết hợp cơ chế bảo vệ băng thông Fillrate ở tốc độ cao trên màn hình High-DPI/Retina để duy trì 60 FPS ổn định.
+- **HUD & Biểu đồ FPS Cyberpunk:** Đồng hồ đo FPS, Frametime và đồ thị Canvas 60 frame thời gian thực phong cách Neon cực nhẹ với công nghệ zero-allocation.
+- **Vật lý nảy gạch chân thực (Dynamic Bounce Physics):** Độ lún sâu của khối gạch nảy tăng lên 0.52 world units kết hợp tùy chọn tốc độ đàn hồi biến thiên theo nhịp độ bài hát (`dynamicBounceSpeedEnabled`).
+- **Lưu trữ thế hệ mới (OPFS & IndexedDB v3):** Ứng dụng Origin Private File System kết hợp IndexedDB lưu trữ âm thanh, dữ liệu Beatmap ngoại tuyến tốc độ cao kèm giao diện StorageManager theo dõi và dọn dẹp dung lượng thông minh.
+- **Bảo mật đa tầng (MeoTN Easy AntiCheat):** Tích hợp hệ thống bảo vệ Anti-Dev Engine đa tầng (Size mismatch, Debugger timing loop, Element trap, Key blocker, Target-scoped MutationObserver) ngăn chặn can thiệp trái phép.
+- **Đa ngôn ngữ toàn cầu (10 Ngôn ngữ - i18n):** Hỗ trợ chuyển đổi mượt mà giữa 10 thứ tiếng (Tiếng Việt, Anh, Pháp, Trung Giản thể, Trung Phồn thể, Hàn, Nhật, Tây Ban Nha, Bồ Đào Nha, Nga).
+- **Âm nhạc & Beat Editor tích hợp:** Danh sách bài hát đa thể loại với nhịp điệu căn chỉnh khớp từng khối gạch, đi kèm công cụ biên tập beatmap trực quan (`beat_editor.html`).
+- **PWA Hoạt động Offline Toàn diện:** Service Worker tải ngầm thông minh, cho phép cài đặt app trên mọi thiết bị và chơi trọn vẹn không cần kết nối mạng.
 
 ---
 
 ## 🛠 Công nghệ sử dụng
 
-Dự án được xây dựng trực tiếp chạy trên nền tảng Web:
-- **HTML5 / CSS3 / JavaScript thuần (Vanilla JS)**
-- **Tailwind CSS:** Thiết kế giao diện (UI) hiện đại, đáp ứng (Responsive).
-- **Three.js:** Xây dựng, render không gian 3D, xử lý camera và ánh sáng.
-- **AnimeJS:** Xử lý các hoạt ảnh (animation) mượt mà cho UI.
-- **Web Audio API:** Xử lý đồng bộ âm thanh, kiểm soát bộ lọc (Lowpass) và tốc độ phát nhạc (Playback Rate).
+Dự án được xây dựng và tối ưu chạy trực tiếp trên nền tảng Web hiện đại:
+- **HTML5 / CSS3 / JavaScript (ES6+ Modular Architecture):** Mã nguồn được tổ chức mô-đun hóa rõ ràng theo cấu trúc thư mục chuẩn mực (`js/audio`, `js/core`, `js/engine`, `js/game`, `js/services`, `js/ui`).
+- **Tailwind CSS:** Thiết kế giao diện phong cách Cyberpunk Responsive, được biên dịch precompiled cục bộ bằng `@tailwindcss/cli` (`css/tailwind.min.css`) tối ưu dung lượng và tốc độ tải.
+- **Three.js:** Xây dựng không gian 3D, camera, ánh sáng, vật liệu neon và cơ chế Object Pooling / `InstancedMesh`.
+- **AnimeJS:** Xử lý các hiệu ứng chuyển động và hoạt ảnh mượt mà cho UI.
+- **Web Audio API:** Xử lý giải mã âm thanh đa kênh, AudioContext, bộ lọc tần số (Lowpass) và đồng bộ tốc độ phát theo thời gian thực.
+- **OPFS (Origin Private File System) & IndexedDB (MagicHopDB v3):** Lưu trữ dữ liệu beatmap và tệp âm thanh hiệu năng cao trực tiếp trên trình duyệt.
+- **Service Worker & Cache API:** Hỗ trợ PWA, cập nhật tài nguyên ngầm và hoạt động ngoại tuyến.
 
 ---
 
 ## 🚀 Hướng dẫn chạy dự án ở Local (Local Setup)
 
-Vì dự án xử lý tải các tệp tin từ cloud (âm thanh, modules), nếu bạn dùng các tệp tin cục bộ, bạn cần chạy thông qua một máy chủ web cục bộ (Local Web Server) thay vì mở trực tiếp file `index.html` trên trình duyệt để tránh lỗi CORS.
+Vì dự án xử lý tải các tệp tin âm thanh và beatmap, bạn cần chạy thông qua một máy chủ web cục bộ (Local Web Server) thay vì mở trực tiếp file `index.html` trên trình duyệt để tránh lỗi bảo mật CORS.
 
 **Các bước thực hiện:**
 1. Clone hoặc tải mã nguồn dự án về máy.
@@ -308,9 +377,9 @@ Vì dự án xử lý tải các tệp tin từ cloud (âm thanh, modules), nế
 
 ---
 
-## 🎧 Tùy chỉnh danh sách bài hát (Custom Playlist) Cho dân muốn clone dự án
+## 🎧 Tùy chỉnh danh sách bài hát (Custom Playlist) Cho người phát triển
 
-Cho dân nào muốn clone dự án, thì kể từ phiên bản 1.0.3, bạn có thể dễ dàng thêm hoặc thay đổi bài hát bằng cách sử dụng file JSON riêng biệt hoặc dán đường link vào mảng `playlistSource` trong tệp `js/playlist.js`. Việc này giúp dễ dàng chia sẻ, lưu trữ trên Cloud và quản lý:
+Bạn có thể dễ dàng thêm hoặc thay đổi bài hát bằng cách sử dụng file JSON riêng biệt hoặc khai báo đường link vào mảng `playlistSource` trong tệp `js/audio/playlist.js`. Việc này giúp dễ dàng chia sẻ, lưu trữ trên Cloud và quản lý:
 
 **1. Cấu trúc một file JSON bài hát (ví dụ: `my-song.json`):**
 ```json
@@ -331,7 +400,7 @@ Cho dân nào muốn clone dự án, thì kể từ phiên bản 1.0.3, bạn c�
 }
 ```
 
-**2. Khai báo vào game (`js/playlist.js`):**
+**2. Khai báo vào game (`js/audio/playlist.js`):**
 ```javascript
 const playlistSource = [
     // Dùng link URL đến file JSON (Cloud hoặc Local)
@@ -339,28 +408,23 @@ const playlistSource = [
         name: "Aleph-0",
         artist: "Leaf",
         warning_alert: "Level nhịp dồn dập, có thể gây lag cho máy yếu",
-        beatmapUrl: "beatmap/music_41.json" // Hoặc là Link URL đến file JSON hoặc đường dẫn cục bộ
+        beatmapUrl: "beatmap/music_41.json" // Đường link URL tới file JSON hoặc đường dẫn cục bộ
     },
 ];
 ```
 *Lưu ý:*
-- Mảng `beats` là các mốc thời gian (tính bằng giây) chỉ định lúc quả bóng nảy trúng khối gạch. Bạn có thể tự căn nhịp thủ công hoặc dùng các công cụ phân tích Audio/MIDI để tự động tạo beatmap.
-- Về bản quyền âm nhạc: Khi thêm các bài hát tùy chỉnh của riêng bạn vào trò chơi, vui lòng đảm bảo rằng bạn có quyền sử dụng hợp pháp các bản nhạc đó (ví dụ: nhạc không bản quyền, nhạc tự sáng tác, hoặc đã mua giấy phép) để tránh các vấn đề vi phạm bản quyền nếu bạn có ý định phát hành hay chia sẻ dự án ra cộng đồng.
+- Mảng `beats` là các mốc thời gian (tính bằng giây) chỉ định lúc quả bóng nảy trúng khối gạch. Bạn có thể tự căn nhịp thủ công hoặc dùng công cụ Beat Editor (`beat_editor.html`) tích hợp sẵn.
+- Về bản quyền âm nhạc: Khi thêm các bài hát tùy chỉnh của riêng bạn vào trò chơi, vui lòng đảm bảo rằng bạn có quyền sử dụng hợp pháp các bản nhạc đó (nhạc không bản quyền, nhạc tự sáng tác, hoặc đã mua giấy phép) để tránh các vấn đề vi phạm bản quyền khi phát hành ra cộng đồng.
 
 ---
 
-## 🔒 Mô Hình Phát Triển & Mã Nguồn (Closed Source & MeoTN Open Source)
+## 📜 Giấy phép & Bản quyền (License & Credits)
 
-Game vẫn duy trì trải nghiệm **Online** (Đồng bộ tài khoản, điểm số, Bảng xếp hạng server). 
-
-Dự án hiện tại là phiên bản **Mã nguồn đóng (Closed Source)** phục vụ phát triển & thử nghiệm **Nội bộ (Internal Build)**. Phiên bản **MeoTN Open Source** dành cho cộng đồng sẽ được chuyển sang phân tách và phát triển ở một kho lưu trữ (repository) riêng.
-
----
-
-## 📜 Giấy phép & Thông tin bản quyền (Credits & License)
-
-Phiên bản **v1.0.3** là bản phát hành dành riêng cho **NỘI BỘ (Internal Release)**. Thông tin về **Giấy phép MeoTN Open Source** (MeoTN Open Source License) tạm thời được ẩn trong phần Credits đối với bản phát hành này.
+Dự án phát hành dưới điều khoản **MEOTN OPEN SOURCE LICENSE**:
+- **Sử dụng tự do & Phi thương mại:** Bạn được tự do sử dụng, sao chép, tùy biến, học tập và trải nghiệm dự án cho mục đích cá nhân, giáo dục hoặc phi thương mại.
+- **Sử dụng thương mại:** Mọi hành vi sử dụng cho mục đích thương mại (kinh doanh, bán phần mềm, tích hợp dịch vụ thu phí) đều cần có sự liên hệ và cấp phép chính thức từ tác giả.
+- Xem chi tiết điều khoản tại [LICENSE](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/LICENSE) hoặc trang giao diện [license.html](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/license.html).
 
 ---
 
-*Bản quyền thuộc về **MeoTN Gaming** | Phiên bản Nội bộ (Internal Build v1.0.3)*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.4*

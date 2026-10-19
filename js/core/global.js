@@ -1031,7 +1031,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.3 (Nội bộ)' : 'Version 1.0.3 (Internal)'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.4' : 'Version 1.0.4'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
@@ -1048,7 +1048,7 @@ if (secretCreditBtn) {
                     </div>
                 </div>
                 <div class="mt-4 text-center">
-                    <p class="text-[10px] text-gray-500 leading-relaxed font-bold">${isVi ? 'Dự án game âm nhạc phi thương mại (Bản nội bộ). Cảm ơn bạn đã trải nghiệm!' : 'Non-commercial music game project (Internal Build). Thanks for playing!'}</p>
+                    <p class="text-[10px] text-gray-500 leading-relaxed font-bold">${isVi ? 'Dự án game âm nhạc phi thương mại. Cảm ơn bạn đã trải nghiệm!' : 'Non-commercial music game project. Thanks for playing!'}</p>
                     <p class="text-[10px] text-gray-400 mt-2 font-bold">${isVi ? 'Nếu cần thêm thông tin, vui lòng liên hệ:' : 'For inquiries, please contact:'}</p>
                     <a href="mailto:tranquockhanh.leaf@gmail.com" class="text-[11px] text-cyan-400 hover:text-cyan-300 underline font-orbitron font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] mt-1 block">tranquockhanh.leaf@gmail.com</a>
                 </div>
