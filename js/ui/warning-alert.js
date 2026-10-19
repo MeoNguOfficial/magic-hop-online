@@ -188,18 +188,7 @@ function handleAutoReturn() {
     }, 700);
 }
 
-// 1. Tích hợp disable-devtool lắng nghe sự kiện ondevtoolclose
-if (typeof DisableDevtool === 'function') {
-    try {
-        DisableDevtool({
-            ondevtoolclose: function() {
-                handleAutoReturn();
-            }
-        });
-    } catch (e) {}
-}
-
-// 2. Lắng nghe sự kiện resize (khi người dùng đóng bảng DevTools docked)
+// 1. Lắng nghe sự kiện resize (khi người dùng đóng bảng DevTools docked)
 window.addEventListener('resize', () => {
     if (!isDevToolsCurrentlyOpen()) {
         closedConfirmedStreak++;
