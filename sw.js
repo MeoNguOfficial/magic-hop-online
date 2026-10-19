@@ -4,8 +4,8 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.0.45';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.45';
+const STATIC_CACHE = 'magic-hop-static-v1.0.0.46';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.46';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
@@ -25,7 +25,9 @@ const CORE_ASSETS = [
     './css/style.css',
     './js/libs/anime.min.js',
     './js/libs/three.module.js',
-    'https://cdn.jsdelivr.net/npm/disable-devtool@latest/disable-devtool.min.js',
+    './js/libs/disable-devtool.min.js',
+    './warning.html',
+    './js/ui/warning-alert.js',
     './js/core/config.js',
     './js/core/app-main.js',
     './js/audio/playlist.js',

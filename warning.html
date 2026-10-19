@@ -52,6 +52,14 @@
             80% { clip-path: inset(50% 0 30% 0); transform: translate(4px, 2px); }
             100% { clip-path: inset(5% 0 80% 0); transform: translate(-4px, -2px); }
         }
+        @keyframes shake-card {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+        .animate-shake {
+            animation: shake-card 0.4s ease-in-out;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center h-screen w-screen text-center p-4">
@@ -62,7 +70,7 @@
         <button id="btn-lang-en" onclick="setLanguage('en')" class="text-cyan-400 hover:text-cyan-300 transition-colors">EN</button>
     </div>
 
-    <div class="border-2 border-red-500/50 p-8 md:p-12 rounded-2xl bg-black/80 shadow-[0_0_40px_rgba(255,0,85,0.3)] max-w-xl w-full flex flex-col items-center relative z-10">
+    <div id="warn-card" class="border-2 border-red-500/50 p-8 md:p-12 rounded-2xl bg-black/80 shadow-[0_0_40px_rgba(255,0,85,0.3)] max-w-xl w-full flex flex-col items-center relative z-10 transition-all duration-300">
         <svg class="w-24 h-24 mb-6 animate-pulse text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
         
         <h1 id="warn-heading" class="glitch-text text-3xl md:text-5xl font-black mb-4 neon-text tracking-widest uppercase font-orbitron leading-tight" data-text="Ey zô quách súp!!!">Ey zô quách súp!!!</h1>
@@ -71,12 +79,13 @@
             Hệ thống phát hiện hành vi bất thường.<br>Bảo vệ bởi MeoTN Easy AntiCheat.<br><br><span class="text-red-400 font-bold uppercase">Chà... Bạn đang làm gì đó ở hậu trường thế? Vui lòng đóng các công cụ kiểm tra để tiếp tục nhé!</span>
         </p>
         
-        <button id="warn-btn" onclick="window.location.href='index.html'" class="w-full md:w-auto px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.5)] font-orbitron active:scale-95">QUAY LẠI TRÒ CHƠI</button>
+        <button id="warn-btn" onclick="handleReturnToGame()" class="w-full md:w-auto px-8 py-4 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg uppercase tracking-widest transition-all shadow-[0_0_15px_rgba(220,38,38,0.5)] font-orbitron active:scale-95">QUAY LẠI TRÒ CHƠI</button>
     </div>
 
     <!-- Hiệu ứng sọc CRT mờ ảo toàn màn hình -->
     <div class="fixed inset-0 pointer-events-none z-50 bg-[linear-gradient(to_bottom,rgba(255,255,255,0),rgba(255,255,255,0)_50%,rgba(0,0,0,0.2)_50%,rgba(0,0,0,0.2))] bg-[length:100%_4px]"></div>
 
+    <script src="js/libs/disable-devtool.min.js"></script>
     <script src="js/ui/warning-alert.js"></script>
 </body>
 </html>

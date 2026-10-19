@@ -115,33 +115,46 @@
     }
 
     let devModeAllowed = isBypass || isPersistedBypass;
-    let intervalDebugger = null;
 
     function isAllowedBypass() {
         return isUserAdmin() === true || devModeAllowed === true;
     }
+    window.isAllowedBypass = isAllowedBypass;
 
-    // --- BƯỚC 4: TÍCH HỢP DISABLE-DEVTOOL (THƯ VIỆN CHỐNG F12) ---
+    // --- BƯỚC 4: HÀM ĐIỀU HƯỚNG CẢNH BÁO (REPLACE AN TOÀN) ---
+    let isRedirecting = false;
+    function triggerWarningRedirect() {
+        if (isAllowedBypass() || isRedirecting) return;
+        isRedirecting = true;
+        try {
+            window.location.replace('warning.html');
+        } catch (e) {
+            window.location.href = 'warning.html';
+        }
+    }
+
+    // --- BƯỚC 5: TÍCH HỢP DISABLE-DEVTOOL (LOCAL & FULL DETECTORS) ---
     function setupDisableDevtool() {
-        if (typeof DisableDevtool !== 'undefined') {
+        if (typeof window.DisableDevtool === 'function') {
             try {
-                DisableDevtool({
-                    url: 'warning.html',      // Chuyển hướng ngay lập tức khi mở F12
-                    timeOutUrl: 'warning.html', // Chuyển hướng khi bị ai đó cố tình chặn script
+                window.DisableDevtool({
+                    url: 'warning.html',
+                    timeOutUrl: 'warning.html',
                     tkName: 'devmode',
-                    clearLog: false,          // Không xóa log của admin khi mở DevTools
-                    disableMenu: false,       // Giữ nguyên Menu để trải nghiệm game mobile không bị lỗi touch
+                    clearLog: false,
+                    disableMenu: false,
                     disableSelect: false,
                     disableCopy: false,
                     disableCut: false,
                     disablePaste: false,
                     seo: true,
+                    detectors: [0, 1, 2, 3, 4, 5, 6, 7],
                     ondevtoolopen: (type, next) => {
                         if (isAllowedBypass()) return;
-                        next();
+                        triggerWarningRedirect();
                     }
                 });
-                DisableDevtool.isSuspend = isAllowedBypass();
+                window.DisableDevtool.isSuspend = isAllowedBypass();
                 return true;
             } catch (e) {}
         }
@@ -153,47 +166,127 @@
         window.addEventListener('load', setupDisableDevtool);
     }
 
-    // --- BƯỚC 5: NATIVE DEFENSE (CHẶN PHÍM TẮT & CÔNG CỤ DEBUG BÊN THỨ 3) ---
-    function startNativeAntiDev() {
-        if (isAllowedBypass()) return;
-        window.addEventListener('keydown', preventKeys);
-        checkThirdPartyTools();
+    // --- BƯỚC 6: NATIVE MULTI-LAYER ANTI-DEV ENGINE (ĐA TẦNG PHÁT HIỆN) ---
+    let nativeInterval = null;
+    let trapElement = null;
+
+    // Tầng 1: Window Size Difference (Phát hiện DevTools dạng Docked trên mọi trình duyệt)
+    function checkSizeMismatch() {
+        if (isAllowedBypass()) return false;
+        const threshold = 160;
+        const wDiff = window.outerWidth - window.innerWidth;
+        const hDiff = window.outerHeight - window.innerHeight;
+        return (wDiff > threshold || hDiff > threshold);
     }
 
-    function checkThirdPartyTools() {
-        setInterval(() => {
-            if (isAllowedBypass()) return;
-            if (document.getElementById('__vconsole') || document.getElementById('eruda') || window.vConsole || window.eruda) {
-                window.location.href = 'warning.html';
-            }
-        }, 1500);
+    // Tầng 2: Debugger Timing Loop (Phát hiện DevTools dạng Undocked / Detached hoặc đã mở)
+    function checkDebuggerTiming() {
+        if (isAllowedBypass()) return false;
+        const t0 = performance.now();
+        (function() {}.constructor("debugger")());
+        return (performance.now() - t0 > 100);
     }
 
-    function stopNativeAntiDev() {
-        window.removeEventListener('keydown', preventKeys);
-        if (intervalDebugger) {
-            clearInterval(intervalDebugger);
-            intervalDebugger = null;
+    // Tầng 3: Element Trap (Phát hiện khi mở tab Elements hoặc Console)
+    function initTrapElement() {
+        if (!trapElement) {
+            trapElement = document.createElement('div');
+            Object.defineProperty(trapElement, 'id', {
+                get: function() {
+                    if (!isAllowedBypass()) {
+                        triggerWarningRedirect();
+                    }
+                    return 'anti-dev';
+                }
+            });
         }
     }
 
+    // Tầng 4: Chặn phím tắt F12, Ctrl+Shift+I/J/C, Ctrl+U, Cmd+Option+I/J/C
     function preventKeys(e) {
         if (isAllowedBypass()) return;
-        // Chặn F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C, Ctrl+U
-        if (
-            e.keyCode === 123 || 
-            (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67)) || 
-            (e.ctrlKey && e.keyCode === 85)
-        ) {
+        const isF12 = (e.keyCode === 123);
+        const isCtrlShift = e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67);
+        const isCtrlU = e.ctrlKey && (e.keyCode === 85);
+        const isMacCmdOpt = e.metaKey && e.altKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67 || e.keyCode === 85);
+
+        if (isF12 || isCtrlShift || isCtrlU || isMacCmdOpt) {
             e.preventDefault();
-            window.location.href = 'warning.html';
+            e.stopPropagation();
+            triggerWarningRedirect();
             return false;
+        }
+    }
+
+    function onWindowResize() {
+        if (isAllowedBypass()) return;
+        if (checkSizeMismatch()) {
+            triggerWarningRedirect();
+        }
+    }
+
+    function startNativeAntiDev() {
+        if (isAllowedBypass()) return;
+
+        window.addEventListener('keydown', preventKeys, true);
+        window.addEventListener('resize', onWindowResize, { passive: true });
+        initTrapElement();
+
+        // Kiểm tra ngay lập tức nếu DevTools đã mở sẵn từ trước
+        if (checkSizeMismatch()) {
+            triggerWarningRedirect();
+            return;
+        }
+
+        if (nativeInterval) clearInterval(nativeInterval);
+        nativeInterval = setInterval(() => {
+            if (isAllowedBypass()) {
+                stopNativeAntiDev();
+                return;
+            }
+
+            // 1. Kiểm tra kích thước cửa sổ
+            if (checkSizeMismatch()) {
+                triggerWarningRedirect();
+                return;
+            }
+
+            // 2. Kiểm tra timing của debugger
+            if (checkDebuggerTiming()) {
+                triggerWarningRedirect();
+                return;
+            }
+
+            // 3. Kích hoạt trap element console qua originalConsole
+            if (originalConsole && typeof originalConsole.log === 'function' && trapElement) {
+                originalConsole.log(trapElement);
+            }
+
+            // 4. Kiểm tra công cụ debug mobile bên thứ ba
+            if (document.getElementById('__vconsole') || document.getElementById('eruda') || window.vConsole || window.eruda) {
+                triggerWarningRedirect();
+                return;
+            }
+        }, 700);
+    }
+
+    function stopNativeAntiDev() {
+        window.removeEventListener('keydown', preventKeys, true);
+        window.removeEventListener('resize', onWindowResize);
+        if (nativeInterval) {
+            clearInterval(nativeInterval);
+            nativeInterval = null;
         }
     }
 
     startNativeAntiDev();
 
-    // --- BƯỚC 6: QUẢN LÝ ĐỒNG BỘ TRẠNG THÁI ADMIN (DEV MODE) ---
+    // Thông báo trạng thái bypass cho Admin trong console gốc
+    if (isAllowedBypass() && originalConsole && originalConsole.info) {
+        originalConsole.info("%c[MeoTN Security Gateway] DevTools Bypass Active (Admin or DevMode enabled).", "color: #00ffff; font-weight: bold; background: #000; padding: 4px; border-radius: 4px;");
+    }
+
+    // --- BƯỚC 7: QUẢN LÝ ĐỒNG BỘ TRẠNG THÁI ADMIN (DEV MODE) ---
     window.setDevMode = function(state, persistDays = 0) {
         devModeAllowed = state;
         
@@ -204,8 +297,8 @@
             localStorage.removeItem('MeoTNDevModeExp');
         }
 
-        if (typeof DisableDevtool !== 'undefined') {
-            DisableDevtool.isSuspend = state || isUserAdmin(); 
+        if (typeof window.DisableDevtool !== 'undefined') {
+            window.DisableDevtool.isSuspend = state || isUserAdmin(); 
         }
         
         if (state || isUserAdmin()) {
