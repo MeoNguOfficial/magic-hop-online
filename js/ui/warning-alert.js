@@ -58,6 +58,10 @@ if (userLang === 'auto' || !userLang) {
     currentLang = userLang === 'vi' ? 'vi' : 'en';
 }
 
+// Trạng thái điều hướng và xác nhận DevTools đóng
+let isReturning = false;
+let closedConfirmedStreak = 0;
+
 function applyLang(lang) {
     currentLang = lang;
     const t = dict[currentLang];
@@ -131,15 +135,13 @@ document.addEventListener('contextmenu', (event) => {
 // ============================================================
 // AUTO-RETURN WATCHER (TỰ ĐỘNG CHUYỂN HƯỚNG KHI TẮT DEVTOOLS)
 // ============================================================
-let isReturning = false;
-let closedConfirmedStreak = 0;
-
 function isDevToolsCurrentlyOpen() {
     // 1. Kiểm tra độ lệch kích thước cửa sổ (DevTools docked)
-    const threshold = 160;
+    const thresholdWidth = 160;
+    const thresholdHeight = 200;
     const wDiff = window.outerWidth - window.innerWidth;
     const hDiff = window.outerHeight - window.innerHeight;
-    if (wDiff > threshold || hDiff > threshold) {
+    if (wDiff > thresholdWidth || hDiff > thresholdHeight) {
         return true;
     }
 

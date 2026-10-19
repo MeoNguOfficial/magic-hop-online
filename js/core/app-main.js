@@ -173,10 +173,11 @@
     // Tầng 1: Window Size Difference (Phát hiện DevTools dạng Docked trên mọi trình duyệt)
     function checkSizeMismatch() {
         if (isAllowedBypass()) return false;
-        const threshold = 160;
+        const thresholdWidth = 160;
+        const thresholdHeight = 200;
         const wDiff = window.outerWidth - window.innerWidth;
         const hDiff = window.outerHeight - window.innerHeight;
-        return (wDiff > threshold || hDiff > threshold);
+        return (wDiff > thresholdWidth || hDiff > thresholdHeight);
     }
 
     // Tầng 2: Debugger Timing Loop (Phát hiện DevTools dạng Undocked / Detached hoặc đã mở)
