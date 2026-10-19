@@ -350,6 +350,12 @@ function pushTileToPool(tile) {
             t.userData.springY = 0;
             t.userData.springVelocityY = 0;
             t.position.y = 0;
+            t.userData.isDimmed = false;
+        }
+        if (t.userData && t.userData.themeColor === 0xff00ff) {
+            t.material = window.globalTileMatMagenta;
+        } else {
+            t.material = window.globalTileMatCyan;
         }
     };
     

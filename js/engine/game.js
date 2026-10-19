@@ -276,10 +276,53 @@ async function saveBestScore(songIndex, score, isPassed = false) {
 }
 
 // --- LÀM MỜ TILE SAU KHI BÓNG ĐÃ CHẠM ---
+// LƯU Ý QUAN TRỌNG: Chỉ làm mờ phần nền trong (tile mesh chính), tuyệt đối KHÔNG làm mờ viền (borderLine) hay glow (glowMesh)
 function dimLandedTile(tile) {
     if (!tile || !tile.userData) return;
     tile.userData.isDimmed = true;
+
+    // Đảm bảo các material dimmed đã được khởi tạo
+    if (!window.globalTileDimmedMatCyan && window.globalTileMatCyan) {
+        window.globalTileDimmedMatCyan = window.globalTileMatCyan.clone();
+        window.globalTileDimmedMatCyan.opacity = 0.08;
+    }
+    if (!window.globalTileDimmedMatMagenta && window.globalTileMatMagenta) {
+        window.globalTileDimmedMatMagenta = window.globalTileMatMagenta.clone();
+        window.globalTileDimmedMatMagenta.opacity = 0.08;
+    }
+
+    const isMagenta = (tile.userData.themeColor === 0xff00ff);
+    if (isMagenta) {
+        if (window.globalTileDimmedMatMagenta) {
+            tile.material = window.globalTileDimmedMatMagenta;
+        }
+    } else {
+        if (window.globalTileDimmedMatCyan) {
+            tile.material = window.globalTileDimmedMatCyan;
+        }
+    }
+
+    // Đảm bảo viền (borderLine) và glow (glowMesh) giữ nguyên 100% độ sáng rực rỡ
+    if (tile.userData.borderLine && tile.userData.borderLine.material) {
+        tile.userData.borderLine.visible = true;
+        tile.userData.borderLine.material.opacity = 1.0;
+    }
+    const glowMesh = tile.userData.glowMesh || (typeof tile.getObjectByName === 'function' ? tile.getObjectByName("glowMesh") : null);
+    if (glowMesh) {
+        if (typeof isGlowEnabled === 'function') {
+            glowMesh.visible = isGlowEnabled();
+        }
+        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
+        if (glowMat) {
+            if (glowMat.uniforms && glowMat.uniforms.opacityMultiplier) {
+                glowMat.uniforms.opacityMultiplier.value = (tile.userData && tile.userData.isFake === true) ? 0.3 : 1.0;
+            } else {
+                glowMat.opacity = (tile.userData && tile.userData.isFake === true) ? 0.08 : 0.85;
+            }
+        }
+    }
 }
+window.dimLandedTile = dimLandedTile;
 
 // --- HIỆU ỨNG SÓNG XUNG KÍCH ---
 
@@ -4766,6 +4809,9 @@ function setupGameStates() {
 
     jumpStartRawZ = tiles[0].position.z;
     calculateNextParabola(0);
+    if (tiles[0]) {
+        dimLandedTile(tiles[0]);
+    }
 
     accumulatedSongTime = 0;
     gameStarted = true;
