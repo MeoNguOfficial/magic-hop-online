@@ -18,7 +18,7 @@
     </script>
 
     <!-- ANTI DEVTOOLS & CONSOLE GATEWAY (ADMIN ONLY) -->
-    <script src="js/app-main.js"></script>
+    <script src="js/core/app-main.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/disable-devtool@latest/disable-devtool.min.js"></script>
 
     <meta charset="UTF-8">
@@ -3110,38 +3110,38 @@
         }
 
         const scripts = [
-            "js/config.js",
-            "js/api.js",
-            "js/playlist.js",
-            "js/cacheManager.js",
-            "js/storage-manager.js",
-            "js/pwa-installer.js",
-            "js/i18n.js",
-            "js/global.js",
-            "js/global_function.js",
-            "js/settings.js",
-            "js/audio-manager.js",
-            "js/copyright_check.js",
-            "js/moving-blocks.js",
-            "js/easy-mode.js",
-            "js/hard-mode.js",
-            "js/asian-mode.js",
-            "js/normal-blocks.js",
-            "js/personalize.js",
-            "js/game-effects.js",
-            "js/game-camera.js",
-            "js/visualizer.js",
-            "js/adaptive-performance.js",
-            "js/fps-graph.js",
-            "js/game.js",
-            "js/autoplay.js",
-            "js/bot-assist.js",
-            "js/music-player.js",
-            "js/song-selector.js",
-            "js/chat.js",
-            "js/account.js",
-            "js/tos-warning.js",
-            // "js/alert.js"
+            "js/core/config.js",
+            "js/services/api.js",
+            "js/audio/playlist.js",
+            "js/services/cacheManager.js",
+            "js/services/storage-manager.js",
+            "js/core/pwa-installer.js",
+            "js/core/i18n.js",
+            "js/core/global.js",
+            "js/core/global_function.js",
+            "js/ui/settings.js",
+            "js/audio/audio-manager.js",
+            "js/services/copyright_check.js",
+            "js/game/blocks/moving-blocks.js",
+            "js/game/modes/easy-mode.js",
+            "js/game/modes/hard-mode.js",
+            "js/game/modes/asian-mode.js",
+            "js/game/blocks/normal-blocks.js",
+            "js/ui/personalize.js",
+            "js/engine/game-effects.js",
+            "js/engine/game-camera.js",
+            "js/audio/visualizer.js",
+            "js/engine/adaptive-performance.js",
+            "js/engine/fps-graph.js",
+            "js/engine/game.js",
+            "js/game/assists/autoplay.js",
+            "js/game/assists/bot-assist.js",
+            "js/audio/music-player.js",
+            "js/ui/song-selector.js",
+            "js/ui/chat.js",
+            "js/ui/account.js",
+            "js/ui/tos-warning.js",
+            // "js/ui/alert.js"
         ];
 
         function loadScript(src) {

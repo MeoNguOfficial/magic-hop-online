@@ -528,7 +528,7 @@ async function loadFakeBlocksLogic() {
     if (document.getElementById('fake-blocks-script')) return;
 
     if (!navigator.onLine) {
-        const isCached = typeof isResourceCached === 'function' ? await isResourceCached('js/fake-blocks.js') : false;
+        const isCached = typeof isResourceCached === 'function' ? await isResourceCached('js/game/blocks/fake-blocks.js') : false;
         if (!isCached) {
             if (typeof showCyberModal === 'function') {
                 showCyberModal({
@@ -547,7 +547,7 @@ async function loadFakeBlocksLogic() {
 
     const script = document.createElement('script');
     script.id = 'fake-blocks-script';
-    script.src = 'js/fake-blocks.js';
+    script.src = 'js/game/blocks/fake-blocks.js';
     document.body.appendChild(script);
 }
 
