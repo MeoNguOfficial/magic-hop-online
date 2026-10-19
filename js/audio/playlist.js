@@ -414,19 +414,13 @@ async function refreshPlaylist(search = '', forceRefresh = true, options = {}) {
         playlistRenderStartIndex = 0;
     }
 
-    // Chỉ xóa cache API nếu DB thực sự Online. Nếu DB offline/check false, giữ nguyên cache để không mất nhạc!
-    let isDbHealthy = true;
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        isDbHealthy = false;
-    } else if (window.ApiService && typeof window.ApiService.checkHealth === 'function') {
-        const health = await window.ApiService.checkHealth().catch(() => ({ isHealthy: false }));
-        isDbHealthy = !!health.isHealthy;
-    }
-    if (forceRefresh && isDbHealthy && typeof window.deleteApiCache === 'function') {
+    // Khi người dùng yêu cầu làm mới và đang có mạng, luôn xóa cache API /beatmaps để kéo bản mới nhất từ Server
+    const isOnline = typeof navigator === 'undefined' || navigator.onLine;
+    if (forceRefresh && isOnline && typeof window.deleteApiCache === 'function') {
         await window.deleteApiCache('/beatmaps');
     }
 
-    await loadPlaylistData(search, forceRefresh);
+    await loadPlaylistData(search, forceRefresh, options);
 
     if (!options.skipRender && typeof renderSongList === 'function') {
         renderSongList(search, currentPlaylistIndices);
@@ -439,7 +433,14 @@ window.refreshPlaylist = refreshPlaylist;
 window.mergeIntoPlaylist = function (newMaps) {
     if (!Array.isArray(newMaps) || newMaps.length === 0) return [];
 
-    const processedMaps = newMaps.map(item => {
+    // LỌC BỎ NGAY LẬP TỨC CÁC PHẦN TỬ RÁC (KHÔNG CÓ TÊN BÀI HÁT)
+    const validRawMaps = newMaps.filter(item => Boolean(item && typeof item === 'object' && (item.name || item.title)));
+    if (validRawMaps.length === 0) return [];
+
+    const processedMaps = validRawMaps.map(item => {
+        const songName = String(item.title || item.name || '').trim();
+        if (!songName) return null;
+
         const normalized = normalizeBeats(item.beats);
         const songId = item.id !== undefined && item.id !== null ? item.id : (typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(item) : null);
         
@@ -462,8 +463,9 @@ window.mergeIntoPlaylist = function (newMaps) {
         return {
             ...item,
             id: songId,
-            name: item.title || item.name,
-            artist: item.artist || "Unknown",
+            name: songName,
+            title: songName,
+            artist: item.artist ? String(item.artist).trim() : "Unknown",
             url: item.url || item.file_url || item.audioUrl || item.song || '',
             beats: normalized,
             beatmapUrl: finalBeatmapUrl,
@@ -477,7 +479,7 @@ window.mergeIntoPlaylist = function (newMaps) {
             verified: isVerified,
             updated_at: item.updated_at || null
         };
-    });
+    }).filter(Boolean);
 
     const resultIndices = [];
 
@@ -579,23 +581,15 @@ function isCurrentUserAdmin() {
 }
 window.isCurrentUserAdmin = isCurrentUserAdmin;
 
-async function loadPlaylistData(search = '', forceRefresh = false) {
+async function loadPlaylistData(search = '', forceRefresh = false, options = {}) {
     let indices = [];
     let syncError = null;
     currentSearchTerm = search;
     const isAdmin = isCurrentUserAdmin();
+    const isBrowserOffline = (typeof navigator !== 'undefined' && !navigator.onLine);
 
-    // THÔNG QUA HEALTH BACKEND: Kiểm tra sức khỏe máy chủ & DB trước
-    let isDbHealthy = true;
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        isDbHealthy = false;
-    } else if (window.ApiService && typeof window.ApiService.checkHealth === 'function') {
-        const health = await window.ApiService.checkHealth().catch(() => ({ isHealthy: false }));
-        isDbHealthy = !!health.isHealthy;
-    }
-
-    // 1. SERVER TRƯỚC: Nếu Health Backend Online, ưu tiên gọi API Server
-    if (isDbHealthy && window.ApiService) {
+    // 1. SERVER TRƯỚC (Network-First): Nếu thiết bị có mạng và có ApiService, LUÔN gọi trực tiếp Server API
+    if (!isBrowserOffline && window.ApiService && typeof window.ApiService.getPublicBeatmaps === 'function') {
         try {
             const params = { limit: 100 };
             if (isAdmin) {
@@ -606,8 +600,9 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
             if (window.selectedGenreFilter) params.genre = window.selectedGenreFilter;
             if (window.selectedCopyrightFilter) params.copyright_status = window.selectedCopyrightFilter;
 
-            const options = forceRefresh ? { forceRefresh: true, headers: { 'X-Force-Refresh': 'true' } } : {};
-            const apiResponse = await ApiService.getPublicBeatmaps(params, options);
+            const reqOptions = forceRefresh ? { forceRefresh: true, headers: { 'X-Force-Refresh': 'true' } } : {};
+            const apiResponse = await ApiService.getPublicBeatmaps(params, reqOptions);
+            
             if (apiResponse.data?.meta) {
                 nextCursor = apiResponse.data.meta.next_cursor;
                 hasMore = apiResponse.data.meta.has_more;
@@ -624,11 +619,13 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
                 window.apiFilterOptions = apiResponse.data.filter_options;
             }
 
-            const newMaps = apiResponse.data?.data || apiResponse.data || [];
+            const rawList = apiResponse.data?.data || apiResponse.data || [];
+            const newMaps = (Array.isArray(rawList) ? rawList : []).filter(m => Boolean(m && typeof m === 'object' && (m.name || m.title)));
+
             if (newMaps.length > 0) {
                 indices = window.mergeIntoPlaylist(newMaps);
                 const sourceText = apiResponse.isCached ? "Cache/IndexedDB" : "Server API";
-                console.log(`[Playlist] [Server First] Đã đồng bộ playlist từ ${sourceText}.` + (isAdmin ? " (Mode Admin)" : ""));
+                console.log(`[Playlist] [Server First] Đã nạp ${indices.length} bài hát từ ${sourceText}.` + (isAdmin ? " (Mode Admin)" : ""));
                 if (typeof window.updateConnectionStatusIndicator === 'function') {
                     window.updateConnectionStatusIndicator(apiResponse.isCached ? 'cache' : 'server');
                 }
@@ -670,38 +667,46 @@ async function loadPlaylistData(search = '', forceRefresh = false) {
         }
     }
 
-    // 2. CACHE SAU: Nếu Health Backend báo Offline HOẶC gọi Server API thất bại, nạp từ Cache Offline
-    if (!isDbHealthy || syncError || indices.length === 0) {
+    // 2. CACHE SAU (Fallback): Nếu browser offline HOẶC gọi Server API thất bại HOẶC không lấy được bài nào từ server
+    if (indices.length === 0) {
         if (typeof window.updateConnectionStatusIndicator === 'function') {
             window.updateConnectionStatusIndicator('cache');
         }
         if (typeof getCachedPlaylistFromDB === 'function') {
             try {
                 const cachedMaps = await getCachedPlaylistFromDB();
-                if (cachedMaps && cachedMaps.length > 0) {
-                    indices = window.mergeIntoPlaylist(cachedMaps);
-                    console.log(`[Playlist] [Cache Fallback] Đã nạp ${cachedMaps.length} bài từ Offline Cache (${!isDbHealthy ? 'Health Backend Offline' : 'Server Error'}).`);
-                    // Toàn bộ danh sách đã nạp vào bộ nhớ, vô hiệu hóa cờ hasMore của API
-                    hasMore = false;
-                    nextCursor = null;
+                if (cachedMaps && Array.isArray(cachedMaps) && cachedMaps.length > 0) {
+                    const validCached = cachedMaps.filter(m => Boolean(m && typeof m === 'object' && (m.name || m.title)));
+                    if (validCached.length > 0) {
+                        indices = window.mergeIntoPlaylist(validCached);
+                        console.log(`[Playlist] [Cache Fallback] Đã nạp ${validCached.length} bài từ Offline Cache (${isBrowserOffline ? 'Browser Offline' : 'Server Error'}).`);
+                        hasMore = false;
+                        nextCursor = null;
+                    }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.warn("[Playlist] Đọc cache offline thất bại:", e);
+            }
         }
     }
 
-    // Luôn đảm bảo nạp đủ 70 bài hát mặc định (playlistSource) nếu danh sách đang thiếu khi offline/khởi động
-    if (!search && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
-        if (indices.length < playlistSource.length || playlist.length < playlistSource.length) {
-            const sourceIndices = window.mergeIntoPlaylist(playlistSource);
-            if (sourceIndices && sourceIndices.length > 0) {
-                indices = [...new Set([...indices, ...sourceIndices])];
-            }
+    // 3. DEFAULT BACKUP: Nếu cả server lẫn cache đều chưa có, nạp playlistSource mặc định
+    if (indices.length === 0 && !search && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
+        const sourceIndices = window.mergeIntoPlaylist(playlistSource);
+        if (sourceIndices && sourceIndices.length > 0) {
+            indices = sourceIndices;
+            console.log(`[Playlist] [Built-in Fallback] Đã nạp ${indices.length} bài mặc định từ playlistSource.`);
         }
     }
 
     currentPlaylistIndices = indices.length > 0 ? indices : currentPlaylistIndices;
 
-    // Chỉ ném lỗi nếu không lấy được bài nào từ cả Server lẫn Cache Offline
+    // Tự động cập nhật render danh sách ra giao diện
+    if (!options?.skipRender && typeof renderSongList === 'function') {
+        renderSongList(search, currentPlaylistIndices);
+    }
+
+    // Chỉ ném lỗi nếu forceRefresh và không lấy được bài nào từ cả Server lẫn Cache Offline
     if (forceRefresh && syncError && indices.length === 0) {
         throw syncError;
     }
@@ -735,7 +740,8 @@ async function loadMoreSongs() {
         if (window.selectedCopyrightFilter) params.copyright_status = window.selectedCopyrightFilter;
 
         const apiResponse = await ApiService.getPublicBeatmaps(params);
-        const newMaps = apiResponse.data?.data || [];
+        const rawList = apiResponse.data?.data || [];
+        const newMaps = (Array.isArray(rawList) ? rawList : []).filter(m => Boolean(m && typeof m === 'object' && (m.name || m.title)));
 
         if (apiResponse.data?.meta) {
             nextCursor = apiResponse.data.meta.next_cursor;

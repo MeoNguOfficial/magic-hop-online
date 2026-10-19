@@ -242,7 +242,7 @@ function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
     // Tối ưu hóa: Gộp 5 vòng lặp .filter() chuỗi liên tiếp thành 1 vòng lặp duy nhất O(N) với short-circuit
     filteredIndices = sourceIndices.filter(i => {
         const song = playlist[i];
-        if (!song) return false;
+        if (!song || (!song.name && !song.title)) return false;
 
         // 1. Phân quyền Admin & Ngày khả dụng
         if (!isAdmin) {
@@ -452,6 +452,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
     displayIndices.forEach((originalIndex, i) => {
         const song = playlist[originalIndex];
+        if (!song || (!song.name && !song.title)) return;
 
         // Kiểm tra trạng thái ẩn / ngoài khung ngày (dành cho Admin)
         const isHiddenStatus = song.is_available === false || song.is_available === 0;
@@ -495,7 +496,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                 <div class="flex-1 min-w-0 pr-2 overflow-hidden pointer-events-auto">
                     <div class="flex items-center gap-1.5 min-w-0 w-full">
                         <h3 class="font-bold text-white group-hover:text-cyan-300 font-orbitron text-sm pointer-events-none overflow-hidden whitespace-nowrap flex-1 min-w-0 marquee-container">
-                            <span class="marquee-text inline-block">${song.name}</span>
+                            <span class="marquee-text inline-block">${song.name || song.title || 'Untitled'}</span>
                         </h3>
                         ${adminEyeBadgeHtml}
                         <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none inline-flex items-center justify-center self-center my-auto"></div>

@@ -884,12 +884,25 @@ async function updateCachedSongInPlaylistDB(songId, updatedFields) {
 }
 window.updateCachedSongInPlaylistDB = updateCachedSongInPlaylistDB;
 
+// Helper kiểm tra bài hát hợp lệ
+function isValidSongItem(item) {
+    if (!item || typeof item !== 'object') return false;
+    const name = item.name || item.title;
+    if (!name || typeof name !== 'string' || !name.trim()) return false;
+    // Bắt buộc phải có thêm một trong các trường bài hát đặc thù
+    return Boolean(item.url || item.file_url || item.beatmap_url || item.beatmapUrl || (Array.isArray(item.beats) && item.beats.length > 0) || item.bpm || item.artist);
+}
+
 // --- QUẢN LÝ CACHE PLAYLIST (TỐI ƯU CẬP NHẬT TRƯỜNG THAY ĐỔI) ---
 async function cachePlaylistToDB(maps, customKey = null) {
     if (!Array.isArray(maps) || maps.length === 0) return;
+    // LỌC NGHIÊM NGẶT: Chỉ lưu các bài hát thực sự hợp lệ có tên
+    maps = maps.filter(isValidSongItem);
+    if (maps.length === 0) return;
+
     const storeKey = customKey || ((typeof isCurrentUserAdmin === 'function' && isCurrentUserAdmin()) ? 'admin_playlist' : 'public_playlist');
     try {
-        const existing = await getCachedPlaylistFromDB(storeKey);
+        const existing = await getCachedPlaylistFromDB(storeKey, { rawOnly: true });
         if (existing && Array.isArray(existing) && existing.length > 0) {
             const getSongKey = (item) => {
                 if (typeof getBeatmapIdFromSong === 'function') {
@@ -904,6 +917,7 @@ async function cachePlaylistToDB(maps, customKey = null) {
 
             const existingMapById = new Map();
             existing.forEach(item => {
+                if (!isValidSongItem(item)) return;
                 const key = getSongKey(item);
                 if (key) existingMapById.set(key, item);
             });
@@ -952,6 +966,7 @@ async function cachePlaylistToDB(maps, customKey = null) {
             // Giữ lại tất cả các bài hát đã có trong existing mà không có trong maps mới tải về
             // (tránh tình trạng chỉ tải page 1 có 20 bài làm xóa mất hàng chục bài nhạc đã lưu ngoại tuyến!)
             existing.forEach(oldSong => {
+                if (!isValidSongItem(oldSong)) return;
                 const key = getSongKey(oldSong);
                 if (key && !visitedKeys.has(key)) {
                     merged.push(oldSong);
@@ -1017,7 +1032,8 @@ async function getCachedPlaylistFromDB(customKey = null, options = {}) {
         });
 
         sourceList.forEach(item => {
-            if (!item) return;
+            // LỌC BỎ NGAY CÁC ITEM RÁC (ĐIỂM SỐ, LEADERBOARD, NOTIFICATION) KHÔNG PHẢI BÀI HÁT
+            if (!isValidSongItem(item)) return;
             const k = getSongKey(item);
             if (!k) return;
             if (keyMap.has(k)) {
@@ -1069,38 +1085,44 @@ async function getCachedPlaylistFromDB(customKey = null, options = {}) {
             });
         } catch (e) {}
 
-        const primaryList = (Array.isArray(primaryOpfs) && primaryOpfs.length > 0) ? primaryOpfs : (Array.isArray(primaryIdb) ? primaryIdb : []);
-        const secondaryList = (Array.isArray(secondaryOpfs) && secondaryOpfs.length > 0) ? secondaryOpfs : (Array.isArray(secondaryIdb) ? secondaryIdb : []);
+        const primaryList = (Array.isArray(primaryOpfs) && primaryOpfs.length > 0) ? primaryOpfs.filter(isValidSongItem) : (Array.isArray(primaryIdb) ? primaryIdb.filter(isValidSongItem) : []);
+        const secondaryList = (Array.isArray(secondaryOpfs) && secondaryOpfs.length > 0) ? secondaryOpfs.filter(isValidSongItem) : (Array.isArray(secondaryIdb) ? secondaryIdb.filter(isValidSongItem) : []);
 
         combined = [...primaryList];
         mergeSongLists(combined, secondaryList);
 
-        // 3. Quét thêm toàn bộ beatmaps từ STORE_API_CACHE (tất cả các response /beatmaps từng được tải về)
+        // 3. Quét thêm beatmaps từ STORE_API_CACHE có chọn lọc (CHỈ QUÉT KEY DANH SÁCH /beatmaps)
         try {
             const db = await getDB();
             const tx = db.transaction(STORE_API_CACHE, 'readonly');
             const store = tx.objectStore(STORE_API_CACHE);
-            const allApiRecords = await new Promise(r => {
-                if (typeof store.getAll === 'function') {
-                    const req = store.getAll();
-                    req.onsuccess = () => r(req.result || []);
-                    req.onerror = () => r([]);
-                } else {
-                    r([]);
-                }
-            });
-
+            
             const apiMaps = [];
-            for (const record of allApiRecords) {
-                const data = (record && record.data !== undefined) ? record.data : record;
-                if (!data) continue;
-                if (Array.isArray(data.data) && data.data.length > 0 && (data.data[0].id || data.data[0].title || data.data[0].name)) {
-                    apiMaps.push(...data.data);
-                } else if (Array.isArray(data) && data.length > 0 && (data[0].id || data[0].title || data[0].name)) {
-                    apiMaps.push(...data);
-                } else if (data.data && typeof data.data === 'object' && (data.data.id || data.data.title || data.data.name)) {
-                    apiMaps.push(data.data);
-                }
+            if (typeof store.openCursor === 'function') {
+                await new Promise((resolve) => {
+                    const req = store.openCursor();
+                    req.onsuccess = (e) => {
+                        const cursor = e.target.result;
+                        if (cursor) {
+                            const key = String(cursor.key || '');
+                            // CHỈ LẤY CÁC KEY LIÊN QUAN ĐẾN DANH SÁCH BÀI HÁT (/beatmaps) VÀ KHÔNG PHẢI LEADERBOARD/SCORES/IMPORT
+                            if (key.includes('/beatmaps') && !key.includes('/leaderboard') && !key.includes('/scores') && !key.includes('/import')) {
+                                const record = cursor.value;
+                                const data = (record && record.data !== undefined) ? record.data : record;
+                                const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+                                list.forEach(item => {
+                                    if (isValidSongItem(item)) {
+                                        apiMaps.push(item);
+                                    }
+                                });
+                            }
+                            cursor.continue();
+                        } else {
+                            resolve();
+                        }
+                    };
+                    req.onerror = () => resolve();
+                });
             }
             if (apiMaps.length > 0) {
                 mergeSongLists(combined, apiMaps);
@@ -1112,9 +1134,41 @@ async function getCachedPlaylistFromDB(customKey = null, options = {}) {
             mergeSongLists(combined, playlistSource);
         }
 
+        // Đảm bảo 100% không còn bài rác
+        combined = combined.filter(isValidSongItem);
+
         return combined.length > 0 ? combined : null;
     } catch (e) { return null; }
 }
+
+// Tự động quét và dọn sạch các bài hát rác (undefined/Unknown) bị kẹt trong Cache người dùng
+async function sanitizeAndCleanPlaylistCache() {
+    try {
+        const db = await getDB();
+        const tx = db.transaction(STORE_PLAYLIST, 'readwrite');
+        const store = tx.objectStore(STORE_PLAYLIST);
+        
+        ['public_playlist', 'admin_playlist'].forEach(async (key) => {
+            const req = store.get(key);
+            req.onsuccess = async () => {
+                const list = req.result;
+                if (Array.isArray(list)) {
+                    const cleanList = list.filter(isValidSongItem);
+                    if (cleanList.length !== list.length) {
+                        console.warn(`[CacheManager] Đã dọn dẹp ${list.length - cleanList.length} bài hát rác khỏi ${key}`);
+                        const putTx = db.transaction(STORE_PLAYLIST, 'readwrite');
+                        putTx.objectStore(STORE_PLAYLIST).put(cleanList, key);
+                        if (hasOPFS) {
+                            writeToOPFS('playlist', key, JSON.stringify(cleanList)).catch(() => {});
+                        }
+                    }
+                }
+            };
+        });
+    } catch (e) {}
+}
+// Chạy dọn rác ngầm khi khởi tạo
+setTimeout(sanitizeAndCleanPlaylistCache, 1500);
 
 // --- QUẢN LÝ CACHE REQUEST BACKEND (API CACHE) ---
 const apiMemoryCache = new Map();

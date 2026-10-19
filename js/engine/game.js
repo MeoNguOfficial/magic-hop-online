@@ -5460,6 +5460,9 @@ async function bootGame() {
     window.bgInitPromise = (async () => {
         if (typeof loadPlaylistData === 'function') {
             await loadPlaylistData();
+            if (typeof renderSongList === 'function') {
+                renderSongList('', currentPlaylistIndices);
+            }
         }
 
         if (typeof playlist !== 'undefined' && playlist.length > 0) {
@@ -5476,10 +5479,10 @@ async function bootGame() {
 
         let foundIndex = -1;
         if (savedId) {
-            foundIndex = activePlaylist.findIndex(s => String(s.id) === String(savedId));
+            foundIndex = activePlaylist.findIndex(s => s && (s.name || s.title) && String(s.id) === String(savedId));
         }
         if (foundIndex === -1 && savedUrl) {
-            foundIndex = activePlaylist.findIndex(s => s.url === savedUrl || s.file_url === savedUrl);
+            foundIndex = activePlaylist.findIndex(s => s && (s.name || s.title) && (s.url === savedUrl || s.file_url === savedUrl));
         }
 
         // Nếu bài hát đã lưu chưa có trong page 1 API tải về (lazy load), khôi phục từ savedSongData / DB Offline / playlistSource
@@ -5488,7 +5491,7 @@ async function bootGame() {
             if (savedSongDataStr) {
                 try {
                     const parsed = JSON.parse(savedSongDataStr);
-                    if (parsed && (parsed.id || parsed.url || parsed.name)) {
+                    if (parsed && typeof parsed === 'object' && (parsed.name || parsed.title)) {
                         matchedSong = parsed;
                     }
                 } catch (e) {}
@@ -5497,15 +5500,15 @@ async function bootGame() {
                 try {
                     const cachedMaps = await getCachedPlaylistFromDB();
                     if (cachedMaps && Array.isArray(cachedMaps)) {
-                        matchedSong = cachedMaps.find(s => (savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl)));
+                        matchedSong = cachedMaps.find(s => s && (s.name || s.title) && ((savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl))));
                     }
                 } catch (e) {}
             }
             if (!matchedSong && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
-                matchedSong = playlistSource.find(s => (savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl)));
+                matchedSong = playlistSource.find(s => s && (s.name || s.title) && ((savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl))));
             }
 
-            if (matchedSong && typeof window.mergeIntoPlaylist === 'function') {
+            if (matchedSong && (matchedSong.name || matchedSong.title) && typeof window.mergeIntoPlaylist === 'function') {
                 const newIndices = window.mergeIntoPlaylist([matchedSong]);
                 if (newIndices && newIndices.length > 0) {
                     foundIndex = newIndices[0];

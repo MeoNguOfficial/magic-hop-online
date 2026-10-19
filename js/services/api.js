@@ -243,6 +243,106 @@ const originalPost = apiClient.post.bind(apiClient);
 const originalPut = apiClient.put.bind(apiClient);
 const originalDelete = apiClient.delete.bind(apiClient);
 
+// Helper fallback lấy dữ liệu offline/cache cho apiClient.get
+async function getOfflineFallbackResponse(url, config, cacheKey, isDbError = false, originalError = null) {
+    // 1. Nếu là endpoint /beatmaps danh sách (không phải chi tiết /beatmaps/{id}), lấy danh sách từ getCachedPlaylistFromDB
+    if (typeof url === 'string' && url.includes('/beatmaps') && !url.includes('/beatmaps/') && typeof window.getCachedPlaylistFromDB === 'function') {
+        try {
+            const dbPlaylist = await window.getCachedPlaylistFromDB();
+            const validPlaylist = Array.isArray(dbPlaylist) ? dbPlaylist.filter(s => Boolean(s && (s.name || s.title))) : [];
+            if (validPlaylist.length > 0) {
+                console.warn(`[ApiCache] Server offline/lỗi mạng: Tự động fallback dùng ${validPlaylist.length} bài hát từ Playlist Cache.`);
+                updateConnectionStatusIndicator('cache');
+                return {
+                    data: { data: validPlaylist, meta: { has_more: false } },
+                    status: 200,
+                    statusText: 'OK (Playlist Cache Fallback - Offline)',
+                    headers: {},
+                    config: config,
+                    isCached: true,
+                    isStale: true,
+                    isDbOffline: isDbError
+                };
+            }
+        } catch (e) {}
+    }
+
+    // 2. Kiểm tra cache API thông thường
+    if (typeof window.getApiCache === 'function') {
+        const cachedData = await window.getApiCache(cacheKey, { allowExpired: true });
+        if (cachedData !== null && cachedData !== undefined) {
+            console.warn('[ApiCache] Server offline/lỗi mạng: Tự động fallback dùng Cache cho:', cacheKey);
+            updateConnectionStatusIndicator('cache');
+            return {
+                data: cachedData,
+                status: 200,
+                statusText: 'OK (Auto Cache Fallback - Offline)',
+                headers: {},
+                config: config,
+                isCached: true,
+                isStale: true,
+                isDbOffline: isDbError
+            };
+        }
+    }
+
+    // 3. Hỗ trợ lazy load beatmap chi tiết: /beatmaps/{id}
+    if (typeof url === 'string' && url.includes('/beatmaps/')) {
+        const bmMatch = url.match(/\/beatmaps\/(\d+)/);
+        if (bmMatch) {
+            const songId = bmMatch[1];
+            let beatmapDetails = null;
+
+            if (typeof window.getCachedBeatmap === 'function') {
+                beatmapDetails = await window.getCachedBeatmap(songId);
+            } else if (typeof window.getCachedJson === 'function') {
+                beatmapDetails = await window.getCachedJson(`beatmap_${songId}.json`);
+            }
+
+            if (!beatmapDetails && typeof window.getCachedPlaylistFromDB === 'function') {
+                try {
+                    const dbPlaylist = await window.getCachedPlaylistFromDB();
+                    if (dbPlaylist && Array.isArray(dbPlaylist)) {
+                        const target = dbPlaylist.find(s => String(s.id) === String(songId) && (s.name || s.title));
+                        if (target && target.beats && Array.isArray(target.beats) && target.beats.length > 4) {
+                            beatmapDetails = {
+                                id: target.id,
+                                name: target.name || target.title,
+                                title: target.title || target.name,
+                                artist: target.artist,
+                                bpm: target.bpm,
+                                speed: target.speed,
+                                beats: target.beats,
+                                url: target.url || target.file_url,
+                                no_fake_block: target.no_fake_block === true
+                            };
+                        }
+                    }
+                } catch (e) {}
+            }
+
+            if (beatmapDetails) {
+                console.warn(`[ApiCache] Server offline/lỗi mạng: Tự động dùng chi tiết beatmap #${songId} từ Cache.`);
+                updateConnectionStatusIndicator('cache');
+                return {
+                    data: { data: beatmapDetails },
+                    status: 200,
+                    statusText: 'OK (Cached Beatmap Details - Offline)',
+                    headers: {},
+                    config: config,
+                    isCached: true,
+                    isStale: true,
+                    isDbOffline: isDbError
+                };
+            }
+        }
+    }
+
+    // Nếu không có cache nào để fallback, ném lại lỗi ban đầu
+    if (originalError) throw originalError;
+    throw new Error('Network Offline: Không có dữ liệu Cache cho request này.');
+}
+
 apiClient.get = async function (url, config = {}) {
     const isHealthCheck = typeof url === 'string' && url.includes('/health');
     if (isHealthCheck) {
@@ -251,118 +351,22 @@ apiClient.get = async function (url, config = {}) {
 
     const isForceRefresh = config.forceRefresh === true || (config.headers && config.headers['X-Force-Refresh'] === 'true');
     const cacheKey = buildApiCacheKey(url, config.params);
-
     const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
-    const isDbOffline = !isDatabaseOnlineState || isBrowserOffline;
 
-    // TRƯỜNG HỢP 1: Database hoặc Mạng đang offline -> TỰ ĐỘNG DÙNG CACHE NGAY
-    if (isDbOffline) {
-        // Nếu là endpoint /beatmaps danh sách (không phải chi tiết /beatmaps/{id}), ưu tiên lấy danh sách đầy đủ từ getCachedPlaylistFromDB
-        if (typeof url === 'string' && url.includes('/beatmaps') && !url.includes('/beatmaps/') && typeof window.getCachedPlaylistFromDB === 'function') {
-            try {
-                const dbPlaylist = await window.getCachedPlaylistFromDB();
-                if (dbPlaylist && Array.isArray(dbPlaylist) && dbPlaylist.length > 0) {
-                    let useDb = true;
-                    if (typeof window.getApiCache === 'function') {
-                        const cachedData = await window.getApiCache(cacheKey, { allowExpired: true });
-                        const cachedList = cachedData?.data?.data || (Array.isArray(cachedData?.data) ? cachedData.data : (Array.isArray(cachedData) ? cachedData : []));
-                        if (cachedList.length > dbPlaylist.length) {
-                            useDb = false;
-                        }
-                    }
-                    if (useDb) {
-                        console.warn(`[ApiCache] Database/Mạng offline: Tự động dùng ${dbPlaylist.length} bài hát từ Playlist Cache.`);
-                        updateConnectionStatusIndicator('cache');
-                        return {
-                            data: { data: dbPlaylist, meta: { has_more: false } },
-                            status: 200,
-                            statusText: 'OK (Full Playlist Cache - Offline)',
-                            headers: {},
-                            config: config,
-                            isCached: true,
-                            isDbOffline: true
-                        };
-                    }
-                }
-            } catch (e) {}
-        }
-
-        if (typeof window.getApiCache === 'function') {
-            const cachedData = await window.getApiCache(cacheKey, { allowExpired: true });
-            if (cachedData !== null && cachedData !== undefined) {
-                console.warn('[ApiCache] Database/Mạng offline: Tự động dùng Cache cho:', cacheKey);
-                updateConnectionStatusIndicator('cache');
-                return {
-                    data: cachedData,
-                    status: 200,
-                    statusText: 'OK (Auto Cache - Offline)',
-                    headers: {},
-                    config: config,
-                    isCached: true,
-                    isDbOffline: true
-                };
-            }
-        }
-
-        // HỖ TRỢ LAZY LOADING BEATMAP TỪ CACHE KHI OFFLINE: /beatmaps/{id}
-        if (typeof url === 'string' && url.includes('/beatmaps/')) {
-            const bmMatch = url.match(/\/beatmaps\/(\d+)/);
-            if (bmMatch) {
-                const songId = bmMatch[1];
-                let beatmapDetails = null;
-
-                if (typeof window.getCachedBeatmap === 'function') {
-                    beatmapDetails = await window.getCachedBeatmap(songId);
-                } else if (typeof window.getCachedJson === 'function') {
-                    beatmapDetails = await window.getCachedJson(`beatmap_${songId}.json`);
-                }
-
-                if (!beatmapDetails && typeof window.getCachedPlaylistFromDB === 'function') {
-                    try {
-                        const dbPlaylist = await window.getCachedPlaylistFromDB();
-                        if (dbPlaylist && Array.isArray(dbPlaylist)) {
-                            const target = dbPlaylist.find(s => String(s.id) === String(songId));
-                            if (target && target.beats && Array.isArray(target.beats) && target.beats.length > 4) {
-                                beatmapDetails = {
-                                    id: target.id,
-                                    name: target.name || target.title,
-                                    title: target.title || target.name,
-                                    artist: target.artist,
-                                    bpm: target.bpm,
-                                    speed: target.speed,
-                                    beats: target.beats,
-                                    url: target.url || target.file_url,
-                                    no_fake_block: target.no_fake_block === true
-                                };
-                            }
-                        }
-                    } catch (e) {}
-                }
-
-                if (beatmapDetails) {
-                    console.warn(`[ApiCache] Database/Mạng offline: Tự động dùng chi tiết beatmap #${songId} từ Cache.`);
-                    updateConnectionStatusIndicator('cache');
-                    return {
-                        data: { data: beatmapDetails },
-                        status: 200,
-                        statusText: 'OK (Cached Beatmap Details - Offline)',
-                        headers: {},
-                        config: config,
-                        isCached: true,
-                        isDbOffline: true
-                    };
-                }
-            }
-        }
+    // TRƯỜNG HỢP 1: Trình duyệt hoàn toàn mất kết nối mạng (Network Offline) -> Tự động dùng Cache ngay
+    if (isBrowserOffline) {
+        return getOfflineFallbackResponse(url, config, cacheKey, true);
     }
 
-    // TRƯỜNG HỢP 2 (SERVER TRƯỚC): Gửi request thực tới backend khi Online
+    // TRƯỜNG HỢP 2 (SERVER TRƯỚC - NETWORK-FIRST): Khi có mạng, LUÔN gửi request thực tới backend trước
     try {
         const response = await originalGet(url, config);
-        if (response && response.status >= 200 && response.status < 300 && typeof window.setApiCache === 'function') {
-            const hasChanged = await window.setApiCache(cacheKey, response.data);
-            if (hasChanged) {
-                console.log('[ApiCache] [Server First] Dữ liệu Backend có thay đổi, đã cập nhật Cache:', cacheKey);
+        if (response && response.status >= 200 && response.status < 300) {
+            if (typeof window.setApiCache === 'function') {
+                const hasChanged = await window.setApiCache(cacheKey, response.data);
+                if (hasChanged) {
+                    console.log('[ApiCache] [Server First] Dữ liệu Backend có thay đổi, đã cập nhật Cache:', cacheKey);
+                }
             }
             isDatabaseOnlineState = true;
             window.isDatabaseOnline = true;
@@ -370,6 +374,7 @@ apiClient.get = async function (url, config = {}) {
         }
         return response;
     } catch (error) {
+        // Request tới Backend thất bại (Timeout, 500/503 DB Offline, DNS...) -> Tự động Fallback sang Cache
         const isDbError = (error.response && (error.response.status === 500 || error.response.status === 503) && 
             (error.response.data?.error_code === 'DATABASE_CONNECTION_ERROR' || error.response.data?.database_status === 'offline'))
             || error.code === 'ECONNABORTED' || !error.response;
@@ -380,101 +385,11 @@ apiClient.get = async function (url, config = {}) {
             lastDbHealthCheckTimestamp = Date.now();
         }
 
-        // Fallback: Nếu request tới Backend thất bại (DB Offline / Mạng lỗi), tự động fallback dùng cache cũ
-        if (typeof window.getApiCache === 'function') {
-            const staleCache = await window.getApiCache(cacheKey, { allowExpired: true });
-            if (staleCache !== null && staleCache !== undefined) {
-                console.warn('[ApiCache] Request tới Backend thất bại (DB Offline/Lỗi mạng), tự động fallback dùng cache cũ:', cacheKey, error);
-                updateConnectionStatusIndicator('cache');
-                return {
-                    data: staleCache,
-                    status: 200,
-                    statusText: 'OK (Stale Cache Fallback)',
-                    headers: {},
-                    config: config,
-                    isCached: true,
-                    isStale: true,
-                    isDbOffline: isDbError
-                };
-            }
-        }
-
-        // Tương tự, nếu /beatmaps và có dữ liệu trong IndexedDB STORE_PLAYLIST
-        if (typeof url === 'string' && url.includes('/beatmaps') && !url.includes('/beatmaps/') && typeof window.getCachedPlaylistFromDB === 'function') {
-            try {
-                const dbPlaylist = await window.getCachedPlaylistFromDB();
-                if (dbPlaylist && Array.isArray(dbPlaylist) && dbPlaylist.length > 0) {
-                    console.warn('[ApiCache] Request /beatmaps thất bại, tự động fallback dùng playlist IndexedDB:', error);
-                    updateConnectionStatusIndicator('cache');
-                    return {
-                        data: { data: dbPlaylist, meta: { has_more: false } },
-                        status: 200,
-                        statusText: 'OK (IndexedDB Playlist Fallback)',
-                        headers: {},
-                        config: config,
-                        isCached: true,
-                        isStale: true,
-                        isDbOffline: isDbError
-                    };
-                }
-            } catch (e) {}
-        }
-
-        // Hỗ trợ fallback chi tiết beatmap /beatmaps/{id} khi Backend gặp sự cố / Timeout
-        if (typeof url === 'string' && url.includes('/beatmaps/')) {
-            const bmMatch = url.match(/\/beatmaps\/(\d+)/);
-            if (bmMatch) {
-                const songId = bmMatch[1];
-                let beatmapDetails = null;
-
-                if (typeof window.getCachedBeatmap === 'function') {
-                    beatmapDetails = await window.getCachedBeatmap(songId);
-                } else if (typeof window.getCachedJson === 'function') {
-                    beatmapDetails = await window.getCachedJson(`beatmap_${songId}.json`);
-                }
-
-                if (!beatmapDetails && typeof window.getCachedPlaylistFromDB === 'function') {
-                    try {
-                        const dbPlaylist = await window.getCachedPlaylistFromDB();
-                        if (dbPlaylist && Array.isArray(dbPlaylist)) {
-                            const target = dbPlaylist.find(s => String(s.id) === String(songId));
-                            if (target && target.beats && Array.isArray(target.beats) && target.beats.length > 4) {
-                                beatmapDetails = {
-                                    id: target.id,
-                                    name: target.name || target.title,
-                                    title: target.title || target.name,
-                                    artist: target.artist,
-                                    bpm: target.bpm,
-                                    speed: target.speed,
-                                    beats: target.beats,
-                                    url: target.url || target.file_url,
-                                    no_fake_block: target.no_fake_block === true
-                                };
-                            }
-                        }
-                    } catch (e) {}
-                }
-
-                if (beatmapDetails) {
-                    console.warn(`[ApiCache] Request /beatmaps/${songId} thất bại, tự động fallback dùng beatmap Cache:`, error);
-                    updateConnectionStatusIndicator('cache');
-                    return {
-                        data: { data: beatmapDetails },
-                        status: 200,
-                        statusText: 'OK (Cached Beatmap Details Fallback)',
-                        headers: {},
-                        config: config,
-                        isCached: true,
-                        isStale: true,
-                        isDbOffline: isDbError
-                    };
-                }
-            }
-        }
-
-        throw error;
+        console.warn('[ApiCache] Request tới Backend thất bại, tự động fallback dùng cache cũ:', cacheKey, error.message || error);
+        return getOfflineFallbackResponse(url, config, cacheKey, isDbError, error);
     }
 };
+
 
 apiClient.post = async function (url, data, config) {
     const response = await originalPost(url, data, config);
