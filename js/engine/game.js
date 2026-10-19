@@ -629,24 +629,6 @@ function calculateNextParabola(currentTargetIndex) {
     let standardFlightTime = distanceZ / Math.abs(standardVelocityZ);
     let targetFlightTime = standardFlightTime;
 
-    // Tự động triệt tiêu tích lũy trôi nhịp mượt mà (đồng bộ chính xác theo beat bài nhạc) - ĐÃ COMMENT THEO YÊU CẦU
-    /*
-    if (audio && !audio.paused && nextTile.userData && typeof nextTile.userData.time === 'number') {
-        const now = audio.currentTime;
-        const targetBeatTime = nextTile.userData.time;
-        const currentSpeed = Math.min(3.0, gameSpeed);
-        const timeRemainingSec = (targetBeatTime - now) / currentSpeed;
-
-        if (timeRemainingSec >= standardFlightTime * 0.5) {
-            targetFlightTime = Math.max(standardFlightTime * 0.8, Math.min(standardFlightTime * 1.25, timeRemainingSec));
-        } else if (timeRemainingSec > 0.05) {
-            targetFlightTime = standardFlightTime;
-            const targetRate = (targetBeatTime - now) / standardFlightTime;
-            const clampedRate = Math.max(gameSpeed * 0.85, Math.min(gameSpeed * 1.15, targetRate));
-            audio.playbackRate = clampedRate;
-        }
-    }
-    */
 
     flightTime = targetFlightTime;
     ballVelocityZ = -distanceZ / flightTime;
@@ -680,29 +662,6 @@ function calculateRescueParabola(currentTargetIndex) {
     // Yêu cầu: Tốc độ cứu bóng không được nhanh hơn cũng không được chậm hơn -> Giữ nguyên standardFlightTime
     targetFlightTime = standardFlightTime;
 
-    // Tắt vi chỉnh tốc độ nhạc đột ngột khi cứu bóng mép để tránh hiện tượng méo tiếng / lợn cợn nhịp nhạc
-    /*
-    if (typeof audio !== 'undefined' && audio && !audio.paused && nextTile.userData && typeof nextTile.userData.time === 'number') {
-        const now = audio.currentTime;
-        const targetBeatTime = nextTile.userData.time;
-        
-        let timeRemainingAudioSec = targetBeatTime - now;
-        if (timeRemainingAudioSec > 0) {
-            // Để đồng bộ nhịp nhạc khi bóng bay với tốc độ gốc, ta phải vi chỉnh tốc độ nhạc (audio.playbackRate)
-            let targetAudioRate = timeRemainingAudioSec / standardFlightTime;
-            
-            // Giới hạn thay đổi tốc độ nhạc trong khoảng an toàn (ví dụ +- 15%) so với gameSpeed
-            let minRate = gameSpeed * 0.85;
-            let maxRate = gameSpeed * 1.15;
-            let clampedRate = Math.max(minRate, Math.min(maxRate, targetAudioRate));
-            
-            // Tốc độ Nhạc: Đặt trần giới hạn tối đa là 3.0x theo đúng yêu cầu
-            clampedRate = Math.min(clampedRate, 3.0);
-            
-            audio.playbackRate = clampedRate;
-        }
-    }
-    */
 
     flightTime = targetFlightTime;
     ballVelocityZ = -distanceZ / flightTime;
