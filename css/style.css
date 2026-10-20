@@ -436,7 +436,7 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
 
 #combo-ui {
     position: relative;
-    display: inline-block;
+    /* display: inline-block; */
     will-change: transform, opacity;
     transform: translate3d(0, 0, 0) scale(0.75);
     transform-origin: center center;
@@ -584,4 +584,4 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     filter: drop-shadow(0 0 3px rgba(0, 240, 255, 0.45));
 }
 
-
+
