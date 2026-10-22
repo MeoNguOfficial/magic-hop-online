@@ -2604,16 +2604,6 @@ function animate() {
                 }
             }
 
-            // Cập nhật hiệu ứng giật mép gạch (Zero-GC Frame-driven timer thay thế setTimeout)
-            if (tile.userData.nudgeTimer > 0) {
-                tile.userData.nudgeTimer -= delta;
-                if (tile.userData.nudgeTimer <= 0) {
-                    tile.userData.nudgeTimer = 0;
-                    if (!tile.userData.isMoving && tile.userData.originalX !== undefined) {
-                        tile.position.x = tile.userData.originalX;
-                    }
-                }
-            }
 
             // Cập nhật block bouncy dựa trên Tiles Hop – Remake (Fast-path: bỏ qua tính toán cho các khối tĩnh đang nghỉ)
             const uData = tile.userData;
@@ -2968,10 +2958,6 @@ function animate() {
 
                         if (driftRatio > 0.85) {
                             shockwaveScale = 1.35;
-                            const originalX = targetTile.position.x;
-                            targetTile.position.x += (ball.position.x > targetTile.position.x ? 0.15 : -0.15);
-                            targetTile.userData.originalX = originalX;
-                            targetTile.userData.nudgeTimer = 0.08;
                         }
 
                         const tileColor = targetTile.userData.themeColor || 0x00ffff;
@@ -3166,11 +3152,6 @@ function animate() {
                         const directionToCenter = ball.position.x > targetTile.position.x ? -1 : 1;
                         ball.position.x += directionToCenter * epsilon;
                         ballTargetX = ball.position.x; // Khóa target để không bị lerp giật ngược
-                        
-                        const originalX = targetTile.position.x;
-                        targetTile.position.x += (ball.position.x > targetTile.position.x ? 0.15 : -0.15);
-                        targetTile.userData.originalX = originalX;
-                        targetTile.userData.nudgeTimer = 0.08;
                     }
 
                     const tileColor = targetTile.userData.themeColor || 0x00ffff;
