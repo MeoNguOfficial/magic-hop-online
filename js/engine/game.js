@@ -650,7 +650,7 @@ function calculateRescueParabola(currentTargetIndex) {
     }
 
     const nextTileEffectiveZ = nextTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? nextTile.userData.targetZ : nextTile.position.z;
-    
+
     // Smooth Interpolation: Dùng điểm contact hiện tại làm origin (không teleport cứng)
     const distanceZ = Math.abs(jumpStartRawZ - nextTileEffectiveZ);
 
@@ -671,7 +671,7 @@ function calculateRescueParabola(currentTargetIndex) {
 
     // Giữ nguyên trọng lực chuẩn
     currentGravity = -(8 * adaptiveHeight) / (flightTime * flightTime);
-    
+
     // Zero-velocity stutter fix: Cập nhật Vector vận tốc Y mới bù trừ từ điểm va chạm hiện tại
     const targetFloorY = typeof minFloor !== 'undefined' ? minFloor : 0.95;
     currentBounceVelocityY = (targetFloorY - jumpStartRawY - 0.5 * currentGravity * flightTime * flightTime) / flightTime;
@@ -726,7 +726,7 @@ function shiftCoordinateOrigin(offsetZ) {
     if (blueprintGrid) {
         blueprintGrid.position.z += offsetZ;
     }
-    
+
     if (cityInstancedMesh) {
         for (let i = 0; i < cityInstancedMesh.count; i++) {
             cityInstancedMesh.instanceMatrix.array[i * 16 + 14] += offsetZ;
@@ -844,7 +844,7 @@ function onWindowResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
     const aspect = width / height;
-    
+
     window.cachedControlWidth = Math.min(width, height * 0.83);
 
     camera.aspect = aspect;
@@ -1010,19 +1010,19 @@ function createBoundaryParticleTexture() {
     canvas.width = 32;
     canvas.height = 32;
     const ctx = canvas.getContext('2d');
-    
+
     // Gradient hạt bụi phát sáng mềm mại 32x32 siêu nhẹ
     const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
     grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
     grad.addColorStop(0.25, 'rgba(255, 255, 255, 0.85)');
     grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.3)');
     grad.addColorStop(1, 'rgba(255, 255, 255, 0.0)');
-    
+
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.arc(16, 16, 15, 0, Math.PI * 2);
     ctx.fill();
-    
+
     cachedBoundaryParticleTexture = new THREE.CanvasTexture(canvas);
     cachedBoundaryParticleTexture.generateMipmaps = false;
     cachedBoundaryParticleTexture.minFilter = THREE.LinearFilter;
@@ -1034,7 +1034,7 @@ function initBoundaryFlames() {
         scene.remove(boundaryDustMesh);
         if (boundaryDustMesh.geometry) boundaryDustMesh.geometry.dispose();
     }
-    
+
     const dustGeo = new THREE.PlaneGeometry(0.35, 0.35);
     const dustTex = createBoundaryParticleTexture();
     const dustMat = new THREE.MeshBasicMaterial({
@@ -1045,22 +1045,22 @@ function initBoundaryFlames() {
         depthWrite: false,
         side: THREE.DoubleSide
     });
-    
+
     boundaryDustMesh = new THREE.InstancedMesh(dustGeo, dustMat, MAX_BOUNDARY_DUST);
     boundaryDustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     boundaryDustMesh.frustumCulled = false;
     boundaryDustMesh.matrixAutoUpdate = false;
     boundaryDustMesh.updateMatrix();
-    
+
     boundaryDustData = [];
     const rangeZ = 140.0;
     const countPerSide = MAX_BOUNDARY_DUST / 2;
-    
+
     for (let i = 0; i < MAX_BOUNDARY_DUST; i++) {
         const isRight = i >= countPerSide;
         const idxInSide = isRight ? (i - countPerSide) : i;
         const relZ = -((idxInSide / countPerSide) * rangeZ) + 6.0;
-        
+
         boundaryDustData.push({
             side: isRight ? 1 : -1,
             relZ: relZ,
@@ -1075,7 +1075,7 @@ function initBoundaryFlames() {
             twinkleSpeed: 4.0 + Math.random() * 4.0
         });
     }
-    
+
     const mArray = boundaryDustMesh.instanceMatrix.array;
     for (let i = 0; i < MAX_BOUNDARY_DUST * 16; i += 16) {
         mArray[i + 0] = 0;
@@ -1084,7 +1084,7 @@ function initBoundaryFlames() {
         mArray[i + 15] = 1;
     }
     boundaryDustMesh.instanceMatrix.needsUpdate = true;
-    
+
     scene.add(boundaryDustMesh);
 }
 
@@ -1092,7 +1092,7 @@ function getDifficultyBoundaryColor(time) {
     const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
     const isHard = window.HardModeManager && window.HardModeManager.isEnabled;
     const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
-    
+
     if (isAsian) {
         return dustColorAsian;
     } else if (isHard) {
@@ -1835,23 +1835,23 @@ function updateEnvironment() {
             const geo = new THREE.BufferGeometry();
             const vertices = new Float32Array([
                 // Front face (z = 0.5)
-                 0.5,  0.5, 0.5,
-                -0.5,  0.5, 0.5,
+                0.5, 0.5, 0.5,
+                -0.5, 0.5, 0.5,
                 -0.5, -0.5, 0.5,
-                 0.5, -0.5, 0.5,
+                0.5, -0.5, 0.5,
                 // Left face (x = -0.5)
-                -0.5,  0.5, -0.5,
-                -0.5,  0.5,  0.5,
-                -0.5, -0.5,  0.5,
+                -0.5, 0.5, -0.5,
+                -0.5, 0.5, 0.5,
+                -0.5, -0.5, 0.5,
                 -0.5, -0.5, -0.5
             ]);
             const normals = new Float32Array([
-                 0, 0, 1,   0, 0, 1,   0, 0, 1,   0, 0, 1,
-                -1, 0, 0,  -1, 0, 0,  -1, 0, 0,  -1, 0, 0
+                0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
+                -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0
             ]);
             const indices = [
-                0, 1, 2,   0, 2, 3,
-                4, 5, 6,   4, 6, 7
+                0, 1, 2, 0, 2, 3,
+                4, 5, 6, 4, 6, 7
             ];
             geo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
             geo.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
@@ -1859,9 +1859,9 @@ function updateEnvironment() {
 
             // Dùng DoubleSide để khi lật Scale X thì mặt không bị culling
             const mat = new THREE.MeshPhongMaterial({ color: 0x020a15, emissive: 0x002244, side: THREE.DoubleSide });
-            
+
             cityInstancedMesh = new THREE.InstancedMesh(geo, mat, count);
-            
+
             // Lưới viền (Wireframe) đè lên để tạo viền cho toà nhà siêu nhẹ
             const wireMat = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.15, side: THREE.DoubleSide });
             window.cityWireframeInstancedMesh = new THREE.InstancedMesh(geo, wireMat, count);
@@ -1869,23 +1869,23 @@ function updateEnvironment() {
             const dummy = new THREE.Object3D();
             for (let i = 0; i < count; i++) {
                 // Sắp xếp grid để tránh đè nhau (100 toà mỗi bên, 2 cột/bên, 50 hàng dọc)
-                const sideIndex = Math.floor(i / 2); 
+                const sideIndex = Math.floor(i / 2);
                 const side = (i % 2 === 0) ? 1 : -1;
-                const col = sideIndex % 2; 
-                const row = Math.floor(sideIndex / 2); 
-                
+                const col = sideIndex % 2;
+                const row = Math.floor(sideIndex / 2);
+
                 // w, d tối đa là 12, nên grid ô 16x22
                 const w = 4 + Math.random() * 8;
                 const d = 4 + Math.random() * 8;
                 const h = 5 + Math.random() * 40;
-                
+
                 // Khoảng cách an toàn để không đâm xuyên
                 const xBase = 24 + col * 16; // Cột 1: x=24, Cột 2: x=40
                 const zBase = 100 - row * 22; // Hàng 0: z=100, Hàng 49: z=-978
-                
+
                 const x = side * (xBase + (Math.random() * 4 - 2)); // Lệch random nhẹ +-2
                 let z = zBase + (Math.random() * 10 - 5); // Lệch random dọc +-5
-                
+
                 // Align with cameraZ immediately if updating mid-game
                 const currentCameraZ = typeof camera !== 'undefined' && camera ? camera.position.z : 15;
                 if (z > currentCameraZ + 50) {
@@ -1893,7 +1893,7 @@ function updateEnvironment() {
                     z -= shifts * 1100;
                 }
 
-                dummy.position.set(x, groundY + h/2, z);
+                dummy.position.set(x, groundY + h / 2, z);
                 // Lật scale X=-1 nếu ở bên trái để mặt Left hướng ra ngoài thành Right
                 dummy.scale.set(side === 1 ? w : -w, h, d);
                 dummy.updateMatrix();
@@ -1907,7 +1907,7 @@ function updateEnvironment() {
             if (typeof camera !== 'undefined' && camera && cityInstancedMesh) {
                 let updated = false;
                 for (let i = 0; i < cityInstancedMesh.count; i++) {
-                    const zIndex = i * 16 + 14; 
+                    const zIndex = i * 16 + 14;
                     let z = cityInstancedMesh.instanceMatrix.array[zIndex];
                     if (z > camera.position.z + 50) {
                         const shifts = Math.ceil((z - (camera.position.z + 50)) / 1100);
@@ -1954,17 +1954,17 @@ function updateEnvironment() {
             const dummy = new THREE.Object3D();
             for (let i = 0; i < count; i++) {
                 let z = 100 - Math.random() * 1100;
-                
+
                 // Align with cameraZ immediately if updating mid-game
                 const currentCameraZ = typeof camera !== 'undefined' && camera ? camera.position.z : 15;
                 if (z > currentCameraZ + 50) {
                     const shifts = Math.ceil((z - (currentCameraZ + 50)) / 1100);
                     z -= shifts * 1100;
                 }
-                
+
                 const side = Math.random() > 0.5 ? 1 : -1;
                 const x = side * (16 + Math.random() * 100); // Lùi ra 16 giống City
-                
+
                 dummy.position.set(x, groundY + 2, z); // Thân lúa cao 4, tâm ở giữa nên y + 2
                 dummy.rotation.y = Math.random() * Math.PI;
                 dummy.rotation.x = (Math.random() - 0.5) * 0.3;
@@ -1977,7 +1977,7 @@ function updateEnvironment() {
             if (typeof camera !== 'undefined' && camera && riceFieldInstancedMesh) {
                 let updated = false;
                 for (let i = 0; i < riceFieldInstancedMesh.count; i++) {
-                    const zIndex = i * 16 + 14; 
+                    const zIndex = i * 16 + 14;
                     let z = riceFieldInstancedMesh.instanceMatrix.array[zIndex];
                     if (z > camera.position.z + 50) {
                         const shifts = Math.ceil((z - (camera.position.z + 50)) / 1100);
@@ -2035,7 +2035,7 @@ function resetEnvironmentPositions() {
         if (riceGroundPlane.material) riceGroundPlane.material.dispose();
         riceGroundPlane = null;
     }
-    
+
     // Recreate them at the origin (Z=0 area)
     updateEnvironment();
 }
@@ -2058,7 +2058,7 @@ function recycleEnvironmentObjects(cameraZ) {
         let updated = false;
         // The matrix for each instance is a 16-element Float32Array where elements[14] is Z translation
         for (let i = 0; i < cityInstancedMesh.count; i++) {
-            const zIndex = i * 16 + 14; 
+            const zIndex = i * 16 + 14;
             const z = cityInstancedMesh.instanceMatrix.array[zIndex];
             if (z > cameraZ + 50) {
                 cityInstancedMesh.instanceMatrix.array[zIndex] -= 1100;
@@ -2077,7 +2077,7 @@ function recycleEnvironmentObjects(cameraZ) {
             }
         }
     }
-    
+
     if (selectedEnvironment === 'ricefield' && riceFieldInstancedMesh) {
         let updated = false;
         for (let i = 0; i < riceFieldInstancedMesh.count; i++) {
@@ -2092,7 +2092,7 @@ function recycleEnvironmentObjects(cameraZ) {
             riceFieldInstancedMesh.instanceMatrix.needsUpdate = true;
             riceFieldInstancedMesh.frustumCulled = false;
         }
-        
+
         if (riceGroundPlane) {
             // Keep the ground plane somewhat centered relative to the camera
             // to maintain the infinite illusion without needing constant shifting
@@ -2106,7 +2106,7 @@ window.recycleEnvironmentObjects = recycleEnvironmentObjects;
 const patternTextures = {};
 function getPatternTexture(type) {
     if (patternTextures[type]) return patternTextures[type];
-    
+
     const size = 512;
     const canvas = document.createElement('canvas');
     canvas.width = size;
@@ -2114,11 +2114,11 @@ function getPatternTexture(type) {
     const ctx = canvas.getContext('2d');
 
     // Nền trắng để nhân (multiply) với màu gốc của material không bị mất màu
-    ctx.fillStyle = '#ffffff'; 
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, size, size);
-    
+
     // Họa tiết màu tối hoặc xám để hiện rõ trên nền màu sáng
-    ctx.fillStyle = '#666666'; 
+    ctx.fillStyle = '#666666';
     ctx.strokeStyle = '#666666';
 
     if (type === 'checkerboard') {
@@ -2184,7 +2184,7 @@ function updateBallCustomization() {
     if (selectedBallColor !== 'dynamic') {
         let hexColor = 0x00ffff;
         let emissiveColor = 0x003355;
-        
+
         if (selectedBallColor === 'cyan') { hexColor = 0x00ffff; emissiveColor = 0x003355; }
         else if (selectedBallColor === 'pink') { hexColor = 0xff00ff; emissiveColor = 0x550055; }
         else if (selectedBallColor === 'yellow') { hexColor = 0xffff00; emissiveColor = 0x555500; }
@@ -2388,7 +2388,7 @@ function animate() {
                 if (activeRoundCount >= 1 || activeEndlessMode || isEndlessMode) {
                     const currentTile = (typeof tiles !== 'undefined' && typeof currentTileIndex !== 'undefined') ? tiles[currentTileIndex] : null;
                     const totalBeatsCount = (beatmapBeats && beatmapBeats.length > 1) ? (beatmapBeats.length - 1) : 1;
-                    
+
                     // x: Biến tiến trình tuyến tính từ 0.0 (block đầu) -> 1.0 (vừa chạm block cuối)
                     let x = 0;
                     if (currentTile && currentTile.userData && typeof currentTile.userData.beatIndex === 'number') {
@@ -2439,7 +2439,7 @@ function animate() {
             const isWarmup = !activeEndlessMode || (roundCount === 0 && totalTilesJumped < 16);
             const roundedSpeed = Math.round(gameSpeed * 100) / 100;
             const progress = (isWarmup && beatmapBeats && beatmapBeats.length > 0) ? Math.min(100, Math.floor((totalTilesJumped / beatmapBeats.length) * 100)) : 0;
-            
+
             // Tối ưu hóa: Giới hạn tần suất cập nhật DOM text cho speedEl (~12 FPS / 80ms) trừ khi chuyển Round/Mode
             // Triệt tiêu hoàn toàn hiện tượng Forced Synchronous Layout / Layout Thrashing trong khung hình WebGL
             if (typeof lastDisplayedSpeedTime === 'undefined') {
@@ -2486,7 +2486,7 @@ function animate() {
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
         const time = clock.getElapsedTime();
-        
+
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
             const hue = (time * 0.2) % 1;
@@ -2535,17 +2535,17 @@ function animate() {
 
         const tilesCount = tiles.length;
         const camZForCulling = typeof camera !== 'undefined' && camera ? camera.position.z : (typeof ball !== 'undefined' && ball ? ball.position.z + 10 : 0);
-        
+
         // Cơ chế Block Bouncy dựa trên Tiles Hop – Remake (Half-sine impulse: -Math.sin(b * Math.PI) * amplitude)
         // b đếm ngược từ 1.0 về 0 với tốc độ decay (cố định hoặc tỉ lệ thuận theo nhịp độ game nếu dynamic bounce speed được bật)
-        const baseDecay = 5.5;
+        const baseDecay = 9.0; // Tăng tốc độ hồi nảy bouncy block (từ 5.5 lên 9.0 để nhún nhanh và nảy dứt khoát hơn)
         const isDynamicBounce = typeof dynamicBounceSpeedEnabled !== 'undefined' && dynamicBounceSpeedEnabled;
-        const bounceDecaySpeed = isDynamicBounce 
+        const bounceDecaySpeed = isDynamicBounce
             ? baseDecay * (typeof gameSpeed !== 'undefined' ? Math.max(1.0, Math.min(gameSpeed, 3.0)) : 1.0)
             : baseDecay;
         const baseBounceAmplitude = 0.52; // Tăng độ lún của bouncy block xuống 1 tí (từ 0.38 lên 0.52 world units)
         const scaleLerpSpeed = Math.min(1.0, 10 * delta);
-        
+
         // Hoist các biến invariant ra khỏi vòng lặp tiles để triệt tiêu điểm nghẽn
         const targetTileScaleCached = typeof currentTileScale !== 'undefined' ? currentTileScale : 1.0;
         const isHitboxVisibleCached = typeof showHitboxEnabled !== 'undefined' && showHitboxEnabled;
@@ -2555,11 +2555,11 @@ function animate() {
         const spawnAnimModeCached = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'none';
         const animationMultiplierCached = Math.max(1.0, gameSpeed * 0.8);
         const enterSpeedSlideCached = 1 - Math.exp(-12 * animationMultiplierCached * delta);
-        
+
         for (let ti = 0; ti < tilesCount; ti++) {
             const tile = tiles[ti];
             if (!tile) continue;
-            
+
             const tileTargetZ = tile.userData.targetZ !== undefined ? tile.userData.targetZ : tile.position.z;
             if (tileTargetZ <= camZForCulling - 250) {
                 // Do mảng tiles được xếp đơn điệu giảm dần theo Z, toàn bộ các tile tiếp theo
@@ -2577,7 +2577,7 @@ function animate() {
             }
 
             const isVisible = tile.position.z < camZForCulling + 30 && tile.position.z > camZForCulling - 250;
-            
+
             // Tối ưu hiệu năng: Tắt visibility cho Three.js và bỏ qua tính toán vật lý, đổi màu cho các tile không nằm trong khung nhìn
             if (!isVisible) {
                 if (tile.visible && !tile.userData.isEntering) {
@@ -2818,7 +2818,7 @@ function animate() {
         if (typeof starField !== 'undefined' && starField && starField.visible) {
             const baseDustSpeed = 25.0; // Tốc độ cơ bản của bụi
             let dustSpeedMult = typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0;
-            
+
             // Giảm tốc độ bụi (tắt gió) khi thua game hoặc đang ở trạng thái chuyển cảnh
             if (typeof isFailTransition !== 'undefined' && (isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition))) {
                 dustSpeedMult *= (typeof audio !== 'undefined' && audio) ? Math.max(0, audio.playbackRate) : 0.05;
@@ -2826,9 +2826,9 @@ function animate() {
                 const elapsed = typeof victoryTimeElapsed !== 'undefined' ? victoryTimeElapsed : 0;
                 dustSpeedMult *= Math.max(0, 1.0 - (elapsed / 2.0)); // Giảm dần về 0
             }
-            
+
             const moveZ = baseDustSpeed * dustSpeedMult * delta;
-            
+
             if (typeof starFieldUniforms !== 'undefined' && starFieldUniforms && starFieldUniforms.uZOffset !== undefined) {
                 // Shader (WebGL): Shader tự động wrap-around theo hàm mod()
                 starFieldUniforms.uZOffset.value += moveZ;
@@ -2840,10 +2840,10 @@ function animate() {
                 const posArr = starField.geometry.attributes.position.array;
                 const camZ = typeof camera !== 'undefined' ? camera.position.z : 10;
                 const rangeZ = 810.0;
-                
+
                 for (let i = 2, len = posArr.length; i < len; i += 3) {
                     posArr[i] += moveZ;
-                    if (posArr[i] - camZ > 10.0) { 
+                    if (posArr[i] - camZ > 10.0) {
                         posArr[i] -= rangeZ;
                     }
                 }
@@ -3146,7 +3146,7 @@ function animate() {
                     if (driftRatio > 0.85) {
                         shockwaveScale = 1.35;
                         isEdgeHit = true;
-                        
+
                         // Anti-Stuck / Multi-trigger: Dịch nhẹ bóng vào trong (epsilon)
                         const epsilon = 0.15;
                         const directionToCenter = ball.position.x > targetTile.position.x ? -1 : 1;
@@ -3425,13 +3425,13 @@ function fadeOutGameAudio(durationSeconds = 1.0) {
     }
 }
 
+let _lastFinalScoreClass = '';
 // Tự động điều chỉnh kích thước font và màu sắc cho điểm số cuối cùng để luôn căn giữa đẹp mắt và không bị tràn/lệch
 function updateFinalScoreStyle(currentValue, targetValue = currentValue) {
     if (!finalScoreEl) return;
     const currentFormatted = formatScoreDisplay(currentValue);
     const targetFormatted = formatScoreDisplay(targetValue);
-    const actualStr = String(finalScoreEl.innerText || "");
-    const len = Math.max(currentFormatted.length, targetFormatted.length, actualStr.length);
+    const len = Math.max(currentFormatted.length, targetFormatted.length);
 
     let sizeClasses = "text-5xl sm:text-7xl md:text-8xl lg:text-[9.5rem]";
     if (len >= 13) {
@@ -3446,16 +3446,20 @@ function updateFinalScoreStyle(currentValue, targetValue = currentValue) {
         sizeClasses = "text-4xl sm:text-6xl md:text-7xl lg:text-8xl";
     }
 
-    let colorClasses = "text-cyan-400 text-shadow-[0_0_60px_rgba(34,211,238,0.9)]";
+    let colorClasses = "text-cyan-400 text-shadow-[0_0_30px_rgba(34,211,238,0.9)]";
     if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-        colorClasses = "text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_60px_rgba(239,68,68,0.9)]";
+        colorClasses = "text-red-500 neon-glow-red animate-pulse text-shadow-[0_0_30px_rgba(239,68,68,0.9)]";
     } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-        colorClasses = "text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_60px_rgba(249,115,22,0.9)]";
+        colorClasses = "text-orange-500 neon-glow-orange animate-pulse text-shadow-[0_0_30px_rgba(249,115,22,0.9)]";
     } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-        colorClasses = "text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_60px_rgba(34,197,94,0.9)]";
+        colorClasses = "text-green-400 neon-glow-green animate-pulse text-shadow-[0_0_30px_rgba(34,197,94,0.9)]";
     }
 
-    finalScoreEl.className = `${sizeClasses} font-black font-orbitron tracking-tight leading-normal py-2 overflow-visible w-full max-w-full ${colorClasses} my-1 text-center block mx-auto break-all sm:break-normal`;
+    const newClassName = `${sizeClasses} font-black font-orbitron tracking-tight leading-normal py-2 overflow-visible w-full max-w-full ${colorClasses} my-1 text-center block mx-auto break-all sm:break-normal`;
+    if (_lastFinalScoreClass !== newClassName) {
+        _lastFinalScoreClass = newClassName;
+        finalScoreEl.className = newClassName;
+    }
 }
 
 // --- GAME VICTORY ---
@@ -3468,17 +3472,13 @@ async function gameVictory() {
     victoryCameraDecay = 1.0;
     camVelX = 0; camVelY = 0; camVelZ = 0;
 
+    const cacheKey = getScoreCacheKey(selectedSongIndex);
     let oldBest = 0;
-    try {
-        const cached = cachedBestScores[selectedSongIndex];
-        if (cached !== undefined && cached !== null) {
-            oldBest = typeof cached === 'number' ? cached : (parseInt(cached, 10) || 0);
-        } else {
-            oldBest = await getLocalBestScore(selectedSongIndex);
-        }
-    } catch (e) {
-        oldBest = 0;
+    const cached = cachedBestScores[cacheKey];
+    if (cached !== undefined && cached !== null) {
+        oldBest = typeof cached === 'number' ? cached : (parseInt(cached, 10) || 0);
     }
+    const oldBestPromise = (oldBest > 0) ? Promise.resolve(oldBest) : getLocalBestScore(selectedSongIndex).catch(() => 0);
 
     gameSpeed = 1.0;
     comboCount = 0;
@@ -3516,31 +3516,43 @@ async function gameVictory() {
 
     cleanUpOldObjects();
 
+    // Ẩn HUD trong trận đấu để không bị trùng lặp hoặc lộ số điểm cũ
+    const centerHud = document.getElementById('center-hud');
+    if (centerHud) centerHud.style.display = 'none';
+    const topLeftHud = document.getElementById('top-left-hud');
+    if (topLeftHud) topLeftHud.style.display = 'none';
+
     const menuBtnElement = document.getElementById('menu-btn');
     const restartBtnElement = document.getElementById('restart-btn');
     if (menuBtnElement) {
+        menuBtnElement.style.opacity = '0';
+        menuBtnElement.style.pointerEvents = 'none';
+        menuBtnElement.style.transform = 'translateY(16px)';
         menuBtnElement.classList.add('opacity-0', 'pointer-events-none');
-        menuBtnElement.classList.remove('opacity-100');
     }
     if (restartBtnElement) {
         restartBtnElement.innerText = t('btn_endless') || "ENDLESS (KHÔNG HỒI KẾT)";
         restartBtnElement.setAttribute('data-action', 'endless');
+        restartBtnElement.style.opacity = '0';
+        restartBtnElement.style.pointerEvents = 'none';
+        restartBtnElement.style.transform = 'translateY(16px)';
         if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-purple-800 hover:from-red-500 hover:via-rose-500 hover:to-purple-700 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_25px_rgba(225,29,72,0.8)] border border-red-500/50";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-purple-800 hover:from-red-500 hover:via-rose-500 hover:to-purple-700 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_25px_rgba(225,29,72,0.8)] border border-red-500/50 cursor-pointer";
         } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-yellow-500 via-orange-500 to-red-600 hover:from-yellow-400 hover:via-orange-400 hover:to-red-500 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] border border-orange-400/30";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-yellow-500 via-orange-500 to-red-600 hover:from-yellow-400 hover:via-orange-400 hover:to-red-500 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] border border-orange-400/30 cursor-pointer";
         } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 hover:from-emerald-300 hover:via-teal-300 hover:to-green-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(16,185,129,0.6)] border border-emerald-400/30";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 hover:from-emerald-300 hover:via-teal-300 hover:to-green-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(16,185,129,0.6)] border border-emerald-400/30 cursor-pointer";
         } else {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-cyan-400 to-blue-500 hover:from-cyan-300 hover:to-blue-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none cursor-pointer";
         }
     }
 
     // Hiển thị UI ban đầu
-    finalScoreEl.innerText = "0";
+    finalScoreEl.textContent = "0";
     updateFinalScoreStyle(0, score);
     highScoreDisplay.classList.add('hidden');
-    if (finalSpeedEl) finalSpeedEl.innerText = ""; // Ẩn tốc độ tối đa cho chế độ Thường
+    highScoreDisplay.style.opacity = '0';
+    if (finalSpeedEl) finalSpeedEl.innerText = "";
     speedEl.innerText = `${t('speed')} 1.00x`;
     lastDisplayedSpeedText = `${t('speed')} 1.00x`;
     if (perfectStreakHud) perfectStreakHud.innerText = "0";
@@ -3552,7 +3564,6 @@ async function gameVictory() {
         gameoverTitle.setAttribute('data-i18n', 'normal_mode_completed');
     }
 
-    // Kích hoạt hiệu ứng Particle và Style cho Màn hình Hoàn thành (Victory / Mode Completed) như Game Over
     const isRage = window.HardModeManager && window.HardModeManager.isEnabled;
     const isEasy = window.EasyModeManager && window.EasyModeManager.isEnabled;
     const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
@@ -3588,6 +3599,7 @@ async function gameVictory() {
         if (gameoverScreenWindow) {
             gameoverScreenWindow.classList.remove('border-pink-500/40', 'border-red-500/70', 'border-orange-500/70', 'border-green-500/70');
             gameoverScreenWindow.classList.add('border-cyan-500/40');
+            gameoverScreenWindow.style.transform = '';
         }
     }
 
@@ -3631,52 +3643,101 @@ async function gameVictory() {
     const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
     const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
     const songArtist = song.artist || (typeof t === 'function' ? t('unknown_artist') : "Unknown Artist");
+    const victoryMiniCardKey = `${selectedSongIndex}_vic_${isAsian ? 'a' : (isRage ? 'r' : (isEasy ? 'e' : 'n'))}`;
 
-    gameOverMiniCard.innerHTML = `
-        <div class="flex items-center gap-3 w-full">
-            <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
-                <svg class="w-5 h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-            </div>
-            <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
-                <div class="${textColor} font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
-                    <span class="marquee-text inline-block">${songName}</span>
+    if (gameOverMiniCard.dataset.cardKey !== victoryMiniCardKey) {
+        gameOverMiniCard.dataset.cardKey = victoryMiniCardKey;
+        gameOverMiniCard.innerHTML = `
+            <div class="flex items-center gap-3 w-full">
+                <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
                 </div>
-                <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
+                <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
+                    <div class="${textColor} font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
+                        <span class="marquee-text inline-block">${songName}</span>
+                    </div>
+                    <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
+                </div>
             </div>
-        </div>
-    `;
+        `;
 
-    const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
-    if (gameOverMarquee && typeof window.applyMarquee === 'function') {
-        window.applyMarquee(gameOverMarquee);
+        const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
+        if (gameOverMarquee && typeof window.applyMarquee === 'function') {
+            window.applyMarquee(gameOverMarquee);
+        }
     }
 
-    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+    const hasAnime = typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+    const statsRow = document.getElementById('gameover-stats-row');
+
+    if (hasAnime) {
+        // Tận dụng Anime.js để mở màn hình Game Over/Victory mượt mà và đẳng cấp
         gameoverScreen.style.opacity = 0;
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(0.92)';
         anime({
             targets: gameoverScreen,
-            opacity: 1,
-            duration: 400,
-            easing: 'easeOutQuint'
+            opacity: [0, 1],
+            duration: 350,
+            easing: 'easeOutQuad'
         });
-        if (gameoverScreenWindow) {
+
+        if (gameOverMiniCard) {
+            gameOverMiniCard.style.opacity = 0;
             anime({
-                targets: gameoverScreenWindow,
-                scale: [0.92, 1],
+                targets: gameOverMiniCard,
+                translateY: [-22, 0],
+                opacity: [0, 1],
+                duration: 450,
+                delay: 60,
+                easing: 'easeOutBack'
+            });
+        }
+
+        if (gameoverTitle) {
+            gameoverTitle.style.opacity = 0;
+            anime({
+                targets: gameoverTitle,
+                scale: [0.75, 1],
+                opacity: [0, 1],
                 duration: 400,
-                easing: 'easeOutQuint'
+                delay: 120,
+                easing: 'easeOutBack'
+            });
+        }
+
+        finalScoreEl.style.opacity = 0;
+        anime({
+            targets: finalScoreEl,
+            scale: [0.85, 1],
+            opacity: [0, 1],
+            duration: 380,
+            delay: 180,
+            easing: 'easeOutCubic'
+        });
+
+        if (statsRow) {
+            const statCards = statsRow.children;
+            for (let i = 0; i < statCards.length; i++) statCards[i].style.opacity = 0;
+            anime({
+                targets: statCards,
+                translateY: [16, 0],
+                opacity: [0, 1],
+                delay: anime.stagger(80, { start: 260 }),
+                duration: 400,
+                easing: 'easeOutQuad'
             });
         }
     } else {
         gameoverScreen.style.opacity = 1;
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(1)';
+        if (gameOverMiniCard) gameOverMiniCard.style.opacity = 1;
+        if (gameoverTitle) gameoverTitle.style.opacity = 1;
+        finalScoreEl.style.opacity = 1;
+        if (statsRow) {
+            for (let i = 0; i < statsRow.children.length; i++) statsRow.children[i].style.opacity = 1;
+        }
     }
 
     // Hiển thị điểm cao UI với hiệu ứng loading dự phòng nếu backend chậm
     renderBestScoreUI(selectedSongIndex);
-
-    // Không phát nhạc kỷ lục mới ở đây để tránh đè âm thanh kết quả hoàn thành
 
     // Phát nhạc nền kết quả (Endless Result BGM) khi hoàn thành
     let gameOverAudioToPlay = typeof gameOverRoundAudio !== 'undefined' ? gameOverRoundAudio : null;
@@ -3699,78 +3760,126 @@ async function gameVictory() {
         gameOverAudioToPlay.play().catch(() => { });
     }
 
-    // Logic chạy điểm (Animate Score)
-    let currentDisplayScore = 0;
-    const duration = 1500; // 1.5 giây
-    const startTime = performance.now();
-    let lastTickIndex = -1;
-    const maxTicks = 30;
+    // Callback khi chạy điểm xong -> lưu kết quả & kích hoạt Anime hiện nút bấm
+    const onScoreFinished = async () => {
+        finalScoreEl.textContent = formatScoreDisplay(score);
+        updateFinalScoreStyle(score, score);
 
-    const animateScore = (now) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        currentDisplayScore = Math.floor(progress * score);
+        const canSave = typeof isAnyHelperModeActive === 'function' ? !isAnyHelperModeActive() : (
+            !((typeof relaxModeEnabled !== 'undefined' && relaxModeEnabled) || localStorage.getItem('relaxModeEnabled') === 'true') &&
+            !((typeof botAssistEnabled !== 'undefined' && botAssistEnabled) || localStorage.getItem('botAssistEnabled') === 'true') &&
+            !((typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay))
+        );
 
-        const formattedStr = formatScoreDisplay(currentDisplayScore);
-        if (finalScoreEl.innerText !== formattedStr) {
-            finalScoreEl.innerText = formattedStr;
-            updateFinalScoreStyle(currentDisplayScore, score);
-            const tickCount = Math.min(score, maxTicks);
-            if (tickCount > 0) {
-                const currentTickIndex = Math.floor(progress * (tickCount - 1));
-                if (currentTickIndex > lastTickIndex) {
-                    if (scoreTickAudio) {
-                        scoreTickAudio.currentTime = 0;
-                        scoreTickAudio.play().catch(() => { });
+        const showButtons = () => {
+            const menuBtnEl = menuBtnElement || document.getElementById('menu-btn');
+            const restartBtnEl = restartBtnElement || document.getElementById('restart-btn');
+            if (!menuBtnEl || !restartBtnEl) return;
+
+            menuBtnEl.classList.remove('opacity-0', 'pointer-events-none');
+            restartBtnEl.classList.remove('opacity-0', 'pointer-events-none');
+            menuBtnEl.style.pointerEvents = 'auto';
+            restartBtnEl.style.pointerEvents = 'auto';
+
+            menuBtnEl.style.transition = 'none';
+            restartBtnEl.style.transition = 'none';
+
+            if (hasAnime) {
+                anime({
+                    targets: [menuBtnEl, restartBtnEl],
+                    translateY: [16, 0],
+                    opacity: [0, 1],
+                    duration: 380,
+                    easing: 'easeOutCubic',
+                    complete: () => {
+                        menuBtnEl.style.transition = '';
+                        restartBtnEl.style.transition = '';
                     }
-                    lastTickIndex = currentTickIndex;
-                }
+                });
+            } else {
+                menuBtnEl.style.opacity = '1';
+                menuBtnEl.style.transform = 'translateY(0)';
+                restartBtnEl.style.opacity = '1';
+                restartBtnEl.style.transform = 'translateY(0)';
+                menuBtnEl.style.transition = '';
+                restartBtnEl.style.transition = '';
             }
-        }
+        };
 
-        if (progress < 1) {
-            requestAnimationFrame(animateScore);
-        } else {
-            // Sau khi chạy điểm xong, check kỷ lục (không lưu/gửi điểm ở Relax mode, Autoplay, hoặc Bot Assist)
-            const canSave = typeof isAnyHelperModeActive === 'function' ? !isAnyHelperModeActive() : (
-                !((typeof relaxModeEnabled !== 'undefined' && relaxModeEnabled) || localStorage.getItem('relaxModeEnabled') === 'true') &&
-                !((typeof botAssistEnabled !== 'undefined' && botAssistEnabled) || localStorage.getItem('botAssistEnabled') === 'true') &&
-                !((typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay))
-            );
-
-            const showButtons = () => {
-                const menuBtnEl = menuBtnElement || document.getElementById('menu-btn');
-                const restartBtnEl = restartBtnElement || document.getElementById('restart-btn');
-                if (menuBtnEl) {
-                    menuBtnEl.classList.remove('opacity-0', 'pointer-events-none');
-                    menuBtnEl.classList.add('opacity-100');
-                }
-                if (restartBtnEl) {
-                    restartBtnEl.classList.remove('opacity-0', 'pointer-events-none');
-                    restartBtnEl.classList.add('opacity-100');
-                }
-            };
-
-            try {
-                // Đồng bộ trạng thái pass bài lên Server & Local (để luôn mở khóa lựa chọn chế độ)
-                if (typeof window.submitScoreToServer === 'function') {
-                    window.submitScoreToServer(score, true, currentBeatHits);
-                }
-                saveBestScore(selectedSongIndex, score, true);
-
-                if (canSave && score > oldBest) {
-                    if (bestScoreLabel) bestScoreLabel.innerText = formatScoreDisplay(score);
-                    highScoreDisplay.classList.remove('hidden');
-                }
-            } catch (err) {
-                console.error("Lỗi xử lý kết quả chiến thắng:", err);
-            } finally {
-                setTimeout(showButtons, 1000);
+        try {
+            if (typeof window.submitScoreToServer === 'function') {
+                window.submitScoreToServer(score, true, currentBeatHits);
             }
+            saveBestScore(selectedSongIndex, score, true);
+
+            oldBest = await oldBestPromise;
+            if (canSave && score > oldBest) {
+                if (bestScoreLabel) bestScoreLabel.innerText = formatScoreDisplay(score);
+                highScoreDisplay.classList.remove('hidden');
+                if (hasAnime) {
+                    anime({
+                        targets: highScoreDisplay,
+                        scale: [0, 1.25, 1],
+                        opacity: [0, 1],
+                        duration: 550,
+                        easing: 'easeOutElastic(1, .6)',
+                        complete: () => {
+                            setTimeout(showButtons, 500);
+                        }
+                    });
+                } else {
+                    highScoreDisplay.style.opacity = 1;
+                    setTimeout(showButtons, 800);
+                }
+            } else {
+                setTimeout(showButtons, 350);
+            }
+        } catch (err) {
+            console.error("Lỗi xử lý kết quả chiến thắng:", err);
+            setTimeout(showButtons, 350);
         }
     };
 
-    requestAnimationFrame(animateScore);
+    // Logic chạy số điểm bằng Anime.js (Mượt mà với easeOutExpo, tự tính frame tối ưu không giật lag)
+    if (hasAnime && score > 0) {
+        const scoreCounterObj = { val: 0 };
+        let lastSoundTick = -1;
+        const maxTicks = 25;
+        const scoreDuration = Math.min(1400, Math.max(500, score * 25));
+
+        anime({
+            targets: scoreCounterObj,
+            val: score,
+            round: 1,
+            duration: scoreDuration,
+            delay: 220,
+            easing: 'easeOutExpo',
+            update: function (anim) {
+                const currentVal = Math.round(scoreCounterObj.val);
+                finalScoreEl.textContent = formatScoreDisplay(currentVal);
+                updateFinalScoreStyle(currentVal, score);
+
+                const progress = anim.progress / 100;
+                const tickCount = Math.min(score, maxTicks);
+                if (tickCount > 0) {
+                    const currentTickIndex = Math.floor(progress * (tickCount - 1));
+                    if (currentTickIndex > lastSoundTick) {
+                        if (scoreTickAudio) {
+                            scoreTickAudio.currentTime = 0;
+                            scoreTickAudio.play().catch(() => { });
+                        }
+                        lastSoundTick = currentTickIndex;
+                    }
+                }
+            },
+            complete: onScoreFinished
+        });
+    } else {
+        finalScoreEl.textContent = formatScoreDisplay(score);
+        updateFinalScoreStyle(score, score);
+        onScoreFinished();
+    }
+
     autoplayBackBtn.style.display = 'none';
 }
 
@@ -3811,10 +3920,14 @@ window.DefaultGameOverParticleManager = {
 
     resizeCanvas: function () {
         if (!this.canvas) return;
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        if (this.canvas.width !== w || this.canvas.height !== h) {
+            this.width = w;
+            this.height = h;
+            this.canvas.width = w;
+            this.canvas.height = h;
+        }
     },
 
     createGlowTexture: function (colorHex, glowHex) {
@@ -3967,17 +4080,14 @@ async function gameOver() {
     victoryCameraDecay = 1.0;
     camVelX = 0; camVelY = 0; camVelZ = 0;
 
+    const cacheKey = getScoreCacheKey(selectedSongIndex);
     let oldBest = 0;
-    try {
-        const cached = cachedBestScores[selectedSongIndex];
-        if (cached !== undefined && cached !== null) {
-            oldBest = typeof cached === 'number' ? cached : (parseInt(cached, 10) || 0);
-        } else {
-            oldBest = await getLocalBestScore(selectedSongIndex);
-        }
-    } catch (e) {
-        oldBest = 0;
+    const cached = cachedBestScores[cacheKey];
+    if (cached !== undefined && cached !== null) {
+        oldBest = typeof cached === 'number' ? cached : (parseInt(cached, 10) || 0);
     }
+    // Không await IndexedDB ở đây để tránh làm khựng frame khi bật modal Game Over
+    const oldBestPromise = (oldBest > 0) ? Promise.resolve(oldBest) : getLocalBestScore(selectedSongIndex).catch(() => 0);
 
     // Đảm bảo khôi phục tiêu đề và kiểu dáng Game Over chuẩn (đề phòng lần trước thắng)
     const gameoverTitle = gameoverScreen.querySelector('h2');
@@ -3989,6 +4099,7 @@ async function gameOver() {
     if (gameoverScreenWindow) {
         gameoverScreenWindow.classList.remove('border-cyan-500/40');
         gameoverScreenWindow.classList.add('border-pink-500/40');
+        gameoverScreenWindow.style.transform = '';
     }
 
     // Lưu lại trạng thái vòng chơi trước khi reset các biến
@@ -4040,30 +4151,42 @@ async function gameOver() {
 
     cleanUpOldObjects();
 
+    // Ẩn HUD trong trận đấu để không bị đè số điểm hoặc che khuất Game Over
+    const centerHud = document.getElementById('center-hud');
+    if (centerHud) centerHud.style.display = 'none';
+    const topLeftHud = document.getElementById('top-left-hud');
+    if (topLeftHud) topLeftHud.style.display = 'none';
+
     const menuBtnElement = document.getElementById('menu-btn');
     const restartBtnElement = document.getElementById('restart-btn');
     if (menuBtnElement) {
+        menuBtnElement.style.opacity = '0';
+        menuBtnElement.style.pointerEvents = 'none';
+        menuBtnElement.style.transform = 'translateY(16px)';
         menuBtnElement.classList.add('opacity-0', 'pointer-events-none');
-        menuBtnElement.classList.remove('opacity-100');
     }
     if (restartBtnElement) {
         restartBtnElement.innerText = t('btn_restart') || "RESTART";
         restartBtnElement.setAttribute('data-action', 'restart');
+        restartBtnElement.style.opacity = '0';
+        restartBtnElement.style.pointerEvents = 'none';
+        restartBtnElement.style.transform = 'translateY(16px)';
         if (window.AsianModeManager && window.AsianModeManager.isEnabled) {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-purple-800 hover:from-red-500 hover:via-rose-500 hover:to-purple-700 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_25px_rgba(225,29,72,0.8)] border border-red-500/50";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-purple-800 hover:from-red-500 hover:via-rose-500 hover:to-purple-700 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_25px_rgba(225,29,72,0.8)] border border-red-500/50 cursor-pointer";
         } else if (window.HardModeManager && window.HardModeManager.isEnabled) {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-yellow-500 via-orange-500 to-red-600 hover:from-yellow-400 hover:via-orange-400 hover:to-red-500 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] border border-orange-400/30";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-white bg-gradient-to-r from-yellow-500 via-orange-500 to-red-600 hover:from-yellow-400 hover:via-orange-400 hover:to-red-500 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(239,68,68,0.6)] border border-orange-400/30 cursor-pointer";
         } else if (window.EasyModeManager && window.EasyModeManager.isEnabled) {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 hover:from-emerald-300 hover:via-teal-300 hover:to-green-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(16,185,129,0.6)] border border-emerald-400/30";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-emerald-400 via-teal-400 to-green-500 hover:from-emerald-300 hover:via-teal-300 hover:to-green-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none shadow-[0_0_20px_rgba(16,185,129,0.6)] border border-emerald-400/30 cursor-pointer";
         } else {
-            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none";
+            restartBtnElement.className = "flex-1 py-3 text-xs font-black text-black bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 rounded-xl font-orbitron uppercase transition-all duration-200 transform hover:scale-105 opacity-0 pointer-events-none cursor-pointer";
         }
     }
 
     // Hiển thị UI ban đầu
-    finalScoreEl.innerText = "0";
+    finalScoreEl.textContent = "0";
     updateFinalScoreStyle(0, score);
     highScoreDisplay.classList.add('hidden');
+    highScoreDisplay.style.opacity = '0';
     if (finalSpeedEl) finalSpeedEl.innerText = `${maxSpeedReached.toFixed(2)}x`;
     speedEl.innerText = `${t('speed')} 1.00x`;
     lastDisplayedSpeedText = `${t('speed')} 1.00x`;
@@ -4107,53 +4230,131 @@ async function gameOver() {
     if (!gameOverMiniCard) {
         gameOverMiniCard = document.createElement('div');
         gameOverMiniCard.id = 'gameover-mini-music-card';
-        gameOverMiniCard.className = "absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border border-cyan-500/40 bg-[#060414]/90 shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none";
         gameoverScreen.appendChild(gameOverMiniCard);
     }
+
+    let cardBorder = "border-pink-500/40 bg-[#060414]/90 shadow-[0_0_20px_rgba(236,72,153,0.2)]";
+    let iconColor = "text-pink-400";
+    let iconBg = "bg-pink-900/50 border-pink-500/50";
+    let textColor = "text-pink-300";
+    let textShadow = "0 0 8px rgba(236,72,153,0.6)";
+
+    if (isAsian) {
+        cardBorder = "border-red-500/40 bg-red-950/80 shadow-[0_0_20px_rgba(239,68,68,0.2)]";
+        iconColor = "text-red-400";
+        iconBg = "bg-red-900/50 border-red-500/50";
+        textColor = "text-red-300";
+        textShadow = "0 0 8px rgba(239,68,68,0.6)";
+    } else if (isRage) {
+        cardBorder = "border-orange-500/40 bg-orange-950/80 shadow-[0_0_20px_rgba(249,115,22,0.2)]";
+        iconColor = "text-orange-400";
+        iconBg = "bg-orange-900/50 border-orange-500/50";
+        textColor = "text-orange-300";
+        textShadow = "0 0 8px rgba(249,115,22,0.6)";
+    } else if (isEasy) {
+        cardBorder = "border-emerald-500/40 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.2)]";
+        iconColor = "text-emerald-400";
+        iconBg = "bg-emerald-900/50 border-emerald-500/50";
+        textColor = "text-emerald-300";
+        textShadow = "0 0 8px rgba(16,185,129,0.6)";
+    }
+
+    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
 
     const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
     const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
     const songArtist = song.artist || (typeof t === 'function' ? t('unknown_artist') : "Unknown Artist");
+    const goCardKey = `${selectedSongIndex}_go_${isAsian ? 'a' : (isRage ? 'r' : (isEasy ? 'e' : 'n'))}`;
 
-    gameOverMiniCard.innerHTML = `
-        <div class="flex items-center gap-3 w-full">
-            <div class="w-10 h-10 rounded-full bg-cyan-900/50 flex items-center justify-center border border-cyan-500/50 shrink-0">
-                <svg class="w-5 h-5 text-pink-400 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-            </div>
-            <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
-                <div class="text-cyan-300 font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: 0 0 8px rgba(34,211,238,0.6)">
-                    <span class="marquee-text inline-block">${songName}</span>
+    if (gameOverMiniCard.dataset.cardKey !== goCardKey) {
+        gameOverMiniCard.dataset.cardKey = goCardKey;
+        gameOverMiniCard.innerHTML = `
+            <div class="flex items-center gap-3 w-full">
+                <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                    <svg class="w-5 h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
                 </div>
-                <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
+                <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
+                    <div class="${textColor} font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
+                        <span class="marquee-text inline-block">${songName}</span>
+                    </div>
+                    <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
+                </div>
             </div>
-        </div>
-    `;
+        `;
 
-    const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
-    if (gameOverMarquee && typeof window.applyMarquee === 'function') {
-        window.applyMarquee(gameOverMarquee);
+        const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
+        if (gameOverMarquee && typeof window.applyMarquee === 'function') {
+            window.applyMarquee(gameOverMarquee);
+        }
     }
 
-    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+    const hasAnime = typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+    const statsRow = document.getElementById('gameover-stats-row');
+
+    if (hasAnime) {
+        // Tận dụng Anime.js để mở màn hình Game Over mượt mà, sống động
         gameoverScreen.style.opacity = 0;
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(0.92)';
         anime({
             targets: gameoverScreen,
-            opacity: 1,
-            duration: 400,
-            easing: 'easeOutQuint'
+            opacity: [0, 1],
+            duration: 320,
+            easing: 'easeOutQuad'
         });
-        if (gameoverScreenWindow) {
+
+        if (gameOverMiniCard) {
+            gameOverMiniCard.style.opacity = 0;
             anime({
-                targets: gameoverScreenWindow,
-                scale: [0.92, 1],
+                targets: gameOverMiniCard,
+                translateY: [-24, 0],
+                opacity: [0, 1],
+                duration: 480,
+                delay: 60,
+                easing: 'easeOutBack'
+            });
+        }
+
+        if (gameoverTitle) {
+            gameoverTitle.style.opacity = 0;
+            anime({
+                targets: gameoverTitle,
+                scale: [0.65, 1],
+                opacity: [0, 1],
+                duration: 450,
+                delay: 120,
+                easing: 'easeOutBack'
+            });
+        }
+
+        finalScoreEl.style.opacity = 0;
+        anime({
+            targets: finalScoreEl,
+            scale: [0.8, 1],
+            opacity: [0, 1],
+            duration: 400,
+            delay: 180,
+            easing: 'easeOutCubic'
+        });
+
+        if (statsRow) {
+            const statCards = statsRow.children;
+            for (let i = 0; i < statCards.length; i++) statCards[i].style.opacity = 0;
+            anime({
+                targets: statCards,
+                translateY: [16, 0],
+                opacity: [0, 1],
+                delay: anime.stagger(80, { start: 250 }),
                 duration: 400,
-                easing: 'easeOutQuint'
+                easing: 'easeOutQuad'
             });
         }
     } else {
         gameoverScreen.style.opacity = 1;
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(1)';
+        if (gameOverMiniCard) gameOverMiniCard.style.opacity = 1;
+        if (gameoverTitle) gameoverTitle.style.opacity = 1;
+        finalScoreEl.style.opacity = 1;
+        if (statsRow) {
+            for (let i = 0; i < statsRow.children.length; i++) statsRow.children[i].style.opacity = 1;
+        }
     }
 
     // Hiển thị điểm cao UI với hiệu ứng loading dự phòng nếu backend chậm
@@ -4186,88 +4387,140 @@ async function gameOver() {
         gameOverAudioToPlay.play().catch(() => { });
     }
 
-    // Logic chạy điểm (Animate Score)
-    let currentDisplayScore = 0;
-    const duration = 1500; // 1.5 giây
-    const startTime = performance.now();
-    let lastTickIndex = -1;
-    const maxTicks = 30;
+    // Callback hoàn tất chạy điểm: Lưu kết quả & kích hoạt Anime hiện nút bấm
+    const onScoreFinished = async () => {
+        finalScoreEl.textContent = formatScoreDisplay(score);
+        updateFinalScoreStyle(score, score);
 
-    const animateScore = (now) => {
-        const elapsed = now - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        currentDisplayScore = Math.floor(progress * score);
-
-        const formattedStr = formatScoreDisplay(currentDisplayScore);
-        if (finalScoreEl.innerText !== formattedStr) {
-            finalScoreEl.innerText = formattedStr;
-            updateFinalScoreStyle(currentDisplayScore, score);
-            // Cơ chế tick: tối đa 30 tick trong suốt quá trình chạy điểm
-            const tickCount = Math.min(score, maxTicks);
-            if (tickCount > 0) {
-                const currentTickIndex = Math.floor(progress * (tickCount - 1));
-                if (currentTickIndex > lastTickIndex) {
-                    if (scoreTickAudio) {
-                        scoreTickAudio.currentTime = 0;
-                        scoreTickAudio.play().catch(() => { });
-                    }
-                    lastTickIndex = currentTickIndex;
-                }
-            }
-
+        // Hiệu ứng đập nhẹ (impact pulse) khi con số dừng lại
+        if (hasAnime && score > 0) {
+            anime({
+                targets: finalScoreEl,
+                scale: [1, 1.1, 1],
+                duration: 280,
+                easing: 'easeOutQuad'
+            });
         }
 
-        if (progress < 1) {
-            requestAnimationFrame(animateScore);
-        } else {
-            // Sau khi chạy điểm xong, check kỷ lục (không lưu/gửi điểm ở Relax mode, Autoplay, hoặc Bot Assist)
-            const canSave = typeof isAnyHelperModeActive === 'function' ? !isAnyHelperModeActive() : (
-                !((typeof relaxModeEnabled !== 'undefined' && relaxModeEnabled) || localStorage.getItem('relaxModeEnabled') === 'true') &&
-                !((typeof botAssistEnabled !== 'undefined' && botAssistEnabled) || localStorage.getItem('botAssistEnabled') === 'true') &&
-                !((typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay))
-            );
+        const canSave = typeof isAnyHelperModeActive === 'function' ? !isAnyHelperModeActive() : (
+            !((typeof relaxModeEnabled !== 'undefined' && relaxModeEnabled) || localStorage.getItem('relaxModeEnabled') === 'true') &&
+            !((typeof botAssistEnabled !== 'undefined' && botAssistEnabled) || localStorage.getItem('botAssistEnabled') === 'true') &&
+            !((typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay))
+        );
 
-            const showButtons = () => {
-                const menuBtnEl = menuBtnElement || document.getElementById('menu-btn');
-                const restartBtnEl = restartBtnElement || document.getElementById('restart-btn');
-                if (menuBtnEl) {
-                    menuBtnEl.classList.remove('opacity-0', 'pointer-events-none');
-                    menuBtnEl.classList.add('opacity-100');
-                }
-                if (restartBtnEl) {
-                    restartBtnEl.classList.remove('opacity-0', 'pointer-events-none');
-                    restartBtnEl.classList.add('opacity-100');
-                }
-            };
+        const showButtons = () => {
+            const menuBtnEl = menuBtnElement || document.getElementById('menu-btn');
+            const restartBtnEl = restartBtnElement || document.getElementById('restart-btn');
+            if (!menuBtnEl || !restartBtnEl) return;
 
-            try {
-                if (canSave) {
-                    // Đồng bộ điểm lên Server và lưu kỷ lục cục bộ (Nếu chơi hợp lệ - không bot/relax/autoplay)
-                    if (typeof window.submitScoreToServer === 'function') {
-                        window.submitScoreToServer(score, false, currentBeatHits);
+            menuBtnEl.classList.remove('opacity-0', 'pointer-events-none');
+            restartBtnEl.classList.remove('opacity-0', 'pointer-events-none');
+            menuBtnEl.style.pointerEvents = 'auto';
+            restartBtnEl.style.pointerEvents = 'auto';
+
+            menuBtnEl.style.transition = 'none';
+            restartBtnEl.style.transition = 'none';
+
+            if (hasAnime) {
+                anime({
+                    targets: [menuBtnEl, restartBtnEl],
+                    translateY: [16, 0],
+                    opacity: [0, 1],
+                    duration: 380,
+                    easing: 'easeOutCubic',
+                    complete: () => {
+                        menuBtnEl.style.transition = '';
+                        restartBtnEl.style.transition = '';
                     }
-
-                    saveBestScore(selectedSongIndex, score);
-
-                    if (score > oldBest) {
-                        if (bestScoreLabel) bestScoreLabel.innerText = formatScoreDisplay(score);
-                        highScoreDisplay.classList.remove('hidden');
-                        if (newBestAudio) newBestAudio.play().catch(() => { });
-                        setTimeout(showButtons, 1500); // Đợi audio kỷ lục phát xong mới hiện
-                    } else {
-                        showButtons();
-                    }
-                } else {
-                    showButtons();
-                }
-            } catch (err) {
-                console.error("Lỗi xử lý kết quả Game Over:", err);
-                showButtons();
+                });
+            } else {
+                menuBtnEl.style.opacity = '1';
+                menuBtnEl.style.transform = 'translateY(0)';
+                restartBtnEl.style.opacity = '1';
+                restartBtnEl.style.transform = 'translateY(0)';
+                menuBtnEl.style.transition = '';
+                restartBtnEl.style.transition = '';
             }
+        };
+
+        try {
+            if (canSave) {
+                oldBest = await oldBestPromise;
+                if (typeof window.submitScoreToServer === 'function') {
+                    window.submitScoreToServer(score, false, currentBeatHits);
+                }
+                saveBestScore(selectedSongIndex, score);
+
+                if (score > oldBest) {
+                    if (bestScoreLabel) bestScoreLabel.innerText = formatScoreDisplay(score);
+                    highScoreDisplay.classList.remove('hidden');
+                    if (hasAnime) {
+                        anime({
+                            targets: highScoreDisplay,
+                            scale: [0, 1.25, 1],
+                            opacity: [0, 1],
+                            duration: 550,
+                            easing: 'easeOutElastic(1, .6)',
+                            complete: () => {
+                                setTimeout(showButtons, 500);
+                            }
+                        });
+                    } else {
+                        highScoreDisplay.style.opacity = 1;
+                        setTimeout(showButtons, 800);
+                    }
+                    if (newBestAudio) newBestAudio.play().catch(() => { });
+                } else {
+                    setTimeout(showButtons, 350);
+                }
+            } else {
+                setTimeout(showButtons, 350);
+            }
+        } catch (err) {
+            console.error("Lỗi xử lý kết quả Game Over:", err);
+            setTimeout(showButtons, 350);
         }
     };
 
-    requestAnimationFrame(animateScore);
+    // Chạy điểm số mượt mà với Anime.js (easeOutExpo, tự căn frame tối ưu không lag)
+    if (hasAnime && score > 0) {
+        const scoreCounterObj = { val: 0 };
+        let lastSoundTick = -1;
+        const maxTicks = 25;
+        const scoreDuration = Math.min(1400, Math.max(500, score * 25));
+
+        anime({
+            targets: scoreCounterObj,
+            val: score,
+            round: 1,
+            duration: scoreDuration,
+            delay: 220,
+            easing: 'easeOutExpo',
+            update: function (anim) {
+                const currentVal = Math.round(scoreCounterObj.val);
+                finalScoreEl.textContent = formatScoreDisplay(currentVal);
+                updateFinalScoreStyle(currentVal, score);
+
+                const progress = anim.progress / 100;
+                const tickCount = Math.min(score, maxTicks);
+                if (tickCount > 0) {
+                    const currentTickIndex = Math.floor(progress * (tickCount - 1));
+                    if (currentTickIndex > lastSoundTick) {
+                        if (scoreTickAudio) {
+                            scoreTickAudio.currentTime = 0;
+                            scoreTickAudio.play().catch(() => { });
+                        }
+                        lastSoundTick = currentTickIndex;
+                    }
+                }
+            },
+            complete: onScoreFinished
+        });
+    } else {
+        finalScoreEl.textContent = formatScoreDisplay(score);
+        updateFinalScoreStyle(score, score);
+        onScoreFinished();
+    }
 
     autoplayBackBtn.style.display = 'none';
     tapToPlayOverlay.style.display = 'none';
@@ -4323,6 +4576,11 @@ function resetGameScene() {
     autoplayBackBtn.style.display = 'none';
     tapToPlayOverlay.style.display = 'none';
 
+    const centerHud = document.getElementById('center-hud');
+    if (centerHud) centerHud.style.display = (isPlaying || gameStarted) ? 'flex' : 'none';
+    const topLeftHud = document.getElementById('top-left-hud');
+    if (topLeftHud) topLeftHud.style.display = (isPlaying || gameStarted) ? 'flex' : 'none';
+
     if (typeof stopGameOverMusic === 'function') {
         stopGameOverMusic();
     }
@@ -4352,7 +4610,7 @@ function resetGameScene() {
     }
 
     cleanUpOldObjects();
-    
+
     if (typeof resetEnvironmentPositions === 'function') {
         resetEnvironmentPositions();
     }
@@ -4604,7 +4862,7 @@ async function handleIntro() {
             startScreen.style.display = 'none';
             startScreen.style.opacity = 0;
             if (typeof startScreenWindow !== 'undefined' && startScreenWindow) {
-                startScreenWindow.style.transform = 'scale(0.92)';
+                startScreenWindow.style.transform = '';
             }
         }
 
@@ -4632,20 +4890,20 @@ async function handleIntro() {
                                 // 4. Camera về xong mới hiện Menu chính lên
                                 if (typeof startScreen !== 'undefined' && startScreen) {
                                     startScreen.style.display = 'flex';
+                                    if (typeof startScreenWindow !== 'undefined' && startScreenWindow) {
+                                        startScreenWindow.style.transform = '';
+                                    }
                                     anime({
                                         targets: startScreen,
                                         opacity: 1,
                                         duration: 500,
-                                        easing: 'easeOutQuint'
+                                        easing: 'easeOutQuint',
+                                        complete: () => {
+                                            if (typeof startScreenWindow !== 'undefined' && startScreenWindow) {
+                                                startScreenWindow.style.transform = '';
+                                            }
+                                        }
                                     });
-                                    if (typeof startScreenWindow !== 'undefined' && startScreenWindow) {
-                                        anime({
-                                            targets: startScreenWindow,
-                                            scale: [0.92, 1],
-                                            duration: 500,
-                                            easing: 'easeOutQuint'
-                                        });
-                                    }
                                 }
                             }
                         });
@@ -4672,12 +4930,12 @@ async function handleIntro() {
                 startScreen.style.display = 'flex';
                 startScreen.style.opacity = 1;
                 if (typeof startScreenWindow !== 'undefined' && startScreenWindow) {
-                    startScreenWindow.style.transform = 'scale(1)';
+                    startScreenWindow.style.transform = '';
                 }
             }
         }
     }
-    
+
     startGameBtn.addEventListener('click', doStartGameTransition);
 }
 
@@ -4712,7 +4970,7 @@ function startGame() {
     setupGameStates();
 
     if (audioCtx && !useAudioContextFallback && audioCtx.state === 'suspended') {
-        audioCtx.resume().catch(() => {});
+        audioCtx.resume().catch(() => { });
     }
     if (audio) {
         let playPromise = audio.play();
@@ -4723,6 +4981,11 @@ function startGame() {
 }
 
 function setupGameStates() {
+    const centerHud = document.getElementById('center-hud');
+    if (centerHud) centerHud.style.display = 'flex';
+    const topLeftHud = document.getElementById('top-left-hud');
+    if (topLeftHud) topLeftHud.style.display = 'flex';
+
     if (window.AdaptivePerformanceManager) {
         window.AdaptivePerformanceManager.reset();
     }
@@ -4778,6 +5041,11 @@ function setupGameStates() {
 }
 
 function returnToMenu() {
+    const centerHud = document.getElementById('center-hud');
+    if (centerHud) centerHud.style.display = 'none';
+    const topLeftHud = document.getElementById('top-left-hud');
+    if (topLeftHud) topLeftHud.style.display = 'none';
+
     if (window.RageGameOverFireManager) {
         window.RageGameOverFireManager.stop();
     }
@@ -4786,45 +5054,41 @@ function returnToMenu() {
         triggerExitFullscreen();
     }
     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        if (typeof anime.remove === 'function') {
+            anime.remove([gameoverScreen, gameoverScreenWindow, startScreen, startScreenWindow]);
+        }
         anime({
             targets: gameoverScreen,
             opacity: 0,
-            duration: 300,
+            duration: 250,
             easing: 'easeInOutQuad',
-            complete: () => gameoverScreen.style.display = 'none'
+            complete: () => {
+                gameoverScreen.style.display = 'none';
+                if (gameoverScreenWindow) gameoverScreenWindow.style.transform = '';
+            }
         });
         if (gameoverScreenWindow) {
-            anime({
-                targets: gameoverScreenWindow,
-                scale: [1, 0.92],
-                duration: 300,
-                easing: 'easeInQuad'
-            });
+            gameoverScreenWindow.style.transform = '';
         }
         startScreen.style.opacity = 0;
         startScreen.style.display = 'flex';
-        if (startScreenWindow) startScreenWindow.style.transform = 'scale(0.92)';
+        if (startScreenWindow) startScreenWindow.style.transform = '';
         anime({
             targets: startScreen,
             opacity: 1,
-            duration: 400,
-            easing: 'easeOutQuint'
+            duration: 300,
+            easing: 'easeOutQuad',
+            complete: () => {
+                if (startScreenWindow) startScreenWindow.style.transform = '';
+            }
         });
-        if (startScreenWindow) {
-            anime({
-                targets: startScreenWindow,
-                scale: [0.92, 1],
-                duration: 400,
-                easing: 'easeOutQuint'
-            });
-        }
     } else {
         gameoverScreen.style.opacity = 0;
         gameoverScreen.style.display = 'none';
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(1)';
+        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = '';
         startScreen.style.display = 'flex';
         startScreen.style.opacity = 1;
-        if (startScreenWindow) startScreenWindow.style.transform = 'scale(1)';
+        if (startScreenWindow) startScreenWindow.style.transform = '';
     }
 
     if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
@@ -4878,7 +5142,7 @@ function showTapToOverlay(type = 'start') {
     lastFrameTime = nowPerf;
     fpsLastTime = nowPerf;
     fpsFrameCount = 0;
-    
+
     tapToPlayOverlay.style.display = 'flex';
     countdownNumber.innerText = type === 'start' ? t('tap_play') : t('tap_resume');
 
@@ -5202,14 +5466,14 @@ function showTapToOverlay(type = 'start') {
         tapToPlayOverlay.appendChild(quickSettingsPanel);
 
         const stopProp = (e) => e.stopPropagation();
-        
+
         let isQsOpen = false;
         const toggleQsPanel = (forceOpen = null) => {
             if (forceOpen !== null) isQsOpen = forceOpen;
             else isQsOpen = !isQsOpen;
 
             const useAnim = (typeof uiAnimationsEnabled !== 'undefined' ? uiAnimationsEnabled : true);
-            
+
             if (!useAnim) {
                 quickSettingsPanel.style.transition = 'none';
                 quickSettingsBtn.style.transition = 'none';
@@ -5238,7 +5502,7 @@ function showTapToOverlay(type = 'start') {
             stopProp(e);
             toggleQsPanel(true);
         });
-        
+
         const closeQsBtn = quickSettingsPanel.querySelector('#close-qs-btn');
         if (closeQsBtn) {
             closeQsBtn.addEventListener('click', (e) => {
@@ -5498,7 +5762,7 @@ async function bootGame() {
                     if (parsed && typeof parsed === 'object' && (parsed.name || parsed.title)) {
                         matchedSong = parsed;
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
             if (!matchedSong && typeof getCachedPlaylistFromDB === 'function') {
                 try {
@@ -5506,7 +5770,7 @@ async function bootGame() {
                     if (cachedMaps && Array.isArray(cachedMaps)) {
                         matchedSong = cachedMaps.find(s => s && (s.name || s.title) && ((savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl))));
                     }
-                } catch (e) {}
+                } catch (e) { }
             }
             if (!matchedSong && typeof playlistSource !== 'undefined' && Array.isArray(playlistSource)) {
                 matchedSong = playlistSource.find(s => s && (s.name || s.title) && ((savedId && String(s.id) === String(savedId)) || (savedUrl && (s.url === savedUrl || s.file_url === savedUrl))));

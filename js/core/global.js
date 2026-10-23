@@ -294,25 +294,26 @@ restartBtn.addEventListener('click', () => {
         window.chosenPlayMode = 'endless';
     }
     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        if (typeof anime.remove === 'function') {
+            anime.remove([gameoverScreen, gameoverScreenWindow]);
+        }
         anime({
             targets: gameoverScreen,
             opacity: 0,
-            duration: 300,
+            duration: 250,
             easing: 'easeInOutQuad',
-            complete: () => gameoverScreen.style.display = 'none'
+            complete: () => {
+                gameoverScreen.style.display = 'none';
+                if (gameoverScreenWindow) gameoverScreenWindow.style.transform = '';
+            }
         });
         if (gameoverScreenWindow) {
-            anime({
-                targets: gameoverScreenWindow,
-                scale: [1, 0.92],
-                duration: 300,
-                easing: 'easeInQuad'
-            });
+            gameoverScreenWindow.style.transform = '';
         }
     } else {
         gameoverScreen.style.opacity = 0;
         gameoverScreen.style.display = 'none';
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(1)';
+        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = '';
     }
     resetGameScene();
     startCountdown();
@@ -692,25 +693,26 @@ async function changeSong(index, autoStart = false) {
                     if (typeof stopPreview === 'function') stopPreview(true);
                     loadingOverlay.style.display = 'none';
                     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+                        if (typeof anime.remove === 'function') {
+                            anime.remove([startScreen, startScreenWindow]);
+                        }
                         anime({
                             targets: startScreen,
                             opacity: 0,
-                            duration: 300,
+                            duration: 250,
                             easing: 'easeInOutQuad',
-                            complete: () => startScreen.style.display = 'none'
+                            complete: () => {
+                                startScreen.style.display = 'none';
+                                if (startScreenWindow) startScreenWindow.style.transform = '';
+                            }
                         });
                         if (startScreenWindow) {
-                            anime({
-                                targets: startScreenWindow,
-                                scale: [1, 0.92],
-                                duration: 300,
-                                easing: 'easeInQuad'
-                            });
+                            startScreenWindow.style.transform = '';
                         }
                     } else {
                         startScreen.style.opacity = 0;
                         startScreen.style.display = 'none';
-                        if (startScreenWindow) startScreenWindow.style.transform = 'scale(1)';
+                        if (startScreenWindow) startScreenWindow.style.transform = '';
                     }
 
                     menuAudio.pause();

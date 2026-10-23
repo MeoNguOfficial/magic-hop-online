@@ -360,10 +360,41 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
 }
 
 /* Frameless & Seamless Game Over / Completed Window */
+#gameover-screen {
+    background: radial-gradient(ellipse at center, rgba(10, 6, 20, 0.94) 0%, rgba(4, 2, 10, 0.98) 100%);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
 #gameover-screen-window {
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+#gameover-screen #menu-btn.opacity-0,
+#gameover-screen #restart-btn.opacity-0,
+.opacity-0 {
+    opacity: 0 !important;
+}
+
+.pointer-events-none {
+    pointer-events: none !important;
+}
+
+#gameover-screen #menu-btn,
+#gameover-screen #restart-btn {
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease !important;
+    will-change: transform, opacity;
+}
+
+#gameover-screen #menu-btn:active,
+#gameover-screen #restart-btn:active {
+    transform: scale(0.96) !important;
 }
 
 /* --- PERFECT TEXT ANIMATION & MULTI-TIER NEON VISUALS --- */
