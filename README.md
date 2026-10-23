@@ -1,9 +1,42 @@
-# 🎵 Cyber Beat Hopper (v1.0.4)
+# 🎵 Cyber Beat Hopper (v1.0.5)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.4**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA) và hệ thống tùy biến sâu rộng.
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.5**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA) và hệ thống tùy biến sâu rộng.
 
 ---
-## 🚀 Phiên Bản v1.0.4 Có gì mới?
+## 🚀 Phiên Bản v1.0.5 Có gì mới?
+
+# 🚀 UPDATE LOG: HỖ TRỢ TOÀN DIỆN KÍCH CỠ CHỮ UI & HUD, TỐC ĐỘ BOUNCY BLOCK & FIX ZOOM GAME OVER (RELEASE v1.0.5)
+
+Chào các bạn, bản cập nhật **v1.0.5** mang đến khả năng tùy chỉnh hiển thị font chữ toàn diện, cải tiến nhịp độ vật lý gạch nảy và khắc phục lỗi chuyển cảnh màn hình kết thúc trận đấu:
+
+---
+
+### 🔤 1. HỖ TRỢ TOÀN DIỆN KÍCH CỠ CHỮ HIỂN THỊ (FULL DISPLAY FONT SIZE SUPPORT)
+- **Tùy biến 4 mức font chữ mượt mà:** Hỗ trợ đầy đủ 4 mức kích thước: **Nhỏ (Small)**, **Vừa (Medium - Mặc định)**, **Lớn (Large)** và **Rất lớn (Very Large)**.
+- **Tối ưu hóa Bảng Cài đặt (Settings UI):**
+  - Đồng bộ kích thước chữ cho thanh tìm kiếm cài đặt (`#settings-search-input`) và toàn bộ danh sách kết quả tìm kiếm (`#settings-search-results`).
+  - Co giãn tỷ lệ font cho các nút tùy chọn chất lượng đồ họa (`#graphics-quality-options`) đảm bảo luôn vừa vặn, không bị vỡ bố cục 5 cột.
+  - Tự động co giãn hộp thông tin nhận diện GPU (`#gpu-info-box`), tên card đồ họa và các ghi chú hướng dẫn.
+  - Bổ sung đầy đủ các bộ chọn còn thiếu cho chế độ Rất lớn (`theme-font-xlarge`), giúp toàn bộ mô tả, nhãn phụ đề, ô nhập liệu và nút bấm co giãn chính xác.
+- **Mở rộng đồng bộ các Panel Menu:** Cập nhật áp dụng cỡ chữ linh hoạt cho toàn bộ các màn hình chức năng: Giao diện chính (Home), Tùy biến (Personalize), Trình phát nhạc (Music Player), Tài khoản (Account).
+- **Hỗ trợ HUD trong trận đấu (Top-Left HUD):**
+  - Chỉ số tốc độ bài hát (`#speed`) và toàn bộ cụm theo dõi hiệu năng (`#fps-hud`: text FPS, frame time ms, biểu đồ canvas) tự động co giãn theo cỡ chữ đã chọn.
+  - Tuyệt đối giữ nguyên kích thước chuẩn của các thành phần giao diện trung tâm (`#center-hud`: Điểm số, Combo, Perfect streak, Autoplay indicator) để đảm bảo trải nghiệm chơi game tối ưu nhất.
+
+---
+
+### 🔄 2. SỬA LỖI PHÓNG TO KHI QUAY VỀ MENU TỪ GAME OVER (GAME OVER ZOOM FIX)
+- **Khắc phục lỗi tỷ lệ hiển thị:** Sửa triệt để hiện tượng góc nhìn camera và giao diện bị phóng to/scale đột ngột khi nhấn nút quay về Menu chính từ màn hình Game Over / Hoàn thành bài hát.
+- **Trải nghiệm chuyển cảnh mượt mà:** Khôi phục góc nhìn chuẩn và trạng thái canvas ổn định, liền mạch khi điều hướng giữa các màn hình.
+
+---
+
+### ⚡ 3. TĂNG TỐC ĐỘ HỒI NẢY GẠCH NHÚN (BOUNCY BLOCKS SPEED & DYNAMICS)
+- **Tăng tốc độ đàn hồi (`baseDecay = 9.0`):** Nâng cao tốc độ hồi phục vị trí của khối gạch nảy sau khi bóng tiếp xúc, giúp hiệu ứng nảy nhanh hơn, dứt khoát hơn và ăn khớp hoàn hảo với nhịp điệu dồn dập ở các bài hát có tốc độ cao.
+
+---
+
+## 🚀 Bản trước đó: Phiên Bản v1.0.4 Có gì mới?
 
 # 🚀 UPDATE LOG: TỐI ƯU HIỆU NĂNG THÍCH ỨNG, FPS GRAPH CYBERPUNK, VẬT LÝ BOUNCE & BẢO VỆ ĐA TẦNG (RELEASE v1.0.4)
 
@@ -427,4 +460,4 @@ Dự án phát hành dưới điều khoản **MEOTN OPEN SOURCE LICENSE**:
 
 ---
 
-*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.4*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.5*

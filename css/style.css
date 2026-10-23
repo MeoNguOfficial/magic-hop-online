@@ -258,105 +258,403 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     font-size: 11px;
 }
 
+/* ============================================================
+   DISPLAY FONT SIZE SETTINGS (Small, Medium, Large, Very Large)
+   Full support for: Settings Panel, Search, Tabs, Results,
+   Menu Panels (Home, Personalize, Music, Account),
+   and In-game HUD: ONLY Top-Left HUD (#top-left-hud)
+   ============================================================ */
+
 /* 1. Kích cỡ chữ: NHỎ (Small) */
-.theme-font-small .tab-btn {
+.theme-font-small .tab-btn,
+[data-display-font-size="small"] .settings-tabs-container .tab-btn {
+    font-size: 10px !important;
+}
+.theme-font-small #settings-search-input,
+[data-display-font-size="small"] #settings-search-input {
+    font-size: 11px !important;
+}
+.theme-font-small #settings-search-results,
+[data-display-font-size="small"] #settings-search-results {
     font-size: 10px !important;
 }
 .theme-font-small .tab-pane .font-bold,
 .theme-font-small .tab-pane h3,
+.theme-font-small .tab-pane h4,
 .theme-font-small .tab-pane select,
 .theme-font-small .tab-pane option,
 .theme-font-small .tab-pane button,
+.theme-font-small .tab-pane input:not([type="checkbox"]):not([type="radio"]),
 .theme-font-small .tab-pane input[type="range"] + div span,
+.theme-font-small .tab-pane input[type="range"] ~ span,
 .theme-font-small#panel-home h3,
 .theme-font-small#panel-home select,
 .theme-font-small#panel-home option,
 .theme-font-small#panel-home button,
-.theme-font-small#panel-home input {
+.theme-font-small#panel-home input:not([type="checkbox"]):not([type="radio"]),
+.theme-font-small#panel-personalize h3,
+.theme-font-small#panel-personalize button,
+.theme-font-small#panel-music h3,
+.theme-font-small#panel-music button,
+.theme-font-small#panel-account h3,
+.theme-font-small#panel-account button,
+[data-display-font-size="small"] #panel-settings .tab-pane .font-bold,
+[data-display-font-size="small"] #panel-settings .tab-pane h3,
+[data-display-font-size="small"] #panel-settings .tab-pane select,
+[data-display-font-size="small"] #panel-settings .tab-pane option,
+[data-display-font-size="small"] #panel-settings .tab-pane button,
+[data-display-font-size="small"] #panel-settings .tab-pane input:not([type="checkbox"]):not([type="radio"]) {
     font-size: 12px !important;
 }
+.theme-font-small #graphics-quality-options span,
+[data-display-font-size="small"] #graphics-quality-options span {
+    font-size: 8.5px !important;
+}
 .theme-font-small .tab-pane p,
-.theme-font-small .tab-pane span:not(.font-bold),
-.theme-font-small .tab-pane label:not(.font-bold),
+.theme-font-small .tab-pane span:not(.font-bold):not(.font-black),
+.theme-font-small .tab-pane label:not(.font-bold):not(.font-black),
 .theme-font-small#panel-home p,
-.theme-font-small#panel-home span:not(.font-bold),
-.theme-font-small#panel-home label:not(.font-bold) {
+.theme-font-small#panel-home span:not(.font-bold):not(.font-black),
+.theme-font-small#panel-home label:not(.font-bold):not(.font-black),
+.theme-font-small#panel-personalize p,
+.theme-font-small#panel-personalize span:not(.font-bold):not(.font-black),
+.theme-font-small#panel-personalize label:not(.font-bold):not(.font-black),
+.theme-font-small#panel-music p,
+.theme-font-small#panel-music span:not(.font-bold):not(.font-black),
+.theme-font-small#panel-music label:not(.font-bold):not(.font-black),
+.theme-font-small#panel-account p,
+.theme-font-small#panel-account span:not(.font-bold):not(.font-black),
+.theme-font-small#panel-account label:not(.font-bold):not(.font-black),
+[data-display-font-size="small"] #panel-settings .tab-pane p,
+[data-display-font-size="small"] #panel-settings .tab-pane span:not(.font-bold):not(.font-black),
+[data-display-font-size="small"] #panel-settings .tab-pane label:not(.font-bold):not(.font-black) {
     font-size: 10px !important;
 }
+.theme-font-small #gpu-info-box,
+.theme-font-small #gpu-info-box span,
+[data-display-font-size="small"] #gpu-info-box,
+[data-display-font-size="small"] #gpu-info-box span {
+    font-size: 9px !important;
+}
+.theme-font-small #gpu-info-box p,
+[data-display-font-size="small"] #gpu-info-box p {
+    font-size: 8px !important;
+}
+/* In-game HUD: ONLY top-left HUD (Image 2 Red Box) */
+.theme-font-small#top-left-hud #speed,
+[data-display-font-size="small"] #top-left-hud #speed {
+    font-size: 11.5px !important;
+}
+.theme-font-small#top-left-hud #fps-value-text,
+[data-display-font-size="small"] #top-left-hud #fps-value-text {
+    font-size: 10px !important;
+}
+.theme-font-small#top-left-hud #fps-frametime-text,
+[data-display-font-size="small"] #top-left-hud #fps-frametime-text {
+    font-size: 8px !important;
+}
+.theme-font-small#top-left-hud #fps-graph-canvas,
+[data-display-font-size="small"] #top-left-hud #fps-graph-canvas {
+    width: 105px !important;
+    height: 28px !important;
+}
+.theme-font-small#top-left-hud #fps-hud,
+[data-display-font-size="small"] #top-left-hud #fps-hud {
+    padding: 4px 8px !important;
+}
 
-/* 2. Kích cỡ chữ: VỪA (Medium) */
-.theme-font-medium .tab-btn {
+/* 2. Kích cỡ chữ: VỪA (Medium - Mặc định) */
+.theme-font-medium .tab-btn,
+[data-display-font-size="medium"] .settings-tabs-container .tab-btn {
+    font-size: 11px !important;
+}
+.theme-font-medium #settings-search-input,
+[data-display-font-size="medium"] #settings-search-input {
+    font-size: 12px !important;
+}
+.theme-font-medium #settings-search-results,
+[data-display-font-size="medium"] #settings-search-results {
     font-size: 11px !important;
 }
 .theme-font-medium .tab-pane .font-bold,
 .theme-font-medium .tab-pane h3,
+.theme-font-medium .tab-pane h4,
 .theme-font-medium .tab-pane select,
 .theme-font-medium .tab-pane option,
 .theme-font-medium .tab-pane button,
+.theme-font-medium .tab-pane input:not([type="checkbox"]):not([type="radio"]),
 .theme-font-medium .tab-pane input[type="range"] + div span,
+.theme-font-medium .tab-pane input[type="range"] ~ span,
 .theme-font-medium#panel-home h3,
 .theme-font-medium#panel-home select,
 .theme-font-medium#panel-home option,
 .theme-font-medium#panel-home button,
-.theme-font-medium#panel-home input {
+.theme-font-medium#panel-home input:not([type="checkbox"]):not([type="radio"]),
+.theme-font-medium#panel-personalize h3,
+.theme-font-medium#panel-personalize button,
+.theme-font-medium#panel-music h3,
+.theme-font-medium#panel-music button,
+.theme-font-medium#panel-account h3,
+.theme-font-medium#panel-account button,
+[data-display-font-size="medium"] #panel-settings .tab-pane .font-bold,
+[data-display-font-size="medium"] #panel-settings .tab-pane h3,
+[data-display-font-size="medium"] #panel-settings .tab-pane select,
+[data-display-font-size="medium"] #panel-settings .tab-pane option,
+[data-display-font-size="medium"] #panel-settings .tab-pane button,
+[data-display-font-size="medium"] #panel-settings .tab-pane input:not([type="checkbox"]):not([type="radio"]) {
     font-size: 13px !important;
 }
+.theme-font-medium #graphics-quality-options span,
+[data-display-font-size="medium"] #graphics-quality-options span {
+    font-size: 9px !important;
+}
 .theme-font-medium .tab-pane p,
-.theme-font-medium .tab-pane span:not(.font-bold),
-.theme-font-medium .tab-pane label:not(.font-bold),
+.theme-font-medium .tab-pane span:not(.font-bold):not(.font-black),
+.theme-font-medium .tab-pane label:not(.font-bold):not(.font-black),
 .theme-font-medium#panel-home p,
-.theme-font-medium#panel-home span:not(.font-bold),
-.theme-font-medium#panel-home label:not(.font-bold) {
+.theme-font-medium#panel-home span:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-home label:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-personalize p,
+.theme-font-medium#panel-personalize span:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-personalize label:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-music p,
+.theme-font-medium#panel-music span:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-music label:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-account p,
+.theme-font-medium#panel-account span:not(.font-bold):not(.font-black),
+.theme-font-medium#panel-account label:not(.font-bold):not(.font-black),
+[data-display-font-size="medium"] #panel-settings .tab-pane p,
+[data-display-font-size="medium"] #panel-settings .tab-pane span:not(.font-bold):not(.font-black),
+[data-display-font-size="medium"] #panel-settings .tab-pane label:not(.font-bold):not(.font-black) {
     font-size: 11px !important;
+}
+.theme-font-medium #gpu-info-box,
+.theme-font-medium #gpu-info-box span,
+[data-display-font-size="medium"] #gpu-info-box,
+[data-display-font-size="medium"] #gpu-info-box span {
+    font-size: 10px !important;
+}
+.theme-font-medium #gpu-info-box p,
+[data-display-font-size="medium"] #gpu-info-box p {
+    font-size: 8.5px !important;
+}
+/* In-game HUD: ONLY top-left HUD (Image 2 Red Box) */
+.theme-font-medium#top-left-hud #speed,
+[data-display-font-size="medium"] #top-left-hud #speed {
+    font-size: 14px !important;
+}
+.theme-font-medium#top-left-hud #fps-value-text,
+[data-display-font-size="medium"] #top-left-hud #fps-value-text {
+    font-size: 12px !important;
+}
+.theme-font-medium#top-left-hud #fps-frametime-text,
+[data-display-font-size="medium"] #top-left-hud #fps-frametime-text {
+    font-size: 9px !important;
+}
+.theme-font-medium#top-left-hud #fps-graph-canvas,
+[data-display-font-size="medium"] #top-left-hud #fps-graph-canvas {
+    width: 120px !important;
+    height: 32px !important;
+}
+.theme-font-medium#top-left-hud #fps-hud,
+[data-display-font-size="medium"] #top-left-hud #fps-hud {
+    padding: 6px 10px !important;
 }
 
 /* 3. Kích cỡ chữ: LỚN (Large) */
-.theme-font-large .tab-btn {
+.theme-font-large .tab-btn,
+[data-display-font-size="large"] .settings-tabs-container .tab-btn {
+    font-size: 12.5px !important;
+}
+.theme-font-large #settings-search-input,
+[data-display-font-size="large"] #settings-search-input {
+    font-size: 13.5px !important;
+}
+.theme-font-large #settings-search-results,
+[data-display-font-size="large"] #settings-search-results {
     font-size: 12.5px !important;
 }
 .theme-font-large .tab-pane .font-bold,
 .theme-font-large .tab-pane h3,
+.theme-font-large .tab-pane h4,
 .theme-font-large .tab-pane select,
 .theme-font-large .tab-pane option,
 .theme-font-large .tab-pane button,
+.theme-font-large .tab-pane input:not([type="checkbox"]):not([type="radio"]),
 .theme-font-large .tab-pane input[type="range"] + div span,
+.theme-font-large .tab-pane input[type="range"] ~ span,
 .theme-font-large#panel-home h3,
 .theme-font-large#panel-home select,
 .theme-font-large#panel-home option,
 .theme-font-large#panel-home button,
-.theme-font-large#panel-home input {
+.theme-font-large#panel-home input:not([type="checkbox"]):not([type="radio"]),
+.theme-font-large#panel-personalize h3,
+.theme-font-large#panel-personalize button,
+.theme-font-large#panel-music h3,
+.theme-font-large#panel-music button,
+.theme-font-large#panel-account h3,
+.theme-font-large#panel-account button,
+[data-display-font-size="large"] #panel-settings .tab-pane .font-bold,
+[data-display-font-size="large"] #panel-settings .tab-pane h3,
+[data-display-font-size="large"] #panel-settings .tab-pane select,
+[data-display-font-size="large"] #panel-settings .tab-pane option,
+[data-display-font-size="large"] #panel-settings .tab-pane button,
+[data-display-font-size="large"] #panel-settings .tab-pane input:not([type="checkbox"]):not([type="radio"]) {
     font-size: 14.5px !important;
 }
+.theme-font-large #graphics-quality-options span,
+[data-display-font-size="large"] #graphics-quality-options span {
+    font-size: 10.5px !important;
+}
 .theme-font-large .tab-pane p,
-.theme-font-large .tab-pane span:not(.font-bold),
-.theme-font-large .tab-pane label:not(.font-bold),
+.theme-font-large .tab-pane span:not(.font-bold):not(.font-black),
+.theme-font-large .tab-pane label:not(.font-bold):not(.font-black),
 .theme-font-large#panel-home p,
-.theme-font-large#panel-home span:not(.font-bold),
-.theme-font-large#panel-home label:not(.font-bold) {
+.theme-font-large#panel-home span:not(.font-bold):not(.font-black),
+.theme-font-large#panel-home label:not(.font-bold):not(.font-black),
+.theme-font-large#panel-personalize p,
+.theme-font-large#panel-personalize span:not(.font-bold):not(.font-black),
+.theme-font-large#panel-personalize label:not(.font-bold):not(.font-black),
+.theme-font-large#panel-music p,
+.theme-font-large#panel-music span:not(.font-bold):not(.font-black),
+.theme-font-large#panel-music label:not(.font-bold):not(.font-black),
+.theme-font-large#panel-account p,
+.theme-font-large#panel-account span:not(.font-bold):not(.font-black),
+.theme-font-large#panel-account label:not(.font-bold):not(.font-black),
+[data-display-font-size="large"] #panel-settings .tab-pane p,
+[data-display-font-size="large"] #panel-settings .tab-pane span:not(.font-bold):not(.font-black),
+[data-display-font-size="large"] #panel-settings .tab-pane label:not(.font-bold):not(.font-black) {
     font-size: 12.5px !important;
+}
+.theme-font-large #gpu-info-box,
+.theme-font-large #gpu-info-box span,
+[data-display-font-size="large"] #gpu-info-box,
+[data-display-font-size="large"] #gpu-info-box span {
+    font-size: 11px !important;
+}
+.theme-font-large #gpu-info-box p,
+[data-display-font-size="large"] #gpu-info-box p {
+    font-size: 9.5px !important;
+}
+/* In-game HUD: ONLY top-left HUD (Image 2 Red Box) */
+.theme-font-large#top-left-hud #speed,
+[data-display-font-size="large"] #top-left-hud #speed {
+    font-size: 16.5px !important;
+}
+.theme-font-large#top-left-hud #fps-value-text,
+[data-display-font-size="large"] #top-left-hud #fps-value-text {
+    font-size: 14px !important;
+}
+.theme-font-large#top-left-hud #fps-frametime-text,
+[data-display-font-size="large"] #top-left-hud #fps-frametime-text {
+    font-size: 10.5px !important;
+}
+.theme-font-large#top-left-hud #fps-graph-canvas,
+[data-display-font-size="large"] #top-left-hud #fps-graph-canvas {
+    width: 135px !important;
+    height: 36px !important;
+}
+.theme-font-large#top-left-hud #fps-hud,
+[data-display-font-size="large"] #top-left-hud #fps-hud {
+    padding: 8px 12px !important;
 }
 
 /* 4. Kích cỡ chữ: RẤT LỚN (Very Large) */
-.theme-font-xlarge .tab-btn {
+.theme-font-xlarge .tab-btn,
+[data-display-font-size="xlarge"] .settings-tabs-container .tab-btn {
+    font-size: 14px !important;
+}
+.theme-font-xlarge #settings-search-input,
+[data-display-font-size="xlarge"] #settings-search-input {
+    font-size: 15px !important;
+}
+.theme-font-xlarge #settings-search-results,
+[data-display-font-size="xlarge"] #settings-search-results {
     font-size: 14px !important;
 }
 .theme-font-xlarge .tab-pane .font-bold,
 .theme-font-xlarge .tab-pane h3,
+.theme-font-xlarge .tab-pane h4,
 .theme-font-xlarge .tab-pane select,
 .theme-font-xlarge .tab-pane option,
 .theme-font-xlarge .tab-pane button,
+.theme-font-xlarge .tab-pane input:not([type="checkbox"]):not([type="radio"]),
 .theme-font-xlarge .tab-pane input[type="range"] + div span,
+.theme-font-xlarge .tab-pane input[type="range"] ~ span,
 .theme-font-xlarge#panel-home h3,
 .theme-font-xlarge#panel-home select,
 .theme-font-xlarge#panel-home option,
 .theme-font-xlarge#panel-home button,
-.theme-font-xlarge#panel-home input {
+.theme-font-xlarge#panel-home input:not([type="checkbox"]):not([type="radio"]),
+.theme-font-xlarge#panel-personalize h3,
+.theme-font-xlarge#panel-personalize button,
+.theme-font-xlarge#panel-music h3,
+.theme-font-xlarge#panel-music button,
+.theme-font-xlarge#panel-account h3,
+.theme-font-xlarge#panel-account button,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane .font-bold,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane h3,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane select,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane option,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane button,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane input:not([type="checkbox"]):not([type="radio"]) {
     font-size: 16px !important;
 }
+.theme-font-xlarge #graphics-quality-options span,
+[data-display-font-size="xlarge"] #graphics-quality-options span {
+    font-size: 12px !important;
+}
+.theme-font-xlarge .tab-pane p,
+.theme-font-xlarge .tab-pane span:not(.font-bold):not(.font-black),
+.theme-font-xlarge .tab-pane label:not(.font-bold):not(.font-black),
 .theme-font-xlarge#panel-home p,
-.theme-font-xlarge#panel-home span:not(.font-bold),
-.theme-font-xlarge#panel-home label:not(.font-bold) {
+.theme-font-xlarge#panel-home span:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-home label:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-personalize p,
+.theme-font-xlarge#panel-personalize span:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-personalize label:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-music p,
+.theme-font-xlarge#panel-music span:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-music label:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-account p,
+.theme-font-xlarge#panel-account span:not(.font-bold):not(.font-black),
+.theme-font-xlarge#panel-account label:not(.font-bold):not(.font-black),
+[data-display-font-size="xlarge"] #panel-settings .tab-pane p,
+[data-display-font-size="xlarge"] #panel-settings .tab-pane span:not(.font-bold):not(.font-black),
+[data-display-font-size="xlarge"] #panel-settings .tab-pane label:not(.font-bold):not(.font-black) {
     font-size: 14px !important;
+}
+.theme-font-xlarge #gpu-info-box,
+.theme-font-xlarge #gpu-info-box span,
+[data-display-font-size="xlarge"] #gpu-info-box,
+[data-display-font-size="xlarge"] #gpu-info-box span {
+    font-size: 12.5px !important;
+}
+.theme-font-xlarge #gpu-info-box p,
+[data-display-font-size="xlarge"] #gpu-info-box p {
+    font-size: 11px !important;
+}
+/* In-game HUD: ONLY top-left HUD (Image 2 Red Box) */
+.theme-font-xlarge#top-left-hud #speed,
+[data-display-font-size="xlarge"] #top-left-hud #speed {
+    font-size: 19px !important;
+}
+.theme-font-xlarge#top-left-hud #fps-value-text,
+[data-display-font-size="xlarge"] #top-left-hud #fps-value-text {
+    font-size: 16px !important;
+}
+.theme-font-xlarge#top-left-hud #fps-frametime-text,
+[data-display-font-size="xlarge"] #top-left-hud #fps-frametime-text {
+    font-size: 12px !important;
+}
+.theme-font-xlarge#top-left-hud #fps-graph-canvas,
+[data-display-font-size="xlarge"] #top-left-hud #fps-graph-canvas {
+    width: 150px !important;
+    height: 40px !important;
+}
+.theme-font-xlarge#top-left-hud #fps-hud,
+[data-display-font-size="xlarge"] #top-left-hud #fps-hud {
+    padding: 10px 14px !important;
 }
 
 /* Frameless & Seamless Game Over / Completed Window */

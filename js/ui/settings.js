@@ -241,6 +241,7 @@ let settingsFontSize = localStorage.getItem('settingsFontSize') || 'medium';
 let scrollbarMode = (localStorage.getItem('scrollbarMode') === 'hidden') ? 'hidden' : 'auto';
 if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.setAttribute('data-scrollbar-mode', scrollbarMode);
+    document.documentElement.setAttribute('data-display-font-size', settingsFontSize);
 }
 let tileDetailScale = localStorage.getItem('tileDetailScale') !== null ? parseFloat(localStorage.getItem('tileDetailScale')) : 1.0;
 let maxFps = localStorage.getItem('maxFps') !== null ? parseInt(localStorage.getItem('maxFps')) : 0;
@@ -1366,16 +1367,24 @@ function applySettings() {
 
 
     // Kích cỡ chữ hiển thị
-    const panelSettings = document.getElementById('panel-settings');
-    if (panelSettings) {
-        panelSettings.classList.remove('theme-font-small', 'theme-font-medium', 'theme-font-large', 'theme-font-xlarge');
-        panelSettings.classList.add('theme-font-' + settingsFontSize);
+    if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.setAttribute('data-display-font-size', settingsFontSize);
     }
-    const panelHome = document.getElementById('panel-home');
-    if (panelHome) {
-        panelHome.classList.remove('theme-font-small', 'theme-font-medium', 'theme-font-large', 'theme-font-xlarge');
-        panelHome.classList.add('theme-font-' + settingsFontSize);
-    }
+    const fontTargetElements = [
+        document.getElementById('panel-settings'),
+        document.getElementById('panel-home'),
+        document.getElementById('panel-personalize'),
+        document.getElementById('panel-music'),
+        document.getElementById('panel-account'),
+        document.getElementById('top-left-hud')
+    ];
+    const fontClassList = ['theme-font-small', 'theme-font-medium', 'theme-font-large', 'theme-font-xlarge'];
+    fontTargetElements.forEach(el => {
+        if (el) {
+            el.classList.remove(...fontClassList);
+            el.classList.add('theme-font-' + settingsFontSize);
+        }
+    });
 
     // Chế độ thanh cuộn
     if (typeof document !== 'undefined' && document.documentElement) {
