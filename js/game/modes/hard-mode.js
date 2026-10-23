@@ -133,10 +133,14 @@ window.RageGameOverFireManager = {
 
     resizeCanvas: function () {
         if (!this.canvas) return;
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        if (this.canvas.width !== w || this.canvas.height !== h) {
+            this.width = w;
+            this.height = h;
+            this.canvas.width = w;
+            this.canvas.height = h;
+        }
     },
 
     createGlowTexture: function (r, g, b) {

@@ -294,25 +294,26 @@ restartBtn.addEventListener('click', () => {
         window.chosenPlayMode = 'endless';
     }
     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        if (typeof anime.remove === 'function') {
+            anime.remove([gameoverScreen, gameoverScreenWindow]);
+        }
         anime({
             targets: gameoverScreen,
             opacity: 0,
-            duration: 300,
+            duration: 250,
             easing: 'easeInOutQuad',
-            complete: () => gameoverScreen.style.display = 'none'
+            complete: () => {
+                gameoverScreen.style.display = 'none';
+                if (gameoverScreenWindow) gameoverScreenWindow.style.transform = '';
+            }
         });
         if (gameoverScreenWindow) {
-            anime({
-                targets: gameoverScreenWindow,
-                scale: [1, 0.92],
-                duration: 300,
-                easing: 'easeInQuad'
-            });
+            gameoverScreenWindow.style.transform = '';
         }
     } else {
         gameoverScreen.style.opacity = 0;
         gameoverScreen.style.display = 'none';
-        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = 'scale(1)';
+        if (gameoverScreenWindow) gameoverScreenWindow.style.transform = '';
     }
     resetGameScene();
     startCountdown();
@@ -692,25 +693,26 @@ async function changeSong(index, autoStart = false) {
                     if (typeof stopPreview === 'function') stopPreview(true);
                     loadingOverlay.style.display = 'none';
                     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+                        if (typeof anime.remove === 'function') {
+                            anime.remove([startScreen, startScreenWindow]);
+                        }
                         anime({
                             targets: startScreen,
                             opacity: 0,
-                            duration: 300,
+                            duration: 250,
                             easing: 'easeInOutQuad',
-                            complete: () => startScreen.style.display = 'none'
+                            complete: () => {
+                                startScreen.style.display = 'none';
+                                if (startScreenWindow) startScreenWindow.style.transform = '';
+                            }
                         });
                         if (startScreenWindow) {
-                            anime({
-                                targets: startScreenWindow,
-                                scale: [1, 0.92],
-                                duration: 300,
-                                easing: 'easeInQuad'
-                            });
+                            startScreenWindow.style.transform = '';
                         }
                     } else {
                         startScreen.style.opacity = 0;
                         startScreen.style.display = 'none';
-                        if (startScreenWindow) startScreenWindow.style.transform = 'scale(1)';
+                        if (startScreenWindow) startScreenWindow.style.transform = '';
                     }
 
                     menuAudio.pause();
@@ -1031,7 +1033,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.4' : 'Version 1.0.4'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.5' : 'Version 1.0.5'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
