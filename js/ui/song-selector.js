@@ -73,10 +73,32 @@ function devLog(...args) {
 async function checkSongPassedStatus(song, songIndex) {
     if (!song) return false;
 
+    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+    const isHard  = window.HardModeManager && window.HardModeManager.isEnabled;
+    const isEasy  = window.EasyModeManager && window.EasyModeManager.isEnabled;
+
+    const evalPassed = (src) => {
+        if (!src) return false;
+        if (isAsian) {
+            return !!(src.is_asian_mode_passed || src.isAsianModePassed || src.asianPassed);
+        }
+        if (isHard) {
+            return !!(src.is_hard_mode_passed || src.is_rage_mode_passed || src.isRageModePassed || src.ragePassed);
+        }
+        if (isEasy) {
+            return !!(src.is_easy_mode_passed || src.isEasyModePassed || src.easyPassed);
+        }
+        return !!(src.is_normal_mode_passed || src.isNormalModePassed || src.normalPassed || src.is_passed || src.isPassed);
+    };
+
     // 1. Kiểm tra cờ passed đã có trên đối tượng bài hát (in-memory)
-    const memoryPassed = !!(song.is_easy_mode_passed || song.is_normal_mode_passed || song.is_hard_mode_passed || song.is_asian_mode_passed || song.is_passed || song.isPassed);
-    devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex} - "${song.name || song.title}"]: Memory passed status = ${memoryPassed}`);
-    if (memoryPassed) {
+    if (evalPassed(song)) {
+        devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex} - "${song.name || song.title}"]: Memory passed status = true (mode: ${isAsian ? 'asian' : (isHard ? 'hard' : (isEasy ? 'easy' : 'normal'))})`);
+        return true;
+    }
+
+    // Fallback: nếu cờ chung is_passed hoặc isPassed bật và đang ở Normal Mode
+    if (!isAsian && !isHard && !isEasy && (song.is_passed || song.isPassed)) {
         return true;
     }
 
@@ -93,13 +115,18 @@ async function checkSongPassedStatus(song, songIndex) {
                 request.onerror = () => resolve(null);
             });
             devLog(`[SongSelector] checkSongPassedStatus [Index ${songIndex}]: Local IndexedDB record =`, record);
-            if (record && (record.isEasyModePassed || record.isNormalModePassed || record.isRageModePassed || record.isAsianModePassed)) {
+            if (record) {
                 if (record.isEasyModePassed) song.is_easy_mode_passed = true;
                 if (record.isNormalModePassed) song.is_normal_mode_passed = true;
                 if (record.isRageModePassed) song.is_hard_mode_passed = true;
                 if (record.isAsianModePassed) song.is_asian_mode_passed = true;
-                song.is_passed = true;
-                return true;
+                if (record.isEasyModePassed || record.isNormalModePassed || record.isRageModePassed || record.isAsianModePassed) {
+                    song.is_passed = true;
+                }
+
+                if (evalPassed(record)) {
+                    return true;
+                }
             }
         }
     } catch (err) {
@@ -170,8 +197,11 @@ async function preloadBackendAndPassedStatusOnStartup() {
 
                         if (targetBeatmapId) {
                             const songIndex = playlist.findIndex(s => {
+                                if (typeof isSongMatchingBeatmapId === 'function') {
+                                    return isSongMatchingBeatmapId(s, targetBeatmapId);
+                                }
                                 const bId = typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(s) : String(s.id);
-                                return bId && bId === targetBeatmapId;
+                                return bId && (bId === targetBeatmapId || bId === `id_${targetBeatmapId}` || String(s.id) === targetBeatmapId);
                             });
 
                             if (songIndex !== -1) {

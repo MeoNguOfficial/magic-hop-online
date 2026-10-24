@@ -255,6 +255,9 @@ window.GameEffectsManager = {
             if (oldest.isDiamondBurst) {
                 this.diamondShockwavePool.push(oldest.mesh);
             } else {
+                if (oldest.mesh.geometry !== this.cachedShockwaveGeo) {
+                    oldest.mesh.geometry = this.cachedShockwaveGeo;
+                }
                 this.shockwavePool.push(oldest.mesh);
             }
             this.shockwaveDataPool.push(oldest);
@@ -262,7 +265,10 @@ window.GameEffectsManager = {
 
         const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
 
-        if (comboCount >= 6 && this.cachedDiamondShockwaveGeo) {
+        const isDashTile = tile && tile.userData && tile.userData.isDashTile;
+        const effectiveCombo = isDashTile ? 0 : comboCount;
+
+        if (effectiveCombo >= 6 && this.cachedDiamondShockwaveGeo) {
             let waveMesh;
             if (this.diamondShockwavePool.length > 0) {
                 waveMesh = this.diamondShockwavePool.pop();
@@ -282,7 +288,7 @@ window.GameEffectsManager = {
             }
 
             waveMesh.position.copy(tile.position);
-            waveMesh.position.y = surfaceY + 0.032;
+            waveMesh.position.y = tile.position.y + surfaceY + 0.032;
             waveMesh.rotation.x = -Math.PI / 2;
             waveMesh.rotation.z = 0;
             waveMesh.scale.set(tileScale, tileScale, 1);
@@ -320,13 +326,31 @@ window.GameEffectsManager = {
                 return;
             }
 
+            // Gán Geometry theo đúng hình dáng thực của dải gạch Dash
+            if (isDashTile && window.DashBlocksManager && typeof window.DashBlocksManager.getShockwaveGeometry === 'function') {
+                const dashGeo = window.DashBlocksManager.getShockwaveGeometry(
+                    tile.userData.dashLength || 4.0,
+                    (typeof tileWidth !== 'undefined' ? tileWidth : 4.0),
+                    (typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd'),
+                    (typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0)
+                );
+                if (dashGeo) {
+                    waveLine.geometry = dashGeo;
+                }
+            } else if (waveLine.geometry !== this.cachedShockwaveGeo) {
+                waveLine.geometry = this.cachedShockwaveGeo;
+            }
+
             waveLine.position.copy(tile.position);
-            waveLine.position.y = surfaceY + 0.032;
+            waveLine.position.y = tile.position.y + surfaceY + 0.032;
             waveLine.rotation.x = -Math.PI / 2;
-            waveLine.rotation.z = 0;
+            waveLine.rotation.z = (isDashTile && tile.userData && tile.userData.angleZ) ? tile.userData.angleZ : 0;
             waveLine.scale.set(tileScale, tileScale, 1);
 
             const baseScale = tileScale;
+            const shockwaveSpeed = isDashTile ? 3.6 * customOffsetScale : 4.5 * customOffsetScale;
+            const maxShockwaveScale = isDashTile ? (1.55 * customOffsetScale * baseScale) : (2.4 * customOffsetScale * baseScale);
+
             this.shockwaves.push(this.getShockwaveData(
                 waveLine,
                 false,
@@ -334,13 +358,14 @@ window.GameEffectsManager = {
                 baseScale,
                 baseScale,
                 1.0,
-                4.5 * customOffsetScale,
-                2.4 * customOffsetScale * baseScale
+                shockwaveSpeed,
+                maxShockwaveScale
             ));
         }
     },
 
     updateShockwaves: function (delta, camZ) {
+        const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
         const speedScale = Math.max(1.0, Math.min(2.5, (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * 0.85));
         for (let i = this.shockwaves.length - 1; i >= 0; i--) {
             const sw = this.shockwaves[i];
@@ -353,6 +378,10 @@ window.GameEffectsManager = {
                 if (sw.isDiamondBurst) {
                     this.diamondShockwavePool.push(sw.mesh);
                 } else {
+                    if (sw.mesh.geometry !== this.cachedShockwaveGeo) {
+                        sw.mesh.geometry = this.cachedShockwaveGeo;
+                    }
+                    sw.mesh.rotation.z = 0;
                     this.shockwavePool.push(sw.mesh);
                 }
                 this.shockwaveDataPool.push(sw);
@@ -372,6 +401,7 @@ window.GameEffectsManager = {
 
             if (sw.targetTile && sw.targetTile.parent) {
                 sw.mesh.position.x = sw.targetTile.position.x;
+                sw.mesh.position.y = sw.targetTile.position.y + surfaceY + 0.032;
                 sw.mesh.position.z = sw.targetTile.position.z;
             }
 
@@ -384,6 +414,10 @@ window.GameEffectsManager = {
                 if (sw.isDiamondBurst) {
                     this.diamondShockwavePool.push(sw.mesh);
                 } else {
+                    if (sw.mesh.geometry !== this.cachedShockwaveGeo) {
+                        sw.mesh.geometry = this.cachedShockwaveGeo;
+                    }
+                    sw.mesh.rotation.z = 0;
                     this.shockwavePool.push(sw.mesh);
                 }
                 this.shockwaveDataPool.push(sw);

@@ -17,7 +17,22 @@ function normalizeBeats(beats) {
         }
     }
     if (Array.isArray(arr)) {
-        return arr.map(Number).filter(n => !isNaN(n) && n >= 0).sort((a, b) => a - b);
+        return arr.map(item => {
+            if (Array.isArray(item)) {
+                const start = Number(item[0]);
+                const end = Number(item[item.length - 1]);
+                if (!isNaN(start) && !isNaN(end) && end > start && start >= 0) {
+                    return [start, end];
+                }
+                return (!isNaN(start) && start >= 0) ? start : null;
+            }
+            const n = Number(item);
+            return (!isNaN(n) && n >= 0) ? n : null;
+        }).filter(item => item !== null).sort((a, b) => {
+            const timeA = Array.isArray(a) ? a[0] : a;
+            const timeB = Array.isArray(b) ? b[0] : b;
+            return timeA - timeB;
+        });
     }
     return null;
 }
@@ -44,6 +59,54 @@ function getBeatmapIdFromSong(song) {
     return null;
 }
 window.getBeatmapIdFromSong = getBeatmapIdFromSong;
+
+function isSongMatchingBeatmapId(song, targetId) {
+    if (!song || targetId === undefined || targetId === null || targetId === '') return false;
+
+    const tStr = String(targetId).trim();
+    if (!tStr) return false;
+    const tClean = tStr.replace(/^(id_|bm_)/, '');
+
+    // 1. So khớp trực tiếp song.id hoặc song.beatmap_id
+    if (song.id !== undefined && song.id !== null && song.id !== '') {
+        const sId = String(song.id).trim();
+        if (sId === tStr || sId === tClean || `id_${sId}` === tStr) return true;
+    }
+    if (song.beatmap_id !== undefined && song.beatmap_id !== null && song.beatmap_id !== '') {
+        const sBmId = String(song.beatmap_id).trim();
+        if (sBmId === tStr || sBmId === tClean || `id_${sBmId}` === tStr) return true;
+    }
+
+    // 2. So khớp qua getBeatmapIdFromSong(song)
+    if (typeof getBeatmapIdFromSong === 'function') {
+        const bId = getBeatmapIdFromSong(song);
+        if (bId) {
+            const bIdStr = String(bId).trim();
+            if (bIdStr === tStr) return true;
+            const bIdClean = bIdStr.replace(/^(id_|bm_)/, '');
+            if (bIdClean === tStr || bIdClean === tClean) return true;
+            if (bIdStr === `music_${tClean}` || bIdStr === `music_${tStr}`) return true;
+            if (tStr === `music_${bIdClean}` || tClean === `music_${bIdClean}`) return true;
+        }
+    }
+
+    // 3. So khớp qua beatmapUrl / lazyUrl
+    const bUrl = song.beatmapUrl || song.lazyUrl;
+    if (bUrl && typeof bUrl === 'string') {
+        if (bUrl === tStr || bUrl === tClean) return true;
+        const matchMusic = bUrl.match(/music_(\d+)\.json/i);
+        if (matchMusic && (matchMusic[1] === tClean || matchMusic[1] === tStr || `music_${matchMusic[1]}` === tStr)) {
+            return true;
+        }
+        const matchBm = bUrl.match(/beatmap_(\d+)\.json/i);
+        if (matchBm && (matchBm[1] === tClean || matchBm[1] === tStr || `id_${matchBm[1]}` === tStr)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+window.isSongMatchingBeatmapId = isSongMatchingBeatmapId;
 
 let playlistSource =
     [
@@ -553,7 +616,7 @@ window.mergeIntoPlaylist = function (newMaps) {
                 hasChanged = true;
             }
 
-            ['is_normal_mode_passed', 'is_hard_mode_passed', 'is_passed'].forEach(field => {
+            ['is_easy_mode_passed', 'is_normal_mode_passed', 'is_hard_mode_passed', 'is_asian_mode_passed', 'is_passed'].forEach(field => {
                 if (newMap[field] !== undefined && newMap[field] !== existing[field]) {
                     updatedFields[field] = newMap[field];
                     hasChanged = true;

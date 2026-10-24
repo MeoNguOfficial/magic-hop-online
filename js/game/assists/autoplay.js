@@ -73,16 +73,52 @@ window.AutoplayManager = {
             const currentTile = tiles[currentTileIndex];
             const nextTile = tiles[currentTileIndex + 1];
 
+            // Nếu đang trong trạng thái Dash (lướt trên gạch dài), bóng bám sát trục X của dash tile hiện tại
+            if (typeof window !== 'undefined' && window.isDashing && currentTile) {
+                let targetTileX = currentTile.position.x;
+                if (currentTile.userData && currentTile.userData.isDashTile) {
+                    const startZ = currentTile.userData.startZ !== undefined ? currentTile.userData.startZ : currentTile.position.z;
+                    const exitZ = currentTile.userData.endZ !== undefined ? currentTile.userData.endZ : (currentTile.position.z - (currentTile.userData.dashLength || 0) / 2);
+                    const startX = currentTile.userData.startX !== undefined ? currentTile.userData.startX : currentTile.position.x;
+                    const exitX = currentTile.userData.exitX !== undefined ? currentTile.userData.exitX : currentTile.position.x;
+
+                    if (!currentTile.userData.isMoving && ball) {
+                        const totalZDist = Math.max(0.001, startZ - exitZ);
+                        const tRatio = Math.max(0, Math.min(1, (startZ - ball.position.z) / totalZDist));
+                        targetTileX = startX + tRatio * (exitX - startX);
+                    }
+                }
+
+                if (nextTile && typeof window.dashEndTime !== 'undefined' && window.dashEndTime > 0 && typeof audio !== 'undefined' && audio) {
+                    const remainTime = window.dashEndTime - audio.currentTime;
+                    if (remainTime > 0 && remainTime < 0.15) {
+                        const tLerp = (0.15 - remainTime) / 0.15;
+                        const nextTargetX = (nextTile.userData && nextTile.userData.isDashTile && nextTile.userData.startX !== undefined)
+                            ? nextTile.userData.startX
+                            : nextTile.position.x;
+                        targetTileX = targetTileX + (nextTargetX - targetTileX) * (tLerp * 0.4);
+                    }
+                }
+                this._result.targetX = targetTileX + (isNat ? (currentTile.userData.autoNoise || 0) : 0);
+                return this._result;
+            }
+
             if (nextTile) {
                 if (isNat && nextTile.userData.autoNoise === undefined) {
                     nextTile.userData.autoNoise = (Math.random() - 0.5) * 1.2;
                 }
 
-                const endX = nextTile.position.x + (isNat ? (nextTile.userData.autoNoise || 0) : 0);
+                const endTargetX = (nextTile.userData && nextTile.userData.isDashTile && nextTile.userData.startX !== undefined)
+                    ? nextTile.userData.startX
+                    : nextTile.position.x;
+                const endX = endTargetX + (isNat ? (nextTile.userData.autoNoise || 0) : 0);
 
                 let startX = endX;
                 if (currentTile) {
-                    startX = currentTile.position.x + (isNat ? (currentTile.userData.autoNoise || 0) : 0);
+                    const currentTileRefX = (currentTile.userData && currentTile.userData.isDashTile && currentTile.userData.exitX !== undefined)
+                        ? currentTile.userData.exitX
+                        : currentTile.position.x;
+                    startX = currentTileRefX + (isNat ? (currentTile.userData.autoNoise || 0) : 0);
                 } else if (ball) {
                     startX = ball.position.x;
                 }
@@ -96,16 +132,24 @@ window.AutoplayManager = {
                 const smoothProgress = isNat ? (0.5 - 0.5 * Math.cos(progress * Math.PI)) : progress;
                 this._result.targetX = startX + (endX - startX) * smoothProgress;
             } else if (currentTile) {
-                this._result.targetX = currentTile.position.x + (isNat ? (currentTile.userData.autoNoise || 0) : 0);
+                const currentTileRefX = (currentTile.userData && currentTile.userData.isDashTile && currentTile.userData.exitX !== undefined)
+                    ? currentTile.userData.exitX
+                    : currentTile.position.x;
+                this._result.targetX = currentTileRefX + (isNat ? (currentTile.userData.autoNoise || 0) : 0);
             }
         }
 
         return this._result;
     },
 
-    applyPerfectAim: function (diffX, ball, targetTile) {
+    applyPerfectAim: function (diffX, ball, targetTile, customTargetX) {
         if (typeof isAutoplay !== 'undefined' && isAutoplay) {
-            if (ball && targetTile) ball.position.x = targetTile.position.x;
+            const tgtX = (customTargetX !== undefined)
+                ? customTargetX
+                : ((targetTile && targetTile.userData && targetTile.userData.isDashTile && targetTile.userData.startX !== undefined)
+                    ? targetTile.userData.startX
+                    : (targetTile ? targetTile.position.x : 0));
+            if (ball) ball.position.x = tgtX;
             return 0;
         }
         return diffX;

@@ -367,6 +367,69 @@ p.subtitle {
     opacity: 1;
 }
 
+/* --- DASH TILE TIMELINE STYLES --- */
+.timeline-dash-marker {
+    position: absolute;
+    top: 20px;
+    bottom: 4px;
+    margin-left: 0;
+    min-width: 3px;
+    background: linear-gradient(90deg, rgba(255, 170, 0, 0.85), rgba(255, 204, 0, 0.7));
+    border: 1.5px solid #ffcc00;
+    border-radius: 4px;
+    cursor: ew-resize;
+    z-index: 7;
+    touch-action: none;
+    box-shadow: 0 0 10px rgba(255, 170, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.timeline-dash-marker::before {
+    display: none !important;
+}
+
+.timeline-dash-marker::after {
+    display: none !important;
+}
+
+.timeline-dash-marker:hover {
+    background: linear-gradient(90deg, rgba(255, 190, 40, 0.95), rgba(255, 220, 60, 0.85));
+    border-color: #ffffff;
+    box-shadow: 0 0 15px rgba(255, 170, 0, 0.8);
+    z-index: 10;
+}
+
+.timeline-dash-marker.dragging {
+    background: linear-gradient(90deg, #ff7675, #fab1a0) !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 14px #ff7675 !important;
+    z-index: 16;
+}
+
+.timeline-dash-marker.selected-beat {
+    border: 2px solid #ffffff !important;
+    background: linear-gradient(90deg, #ff6b6b, #feca57) !important;
+    box-shadow: 0 0 16px rgba(255, 107, 107, 0.9) !important;
+    z-index: 15;
+}
+
+.timeline-dash-marker.active-beat {
+    background: #ffffff !important;
+    border-color: #ffaa00 !important;
+    box-shadow: 0 0 15px #fff, 0 0 20px #ffaa00 !important;
+    color: #000 !important;
+}
+
 .workspace {
     display: grid;
     grid-template-columns: 1fr;
@@ -583,6 +646,15 @@ button:active {
 
 .undo:hover:not(:disabled) {
     background: #d35400;
+}
+
+.redo {
+    background: #6c5ce7;
+    color: white;
+}
+
+.redo:hover:not(:disabled) {
+    background: #5844db;
 }
 
 .export {

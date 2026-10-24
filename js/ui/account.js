@@ -309,8 +309,11 @@ async function syncServerDataToLocal(userId) {
                 if (!targetBeatmapId) return;
 
                 const songIndex = playlist.findIndex(p => {
+                    if (typeof isSongMatchingBeatmapId === 'function') {
+                        return isSongMatchingBeatmapId(p, targetBeatmapId);
+                    }
                     const bId = typeof getBeatmapIdFromSong === 'function' ? getBeatmapIdFromSong(p) : String(p.id);
-                    return bId && bId === targetBeatmapId;
+                    return bId && (bId === targetBeatmapId || bId === `id_${targetBeatmapId}` || String(p.id) === targetBeatmapId);
                 });
                 if (songIndex !== -1) {
                     if (!mergedScores[songIndex]) {
@@ -355,6 +358,15 @@ async function syncServerDataToLocal(userId) {
                 isAsianModePassed: ms.asianPassed ? true : false,
             };
             store.put(record);
+
+            if (typeof playlist !== 'undefined' && playlist[songIdx]) {
+                const targetSong = playlist[songIdx];
+                if (ms.easyPassed) targetSong.is_easy_mode_passed = true;
+                if (ms.normalPassed) targetSong.is_normal_mode_passed = true;
+                if (ms.ragePassed) targetSong.is_hard_mode_passed = true;
+                if (ms.asianPassed) targetSong.is_asian_mode_passed = true;
+                if (ms.easyPassed || ms.normalPassed || ms.ragePassed || ms.asianPassed) targetSong.is_passed = true;
+            }
         });
     } catch (e) {
         console.error('[Account] Lỗi đồng bộ dữ liệu từ server khi chuyển tài khoản:', e);
@@ -1223,7 +1235,16 @@ function renderLoggedOutState(canGoBack = false, previousSession = null, prefill
                                 const mergedScores = {};
                                 serverScores.forEach(s => {
                                     if (typeof playlist !== 'undefined') {
-                                        const songIndex = playlist.findIndex(p => String(p.id) === String(s.beatmap_id) || String(p.id) === String(s.song_id));
+                                        const rawBeatmapId = s.beatmap_id ?? s.beatmapId ?? s.song_id ?? s.songId ?? s.map_id ?? s.beatmap?.id ?? s.song?.id ?? s.beatmap?.beatmap_id;
+                                        const targetBeatmapId = (rawBeatmapId !== undefined && rawBeatmapId !== null) ? String(rawBeatmapId) : null;
+                                        if (!targetBeatmapId) return;
+
+                                        const songIndex = playlist.findIndex(p => {
+                                            if (typeof isSongMatchingBeatmapId === 'function') {
+                                                return isSongMatchingBeatmapId(p, targetBeatmapId);
+                                            }
+                                            return String(p.id) === targetBeatmapId || String(p.id) === `id_${targetBeatmapId}`;
+                                        });
                                         if (songIndex !== -1) {
                                             if (!mergedScores[songIndex]) {
                                                 mergedScores[songIndex] = {
@@ -1260,11 +1281,26 @@ function renderLoggedOutState(canGoBack = false, previousSession = null, prefill
                                     req.onsuccess = () => {
                                         const existing = req.result || { songIndex: songIdx };
                                         
-                                        if (ms.ragePassed) {
-                                             existing.isRageModePassed = true;
-                                        }
+                                        if (ms.easyPassed) existing.isEasyModePassed = true;
+                                        if (ms.normalPassed) existing.isNormalModePassed = true;
+                                        if (ms.ragePassed) existing.isRageModePassed = true;
+                                        if (ms.asianPassed) existing.isAsianModePassed = true;
+
+                                        if (ms.easyScore > 0) existing.easyScore = btoa(ms.easyScore.toString());
+                                        if (ms.normalScore > 0) existing.score = btoa(ms.normalScore.toString());
+                                        if (ms.rageScore > 0) existing.rageScore = btoa(ms.rageScore.toString());
+                                        if (ms.asianScore > 0) existing.asianScore = btoa(ms.asianScore.toString());
 
                                         store.put(existing);
+
+                                        if (typeof playlist !== 'undefined' && playlist[songIdx]) {
+                                            const targetSong = playlist[songIdx];
+                                            if (ms.easyPassed) targetSong.is_easy_mode_passed = true;
+                                            if (ms.normalPassed) targetSong.is_normal_mode_passed = true;
+                                            if (ms.ragePassed) targetSong.is_hard_mode_passed = true;
+                                            if (ms.asianPassed) targetSong.is_asian_mode_passed = true;
+                                            if (ms.easyPassed || ms.normalPassed || ms.ragePassed || ms.asianPassed) targetSong.is_passed = true;
+                                        }
                                     };
                                 });
                             } catch (e) { }

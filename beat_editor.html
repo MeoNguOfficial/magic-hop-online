@@ -85,10 +85,14 @@
 
     <!-- Context Menu Tùy Biến -->
     <div class="context-menu" id="customContextMenu">
+        <div class="context-item" id="ctxUndo"><span style="display: flex; align-items: center; gap: 8px;">↶ Hoàn tác</span><span class="shortcut">Ctrl+Z</span></div>
+        <div class="context-item" id="ctxRedo"><span style="display: flex; align-items: center; gap: 8px;">↷ Làm lại</span><span class="shortcut">Ctrl+Y</span></div>
+        <div class="context-divider"></div>
         <div class="context-item" id="ctxCopy"><span style="display: flex; align-items: center; gap: 8px;">📋 Sao chép</span><span class="shortcut">Ctrl+C</span></div>
         <div class="context-item" id="ctxPaste"><span style="display: flex; align-items: center; gap: 8px;">📥 Dán beat</span><span class="shortcut">Ctrl+V</span></div>
         <div class="context-item" id="ctxDelete"><span style="display: flex; align-items: center; gap: 8px;">❌ Xóa</span><span class="shortcut">Del</span></div>
         <div class="context-divider"></div>
+        <div class="context-item" id="ctxToggleDash"><span style="display: flex; align-items: center; gap: 8px;">⚡ Gạch Lướt (Dash)</span><span class="shortcut">D</span></div>
         <div class="context-item" id="ctxGroupAlign"><span style="display: flex; align-items: center; gap: 8px;">📐 Căn nhịp đều</span><span class="shortcut" title="E = Căn đều nhanh · Ctrl+G = Mở bảng cài đặt">E / Ctrl+G</span></div>
         <div class="context-item" id="ctxGroupShift"><span style="display: flex; align-items: center; gap: 8px;">⏳ Dịch chuyển</span><span class="shortcut">Ctrl+G</span></div>
         <div class="context-divider"></div>
@@ -116,7 +120,8 @@
                 <button class="play" id="playBtn" disabled>▶ Phát</button>
                 <button class="record" id="recordBtn" disabled>⏺ Ghi Beat</button>
                 <button class="add-current" id="addCurrentBtn" disabled>➕ Thêm Beat</button>
-                <button class="undo" id="undoBtn" disabled>↶ Hoàn tác (Undo)</button>
+                <button class="undo" id="undoBtn" disabled title="Hoàn tác thao tác trước (Ctrl+Z)">↶ Hoàn tác (Undo)</button>
+                <button class="redo" id="redoBtn" disabled title="Làm lại thao tác vừa hoàn tác (Ctrl+Y / Ctrl+Shift+Z)">↷ Làm lại (Redo)</button>
                 <button class="export" id="exportBtn" disabled>📦 Xuất JSON</button>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <button class="export" id="saveMemoryBtn" disabled style="background: #10b981; margin: 0;">💾 Lưu vào Lịch sử</button>
@@ -211,6 +216,7 @@
             <li><strong>Model V4 (Pro AI):</strong> AI thuật toán mới nhất, phát hiện chính xác thời điểm "bắt đầu" của nhịp âm thanh thay vì đỉnh âm thanh to nhất. Phù hợp các bài hát nhịp không đều.</li>
             <li><strong>Model V3:</strong> Áp dụng màng lọc High-pass ẩn, lọc bỏ hoàn toàn Bass/Vocal và chỉ tập trung truy vết âm thanh của Snare, Clap. Dành cho nhạc Trap/Hiphop.</li>
             <li><strong>Model V2 & V1:</strong> Dùng thuật toán Root Mean Square và trích xuất độ sắc của tần số truyền thống. Nếu beat tạo ra dày đặc quá, hãy Tăng độ nhạy phân tích lên.</li>
+            <li><strong>Phím tắt D (Gạch Lướt Siêu Tốc):</strong> Chọn 2 mốc nhịp rồi nhấn <strong>D</strong> để gộp thành Gạch Lướt <code>[start, end]</code>. Nếu đang chọn 1 Gạch Lướt, nhấn <strong>D</strong> để tách lại thành 2 mốc nhịp đơn lẻ.</li>
         </ul>
     </div>
 

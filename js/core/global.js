@@ -909,8 +909,12 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
 
     let normalScore = 0;
     let rageScore = 0;
+    let easyScore = 0;
+    let asianScore = 0;
     let normalPassed = false;
     let ragePassed = false;
+    let easyPassed = false;
+    let asianPassed = false;
 
     try {
         const db = typeof getDB === 'function' ? await getDB() : (typeof initDB === 'function' ? await initDB() : null);
@@ -929,8 +933,16 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
                 if (record.rageScore) {
                     try { rageScore = parseInt(atob(record.rageScore)) || 0; } catch (e) {}
                 }
+                if (record.easyScore) {
+                    try { easyScore = parseInt(atob(record.easyScore)) || 0; } catch (e) {}
+                }
+                if (record.asianScore) {
+                    try { asianScore = parseInt(atob(record.asianScore)) || 0; } catch (e) {}
+                }
                 normalPassed = !!record.isNormalModePassed;
                 ragePassed = !!record.isRageModePassed;
+                easyPassed = !!record.isEasyModePassed;
+                asianPassed = !!record.isAsianModePassed;
             }
         }
     } catch (e) {}
@@ -943,26 +955,31 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
         beatmap_id: targetBeatmapId
     };
 
+    const hasEasyPassed = (isEasy && isNormalModePassed) || easyPassed || !!currentSong?.is_easy_mode_passed;
+    const hasNormalPassed = (!isEasy && !isRage && !isAsian && isNormalModePassed) || normalPassed || !!currentSong?.is_normal_mode_passed || !!currentSong?.is_passed;
+    const hasHardPassed = (isRage && isNormalModePassed) || ragePassed || !!currentSong?.is_hard_mode_passed;
+    const hasAsianPassed = (isAsian && isNormalModePassed) || asianPassed || !!currentSong?.is_asian_mode_passed;
+
     if (isEasy) {
         payload.easy_mode_score = finalScore;
         payload.is_easy_mode = 1;
         payload.mode = 'easy';
-        if (isNormalModePassed) payload.is_easy_mode_passed = 1;
+        if (hasEasyPassed) payload.is_easy_mode_passed = 1;
     } else if (isAsian) {
         payload.asian_mode_score = finalScore;
         payload.is_asian_mode = 1;
         payload.mode = 'asian';
-        if (isNormalModePassed) payload.is_asian_mode_passed = 1;
+        if (hasAsianPassed) payload.is_asian_mode_passed = 1;
     } else if (isRage) {
         payload.hard_mode_score = finalScore;
         payload.is_hard_mode = 1;
         payload.is_rage_mode = 1;
         payload.mode = 'hard';
-        if (isNormalModePassed) payload.is_hard_mode_passed = 1;
+        if (hasHardPassed) payload.is_hard_mode_passed = 1;
     } else {
         payload.score = finalScore;
         payload.mode = 'normal';
-        if (isNormalModePassed) payload.is_normal_mode_passed = 1;
+        if (hasNormalPassed) payload.is_normal_mode_passed = 1;
     }
 
     if (Array.isArray(beatsInput) && beatsInput.length > 0) {
@@ -1083,6 +1100,7 @@ if (typeof cacheStaticResources === 'function') {
         'js/core/global.js',
         'js/ui/settings.js',
         'js/audio/audio-manager.js',
+        'js/game/blocks/dash-blocks.js',
         'js/game/blocks/normal-blocks.js',
         'js/game/blocks/moving-blocks.js',
         'js/ui/personalize.js',

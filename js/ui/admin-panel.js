@@ -2133,9 +2133,24 @@ function getValidBeatsArray(beatsStr) {
     try { parsed = JSON.parse(beatsStr); }
     catch (e) { throw new Error("Sai định dạng JSON (Beats phải là một mảng)."); }
     if (!Array.isArray(parsed) || parsed.length === 0) {
-        throw new Error("Dữ liệu Beats phải là một mảng số không rỗng.");
+        throw new Error("Dữ liệu Beats phải là một mảng không rỗng.");
     }
-    return parsed.map(Number).filter(n => !isNaN(n) && n >= 0).sort((a, b) => a - b);
+    return parsed.map(item => {
+        if (Array.isArray(item)) {
+            const start = Number(item[0]);
+            const end = Number(item[item.length - 1]);
+            if (!isNaN(start) && !isNaN(end) && end > start && start >= 0) {
+                return [start, end];
+            }
+            return (!isNaN(start) && start >= 0) ? start : null;
+        }
+        const n = Number(item);
+        return (!isNaN(n) && n >= 0) ? n : null;
+    }).filter(item => item !== null).sort((a, b) => {
+        const timeA = Array.isArray(a) ? a[0] : a;
+        const timeB = Array.isArray(b) ? b[0] : b;
+        return timeA - timeB;
+    });
 }
 
 const addBmModal = document.getElementById('admin-beatmap-add-modal');
