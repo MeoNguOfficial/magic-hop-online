@@ -15,6 +15,8 @@ window.selectedCopyrightFilter = '';
 var _songFilterArtistInited = false;
 var _songFilterGenreInited = false;
 var _songFilterCopyrightInited = false;
+var _lastPopulatedPlaylistLen = -1;
+var _lastPopulatedApiOptions = null;
 
 // --- KIỂM TRA TRẠNG THÁI PASSED BÀI HÁT (ƯU TIÊN SERVER, NGOẠI TUYẾN 60S MỚI DÙNG LOCAL) ---
 let lastBackendCheckTimestamp = 0;
@@ -1291,8 +1293,6 @@ function initSearchableFilterDropdown(cfg) {
 }
 
 // Khởi tạo 3 dropdown searchable/custom cho game
-let _lastPopulatedPlaylistLen = -1;
-let _lastPopulatedApiOptions = null;
 
 function populateFilterDropdowns(force = false) {
     if (!force && _lastPopulatedPlaylistLen === playlist.length && _lastPopulatedApiOptions === window.apiFilterOptions && _songFilterArtistInited && _songFilterGenreInited && _songFilterCopyrightInited) {
