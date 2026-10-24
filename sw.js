@@ -4,8 +4,8 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.0.46';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.46';
+const STATIC_CACHE = 'magic-hop-static-v1.0.0.62';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.62';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
@@ -50,6 +50,7 @@ const CORE_ASSETS = [
     './js/services/storage-manager.js',
     './js/audio/audio-manager.js',
     './js/services/copyright_check.js',
+    './js/game/blocks/dash-blocks.js',
     './js/game/blocks/normal-blocks.js',
     './js/game/blocks/moving-blocks.js',
     './js/ui/personalize.js',

@@ -7,6 +7,7 @@ const recordBtn = document.getElementById("recordBtn");
 const addCurrentBtn = document.getElementById("addCurrentBtn");
 const exportBtn = document.getElementById("exportBtn");
 const undoBtn = document.getElementById("undoBtn");
+const redoBtn = document.getElementById("redoBtn");
 const resetBtn = document.getElementById("resetBtn");
 const autoGenerateBtn = document.getElementById("autoGenerateBtn");
 const saveMemoryBtn = document.getElementById("saveMemoryBtn");
@@ -80,6 +81,8 @@ const selectionIndicator = document.getElementById("selectionIndicator");
 const selectionLabel = document.getElementById("selectionLabel");
 
 const customContextMenu = document.getElementById("customContextMenu");
+const ctxUndo = document.getElementById("ctxUndo");
+const ctxRedo = document.getElementById("ctxRedo");
 const ctxCopy = document.getElementById("ctxCopy");
 const ctxPaste = document.getElementById("ctxPaste");
 const ctxDelete = document.getElementById("ctxDelete");
@@ -88,6 +91,24 @@ const ctxGroupShift = document.getElementById("ctxGroupShift");
 const ctxSelectAll = document.getElementById("ctxSelectAll");
 const ctxClearSelection = document.getElementById("ctxClearSelection");
 const ctxAddBeatHere = document.getElementById("ctxAddBeatHere");
+const ctxToggleDash = document.getElementById("ctxToggleDash");
+
+// --- HELPER FUNCTIONS CHO DASH TILE [start, end] ---
+function getBeatStartTime(b) {
+    return Array.isArray(b) ? b[0] : b;
+}
+
+function getBeatEndTime(b) {
+    return Array.isArray(b) ? b[1] : b;
+}
+
+function isDashBeat(b) {
+    return Array.isArray(b) && b.length >= 2;
+}
+
+function sortBeatsArray(arr) {
+    return arr.sort((a, b) => getBeatStartTime(a) - getBeatStartTime(b));
+}
 
 // Giao diện chuyển đổi Mode AI và BPM
 const autoModelSelect = document.getElementById("autoModelSelect");
@@ -222,8 +243,10 @@ function checkAndHighlightBeats(currentTime) {
     let hasBeatActive = false;
 
     markers.forEach(marker => {
-        const beatTime = parseFloat(marker.dataset.time);
-        if (currentTime >= beatTime && currentTime <= beatTime + tolerance) {
+        const startTime = parseFloat(marker.dataset.time);
+        const isDash = marker.dataset.isDash === "true";
+        const endTime = isDash ? parseFloat(marker.dataset.endTime) : startTime;
+        if (currentTime >= startTime && currentTime <= endTime + tolerance) {
             if (!marker.classList.contains("active-beat")) {
                 marker.classList.add("active-beat");
                 hasBeatActive = true;
@@ -488,8 +511,12 @@ document.addEventListener("mousemove", (e) => {
         const markers = timelineBeats.querySelectorAll(".timeline-beat-marker");
         markers.forEach((marker) => {
             const index = parseInt(marker.dataset.index);
-            const markerLeft = (parseFloat(marker.dataset.time) / duration) * rect.width;
-            if (markerLeft >= x && markerLeft <= x + width) selectedBeatsIndices.add(index);
+            const isDash = marker.dataset.isDash === "true";
+            const sTime = parseFloat(marker.dataset.time);
+            const eTime = isDash ? parseFloat(marker.dataset.endTime) : sTime;
+            const markerLeft = (sTime / duration) * rect.width;
+            const markerRight = (eTime / duration) * rect.width;
+            if (markerRight >= x && markerLeft <= x + width) selectedBeatsIndices.add(index);
             else if (!e.shiftKey && !e.ctrlKey) selectedBeatsIndices.delete(index);
         });
         updateSelectionIndicator();
@@ -529,7 +556,7 @@ timelineContainer.addEventListener("dblclick", (e) => {
 
     if (t >= 0 && t <= audio.duration) {
         beats.push(t);
-        beats.sort((a, b) => a - b);
+        sortBeatsArray(beats);
         clearSelection();
         updateBeatList();
         playTickSound(1000, 0.05);
@@ -567,26 +594,29 @@ function showCountdownValue(val) {
 }
 
 function startRecording() {
+    if (beats.length > 0) pushHistory();
     beats = [0]; recording = true; clearSelection();
     status.textContent = "🔴 Đang ghi beat... (Nhấn phím F, J, Z hoặc X để thêm nhịp gốc)";
     status.className = "active";
     updateBeatList();
-    undoBtn.disabled = false;
+    updateUndoRedoUI();
     audio.currentTime = 0; audio.play(); playBtn.textContent = "⏸ Tạm dừng";
 }
 
 addCurrentBtn.onclick = () => {
     if (!audio.src) return;
     const t = Number(audio.currentTime.toFixed(3));
-    if (beats.length > 0 && Math.abs(t - beats[beats.length - 1]) < 0.03) return;
-    beats.push(t); beats.sort((a, b) => a - b);
+    if (beats.length > 0 && Math.abs(t - getBeatEndTime(beats[beats.length - 1])) < 0.03) return;
+    pushHistory();
+    beats.push(t); sortBeatsArray(beats);
     updateBeatList(); playTickSound(800, 0.05); triggerVisualFlash();
 };
 
 function addBeat() {
     const t = Number(audio.currentTime.toFixed(3));
-    if (beats.length > 0 && Math.abs(t - beats[beats.length - 1]) < 0.03) return;
-    beats.push(t); beats.sort((a, b) => a - b);
+    if (beats.length > 0 && Math.abs(t - getBeatEndTime(beats[beats.length - 1])) < 0.03) return;
+    pushHistory();
+    beats.push(t); sortBeatsArray(beats);
     updateBeatList(); playTickSound(800, 0.05); triggerVisualFlash();
 }
 
@@ -595,31 +625,143 @@ function triggerVisualFlash() {
     setTimeout(() => { flashOverlay.classList.remove("active"); timeLabel.classList.remove("flash"); }, 65);
 }
 
+// --- HỆ THỐNG LỊCH SỬ HOÀN TÁC TOÀN DIỆN (UNDO / REDO ENGINE) ---
+let undoStack = [];
+let redoStack = [];
+const MAX_HISTORY = 100;
+
+function cloneBeats(arr) {
+    if (!arr) return [];
+    return arr.map(b => Array.isArray(b) ? [b[0], b[1]] : b);
+}
+
+function pushHistory() {
+    undoStack.push({
+        beats: cloneBeats(beats),
+        selectedIndices: Array.from(selectedBeatsIndices)
+    });
+    if (undoStack.length > MAX_HISTORY) {
+        undoStack.shift();
+    }
+    redoStack = []; // Thao tác chỉnh sửa mới sẽ làm mới chuỗi Redo
+    updateUndoRedoUI();
+}
+
+function pushHistoryState(beatsArray, selectedIndicesArray) {
+    undoStack.push({
+        beats: cloneBeats(beatsArray),
+        selectedIndices: Array.from(selectedIndicesArray || [])
+    });
+    if (undoStack.length > MAX_HISTORY) {
+        undoStack.shift();
+    }
+    redoStack = [];
+    updateUndoRedoUI();
+}
+
+function undo() {
+    if (undoStack.length === 0) return;
+
+    // Đẩy trạng thái hiện tại vào Redo stack
+    redoStack.push({
+        beats: cloneBeats(beats),
+        selectedIndices: Array.from(selectedBeatsIndices)
+    });
+
+    // Khôi phục trạng thái công việc trước đó
+    const prevState = undoStack.pop();
+    beats = cloneBeats(prevState.beats);
+    selectedBeatsIndices = new Set(prevState.selectedIndices || []);
+
+    updateBeatList();
+    updateUndoRedoUI();
+    playTickSound(600, 0.08);
+
+    status.textContent = "↶ Đã hoàn tác công việc trước đó (Undo)";
+    status.className = "active";
+    setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 2000);
+}
+
+function redo() {
+    if (redoStack.length === 0) return;
+
+    // Đẩy trạng thái hiện tại vào Undo stack
+    undoStack.push({
+        beats: cloneBeats(beats),
+        selectedIndices: Array.from(selectedBeatsIndices)
+    });
+
+    // Tái hiện trạng thái sau đó từ Redo stack
+    const nextState = redoStack.pop();
+    beats = cloneBeats(nextState.beats);
+    selectedBeatsIndices = new Set(nextState.selectedIndices || []);
+
+    updateBeatList();
+    updateUndoRedoUI();
+    playTickSound(800, 0.08);
+
+    status.textContent = "↷ Đã làm lại thao tác (Redo)";
+    status.className = "active";
+    setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 2000);
+}
+
 function undoLastBeat() {
-    if (beats.length > 1) { beats.pop(); clearSelection(); updateBeatList(); }
+    undo();
+}
+
+function updateUndoRedoUI() {
+    if (undoBtn) undoBtn.disabled = (undoStack.length === 0);
+    const redoBtnEl = document.getElementById("redoBtn");
+    if (redoBtnEl) redoBtnEl.disabled = (redoStack.length === 0);
+    const ctxUndoEl = document.getElementById("ctxUndo");
+    if (ctxUndoEl) ctxUndoEl.classList.toggle("disabled", undoStack.length === 0);
+    const ctxRedoEl = document.getElementById("ctxRedo");
+    if (ctxRedoEl) ctxRedoEl.classList.toggle("disabled", redoStack.length === 0);
 }
 
 function renderTimelineMarkers() {
     timelineBeats.innerHTML = "";
     const duration = audio.duration || 1;
 
-    beats.forEach((beatTime, index) => {
-        if (beatTime === 0 && index === 0) return;
-        const percent = (beatTime / duration) * 100;
-        if (percent > 100) return;
+    beats.forEach((beat, index) => {
+        const isDash = isDashBeat(beat);
+        const startTime = getBeatStartTime(beat);
+        const endTime = getBeatEndTime(beat);
+
+        // Beat 0 đơn độc ở đầu bài hát thì ẩn (logic cũ), nhưng nếu là Intro Dash [0, endTime] thì PHẢI hiển thị!
+        if (!isDash && startTime === 0 && index === 0) return;
+        const startPercent = (startTime / duration) * 100;
+        if (startPercent > 100) return;
 
         const marker = document.createElement("div");
-        marker.className = "timeline-beat-marker";
+        if (isDash) {
+            const endPercent = Math.min(100, (endTime / duration) * 100);
+            const widthPercent = Math.max(0.001, endPercent - startPercent);
+            marker.className = "timeline-beat-marker timeline-dash-marker";
+            marker.style.left = `${startPercent}%`;
+            marker.style.width = `${widthPercent}%`;
+            marker.dataset.isDash = "true";
+            marker.dataset.time = startTime;
+            marker.dataset.endTime = endTime;
+            marker.dataset.index = index;
+
+            const tooltip = document.createElement("div");
+            tooltip.className = "marker-tooltip";
+            tooltip.textContent = `[${startTime.toFixed(3)}s → ${endTime.toFixed(3)}s]`;
+            marker.appendChild(tooltip);
+        } else {
+            marker.className = "timeline-beat-marker";
+            marker.style.left = `${startPercent}%`;
+            marker.dataset.time = startTime;
+            marker.dataset.index = index;
+
+            const tooltip = document.createElement("div");
+            tooltip.className = "marker-tooltip";
+            tooltip.textContent = `${startTime.toFixed(3)}s`;
+            marker.appendChild(tooltip);
+        }
+
         if (selectedBeatsIndices.has(index)) marker.classList.add("selected-beat");
-
-        marker.style.left = `${percent}%`;
-        marker.dataset.time = beatTime;
-        marker.dataset.index = index;
-
-        const tooltip = document.createElement("div");
-        tooltip.className = "marker-tooltip";
-        tooltip.textContent = `${beatTime.toFixed(3)}s`;
-        marker.appendChild(tooltip);
 
         marker.addEventListener("mousedown", (e) => {
             if (e.button !== 0) return;
@@ -634,7 +776,8 @@ function renderTimelineMarkers() {
 
             updateSelectionIndicator(); playTickSound(900, 0.03);
             isDragging = true; draggedMarker = marker;
-            dragStartClientX = e.clientX; dragInitialBeatsTime = [...beats];
+            dragStartClientX = e.clientX; 
+            dragInitialBeatsTime = JSON.parse(JSON.stringify(beats));
         });
 
         marker.addEventListener("contextmenu", (e) => {
@@ -642,7 +785,7 @@ function renderTimelineMarkers() {
             if (!selectedBeatsIndices.has(index)) {
                 clearSelection(); selectedBeatsIndices.add(index); updateSelectionIndicator();
             }
-            lastTargetTimeForContext = beatTime;
+            lastTargetTimeForContext = startTime;
             showContextMenu(e.clientX, e.clientY, true);
         });
 
@@ -660,18 +803,38 @@ document.addEventListener("mousemove", (e) => {
     selectedBeatsIndices.forEach((index) => {
         const initialTime = dragInitialBeatsTime[index];
         if (initialTime === undefined) return;
-        let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
 
-        const marker = timelineBeats.querySelector(`.timeline-beat-marker[data-index="${index}"]`);
-        if (marker) {
-            marker.style.left = `${(newTime / duration) * 100}%`;
-            const tooltip = marker.querySelector(".marker-tooltip");
-            if (tooltip) tooltip.textContent = `${newTime.toFixed(3)}s`;
-        }
+        if (isDashBeat(initialTime)) {
+            const span = initialTime[1] - initialTime[0];
+            let newS = Math.max(0, Math.min(duration - span, Number((initialTime[0] + deltaTime).toFixed(3))));
+            let newE = Number((newS + span).toFixed(3));
 
-        if (parseInt(draggedMarker.dataset.index) === index) {
-            const min = Math.floor(newTime / 60); const sec = Math.floor(newTime % 60); const ms = Math.floor((newTime % 1) * 1000);
-            timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+            const marker = timelineBeats.querySelector(`.timeline-beat-marker[data-index="${index}"]`);
+            if (marker) {
+                marker.style.left = `${(newS / duration) * 100}%`;
+                marker.style.width = `${((newE - newS) / duration) * 100}%`;
+                const tooltip = marker.querySelector(".marker-tooltip");
+                if (tooltip) tooltip.textContent = `[${newS.toFixed(3)}s → ${newE.toFixed(3)}s]`;
+            }
+
+            if (parseInt(draggedMarker.dataset.index) === index) {
+                const min = Math.floor(newS / 60); const sec = Math.floor(newS % 60); const ms = Math.floor((newS % 1) * 1000);
+                timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+            }
+        } else {
+            let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
+
+            const marker = timelineBeats.querySelector(`.timeline-beat-marker[data-index="${index}"]`);
+            if (marker) {
+                marker.style.left = `${(newTime / duration) * 100}%`;
+                const tooltip = marker.querySelector(".marker-tooltip");
+                if (tooltip) tooltip.textContent = `${newTime.toFixed(3)}s`;
+            }
+
+            if (parseInt(draggedMarker.dataset.index) === index) {
+                const min = Math.floor(newTime / 60); const sec = Math.floor(newTime % 60); const ms = Math.floor((newTime % 1) * 1000);
+                timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+            }
         }
     });
 });
@@ -683,19 +846,36 @@ document.addEventListener("mouseup", (e) => {
         const deltaX = e.clientX - dragStartClientX;
         const deltaTime = (deltaX / rect.width) * duration;
 
+        if (Math.abs(deltaX) > 2) {
+            pushHistoryState(dragInitialBeatsTime, Array.from(selectedBeatsIndices));
+        }
+
         const updatedIndicesValue = [];
         selectedBeatsIndices.forEach((index) => {
             const initialTime = dragInitialBeatsTime[index];
             if (initialTime !== undefined) {
-                let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
-                beats[index] = newTime; updatedIndicesValue.push(newTime);
+                if (isDashBeat(initialTime)) {
+                    const span = initialTime[1] - initialTime[0];
+                    let newS = Math.max(0, Math.min(duration - span, Number((initialTime[0] + deltaTime).toFixed(3))));
+                    let newE = Number((newS + span).toFixed(3));
+                    const tuple = [newS, newE];
+                    beats[index] = tuple;
+                    updatedIndicesValue.push(tuple);
+                } else {
+                    let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
+                    beats[index] = newTime;
+                    updatedIndicesValue.push(newTime);
+                }
             }
         });
 
-        beats.sort((a, b) => a - b);
+        sortBeatsArray(beats);
         selectedBeatsIndices.clear();
         updatedIndicesValue.forEach((val) => {
-            const newIdx = beats.indexOf(val);
+            const newIdx = beats.findIndex(b => {
+                if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+                return b === val;
+            });
             if (newIdx !== -1) selectedBeatsIndices.add(newIdx);
         });
 
@@ -710,13 +890,30 @@ importBtn.onclick = () => {
     try {
         const parsedData = JSON.parse(rawData);
         if (parsedData && Array.isArray(parsedData.beats)) {
-            const newBeats = parsedData.beats.map(Number).filter(t => !isNaN(t) && t >= 0);
-            if (audio.duration && newBeats.some(t => t > audio.duration)) showNotification("Cảnh báo: Có mốc beat vượt quá độ dài bài hát.", "Lưu ý");
-            beats = newBeats.sort((a, b) => a - b);
+            const newBeats = [];
+            parsedData.beats.forEach(b => {
+                if (Array.isArray(b) && b.length >= 2) {
+                    const s = Number(b[0]);
+                    const e = Number(b[1]);
+                    if (!isNaN(s) && !isNaN(e) && s >= 0 && e > s) {
+                        newBeats.push([Number(s.toFixed(3)), Number(e.toFixed(3))]);
+                    }
+                } else {
+                    const t = Number(b);
+                    if (!isNaN(t) && t >= 0) {
+                        newBeats.push(Number(t.toFixed(3)));
+                    }
+                }
+            });
+            if (audio.duration && newBeats.some(b => getBeatEndTime(b) > audio.duration)) {
+                showNotification("Cảnh báo: Có mốc beat vượt quá độ dài bài hát.", "Lưu ý");
+            }
+            pushHistory();
+            beats = sortBeatsArray(newBeats);
             clearSelection(); updateBeatList(); playTickSound(1000, 0.08);
             status.textContent = "Đã cập nhật danh sách beat từ JSON thành công!"; status.className = "active";
             setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
-        } else showNotification("Cấu trúc JSON thiếu thuộc tính 'beats'. Ví dụ: {\"beats\": [1.2, 3.4]}", "Định dạng sai", true);
+        } else showNotification("Cấu trúc JSON thiếu thuộc tính 'beats'. Ví dụ: {\"beats\": [1.2, [3.4, 5.0]]}", "Định dạng sai", true);
     } catch (err) { showNotification("Không thể phân tích cú pháp chuỗi JSON này.", "Lỗi cú pháp JSON", true); }
 };
 
@@ -761,23 +958,22 @@ function quickGroupAlign() {
         return;
     }
     const indices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
-    const startTime = beats[indices[0]], endTime = beats[indices[indices.length - 1]], totalSpan = endTime - startTime;
+    const startTime = getBeatStartTime(beats[indices[0]]), endTime = getBeatEndTime(beats[indices[indices.length - 1]]), totalSpan = endTime - startTime;
     if (totalSpan <= 0) {
         showNotification("Độ dài khoảng thời gian phải > 0s!", "Lỗi căn đều", true);
         return;
     }
 
     // Thông minh: đếm số beat trong vùng chọn để tự tính số phần chia
-    // Nếu chọn N beat → chia N-1 khoảng → vẫn ra đúng N beat phân đều
-    // Fallback: nếu chỉ chọn đúng 2 beat (chỉ đầu/cuối) → dùng subdividePartsInput
     const autoCount = indices.length;
     const parts = autoCount > 2 ? autoCount - 1 : (parseInt(subdividePartsInput.value) || 4);
 
     const newSubbeats = [];
     for (let i = 0; i <= parts; i++) newSubbeats.push(Number((startTime + (totalSpan * (i / parts))).toFixed(3)));
 
+    pushHistory();
     const leftPart = beats.slice(0, indices[0]), rightPart = beats.slice(indices[indices.length - 1] + 1);
-    beats = [...leftPart, ...newSubbeats, ...rightPart].sort((a, b) => a - b);
+    beats = sortBeatsArray([...leftPart, ...newSubbeats, ...rightPart]);
     selectedBeatsIndices.clear();
     newSubbeats.forEach(val => { const idx = beats.indexOf(val); if (idx !== -1) selectedBeatsIndices.add(idx); });
 
@@ -790,7 +986,9 @@ function quickGroupAlign() {
 
 function openGroupActions() {
     if (selectedBeatsIndices.size < 2) { showNotification("Hãy chọn ít nhất 2 mốc beat để thực hiện!", "Lưu ý chọn mốc"); return; }
-    groupActionSummary.innerHTML = `Đang chọn: <strong>${selectedBeatsIndices.size} beat</strong>. Nhịp đầu: <strong>${beats[Math.min(...selectedBeatsIndices)].toFixed(3)}s</strong>, Nhịp cuối: <strong>${beats[Math.max(...selectedBeatsIndices)].toFixed(3)}s</strong>.`;
+    const firstTime = getBeatStartTime(beats[Math.min(...selectedBeatsIndices)]);
+    const lastTime = getBeatEndTime(beats[Math.max(...selectedBeatsIndices)]);
+    groupActionSummary.innerHTML = `Đang chọn: <strong>${selectedBeatsIndices.size} beat</strong>. Nhịp đầu: <strong>${firstTime.toFixed(3)}s</strong>, Nhịp cuối: <strong>${lastTime.toFixed(3)}s</strong>.`;
     groupActionModal.classList.add("active");
 }
 closeGroupModal.onclick = () => groupActionModal.classList.remove("active");
@@ -799,14 +997,15 @@ btnGroupAlign.onclick = () => {
     const parts = parseInt(subdividePartsInput.value);
     if (isNaN(parts) || parts < 1) { showNotification("Vui lòng nhập số lượng khoảng chia hợp lệ!", "Lỗi nhập", true); return; }
     const indices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
-    const startTime = beats[indices[0]], endTime = beats[indices[indices.length - 1]], totalSpan = endTime - startTime;
+    const startTime = getBeatStartTime(beats[indices[0]]), endTime = getBeatEndTime(beats[indices[indices.length - 1]]), totalSpan = endTime - startTime;
     if (totalSpan <= 0) { showNotification("Độ dài khoảng thời gian phải > 0s!", "Lỗi căn đều", true); return; }
 
     const newSubbeats = [];
     for (let i = 0; i <= parts; i++) newSubbeats.push(Number((startTime + (totalSpan * (i / parts))).toFixed(3)));
 
+    pushHistory();
     const leftPart = beats.slice(0, indices[0]), rightPart = beats.slice(indices[indices.length - 1] + 1);
-    beats = [...leftPart, ...newSubbeats, ...rightPart].sort((a, b) => a - b);
+    beats = sortBeatsArray([...leftPart, ...newSubbeats, ...rightPart]);
     selectedBeatsIndices.clear();
     newSubbeats.forEach(val => { const idx = beats.indexOf(val); if (idx !== -1) selectedBeatsIndices.add(idx); });
 
@@ -818,21 +1017,49 @@ btnGroupShift.onclick = () => {
     const shiftMs = parseFloat(shiftOffsetInput.value);
     if (isNaN(shiftMs)) { showNotification("Vui lòng nhập số mili-giây hợp lệ!", "Lỗi nhập", true); return; }
     const shiftSeconds = shiftMs / 1000, duration = audio.duration || 9999;
+    pushHistory();
     const updatedTimes = [];
     selectedBeatsIndices.forEach((index) => {
-        let newTime = Math.max(0, Math.min(duration, Number((beats[index] + shiftSeconds).toFixed(3))));
-        beats[index] = newTime; updatedTimes.push(newTime);
+        const initialVal = beats[index];
+        if (isDashBeat(initialVal)) {
+            const span = initialVal[1] - initialVal[0];
+            let newS = Math.max(0, Math.min(duration - span, Number((initialVal[0] + shiftSeconds).toFixed(3))));
+            let newE = Number((newS + span).toFixed(3));
+            const tuple = [newS, newE];
+            beats[index] = tuple;
+            updatedTimes.push(tuple);
+        } else {
+            let newTime = Math.max(0, Math.min(duration, Number((initialVal + shiftSeconds).toFixed(3))));
+            beats[index] = newTime;
+            updatedTimes.push(newTime);
+        }
     });
-    beats.sort((a, b) => a - b);
+    sortBeatsArray(beats);
     selectedBeatsIndices.clear();
-    updatedTimes.forEach((val) => { const newIdx = beats.indexOf(val); if (newIdx !== -1) selectedBeatsIndices.add(newIdx); });
+    updatedTimes.forEach((val) => {
+        const newIdx = beats.findIndex(b => {
+            if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+            return b === val;
+        });
+        if (newIdx !== -1) selectedBeatsIndices.add(newIdx);
+    });
     updateBeatList(); playTickSound(800, 0.1); groupActionModal.classList.remove("active");
 };
 
 function copySelectedBeats() {
     if (selectedBeatsIndices.size === 0) return;
-    const selectedTimes = Array.from(selectedBeatsIndices).map(index => beats[index]).sort((a, b) => a - b);
-    clipboardBeats = selectedTimes.map(t => Number((t - selectedTimes[0]).toFixed(3)));
+    const selectedItems = Array.from(selectedBeatsIndices)
+        .map(index => beats[index])
+        .sort((a, b) => getBeatStartTime(a) - getBeatStartTime(b));
+    const baseTime = getBeatStartTime(selectedItems[0]);
+
+    clipboardBeats = selectedItems.map(item => {
+        if (isDashBeat(item)) {
+            return [Number((item[0] - baseTime).toFixed(3)), Number((item[1] - baseTime).toFixed(3))];
+        }
+        return Number((item - baseTime).toFixed(3));
+    });
+
     status.textContent = `📋 Đã sao chép ${selectedBeatsIndices.size} mốc beat!`; status.className = "active"; playTickSound(1100, 0.08);
     setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
 }
@@ -841,13 +1068,27 @@ function pasteBeats(targetTime) {
     if (clipboardBeats.length === 0) { showNotification("Clipboard trống!", "Lưu ý"); return; }
     const duration = audio.duration || 9999, newPastedBeats = [];
     clipboardBeats.forEach(offset => {
-        const t = Number((targetTime + offset).toFixed(3));
-        if (t >= 0 && t <= duration) newPastedBeats.push(t);
+        if (isDashBeat(offset)) {
+            const s = Number((targetTime + offset[0]).toFixed(3));
+            const e = Number((targetTime + offset[1]).toFixed(3));
+            if (s >= 0 && e <= duration) newPastedBeats.push([s, e]);
+        } else {
+            const t = Number((targetTime + offset).toFixed(3));
+            if (t >= 0 && t <= duration) newPastedBeats.push(t);
+        }
     });
     if (newPastedBeats.length > 0) {
-        beats = [...beats, ...newPastedBeats].sort((a, b) => a - b);
+        pushHistory();
+        beats = [...beats, ...newPastedBeats];
+        sortBeatsArray(beats);
         selectedBeatsIndices.clear();
-        newPastedBeats.forEach(val => { const idx = beats.indexOf(val); if (idx !== -1) selectedBeatsIndices.add(idx); });
+        newPastedBeats.forEach(val => {
+            const idx = beats.findIndex(b => {
+                if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+                return b === val;
+            });
+            if (idx !== -1) selectedBeatsIndices.add(idx);
+        });
         updateBeatList(); playTickSound(1000, 0.12);
         status.textContent = `📥 Đã dán ${newPastedBeats.length} mốc beat mới!`; status.className = "active";
         setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
@@ -921,6 +1162,7 @@ autoGenerateBtn.onclick = async () => {
         }
 
         if (detectedBeats.length > 0) {
+            pushHistory();
             beats = detectedBeats.sort((a, b) => a - b);
             clearSelection(); updateBeatList(); playTickSound(1000, 0.15);
             status.textContent = `⚡ Tạo thành công ${detectedBeats.length} mốc beat với tốc độ ${bpm} BPM.`;
@@ -1057,6 +1299,7 @@ autoGenerateBtn.onclick = async () => {
 
             // Cập nhật kết quả lên UI cho AI Model
             if (detectedBeats.length > 0) {
+                pushHistory();
                 beats = detectedBeats.sort((a, b) => a - b);
                 clearSelection(); updateBeatList(); playTickSound(1000, 0.15);
                 status.textContent = `⚡ Phân tích thành công! Tạo ${detectedBeats.length} mốc beat mới.`; status.className = "active";
@@ -1074,6 +1317,62 @@ autoGenerateBtn.onclick = async () => {
         }
     }, 100);
 };
+
+function toggleDashBeat() {
+    if (selectedBeatsIndices.size === 1) {
+        const idx = Array.from(selectedBeatsIndices)[0];
+        const target = beats[idx];
+        if (isDashBeat(target)) {
+            pushHistory();
+            // Tách Dash Beat [start, end] thành 2 beat đơn
+            const s = target[0];
+            const e = target[1];
+            beats.splice(idx, 1, s, e);
+            sortBeatsArray(beats);
+            selectedBeatsIndices.clear();
+            const idx1 = beats.indexOf(s);
+            const idx2 = beats.indexOf(e);
+            if (idx1 !== -1) selectedBeatsIndices.add(idx1);
+            if (idx2 !== -1) selectedBeatsIndices.add(idx2);
+            updateBeatList();
+            playTickSound(900, 0.08);
+            status.textContent = `⚡ Đã tách Gạch Lướt thành 2 mốc nhịp: ${s.toFixed(3)}s và ${e.toFixed(3)}s`;
+            status.className = "active";
+            setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+            return;
+        }
+    }
+
+    if (selectedBeatsIndices.size === 2) {
+        const indices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
+        const b1 = beats[indices[0]];
+        const b2 = beats[indices[1]];
+        const s = Number(getBeatStartTime(b1).toFixed(3));
+        const e = Number(getBeatEndTime(b2).toFixed(3));
+
+        if (e <= s) {
+            showNotification("Thời gian kết thúc phải lớn hơn thời gian bắt đầu!", "Lỗi gộp gạch", true);
+            return;
+        }
+
+        pushHistory();
+        // Gộp toàn bộ phạm vi giữa 2 mốc đã chọn thành 1 tuple [s, e]
+        beats.splice(indices[0], indices[1] - indices[0] + 1, [s, e]);
+        sortBeatsArray(beats);
+        selectedBeatsIndices.clear();
+        const newIdx = beats.findIndex(b => isDashBeat(b) && b[0] === s && b[1] === e);
+        if (newIdx !== -1) selectedBeatsIndices.add(newIdx);
+
+        updateBeatList();
+        playTickSound(1200, 0.12);
+        status.textContent = `⚡ Đã tạo Gạch Lướt (Dash Tile): [${s.toFixed(3)}s → ${e.toFixed(3)}s]`;
+        status.className = "active";
+        setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+        return;
+    }
+
+    showNotification("Chọn 2 mốc nhịp để gộp thành Gạch Lướt (nhấn D), hoặc chọn 1 Gạch Lướt để tách lại thành 2 mốc nhịp đơn lẻ.", "Thao tác Gạch Lướt");
+}
 
 // --- CHUỘT PHẢI ---
 timelineContainer.addEventListener("contextmenu", (e) => {
@@ -1098,6 +1397,39 @@ function showContextMenu(clientX, clientY, isClickedOnMarker) {
     } else {
         ctxCopy.classList.add("disabled"); ctxDelete.classList.add("disabled"); ctxGroupAlign.classList.add("disabled"); ctxGroupShift.classList.add("disabled");
     }
+
+    if (ctxToggleDash) {
+        if (selectedBeatsIndices.size === 1) {
+            const idx = Array.from(selectedBeatsIndices)[0];
+            if (isDashBeat(beats[idx])) {
+                ctxToggleDash.classList.remove("disabled");
+                const label = ctxToggleDash.querySelector("span");
+                if (label) label.textContent = "⚡ Tách Gạch Lướt";
+            } else {
+                ctxToggleDash.classList.add("disabled");
+                const label = ctxToggleDash.querySelector("span");
+                if (label) label.textContent = "⚡ Gạch Lướt (Dash)";
+            }
+        } else if (selectedBeatsIndices.size === 2) {
+            ctxToggleDash.classList.remove("disabled");
+            const label = ctxToggleDash.querySelector("span");
+            if (label) label.textContent = "⚡ Gộp thành Gạch Lướt";
+        } else {
+            ctxToggleDash.classList.add("disabled");
+            const label = ctxToggleDash.querySelector("span");
+            if (label) label.textContent = "⚡ Gạch Lướt (Dash)";
+        }
+    }
+
+    if (ctxUndo) {
+        if (undoStack.length > 0) ctxUndo.classList.remove("disabled");
+        else ctxUndo.classList.add("disabled");
+    }
+    if (ctxRedo) {
+        if (redoStack.length > 0) ctxRedo.classList.remove("disabled");
+        else ctxRedo.classList.add("disabled");
+    }
+
     if (clipboardBeats.length > 0) ctxPaste.classList.remove("disabled"); else ctxPaste.classList.add("disabled");
     ctxAddBeatHere.style.display = isClickedOnMarker ? "none" : "flex";
 }
@@ -1105,14 +1437,41 @@ function showContextMenu(clientX, clientY, isClickedOnMarker) {
 function hideContextMenu() { customContextMenu.style.display = "none"; }
 document.addEventListener("mousedown", (e) => { if (!customContextMenu.contains(e.target)) hideContextMenu(); });
 
+if (ctxUndo) ctxUndo.onclick = (e) => { e.stopPropagation(); undo(); hideContextMenu(); };
+if (ctxRedo) ctxRedo.onclick = (e) => { e.stopPropagation(); redo(); hideContextMenu(); };
 ctxCopy.onclick = (e) => { e.stopPropagation(); copySelectedBeats(); hideContextMenu(); };
 ctxPaste.onclick = (e) => { e.stopPropagation(); pasteBeats(lastTargetTimeForContext); hideContextMenu(); };
-ctxDelete.onclick = (e) => { e.stopPropagation(); if (selectedBeatsIndices.size > 0) { Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); }); clearSelection(); updateBeatList(); playTickSound(400, 0.1); } hideContextMenu(); };
+ctxDelete.onclick = (e) => {
+    e.stopPropagation();
+    if (selectedBeatsIndices.size > 0) {
+        pushHistory();
+        Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); });
+        clearSelection();
+        updateBeatList();
+        playTickSound(400, 0.1);
+    }
+    hideContextMenu();
+};
+if (ctxToggleDash) {
+    ctxToggleDash.onclick = (e) => { e.stopPropagation(); toggleDashBeat(); hideContextMenu(); };
+}
 ctxGroupAlign.onclick = (e) => { e.stopPropagation(); quickGroupAlign(); hideContextMenu(); };
 ctxGroupShift.onclick = (e) => { e.stopPropagation(); openGroupActions(); hideContextMenu(); };
 ctxSelectAll.onclick = (e) => { e.stopPropagation(); if (beats.length > 0) { selectedBeatsIndices.clear(); beats.forEach((_, index) => { if (index > 0) selectedBeatsIndices.add(index); }); updateSelectionIndicator(); playTickSound(1000, 0.05); } hideContextMenu(); };
 ctxClearSelection.onclick = (e) => { e.stopPropagation(); clearSelection(); hideContextMenu(); };
-ctxAddBeatHere.onclick = (e) => { e.stopPropagation(); const t = lastTargetTimeForContext; if (t >= 0 && t <= audio.duration) { beats.push(t); beats.sort((a, b) => a - b); clearSelection(); updateBeatList(); playTickSound(1000, 0.05); } hideContextMenu(); };
+ctxAddBeatHere.onclick = (e) => {
+    e.stopPropagation();
+    const t = lastTargetTimeForContext;
+    if (t >= 0 && t <= audio.duration) {
+        pushHistory();
+        beats.push(t);
+        sortBeatsArray(beats);
+        clearSelection();
+        updateBeatList();
+        playTickSound(1000, 0.05);
+    }
+    hideContextMenu();
+};
 
 document.addEventListener("keydown", e => {
     const active = document.activeElement.tagName;
@@ -1120,6 +1479,7 @@ document.addEventListener("keydown", e => {
     const key = e.key.toLowerCase();
 
     if (e.code === "Space") { e.preventDefault(); togglePlayPause(); return; }
+    if (!e.ctrlKey && key === "d") { e.preventDefault(); toggleDashBeat(); return; }
     if (e.ctrlKey && key === "g") { e.preventDefault(); openGroupActions(); return; }
     if (!e.ctrlKey && key === "e") { e.preventDefault(); quickGroupAlign(); return; }
     if (e.ctrlKey && e.key === "ArrowLeft") { e.preventDefault(); playFromStart(); return; }
@@ -1129,13 +1489,29 @@ document.addEventListener("keydown", e => {
     if (e.key === "Escape") { e.preventDefault(); clearSelection(); hideContextMenu(); return; }
 
     if ((e.key === "Delete" || e.key === "Backspace") && selectedBeatsIndices.size > 0) {
-        e.preventDefault(); Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); }); clearSelection(); updateBeatList(); playTickSound(400, 0.1); return;
+        e.preventDefault();
+        pushHistory();
+        Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); });
+        clearSelection();
+        updateBeatList();
+        playTickSound(400, 0.1);
+        return;
     }
-    if ((e.ctrlKey && key === "z") || key === "u") { e.preventDefault(); undoLastBeat(); return; }
+    if ((e.ctrlKey && e.shiftKey && key === "z") || (e.ctrlKey && key === "y")) {
+        e.preventDefault();
+        redo();
+        return;
+    }
+    if ((e.ctrlKey && key === "z") || (!e.ctrlKey && key === "u")) {
+        e.preventDefault();
+        undo();
+        return;
+    }
     if (!e.ctrlKey && (key === "f" || key === "j" || key === "z" || key === "x")) { e.preventDefault(); addBeat(); return; }
 });
 
-undoBtn.onclick = () => undoLastBeat();
+undoBtn.onclick = () => undo();
+if (redoBtn) redoBtn.onclick = () => redo();
 
 exportBtn.onclick = () => {
     const data = { song: currentProjectName, beats: beats };
@@ -1154,9 +1530,10 @@ exportBtn.onclick = () => {
 resetBtn.onclick = () => confirmModal.classList.add("active");
 cancelResetBtn.onclick = () => confirmModal.classList.remove("active");
 confirmResetBtn.onclick = () => {
+    if (beats.length > 0) pushHistory();
     audio.pause(); audio.currentTime = 0; beats = []; recording = false; isCountingDown = false; clearSelection();
     timeLabel.textContent = "00:00.000"; status.textContent = "Sẵn sàng (Đã đặt lại danh sách beat)"; status.className = ""; beatCount.textContent = "Beat: 0"; output.value = ""; timelineBeats.innerHTML = "";
-    playBtn.textContent = "▶ Phát"; undoBtn.disabled = true; confirmModal.classList.remove("active");
+    playBtn.textContent = "▶ Phát"; updateUndoRedoUI(); confirmModal.classList.remove("active");
     if (typeof lastSavedBeatsStr !== 'undefined') lastSavedBeatsStr = "[]";
 };
 
@@ -1286,7 +1663,8 @@ async function renderHistory() {
         loadBtn.style.fontSize = "0.85rem";
         loadBtn.textContent = "Tải";
         loadBtn.onclick = () => {
-            beats = [...item.beats];
+            if (beats.length > 0) pushHistory();
+            beats = cloneBeats(item.beats);
             lastSavedBeatsStr = JSON.stringify(beats);
             if (typeof updateBeatList === 'function') updateBeatList(); 
             if (typeof clearSelection === 'function') clearSelection();

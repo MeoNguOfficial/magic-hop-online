@@ -582,6 +582,17 @@ async function changeSong(index, autoStart = false) {
         baseBallVelocityZ = -18;
     }
 
+    if (window.DashBlocksManager && typeof window.DashBlocksManager.prewarmSongDashGeometries === 'function') {
+        window.DashBlocksManager.prewarmSongDashGeometries(
+            beatmapBeats,
+            typeof tileWidth !== 'undefined' ? tileWidth : 4.3,
+            typeof tileLength !== 'undefined' ? tileLength : 4.3,
+            typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd',
+            typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0,
+            baseBallVelocityZ
+        );
+    }
+
     if (!menuAudio || !audioCtx) initAudio();
 
     // Đảm bảo AudioContext hoạt động khi có tương tác (chuyển bài cũng là tương tác)
@@ -909,8 +920,12 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
 
     let normalScore = 0;
     let rageScore = 0;
+    let easyScore = 0;
+    let asianScore = 0;
     let normalPassed = false;
     let ragePassed = false;
+    let easyPassed = false;
+    let asianPassed = false;
 
     try {
         const db = typeof getDB === 'function' ? await getDB() : (typeof initDB === 'function' ? await initDB() : null);
@@ -929,8 +944,16 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
                 if (record.rageScore) {
                     try { rageScore = parseInt(atob(record.rageScore)) || 0; } catch (e) {}
                 }
+                if (record.easyScore) {
+                    try { easyScore = parseInt(atob(record.easyScore)) || 0; } catch (e) {}
+                }
+                if (record.asianScore) {
+                    try { asianScore = parseInt(atob(record.asianScore)) || 0; } catch (e) {}
+                }
                 normalPassed = !!record.isNormalModePassed;
                 ragePassed = !!record.isRageModePassed;
+                easyPassed = !!record.isEasyModePassed;
+                asianPassed = !!record.isAsianModePassed;
             }
         }
     } catch (e) {}
@@ -943,26 +966,31 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
         beatmap_id: targetBeatmapId
     };
 
+    const hasEasyPassed = (isEasy && isNormalModePassed) || easyPassed || !!currentSong?.is_easy_mode_passed;
+    const hasNormalPassed = (!isEasy && !isRage && !isAsian && isNormalModePassed) || normalPassed || !!currentSong?.is_normal_mode_passed || !!currentSong?.is_passed;
+    const hasHardPassed = (isRage && isNormalModePassed) || ragePassed || !!currentSong?.is_hard_mode_passed;
+    const hasAsianPassed = (isAsian && isNormalModePassed) || asianPassed || !!currentSong?.is_asian_mode_passed;
+
     if (isEasy) {
         payload.easy_mode_score = finalScore;
         payload.is_easy_mode = 1;
         payload.mode = 'easy';
-        if (isNormalModePassed) payload.is_easy_mode_passed = 1;
+        if (hasEasyPassed) payload.is_easy_mode_passed = 1;
     } else if (isAsian) {
         payload.asian_mode_score = finalScore;
         payload.is_asian_mode = 1;
         payload.mode = 'asian';
-        if (isNormalModePassed) payload.is_asian_mode_passed = 1;
+        if (hasAsianPassed) payload.is_asian_mode_passed = 1;
     } else if (isRage) {
         payload.hard_mode_score = finalScore;
         payload.is_hard_mode = 1;
         payload.is_rage_mode = 1;
         payload.mode = 'hard';
-        if (isNormalModePassed) payload.is_hard_mode_passed = 1;
+        if (hasHardPassed) payload.is_hard_mode_passed = 1;
     } else {
         payload.score = finalScore;
         payload.mode = 'normal';
-        if (isNormalModePassed) payload.is_normal_mode_passed = 1;
+        if (hasNormalPassed) payload.is_normal_mode_passed = 1;
     }
 
     if (Array.isArray(beatsInput) && beatsInput.length > 0) {
@@ -1033,7 +1061,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.5' : 'Version 1.0.5'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.6' : 'Version 1.0.6'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
@@ -1083,6 +1111,7 @@ if (typeof cacheStaticResources === 'function') {
         'js/core/global.js',
         'js/ui/settings.js',
         'js/audio/audio-manager.js',
+        'js/game/blocks/dash-blocks.js',
         'js/game/blocks/normal-blocks.js',
         'js/game/blocks/moving-blocks.js',
         'js/ui/personalize.js',

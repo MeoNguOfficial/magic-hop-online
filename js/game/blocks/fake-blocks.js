@@ -30,6 +30,7 @@ window.FakeBlocksManager = {
     usedSlotsOnCurrentZ: [],
     
     createFakeTile: function(realTile, timeDiff, forceCount = null) {
+        if (!realTile || (realTile.userData && realTile.userData.isDashTile)) return;
         const mainX = realTile.position.x;
         const realScale = realTile.userData.scale || 1.0;
         
@@ -484,7 +485,7 @@ window.FakeBlocksManager = {
         } else if (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled) {
             threshold = window.HardModeManager.getFakeBlockThreshold();
         }
-        if (isFirst || isWarmup || isTooClose || timeDiff < threshold || nextTimeDiff < threshold || (tile.userData && tile.userData.isRoundStart) || (tile.userData && tile.userData.isMoving)) {
+        if (isFirst || isWarmup || isTooClose || timeDiff < threshold || nextTimeDiff < threshold || (tile.userData && tile.userData.isRoundStart) || (tile.userData && tile.userData.isMoving) || (tile.userData && tile.userData.isDashTile)) {
             try { this._recordRealX(tile.position.x); } catch (e) {}
             return;
         }

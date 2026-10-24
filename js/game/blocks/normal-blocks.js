@@ -20,6 +20,7 @@ function createRoundedRectShape(width, height, radius) {
     shape.quadraticCurveTo(x, y, x, y + radius);
     return shape;
 }
+window.createRoundedRectShape = createRoundedRectShape;
 
 // --- SHADERS & VẬT LIỆU CHO BỂ HỒNG NGOẠI / HIỆU ỨNG TỎA SÁNG PHẢN CHIẾU ---
 const glowVertexShader = `
@@ -164,6 +165,7 @@ function createTileGlowMaterial(activeColor) {
         side: THREE.FrontSide
     });
 }
+window.createTileGlowMaterial = createTileGlowMaterial;
 
 // --- TEXTURE CACHE FOR LABELS ---
 const cachedTexturesSet = new Set();
@@ -175,9 +177,9 @@ let starSpriteCache = null;
 function createRoundLabel(round) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     const key = `${round}_${fontFamily}`;
-    
+
     if (roundSpriteCache.has(key)) return roundSpriteCache.get(key).clone();
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 512;
@@ -190,14 +192,14 @@ function createRoundLabel(round) {
     ctx.shadowColor = '#00ffff';
     ctx.shadowBlur = 15;
     ctx.fillText(`${t('round')} ${round}`, 256, 80);
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(10, 2.5, 1);
     sprite.position.y = 0;
     sprite.position.z = 1.5;
-    
+
     roundSpriteCache.set(key, sprite);
     return sprite.clone();
 }
@@ -206,9 +208,9 @@ function createRoundLabel(round) {
 function createPercentLabel(percent) {
     const fontFamily = (typeof activeLang !== 'undefined' && activeLang === 'vi') ? 'Montserrat' : 'Arial';
     const key = `${percent}_${fontFamily}`;
-    
+
     if (percentSpriteCache.has(key)) return percentSpriteCache.get(key).clone();
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 512;
@@ -221,21 +223,21 @@ function createPercentLabel(percent) {
     ctx.shadowColor = '#ec4899';
     ctx.shadowBlur = 15;
     ctx.fillText(`${percent}%`, 256, 80);
-    
+
     const texture = new THREE.CanvasTexture(canvas);
     const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(8, 2, 1);
     sprite.position.y = 0;
     sprite.position.z = 1.2;
-    
+
     percentSpriteCache.set(key, sprite);
     return sprite.clone();
 }
 
 function createStarLabel() {
     if (starSpriteCache) return starSpriteCache.clone();
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     canvas.width = 128;
@@ -257,7 +259,7 @@ function createStarLabel() {
     sprite.scale.set(3, 3, 1);
     sprite.position.y = 0;
     sprite.position.z = 1.2;
-    
+
     starSpriteCache = sprite;
     return sprite.clone();
 }
@@ -327,12 +329,16 @@ function disposeTile(tile) {
 // --- THÊM GẠCH VÀO POOL ---
 function pushTileToPool(tile) {
     if (!tile) return;
-    
+
     const cleanFunc = (t) => {
         t.visible = false;
 
         if (typeof window.MovingBlocksManager !== 'undefined' && typeof window.MovingBlocksManager.removeTile === 'function') {
             window.MovingBlocksManager.removeTile(t);
+        }
+
+        if (window.DashBlocksManager) {
+            window.DashBlocksManager.resetTile(t, currentTileThickness / 2, tileLength);
         }
 
         if (t.userData) {
@@ -351,14 +357,22 @@ function pushTileToPool(tile) {
             t.userData.springVelocityY = 0;
             t.position.y = 0;
             t.userData.isDimmed = false;
+            t.userData.isDashTile = false;
+            t.userData.dashLength = 0;
+            t.userData.dashStartTime = 0;
+            t.userData.dashEndTime = 0;
+            t.userData.startZ = 0;
+            t.userData.endZ = 0;
         }
+        t.scale.set(1, 1, 1);
+        t.rotation.set(-Math.PI / 2, 0, 0);
         if (t.userData && t.userData.themeColor === 0xff00ff) {
             t.material = window.globalTileMatMagenta;
         } else {
             t.material = window.globalTileMatCyan;
         }
     };
-    
+
     if (typeof window.PoolHelpers !== 'undefined') {
         window.PoolHelpers.release(tilePool, tile, cleanFunc);
     } else {
@@ -381,7 +395,7 @@ function prewarmTilePool(count = 100) {
             tilePool.push(tile);
         }
     }
-    
+
     if (tilePool.length > 0 && typeof window.FakeBlocksManager !== 'undefined') {
         if (typeof window.FakeBlocksManager.prewarmFakeTilePool === 'function') {
             window.FakeBlocksManager.prewarmFakeTilePool(tilePool[0], 60);
@@ -425,6 +439,18 @@ function getTileFromPool(forceNew = false) {
         u.centerMeshFade = false;
         u.isDimmed = false;
         u.scale = 1.0;
+        if (window.DashBlocksManager) {
+            window.DashBlocksManager.resetTile(tile, currentTileThickness / 2, tileLength);
+        } else {
+            tile.scale.set(1, 1, 1);
+            tile.rotation.set(-Math.PI / 2, 0, 0);
+            u.isDashTile = false;
+            u.dashLength = 0;
+            u.dashStartTime = 0;
+            u.dashEndTime = 0;
+            u.startZ = 0;
+            u.endZ = 0;
+        }
     } else {
         const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
 
@@ -459,6 +485,12 @@ function getTileFromPool(forceNew = false) {
             window.globalTileMatMagenta = window.globalTileMatCyan.clone();
             window.globalTileMatMagenta.color.setHex(0xff00ff);
             if (window.globalTileMatMagenta.emissive) window.globalTileMatMagenta.emissive.setHex(0x220022);
+        }
+        if (window.DashBlocksManager) {
+            window.DashBlocksManager.initMaterials(currentGraphicsQuality);
+            if (typeof window.DashBlocksManager.prewarmGeometries === 'function') {
+                window.DashBlocksManager.prewarmGeometries(tileWidth, tileLength, currentGraphicsQuality, detailScale);
+            }
         }
         if (!window.globalTileDimmedMatCyan) {
             window.globalTileDimmedMatCyan = window.globalTileMatCyan.clone();
@@ -535,6 +567,9 @@ function getTileFromPool(forceNew = false) {
         if (!window.globalTileGlowMatMagenta) {
             window.globalTileGlowMatMagenta = createTileGlowMaterial(0xff00ff);
         }
+        if (!window.globalTileGlowMatDash) {
+            window.globalTileGlowMatDash = createTileGlowMaterial(0xffaa00);
+        }
         const glowMesh = new THREE.Mesh(cachedGlowGeo, [capMaterial, window.globalTileGlowMatCyan]);
         glowMesh.name = "glowMesh";
         const bevelOffset = (typeof currentBevelEnabled !== 'undefined' && currentBevelEnabled) ? currentBevelThickness : 0;
@@ -562,10 +597,18 @@ function getTileFromPool(forceNew = false) {
     // Reset trạng thái cơ bản
     tile.visible = true;
     tile.scale.set(1, 1, 1);
+    tile.rotation.set(-Math.PI / 2, 0, 0);
+    const surfaceZ = currentTileThickness / 2;
     if (tile.userData) {
+        if (window.DashBlocksManager && tile.userData.isDashTile) {
+            window.DashBlocksManager.resetTile(tile, surfaceZ, typeof tileLength !== 'undefined' ? tileLength : 4.0);
+        }
         // Reset centerMesh
         if (tile.userData.centerMesh) {
             tile.userData.centerMesh.visible = true;
+            tile.userData.centerMesh.position.set(0, 0, surfaceZ + 0.015);
+            tile.userData.centerMesh.scale.set(1, 1, 1);
+            tile.userData.centerMesh.updateMatrix();
             if (tile.userData.centerMesh.material) tile.userData.centerMesh.material.opacity = 0.0;
             tile.userData.centerMeshFade = false;
         }
@@ -596,24 +639,66 @@ function getTileFromPool(forceNew = false) {
 
 let lastTileWasDelayed = false;
 
+// Trạng thái điều hướng cho chuỗi beat dồn dập (Lệch cố định & So-le) trong Hard Mode & Asian Mode
+let rapidBurstState = {
+    lastDir: 0,
+    lastBeatIndex: -1
+};
+
+function getBeatStartTime(item) {
+    return Array.isArray(item) ? item[0] : (item || 0);
+}
+function getBeatEndTime(item) {
+    return Array.isArray(item) ? item[1] : (item || 0);
+}
+function isDashBeat(item) {
+    return Array.isArray(item) && item.length >= 2;
+}
+
 // --- SINH GẠCH (SPAWN TILE) ---
 function spawnTile(isFirst = false) {
-    let tileZ, tileX;
+    let tileZ, tileX, startZ = 0;
     let isRoundStartBlock = false;
     let isTooClose = false;
     let timeDiff = 1.0;
     let nextTimeDiff = 1.0;
     let prevX = 0;
+    let isDash = false;
+    let dashInfo = null;
 
     if (isFirst) {
-        tileZ = 0;
         tileX = 0;
         currentBeatIndex = 1;
         transitionStep = 0;
         lastTileWasDelayed = false;
+        rapidBurstState.lastDir = 0;
+        rapidBurstState.lastBeatIndex = -1;
+
+        const firstItem = (beatmapBeats && beatmapBeats.length > 0) ? beatmapBeats[0] : 0;
+        if (window.DashBlocksManager && window.DashBlocksManager.isDashBeat(firstItem)) {
+            isDash = true;
+            dashInfo = window.DashBlocksManager.getDashTimes(firstItem);
+            currStartTime = dashInfo.startTime;
+            currEndTime = dashInfo.endTime;
+            const zCalc = window.DashBlocksManager.calculateDashZ(0, dashInfo.duration, baseBallVelocityZ, 0, 0);
+            dashInfo.dashLength = zCalc.dashLength;
+            dashInfo.startZ = zCalc.startZ;
+            dashInfo.exitZ = zCalc.exitZ;
+            dashInfo.startX = 0;
+            dashInfo.exitX = 0;
+            dashInfo.deltaX = 0;
+            dashInfo.angleZ = 0;
+            tileZ = zCalc.tileZ;
+            lastTileZ = zCalc.nextTileReferenceZ;
+        } else {
+            currStartTime = getBeatStartTime(firstItem);
+            currEndTime = currStartTime;
+            tileZ = 0;
+            lastTileZ = 0;
+        }
     } else {
         const prevTile = tiles[tiles.length - 1];
-        prevX = prevTile ? prevTile.position.x : 0;
+        prevX = prevTile ? (prevTile.userData && prevTile.userData.exitX !== undefined ? prevTile.userData.exitX : prevTile.position.x) : 0;
 
         // Kiểm tra nếu đã hết beatmap để chuyển sang Round mới
         if (currentBeatIndex >= beatmapBeats.length) {
@@ -626,28 +711,44 @@ function spawnTile(isFirst = false) {
             isRoundStartBlock = true;
         }
 
+        const prevItem = beatmapBeats[Math.max(0, currentBeatIndex - 1)];
+        const prevEndTime = getBeatEndTime(prevItem);
+
+        let currentItem = 0;
         if (currentBeatIndex === 0) {
             timeDiff = 2.0;
             currentBeatIndex = 1;
             tileX = prevX;
+            currentItem = beatmapBeats[0];
         } else if (currentBeatIndex === 1) {
-            if (beatmapBeats.length > 1) {
-                timeDiff = beatmapBeats[1] - beatmapBeats[0];
-                if (timeDiff < 0.1) timeDiff = Math.max(0.3, timeDiff);
-            } else {
-                timeDiff = 1.0;
-            }
+            currentItem = beatmapBeats[1];
+            timeDiff = getBeatStartTime(currentItem) - prevEndTime;
+            if (timeDiff < 0.1) timeDiff = Math.max(0.3, timeDiff);
             currentBeatIndex = 2;
         } else {
-            timeDiff = beatmapBeats[currentBeatIndex] - beatmapBeats[currentBeatIndex - 1];
+            currentItem = beatmapBeats[currentBeatIndex];
+            timeDiff = getBeatStartTime(currentItem) - prevEndTime;
             currentBeatIndex++;
         }
 
-        if (currentBeatIndex < beatmapBeats.length && currentBeatIndex > 0) {
-            nextTimeDiff = beatmapBeats[currentBeatIndex] - beatmapBeats[currentBeatIndex - 1];
+        if (window.DashBlocksManager && window.DashBlocksManager.isDashBeat(currentItem)) {
+            isDash = true;
+            dashInfo = window.DashBlocksManager.getDashTimes(currentItem);
+            currStartTime = dashInfo.startTime;
+            currEndTime = dashInfo.endTime;
+        } else {
+            currStartTime = getBeatStartTime(currentItem);
+            currEndTime = getBeatEndTime(currentItem);
         }
 
-        tileZ = lastTileZ - (timeDiff * Math.abs(baseBallVelocityZ));
+        if (currentBeatIndex < beatmapBeats.length && currentBeatIndex > 0) {
+            const nextItem = beatmapBeats[currentBeatIndex];
+            nextTimeDiff = getBeatStartTime(nextItem) - currEndTime;
+        }
+
+        startZ = lastTileZ - (timeDiff * Math.abs(baseBallVelocityZ));
+        tileZ = startZ;
+        lastTileZ = tileZ;
     }
 
     // Giai đoạn khởi động: 16 block đầu của lượt đầu tiên (dựa trên currentBeatIndex & roundCount)
@@ -659,17 +760,25 @@ function spawnTile(isFirst = false) {
         // --- LOGIC TRÁNH IMPOSSIBLE JUMP & 16 BLOCK ĐẦU ---
         if (timeDiff < 0.08) isTooClose = true;
         let maxDeltaX = timeDiff * 18;
-        
+
         const isHardMode = typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled;
         const isAsianMode = typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled;
         let fixedDeltaX = null;
-        const blockUnit = typeof tileWidth !== 'undefined' ? tileWidth : 4.0;
+        // FIX: "block" = bề rộng 1 tile (tileWidth), không phải 1.0 đơn vị thế giới.
+        // Trước đây 1/4, 1/2, 1 block bị gán 0.25 / 0.5 / 1.0 đơn vị (chỉ ~6%, 12%, 23% bề rộng tile)
+        // nên gần như không thấy lệch -> Hard/Asian không "ăn".
+        const blockW = (typeof tileWidth !== 'undefined') ? tileWidth : 4.3;
 
-        if (!isInitial16Blocks && (isHardMode || isAsianMode) && timeDiff < 0.15) {
+        if (!isInitial16Blocks && (isHardMode || isAsianMode)) {
             if (timeDiff < 0.08) {
-                fixedDeltaX = isAsianMode ? (0.5 * blockUnit) : (0.25 * blockUnit);
-            } else {
-                fixedDeltaX = isAsianMode ? (1.0 * blockUnit) : (0.5 * blockUnit);
+                // < 0.08s: Hard lệch cố định 1/4 block, Asian lệch cố định 1/2 block
+                fixedDeltaX = (isAsianMode ? 0.5 : 0.25) * blockW;
+            } else if (timeDiff < 0.15) {
+                // 0.08 - <0.15s: Hard lệch cố định 1/2 block, Asian lệch cố định 1 block
+                fixedDeltaX = (isAsianMode ? 1.0 : 0.5) * blockW;
+            } else if (timeDiff < 0.25) {
+                // 0.15 - <0.25s: Hard & Asian lệch cố định 1 block
+                fixedDeltaX = 1.0 * blockW;
             }
         }
 
@@ -685,7 +794,7 @@ function spawnTile(isFirst = false) {
             if (timeDiff < 0.3) {
                 maxDeltaX = 0; // Beat gần → ưu tiên thẳng hàng
             } else {
-                maxDeltaX = 0.5 * blockUnit;
+                maxDeltaX = 0.8 * (typeof tileWidth !== 'undefined' ? tileWidth : 4.0);
             }
         } else if (timeDiff < 0.15) {
             maxDeltaX = 0.25;
@@ -699,74 +808,155 @@ function spawnTile(isFirst = false) {
 
         if (!isRoundStartBlock) {
             if (fixedDeltaX !== null) {
-                const direction = Math.random() < 0.5 ? 1 : -1;
-                tileX = prevX + direction * fixedDeltaX;
-                if (tileX < -4.5 || tileX > 4.5) {
-                    tileX = prevX - direction * fixedDeltaX; // Bẻ hướng nếu lọt ra ngoài
-                }
-            } else if (maxDeltaX === 0) {
-                tileX = prevX;
-            } else {
-                const isAsianMode = typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled;
-                const willSpawnFake = typeof window.FakeBlocksManager !== 'undefined' && window.FakeBlocksManager.willSpawnFakeForNextTile(isFirst, timeDiff, isTooClose, nextTimeDiff);
-                const isNoFakeInAsianMode = isAsianMode && !willSpawnFake && !isInitial16Blocks;
+                // Biên làn là ±4.5 (khớp clamp bên dưới); với offset 1 block (4.3) biên 4.2 cũ sẽ loại gần hết vị trí
+                const canPlus = (prevX + fixedDeltaX <= 4.5 + 1e-6);
+                const canMinus = (prevX - fixedDeltaX >= -4.5 - 1e-6);
 
-                if (isNoFakeInAsianMode) {
-                    // Asian Mode (No Fake State): Ngoại trừ vùng thẳng hàng (maxDeltaX === 0),
-                    // các khối còn lại luôn luôn cách vị trí cũ ít nhất 1 block (khoảng cách slot >= 4.0)
-                    const slots = [-4.5, 0, 4.5];
-                    const minBlockDistance = 4.0;
-                    const candidates = [];
-                    for (let i = 0; i < 3; i++) {
-                        if (Math.abs(slots[i] - prevX) >= minBlockDistance) {
-                            candidates.push(slots[i]);
-                        }
-                    }
-
-                    if (candidates.length > 0) {
-                        tileX = candidates[Math.floor(Math.random() * candidates.length)];
+                let dir = 0;
+                if (canPlus && !canMinus) {
+                    dir = 1; // Ở sát biên trái -> bắt buộc sang phải
+                } else if (!canPlus && canMinus) {
+                    dir = -1; // Ở sát biên phải -> bắt buộc sang trái
+                } else if (canPlus && canMinus) {
+                    // Ở giữa (có thể đi cả 2 bên):
+                    // Ưu tiên so-le (75% đảo hướng so với nhịp trước) và 25% tiếp tục hướng để di chuyển mượt mà qua các làn
+                    if (rapidBurstState.lastDir === 1) {
+                        dir = (Math.random() < 0.75) ? -1 : 1;
+                    } else if (rapidBurstState.lastDir === -1) {
+                        dir = (Math.random() < 0.75) ? 1 : -1;
                     } else {
-                        tileX = (prevX >= 0) ? -4.5 : 4.5;
+                        dir = (prevX > 0.5) ? -1 : ((prevX < -0.5) ? 1 : (Math.random() < 0.5 ? 1 : -1));
                     }
                 } else {
-                    const minX = Math.max(-4.5, prevX - maxDeltaX);
-                    const maxX = Math.min(4.5, prevX + maxDeltaX);
-                    tileX = typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomRange(minX, maxX) : minX + Math.random() * (maxX - minX);
+                    dir = (prevX >= 0) ? -1 : 1;
+                }
+
+                rapidBurstState.lastDir = dir;
+                rapidBurstState.lastBeatIndex = currentBeatIndex;
+
+                // LỆCH CỐ ĐỊNH: đúng bằng fixedDeltaX so với vị trí block trước (prevX)
+                tileX = prevX + dir * fixedDeltaX;
+                tileX = Math.max(-4.5, Math.min(4.5, tileX));
+            } else {
+                rapidBurstState.lastDir = 0;
+                if (maxDeltaX === 0) {
+                    tileX = prevX;
+                } else {
+                    const isAsianMode = typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled;
+                    const willSpawnFake = typeof window.FakeBlocksManager !== 'undefined' && window.FakeBlocksManager.willSpawnFakeForNextTile(isFirst, timeDiff, isTooClose, nextTimeDiff);
+                    // Asian Mode: Chỉ khoảng 0.25s - <0.30s mới giữ nguyên logic Asian slot cũ (slot >= 4.0: [-4.5, 0, 4.5])
+                    // Còn >= 0.30s dùng logic khoảng cách bình thường như Hard Mode!
+                    const isNoFakeInAsianMode = isAsianMode && !willSpawnFake && !isInitial16Blocks && (timeDiff >= 0.25 && timeDiff < 0.30);
+
+                    if (isNoFakeInAsianMode) {
+                        // Asian Mode (No Fake State): Ngoại trừ vùng thẳng hàng (maxDeltaX === 0),
+                        // các khối còn lại luôn luôn cách vị trí cũ ít nhất 1 block (khoảng cách slot >= 4.0)
+                        const slots = [-4.5, 0, 4.5];
+                        const minBlockDistance = 4.0;
+                        const candidates = [];
+                        for (let i = 0; i < 3; i++) {
+                            if (Math.abs(slots[i] - prevX) >= minBlockDistance) {
+                                candidates.push(slots[i]);
+                            }
+                        }
+
+                        if (candidates.length > 0) {
+                            tileX = candidates[Math.floor(Math.random() * candidates.length)];
+                        } else {
+                            tileX = (prevX >= 0) ? -4.5 : 4.5;
+                        }
+                    } else {
+                        const minX = Math.max(-4.5, prevX - maxDeltaX);
+                        const maxX = Math.min(4.5, prevX + maxDeltaX);
+                        tileX = typeof window.MathUtils !== 'undefined' ? window.MathUtils.randomRange(minX, maxX) : minX + Math.random() * (maxX - minX);
+                    }
                 }
             }
         }
     }
 
-    lastTileZ = tileZ;
-    let activeColor = dynamicColorsEnabled ? (Math.random() > 0.4 ? 0xff00ff : 0x00ffff) : 0x00ffff;
+    if (isDash && window.DashBlocksManager && !isFirst) {
+        let deltaX = 0;
+        const isEasy = (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled) || (window.chosenPlayMode === 'relax');
+        const isHard = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
+        const isAsian = (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled);
+        const isNormal = (window.chosenPlayMode === 'normal' || window.chosenPlayMode === 'endless') && !isEasy;
 
-    const tile = getTileFromPool();
-    const finalScale = currentTileScale;
-    tile.scale.set(finalScale, finalScale, 1);
-    tile.position.set(tileX, 0, tileZ);
+        if (!isEasy && (isNormal || isHard || isAsian)) {
+            const diagonalChance = isAsian ? 0.75 : (isHard ? 0.65 : 0.50);
+            if (Math.random() < diagonalChance) {
+                const maxSlant = isAsian ? 3.5 : (isHard ? 3.0 : 2.5);
+                const minSlant = 1.5;
+                let preferredDir = 0;
+                if (tileX > 1.2) preferredDir = -1;
+                else if (tileX < -1.2) preferredDir = 1;
+                else preferredDir = Math.random() < 0.5 ? 1 : -1;
 
-    if (tile.userData.hitboxMesh) {
-        const hitboxMesh = tile.userData.hitboxMesh;
-        if (hitboxMesh) {
-            const scaleX = tileWidth + (ballRadius * 2.5 / finalScale);
-            const scaleY = tileLength + (ballRadius * 1.64 / finalScale);
-            hitboxMesh.scale.set(scaleX, scaleY, 0.4);
+                const slantDist = minSlant + Math.random() * (maxSlant - minSlant);
+                let candidateExitX = tileX + preferredDir * slantDist;
+                candidateExitX = Math.max(-3.8, Math.min(3.8, candidateExitX));
+                deltaX = candidateExitX - tileX;
+                if (Math.abs(deltaX) < 1.0) deltaX = 0;
+            }
+        }
+
+        const zCalc = window.DashBlocksManager.calculateDashZ(startZ, dashInfo.duration, baseBallVelocityZ, tileX, deltaX);
+        dashInfo.dashLength = zCalc.dashLength;
+        dashInfo.startZ = zCalc.startZ;
+        dashInfo.exitZ = zCalc.exitZ;
+        dashInfo.startX = zCalc.startX;
+        dashInfo.exitX = zCalc.exitX;
+        dashInfo.deltaX = zCalc.deltaX;
+        dashInfo.angleZ = zCalc.angleZ;
+        tileX = zCalc.tileX;
+        tileZ = zCalc.tileZ;
+        lastTileZ = zCalc.nextTileReferenceZ;
+
+        // FIX: dash xiên đã dịch chuyển X từ entry -> exit, nhớ hướng này để chuỗi so-le phía sau
+        // không bị reset/lệch pha (trước đây lastDir chỉ nhớ hướng vào dash).
+        if (Math.abs(zCalc.deltaX || 0) > 0.01) {
+            rapidBurstState.lastDir = zCalc.deltaX > 0 ? 1 : -1;
         }
     }
 
-    tile.userData.themeColor = activeColor;
-    tile.material = (activeColor === 0xff00ff) ? window.globalTileMatMagenta : window.globalTileMatCyan;
+    let activeColor = isDash
+        ? (dynamicColorsEnabled && typeof currentFrameHex !== 'undefined' ? currentFrameHex : 0xffaa00)
+        : (dynamicColorsEnabled ? (Math.random() > 0.4 ? 0xff00ff : 0x00ffff) : 0x00ffff);
 
-    if (tile.userData.borderLine) {
-        tile.userData.borderLine.material = (activeColor === 0xff00ff) ? window.globalBorderMatMagenta : window.globalBorderMatCyan;
+    const tile = getTileFromPool();
+    const finalScale = currentTileScale;
+    const surfaceZ = currentTileThickness / 2;
+
+    if (isDash && window.DashBlocksManager) {
+        const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
+        window.DashBlocksManager.setupDashTile(tile, dashInfo, finalScale, surfaceZ, tileWidth, tileLength, ballRadius, currentGraphicsQuality, detailScale);
+    } else {
+        tile.scale.set(finalScale, finalScale, 1);
+
+        if (tile.userData.hitboxMesh) {
+            const hitboxMesh = tile.userData.hitboxMesh;
+            if (hitboxMesh) {
+                const scaleX = tileWidth + (ballRadius * 2.5 / finalScale);
+                const scaleY = tileLength + (ballRadius * 1.64 / finalScale);
+                hitboxMesh.scale.set(scaleX, scaleY, 0.4);
+            }
+        }
+
+        tile.userData.themeColor = activeColor;
+        tile.material = (activeColor === 0xff00ff) ? window.globalTileMatMagenta : window.globalTileMatCyan;
+
+        if (tile.userData.borderLine) {
+            tile.userData.borderLine.material = (activeColor === 0xff00ff) ? window.globalBorderMatMagenta : window.globalBorderMatCyan;
+        }
+
+        const poolGlowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : (tile.userData.glowMesh = tile.getObjectByName('glowMesh'));
+        if (poolGlowMesh && Array.isArray(poolGlowMesh.material)) {
+            poolGlowMesh.material[1] = (activeColor === 0xff00ff) ? window.globalTileGlowMatMagenta : window.globalTileGlowMatCyan;
+        }
     }
+    tile.position.set(tileX, 0, tileZ);
 
-    const poolGlowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : (tile.userData.glowMesh = tile.getObjectByName('glowMesh'));
-    if (poolGlowMesh && Array.isArray(poolGlowMesh.material)) {
-        poolGlowMesh.material[1] = (activeColor === 0xff00ff) ? window.globalTileGlowMatMagenta : window.globalTileGlowMatCyan;
-    }
-
-    let isEntering = !isFirst && spawnAnimationMode !== 'none';
+    let isEntering = !isFirst && !isDash && spawnAnimationMode !== 'none';
     if (isEntering && spawnAnimationMode === 'mix') {
         // Khoảng cách block gần (timing block gần < 0.25s) sẽ dùng instant (không slide)
         if (timeDiff < 0.25) {
@@ -774,18 +964,15 @@ function spawnTile(isFirst = false) {
         }
     }
 
-    // Điều kiện xuất hiện trễ:
-    // 1. Khoảng cách time beat hiện tại dài (> 1.0s)
-    // 2. Time beat kế tiếp sau nó KHÔNG PHẢI là khoảng dài > 1.0s (nextTimeDiff <= 1.0s) và ngắn hơn nhịp hiện tại (nextTimeDiff < timeDiff)
-    // 3. Không bị liên tiếp với block trễ trước đó (!lastTileWasDelayed)
-    // 4. Xác suất 90% (Math.random() < 0.9)
+    // Điều kiện xuất hiện trễ (Dash Tiles luôn hiển thị trước, không xuất hiện trễ)
     const isNextGapLong = nextTimeDiff > 1.0;
-    const isDelayedAppearance = !isFirst && 
-                                !lastTileWasDelayed && 
-                                (timeDiff > 1.0) && 
-                                !isNextGapLong && 
-                                (nextTimeDiff < timeDiff) && 
-                                (Math.random() < 0.9);
+    const isDelayedAppearance = !isFirst &&
+        !isDash &&
+        !lastTileWasDelayed &&
+        (timeDiff > 1.0) &&
+        !isNextGapLong &&
+        (nextTimeDiff < timeDiff) &&
+        (Math.random() < 0.9);
 
     lastTileWasDelayed = isDelayedAppearance;
 
@@ -833,6 +1020,22 @@ function spawnTile(isFirst = false) {
     ud.bounceY = 0;
     ud.bounceIntensity = 1.0;
     ud.baseY = 0;
+    ud.isDashTile = isDash;
+    ud.dashLength = isDash ? dashInfo.dashLength : 0;
+    ud.dashStartTime = isDash ? dashInfo.startTime : currStartTime;
+    ud.dashEndTime = isDash ? dashInfo.endTime : currEndTime;
+    ud.startZ = isDash ? dashInfo.startZ : tileZ;
+    ud.endZ = isDash ? dashInfo.exitZ : tileZ;
+    // FIX: luôn ghi đè startX/exitX cho mọi tile. Trước đây chỉ tile dash mới có exitX,
+    // tile thường lấy từ pool vẫn giữ exitX cũ của dash -> prevX của beat kế tiếp sai,
+    // làm vỡ "lệch cố định" theo bảng Hard/Asian.
+    if (isDash && dashInfo) {
+        ud.startX = (dashInfo.startX !== undefined) ? dashInfo.startX : tileX;
+        ud.exitX = (dashInfo.exitX !== undefined) ? dashInfo.exitX : tileX;
+    } else {
+        ud.startX = tileX;
+        ud.exitX = tileX;
+    }
 
     // TÍCH HỢP LOGIC KHỐI DI CHUYỂN MỚI
     if (typeof window.MovingBlocksManager !== 'undefined') {
@@ -845,7 +1048,13 @@ function spawnTile(isFirst = false) {
             threshold = window.HardModeManager.getMovingBlockThreshold();
         }
         let canBeMoving = isEndlessMode && !isInitialWarmup && !isTooClose && (timeDiff >= threshold) && (nextTimeDiff >= threshold);
+        if (isDash && dashInfo && Math.abs(dashInfo.deltaX || 0) > 0.01) {
+            canBeMoving = false;
+        }
         window.MovingBlocksManager.processTile(tile, canBeMoving, roundCount, timeDiff);
+        if (isDash && window.DashBlocksManager) {
+            window.DashBlocksManager.enforceOrientation(tile);
+        }
     }
 
     const glowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : tile.getObjectByName("glowMesh");
@@ -866,6 +1075,15 @@ function spawnTile(isFirst = false) {
                 }
             }
         }
+    }
+    if (window.DEBUG_SPAWN && !isFirst) {
+        console.log('[spawn]', 'beat#' + (currentBeatIndex - 1),
+            'timeDiff=' + timeDiff.toFixed(3),
+            'dash=' + isDash,
+            'prevX=' + prevX.toFixed(2),
+            'entryX=' + (ud.startX).toFixed(2),
+            'entryOffset=' + Math.abs(ud.startX - prevX).toFixed(2),
+            'exitX=' + (ud.exitX).toFixed(2));
     }
     tiles.push(tile);
 
