@@ -260,6 +260,40 @@ window.DashBlocksManager = {
     },
 
     /**
+     * Tiền khởi tạo toàn bộ Geometry cho các gạch Dash xuất hiện trong bài hát
+     * Giúp loại bỏ 100% việc chạy ExtrudeGeometry/ShapeGeometry nặng nề trong animate loop
+     */
+    prewarmSongDashGeometries: function (beats, tileWidth, tileLength, currentGraphicsQuality, detailScale, baseBallVelocityZ) {
+        if (!Array.isArray(beats) || beats.length === 0) return;
+        this.initMaterials(currentGraphicsQuality);
+
+        const tWidth = tileWidth || 4.3;
+        const tLen = tileLength || 4.3;
+        const padLength = tLen * 0.5;
+        const velZ = (typeof baseBallVelocityZ !== 'undefined' && baseBallVelocityZ) ? Math.abs(baseBallVelocityZ) : 40.0;
+        const quality = currentGraphicsQuality || 'fhd';
+        const dScale = (typeof detailScale !== 'undefined') ? detailScale : 1.0;
+
+        // Quét các beat dash trong bài hát (thẳng và các góc xiên tiêu chuẩn)
+        const slantOffsets = [0, 1.5, 2.5, 3.5];
+        for (let i = 0; i < beats.length; i++) {
+            const item = beats[i];
+            if (this.isDashBeat(item)) {
+                const dashTimes = this.getDashTimes(item);
+                if (dashTimes.duration > 0) {
+                    for (let s = 0; s < slantOffsets.length; s++) {
+                        const dX = slantOffsets[s];
+                        const zCalc = this.calculateDashZ(0, dashTimes.duration, velZ, 0, dX);
+                        const physicalLength = Math.max(0, zCalc.dashLength || 0);
+                        const dashLength = Math.max(tLen, physicalLength + padLength * 2);
+                        this.getOrCreateGeometries(dashLength, tWidth, quality, dScale);
+                    }
+                }
+            }
+        }
+    },
+
+    /**
      * Lấy Geometry sóng xung kích theo hình dáng dải gạch
      */
     getShockwaveGeometry: function (dashLength, tileWidth, currentGraphicsQuality, detailScale) {

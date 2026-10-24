@@ -582,6 +582,17 @@ async function changeSong(index, autoStart = false) {
         baseBallVelocityZ = -18;
     }
 
+    if (window.DashBlocksManager && typeof window.DashBlocksManager.prewarmSongDashGeometries === 'function') {
+        window.DashBlocksManager.prewarmSongDashGeometries(
+            beatmapBeats,
+            typeof tileWidth !== 'undefined' ? tileWidth : 4.3,
+            typeof tileLength !== 'undefined' ? tileLength : 4.3,
+            typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd',
+            typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0,
+            baseBallVelocityZ
+        );
+    }
+
     if (!menuAudio || !audioCtx) initAudio();
 
     // Đảm bảo AudioContext hoạt động khi có tương tác (chuyển bài cũng là tương tác)
@@ -1050,7 +1061,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.5' : 'Version 1.0.5'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.6' : 'Version 1.0.6'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">

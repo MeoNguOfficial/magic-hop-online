@@ -1,7 +1,7 @@
 {
   "name": "magic-hop-online",
-  "version": "1.0.5",
-  "description": "**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.5**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp lối chơi nảy gạch theo giai điệu dồn dập, kết nối Online, hỗ trợ PWA và hệ thống tùy biến sâu rộng.",
+  "version": "1.0.6",
+  "description": "**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.6**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp lối chơi nảy gạch theo giai điệu dồn dập, kết nối Online, hỗ trợ PWA và hệ thống tùy biến sâu rộng.",
   "main": "sw.js",
   "scripts": {
     "css:dev": "tailwindcss -i css/input.css -o css/tailwind.min.css --watch",

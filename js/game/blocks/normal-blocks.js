@@ -956,7 +956,7 @@ function spawnTile(isFirst = false) {
     }
     tile.position.set(tileX, 0, tileZ);
 
-    let isEntering = !isFirst && spawnAnimationMode !== 'none';
+    let isEntering = !isFirst && !isDash && spawnAnimationMode !== 'none';
     if (isEntering && spawnAnimationMode === 'mix') {
         // Khoảng cách block gần (timing block gần < 0.25s) sẽ dùng instant (không slide)
         if (timeDiff < 0.25) {
