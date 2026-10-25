@@ -769,22 +769,54 @@ function spawnTile(isFirst = false) {
         // nên gần như không thấy lệch -> Hard/Asian không "ăn".
         const blockW = (typeof tileWidth !== 'undefined') ? tileWidth : 4.3;
 
-        if (!isInitial16Blocks && (isHardMode || isAsianMode)) {
-            if (timeDiff < 0.08) {
-                // < 0.08s: Hard lệch cố định 1/4 block, Asian lệch cố định 1/2 block
-                fixedDeltaX = (isAsianMode ? 0.5 : 0.25) * blockW;
-            } else if (timeDiff < 0.15) {
-                // 0.08 - <0.15s: Hard lệch cố định 1/2 block, Asian lệch cố định 1 block
-                fixedDeltaX = (isAsianMode ? 1.0 : 0.5) * blockW;
+        // Độ khó (ưu tiên giống game.js: Easy > Asian > Hard > Normal). Relax xử lý như Easy.
+        const isEasyDiff = (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled) || (window.chosenPlayMode === 'relax');
+        const isNormalDiff = !isEasyDiff && !isHardMode && !isAsianMode;
+
+        let forceStraight = false;
+
+        if (!isInitial16Blocks && isEasyDiff) {
+            // Bảng Easy (block = tileWidth), so với vị trí block trước
+            //  < 0.15 thẳng | 0.15-<0.25 1/8 | 0.25-<0.5 1/4 | 0.5-<1.0 1/2 | >= 1.0 logic bình thường
+            if (timeDiff < 0.15) {
+                forceStraight = true;
             } else if (timeDiff < 0.25) {
-                // 0.15 - <0.25s: Hard & Asian lệch cố định 1 block
-                fixedDeltaX = 1.0 * blockW;
+                fixedDeltaX = 0.125 * blockW;
+            } else if (timeDiff < 0.5) {
+                fixedDeltaX = 0.25 * blockW;
+            } else if (timeDiff < 1.0) {
+                fixedDeltaX = 0.5 * blockW;
+            }
+        }
+
+        if (!isInitial16Blocks && !isEasyDiff) {
+            // Bảng lệch cố định (đơn vị: block = tileWidth), so với vị trí block trước
+            //  timeDiff        Normal   Hard    Asian
+            //  < 0.08          thẳng    1/4     1/2
+            //  0.08 - <0.15    1/4      1/2     1
+            //  0.15 - <0.25    1/2      1       1
+            //  0.25 - <0.30    1        thường  giữ logic Asian slot
+            //  >= 0.30         thường   thường  thường
+            if (timeDiff < 0.08) {
+                if (isAsianMode) fixedDeltaX = 0.5 * blockW;
+                else if (isHardMode) fixedDeltaX = 0.25 * blockW;
+                // Normal: thẳng hàng -> xử lý bên dưới qua isTooClose (maxDeltaX = 0)
+            } else if (timeDiff < 0.15) {
+                if (isAsianMode) fixedDeltaX = 1.0 * blockW;
+                else if (isHardMode) fixedDeltaX = 0.5 * blockW;
+                else if (isNormalDiff) fixedDeltaX = 0.25 * blockW;
+            } else if (timeDiff < 0.25) {
+                if (isAsianMode || isHardMode) fixedDeltaX = 1.0 * blockW;
+                else if (isNormalDiff) fixedDeltaX = 0.5 * blockW;
+            } else if (timeDiff < 0.30) {
+                if (isNormalDiff) fixedDeltaX = 1.0 * blockW;
+                // Hard: logic bình thường; Asian: giữ logic Asian slot (xử lý ở nhánh random bên dưới)
             }
         }
 
         if (fixedDeltaX !== null) {
             // Bỏ qua gán maxDeltaX vì dùng độ lệch cố định
-        } else if (isTooClose) {
+        } else if (isTooClose || forceStraight) {
             maxDeltaX = 0;
         } else if (isFirst3Blocks) {
             // 3 block đầu tiên luôn luôn thẳng hàng (maxDeltaX = 0)
@@ -802,7 +834,7 @@ function spawnTile(isFirst = false) {
             maxDeltaX = Math.max(1.5, Math.min(6, maxDeltaX));
         }
 
-        if (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled && !isInitial16Blocks) {
+        if (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled && !isInitial16Blocks && fixedDeltaX === null && !forceStraight) {
             maxDeltaX = window.EasyModeManager.calculateMaxDeltaX(timeDiff, maxDeltaX);
         }
 
@@ -1029,6 +1061,7 @@ function spawnTile(isFirst = false) {
     // FIX: luôn ghi đè startX/exitX cho mọi tile. Trước đây chỉ tile dash mới có exitX,
     // tile thường lấy từ pool vẫn giữ exitX cũ của dash -> prevX của beat kế tiếp sai,
     // làm vỡ "lệch cố định" theo bảng Hard/Asian.
+    ud.autoNoise = undefined; // tile lấy từ pool không giữ noise của Natural Autoplay lần trước
     if (isDash && dashInfo) {
         ud.startX = (dashInfo.startX !== undefined) ? dashInfo.startX : tileX;
         ud.exitX = (dashInfo.exitX !== undefined) ? dashInfo.exitX : tileX;
