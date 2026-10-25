@@ -1286,16 +1286,19 @@ async function deleteApiCache(pattern) {
         if (!pattern) {
             store.clear();
         } else {
-            const keys = await new Promise((resolve) => {
+            await new Promise((resolve) => {
                 const req = store.getAllKeys();
-                req.onsuccess = () => resolve(req.result || []);
-                req.onerror = () => resolve([]);
+                req.onsuccess = () => {
+                    const keys = req.result || [];
+                    for (const k of keys) {
+                        if (typeof k === 'string' && k.includes(pattern)) {
+                            store.delete(k);
+                        }
+                    }
+                    resolve();
+                };
+                req.onerror = () => resolve();
             });
-            for (const k of keys) {
-                if (typeof k === 'string' && k.includes(pattern)) {
-                    store.delete(k);
-                }
-            }
         }
 
         // Nếu xóa cache beatmaps, cũng xóa luôn cache playlist lưu trong IndexedDB & OPFS
@@ -1410,9 +1413,32 @@ async function clearBeatmapCache() {
 async function deleteSongCache(url, lazyUrl) {
     try {
         const db = await getDB();
-        const tx = db.transaction([STORE_AUDIO, STORE_JSON], 'readwrite');
+
+        // 1. Thực hiện toàn bộ thao tác xóa trên IndexedDB đồng bộ (tránh await giữa chừng khiến transaction bị auto-commit)
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction([STORE_AUDIO, STORE_JSON], 'readwrite');
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+            tx.onabort = () => reject(tx.error);
+
+            if (url) {
+                tx.objectStore(STORE_AUDIO).delete(url);
+            }
+            if (lazyUrl) {
+                tx.objectStore(STORE_JSON).delete(lazyUrl);
+
+                // Xóa kèm các biến thể format key nếu có ID
+                const match = lazyUrl.match(/(\d+)/);
+                if (match) {
+                    const songId = match[1];
+                    tx.objectStore(STORE_JSON).delete(`beatmap_${songId}.json`);
+                    tx.objectStore(STORE_JSON).delete(`beatmap/music_${songId}.json`);
+                }
+            }
+        });
+
+        // 2. Xóa cache OPFS, ObjectURL và localStorage / API cache sau khi IDB transaction đã hoàn tất
         if (url) {
-            tx.objectStore(STORE_AUDIO).delete(url);
             if (hasOPFS) {
                 await deleteFromOPFS('audio', url);
             }
@@ -1433,8 +1459,8 @@ async function deleteSongCache(url, lazyUrl) {
                 }
             } catch (e) { }
         }
+
         if (lazyUrl) {
-            tx.objectStore(STORE_JSON).delete(lazyUrl);
             if (hasOPFS) {
                 await deleteFromOPFS('json', lazyUrl);
             }
@@ -1446,8 +1472,6 @@ async function deleteSongCache(url, lazyUrl) {
                 const songId = match[1];
                 const alt1 = `beatmap_${songId}.json`;
                 const alt2 = `beatmap/music_${songId}.json`;
-                tx.objectStore(STORE_JSON).delete(alt1);
-                tx.objectStore(STORE_JSON).delete(alt2);
                 if (hasOPFS) {
                     await deleteFromOPFS('json', alt1);
                     await deleteFromOPFS('json', alt2);
