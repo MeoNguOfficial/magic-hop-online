@@ -623,6 +623,20 @@ function initBallTrail() {
     }
 }
 
+// --- BẮT ĐẦU ROUND MỚI KHI HẠ CÁNH LÊN TILE ROUND-START (dùng cho cả gạch thường và Dash) ---
+function applyRoundStartLanding(tile) {
+    if (!tile || !tile.userData || !tile.userData.isRoundStart) return;
+    activeEndlessMode = true;
+    activeRoundCount = tile.userData.roundValue;
+
+    if (audio) {
+        audio.currentTime = 0;
+        accumulatedSongTime = 0;
+        audio.play().catch(() => { });
+        if (roundStartAudio) roundStartAudio.play().catch(() => { });
+    }
+}
+
 // --- TÍNH TOÁN QUỸ ĐẠO PARABOL (TỰ ĐỘNG ĐỒNG BỘ CHUẨN BEAT KHI TILE PHÓNG TO / THU NHỎ / RESCUE) ---
 function calculateNextParabola(currentTargetIndex) {
     jumpStartRawY = typeof minFloor !== 'undefined' ? minFloor : 0.95;
@@ -3271,6 +3285,10 @@ function animate() {
 
                                 currentTileIndex++;
                                 totalTilesJumped++;
+                                // FIX: Dash tile cũng có thể là tile mở đầu Round (beat 0 là dash).
+                                // Nhánh này `break` trước đoạn xử lý isRoundStart của gạch thường nên trước đây
+                                // không bật activeEndlessMode / không reset nhạc -> round không chuyển, tile lộn xộn.
+                                applyRoundStartLanding(tiles[currentTileIndex]);
                                 jumpElapsedTime = 0;
                                 break;
                             }
