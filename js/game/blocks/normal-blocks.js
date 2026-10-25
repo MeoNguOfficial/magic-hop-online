@@ -928,6 +928,16 @@ function spawnTile(isFirst = false) {
                 let candidateExitX = tileX + preferredDir * slantDist;
                 candidateExitX = Math.max(-3.8, Math.min(3.8, candidateExitX));
                 deltaX = candidateExitX - tileX;
+
+                // Giới hạn góc chéo tối đa 45° so với trục Z: |deltaX| <= baseLength * tan(45°).
+                // baseLength = duration * |v| (hình chiếu Z) nên timebeat không đổi, chỉ dash ngắn bị chéo nhẹ hơn.
+                const MAX_DASH_ANGLE_DEG = 45;
+                const dashBaseLen = dashInfo.duration * Math.abs(baseBallVelocityZ);
+                const maxDeltaByAngle = dashBaseLen * Math.tan(MAX_DASH_ANGLE_DEG * Math.PI / 180);
+                if (Math.abs(deltaX) > maxDeltaByAngle) {
+                    deltaX = Math.sign(deltaX) * maxDeltaByAngle;
+                }
+
                 if (Math.abs(deltaX) < 1.0) deltaX = 0;
             }
         }
