@@ -3140,14 +3140,17 @@ function animate() {
 
                         const dashEndCenterHit = (endDiffX < 0.6);
 
-                        // Dual-Center scoring (Phương án A): Chỉ cộng combo khi trúng tâm cả 2 đầu
+                        // Dual-Center scoring: Chỉ cộng điểm combo khi trúng tâm cả 2 đầu (entrance & exit), còn lại mặc định 2 điểm
                         if (dashStartCenterHit && dashEndCenterHit) {
                             nonPerfectStreak = 0;
+                            const combo1 = comboCount + 1;
+                            const combo2 = comboCount + 2;
                             comboCount += 2;
                             if (comboCount >= 6) {
                                 currentTileScale = Math.min(1.0, currentTileScale + 0.02);
                             }
-                            score += 1 + Math.min(20, comboCount);
+                            // Cộng điểm combo đầy đủ theo từng nhịp cho 2 điểm hoàn hảo của dải Dash
+                            score += (1 + Math.min(20, combo1)) + (1 + Math.min(20, combo2));
                             triggerPerfectComboUI(comboCount);
                         } else {
                             nonPerfectStreak++;
@@ -3155,7 +3158,8 @@ function animate() {
                                 currentTileScale = Math.max(0.4, currentTileScale - 0.02);
                             }
                             comboCount = 0;
-                            score += 1;
+                            // Miss perfect trên Dash Tile: nhận 2 điểm mặc định (1 điểm mỗi nhịp) thay vì cộng theo combo
+                            score += 2;
                             clearPerfectComboUI();
                         }
 
