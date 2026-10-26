@@ -422,6 +422,7 @@ window.DashBlocksManager = {
         tile.scale.set(1, 1, 1);
         tile.rotation.set(-Math.PI / 2, 0, 0);
         tile.userData.isDashTile = false;
+        tile.userData.isDimmed = false;
         tile.userData.dashLength = 0;
         tile.userData.physicalLength = 0;
         tile.userData.dashStartTime = 0;

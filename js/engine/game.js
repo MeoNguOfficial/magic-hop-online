@@ -279,6 +279,7 @@ async function saveBestScore(songIndex, score, isPassed = false) {
 // LƯU Ý QUAN TRỌNG: Chỉ làm mờ phần nền trong (tile mesh chính), tuyệt đối KHÔNG làm mờ viền (borderLine) hay glow (glowMesh)
 function dimLandedTile(tile) {
     if (!tile || !tile.userData) return;
+    if (tile.userData.isDimmed) return;
     tile.userData.isDimmed = true;
 
     // Đảm bảo các material dimmed đã được khởi tạo
@@ -292,6 +293,9 @@ function dimLandedTile(tile) {
     }
 
     if (tile.userData.isDashTile) {
+        if (!window.globalTileDimmedMatDash && window.DashBlocksManager) {
+            window.DashBlocksManager.initMaterials(typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd');
+        }
         if (window.globalTileDimmedMatDash) {
             tile.material = window.globalTileDimmedMatDash;
         }
@@ -3177,7 +3181,7 @@ function animate() {
                             triggerShockwave(dashTargetTile, tileColor, shockwaveScale, activeScale, 0);
                         }
 
-                        dimLandedTile(dashTargetTile);
+                        // Dash tile đã được làm mờ ngay khi chạm điểm đầu (entrance)
                         isDashing = false;
                         window.isDashing = false;
                         dashTargetTile = null;
@@ -3257,6 +3261,7 @@ function animate() {
                                     ? currentFrameHex
                                     : (targetTile.userData.themeColor || 0xffaa00);
                                 triggerShockwave(targetTile, tileColor, shockwaveScale, activeScale, 0);
+                                dimLandedTile(targetTile); // Làm mờ Dash Tile ngay khi bóng chạm điểm đầu (entrance)
 
                                 if (typeof landingAudio !== 'undefined' && landingAudio) {
                                     landingAudio.currentTime = 0;
