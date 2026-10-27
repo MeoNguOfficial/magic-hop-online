@@ -3300,14 +3300,6 @@ function animate() {
                                     landingAudio.play().catch(() => { });
                                 }
 
-                                // Nếu dash tile vẫn đang trượt (slide) thì đưa ngay về vị trí đích chuẩn xác
-                                if (targetTile.userData && targetTile.userData.isEntering) {
-                                    if (targetTile.userData.targetZ !== undefined) {
-                                        targetTile.position.z = targetTile.userData.targetZ;
-                                    }
-                                    targetTile.userData.isEntering = false;
-                                }
-
                                 isDashing = true;
                                 window.isDashing = true;
                                 dashTargetTile = targetTile;
