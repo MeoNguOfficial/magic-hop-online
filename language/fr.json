@@ -252,7 +252,7 @@
   "limit_beatmap_audio_100": "100 chansons",
   "limit_beatmap_audio_unlimited": "Aucune limite",
   "btn_update": "Mettre à jour les données maintenant",
-  "btn_clear_cache": "Effacer le cache musical",
+  "btn_clear_cache": "Effacer le cache",
   "btn_clear_beatmap_cache": "Vider le cache des beatmaps",
   "btn_delete_cache": "Vider le cache",
   "msg_confirm_delete_song_cache": "Êtes-vous sûr de vouloir vider le cache (audio et beatmap) de la chanson «{name}» ?",

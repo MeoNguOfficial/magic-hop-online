@@ -232,7 +232,7 @@
   "limit_beatmap_audio_100": "100 bài",
   "limit_beatmap_audio_unlimited": "Không giới hạn",
   "btn_update": "Cập nhật dữ liệu ngay",
-  "btn_clear_cache": "Xóa Cache Nhạc",
+  "btn_clear_cache": "Xóa Cache",
   "btn_clear_beatmap_cache": "Xóa Cache Beatmap",
   "btn_delete_cache": "Xóa bộ nhớ đệm",
   "msg_confirm_delete_song_cache": "Bạn có chắc chắn muốn xóa bộ nhớ đệm (âm thanh và bản đồ) của bài hát \"{name}\" không?",

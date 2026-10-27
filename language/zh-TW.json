@@ -348,7 +348,7 @@
   "mfx_game_over_vol_desc": "Background music volume on Game Over screen.",
   "limit_beatmap_audio_50": "50 songs",
   "limit_beatmap_audio_100": "100 songs",
-  "btn_clear_cache": "Clear Music Cache",
+  "btn_clear_cache": "Clear Cache",
   "btn_clear_beatmap_cache": "Clear Beatmap Cache",
   "btn_delete_cache": "Clear cache",
   "new_record": "NEW RECORD!",

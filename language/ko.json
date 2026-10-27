@@ -249,7 +249,7 @@
   "limit_beatmap_audio_100": "100곡",
   "limit_beatmap_audio_unlimited": "제한 없음",
   "btn_update": "지금 데이터 업데이트",
-  "btn_clear_cache": "음악 캐시 지우기",
+  "btn_clear_cache": "캐시 삭제",
   "btn_clear_beatmap_cache": "비트맵 캐시 지우기",
   "btn_delete_cache": "캐시 지우기",
   "msg_confirm_delete_song_cache": "\"{name}\" 노래에 대한 캐시(오디오 및 비트맵)를 지우시겠습니까?",

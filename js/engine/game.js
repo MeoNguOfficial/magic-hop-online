@@ -2886,7 +2886,10 @@ function animate() {
                     tile.position.z += (targetZ - tile.position.z) * enterSpeedSlideCached;
 
                     // Tạm tắt distToTargetZ < 15 (auto instant) để slide mượt ngay cả khi nhịp dồn dập
-                    if (ball.position.z < tile.position.z || Math.abs(tile.position.z - targetZ) < 0.1) {
+                    const snapCheckZ = (tile.userData && tile.userData.isDashTile && tile.userData.startZ !== undefined)
+                        ? tile.userData.startZ
+                        : targetZ;
+                    if (ball.position.z < snapCheckZ || Math.abs(tile.position.z - targetZ) < 0.1) {
                         tile.position.z = targetZ;
                         tile.userData.isEntering = false;
                     }
@@ -3186,6 +3189,7 @@ function animate() {
                         }
 
                         // Dash tile đã được làm mờ ngay khi chạm điểm đầu (entrance)
+                        const finishedDashTile = dashTargetTile;
                         isDashing = false;
                         window.isDashing = false;
                         dashTargetTile = null;
@@ -3193,17 +3197,41 @@ function animate() {
                         window.dashStartTime = 0;
                         window.dashEndTime = 0;
 
-                        // Super Hop landing audio
-                        if (typeof landingAudio !== 'undefined' && landingAudio) {
-                            landingAudio.currentTime = 0;
-                            landingAudio.play().catch(() => { });
-                        }
+                        // Kiểm tra nếu đây là block cuối cùng trong normal mode (Final Star Tile)
+                        const isFinalDash = (window.chosenPlayMode === 'normal') && (
+                            (finishedDashTile && finishedDashTile.userData && finishedDashTile.userData.isFinalStarTile) ||
+                            (tiles[currentTileIndex] && tiles[currentTileIndex].userData && tiles[currentTileIndex].userData.isFinalStarTile) ||
+                            (currentTileIndex >= tiles.length - 1)
+                        );
 
-                        // Launch Super Hop towards next tile
-                        jumpStartRawZ = exitZ;
-                        jumpStartRawY = minFloor;
-                        jumpElapsedTime = 0;
-                        calculateNextParabola(currentTileIndex);
+                        if (isFinalDash) {
+                            isVictoryTransition = true;
+                            victoryTimeElapsed = 0;
+                            victoryCameraDecay = 1.0;
+                            ballVictoryVelocityY = 32;
+                            if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
+                                starCollectAudio.currentTime = 0;
+                                starCollectAudio.play().catch(() => { });
+                            } else if (typeof newBestAudio !== 'undefined' && newBestAudio) {
+                                newBestAudio.currentTime = 0;
+                                newBestAudio.play().catch(() => { });
+                            }
+                            if (typeof fadeOutGameAudio === 'function') {
+                                fadeOutGameAudio(1.2);
+                            }
+                        } else {
+                            // Super Hop landing audio
+                            if (typeof landingAudio !== 'undefined' && landingAudio) {
+                                landingAudio.currentTime = 0;
+                                landingAudio.play().catch(() => { });
+                            }
+
+                            // Launch Super Hop towards next tile
+                            jumpStartRawZ = exitZ;
+                            jumpStartRawY = minFloor;
+                            jumpElapsedTime = 0;
+                            calculateNextParabola(currentTileIndex);
+                        }
                     }
                 }
             } else {
@@ -3270,6 +3298,14 @@ function animate() {
                                 if (typeof landingAudio !== 'undefined' && landingAudio) {
                                     landingAudio.currentTime = 0;
                                     landingAudio.play().catch(() => { });
+                                }
+
+                                // Nếu dash tile vẫn đang trượt (slide) thì đưa ngay về vị trí đích chuẩn xác
+                                if (targetTile.userData && targetTile.userData.isEntering) {
+                                    if (targetTile.userData.targetZ !== undefined) {
+                                        targetTile.position.z = targetTile.userData.targetZ;
+                                    }
+                                    targetTile.userData.isEntering = false;
                                 }
 
                                 isDashing = true;
@@ -3414,7 +3450,22 @@ function animate() {
                         }
                     } else {
                         if (window.chosenPlayMode === 'normal' && currentTileIndex === tiles.length - 1) {
-                            gameVictory();
+                            if (!isVictoryTransition) {
+                                isVictoryTransition = true;
+                                victoryTimeElapsed = 0;
+                                victoryCameraDecay = 1.0;
+                                ballVictoryVelocityY = 32;
+                                if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
+                                    starCollectAudio.currentTime = 0;
+                                    starCollectAudio.play().catch(() => { });
+                                } else if (typeof newBestAudio !== 'undefined' && newBestAudio) {
+                                    newBestAudio.currentTime = 0;
+                                    newBestAudio.play().catch(() => { });
+                                }
+                                if (typeof fadeOutGameAudio === 'function') {
+                                    fadeOutGameAudio(1.2);
+                                }
+                            }
                         } else {
                             gameOver();
                         }
@@ -3423,7 +3474,7 @@ function animate() {
                 }
             }
 
-            if (!isFalling && !isDashing) {
+            if (!isFalling && !isDashing && !isVictoryTransition) {
                 ball.position.z = jumpStartRawZ + ballVelocityZ * jumpElapsedTime;
                 ball.position.y = jumpStartRawY + currentBounceVelocityY * jumpElapsedTime + 0.5 * currentGravity * jumpElapsedTime * jumpElapsedTime;
             }

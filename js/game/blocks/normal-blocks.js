@@ -184,8 +184,7 @@ function createRoundLabel(round) {
     const ctx = canvas.getContext('2d');
     canvas.width = 512;
     canvas.height = 128;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = `bold 50px ${fontFamily}, sans-serif`;
     ctx.fillStyle = '#00ffff';
     ctx.textAlign = 'center';
@@ -194,7 +193,12 @@ function createRoundLabel(round) {
     ctx.fillText(`${t('round')} ${round}`, 256, 80);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        depthTest: true
+    });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(10, 2.5, 1);
     sprite.position.y = 0;
@@ -215,8 +219,7 @@ function createPercentLabel(percent) {
     const ctx = canvas.getContext('2d');
     canvas.width = 512;
     canvas.height = 128;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.font = `bold 80px ${fontFamily}, sans-serif`;
     ctx.fillStyle = '#ec4899';
     ctx.textAlign = 'center';
@@ -225,7 +228,12 @@ function createPercentLabel(percent) {
     ctx.fillText(`${percent}%`, 256, 80);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        depthTest: true
+    });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(8, 2, 1);
     sprite.position.y = 0;
@@ -240,21 +248,63 @@ function createStarLabel() {
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = 128;
-    canvas.height = 128;
-    ctx.fillStyle = 'rgba(0,0,0,0)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    canvas.width = 256;
+    canvas.height = 256;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    ctx.font = 'bold 80px Arial, sans-serif';
-    ctx.fillStyle = '#facc15';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    const cx = 128;
+    const cy = 128;
+    const spikes = 5;
+    const outerRadius = 88;
+    const innerRadius = 38;
+
+    function drawStarPath(c, xCenter, yCenter, outerR, innerR) {
+        let rot = -Math.PI / 2;
+        const step = Math.PI / spikes;
+        c.beginPath();
+        c.moveTo(xCenter, yCenter - outerR);
+        for (let i = 0; i < spikes; i++) {
+            c.lineTo(xCenter + Math.cos(rot) * outerR, yCenter + Math.sin(rot) * outerR);
+            rot += step;
+            c.lineTo(xCenter + Math.cos(rot) * innerR, yCenter + Math.sin(rot) * innerR);
+            rot += step;
+        }
+        c.closePath();
+    }
+
+    // 1. Lớp phát sáng viền vàng rực rỡ (Glow)
+    ctx.save();
     ctx.shadowColor = '#facc15';
-    ctx.shadowBlur = 20;
-    ctx.fillText('⭐', 64, 64);
+    ctx.shadowBlur = 24;
+    drawStarPath(ctx, cx, cy, outerRadius, innerRadius);
+    ctx.fillStyle = '#facc15';
+    ctx.fill();
+    ctx.restore();
+
+    // 2. Thân ngôi sao chuyển màu vàng kim rực rỡ (Gold Gradient)
+    const gradient = ctx.createLinearGradient(cx, cy - outerRadius, cx, cy + outerRadius);
+    gradient.addColorStop(0, '#fffbeb');
+    gradient.addColorStop(0.35, '#fde047');
+    gradient.addColorStop(0.7, '#f59e0b');
+    gradient.addColorStop(1, '#d97706');
+
+    drawStarPath(ctx, cx, cy, outerRadius, innerRadius);
+    ctx.fillStyle = gradient;
+    ctx.fill();
+
+    // 3. Viền mảnh nổi khối
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
 
     const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const spriteMat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthWrite: false,
+        depthTest: true
+    });
     const sprite = new THREE.Sprite(spriteMat);
     sprite.scale.set(3, 3, 1);
     sprite.position.y = 0;
@@ -998,7 +1048,7 @@ function spawnTile(isFirst = false) {
     }
     tile.position.set(tileX, 0, tileZ);
 
-    let isEntering = !isFirst && !isDash && spawnAnimationMode !== 'none';
+    let isEntering = !isFirst && spawnAnimationMode !== 'none';
     if (isEntering && spawnAnimationMode === 'mix') {
         // Khoảng cách block gần (timing block gần < 0.25s) sẽ dùng instant (không slide)
         if (timeDiff < 0.25) {
@@ -1130,7 +1180,19 @@ function spawnTile(isFirst = false) {
     }
     tiles.push(tile);
 
-    if (isRoundStartBlock) tile.add(createRoundLabel(roundCount));
+    if (isRoundStartBlock) {
+        const roundLabel = createRoundLabel(roundCount);
+        if (isDash && tile.userData && tile.userData.isDashTile) {
+            const entranceY = (tile.userData.centerMesh)
+                ? tile.userData.centerMesh.position.y
+                : -((tile.userData.physicalLength || (dashInfo && dashInfo.dashLength) || 0) / 2);
+            roundLabel.position.y = entranceY;
+        } else {
+            roundLabel.position.y = 0;
+        }
+        roundLabel.position.z = 1.5;
+        tile.add(roundLabel);
+    }
 
     // --- LOGIC HIỆN PHẦN TRĂM TIẾN ĐỘ WARM-UP ---
     if (!isFirst && !activeEndlessMode && roundCount === 0 && beatmapBeats.length > 10) {
@@ -1149,7 +1211,15 @@ function spawnTile(isFirst = false) {
 
     // --- LOGIC HIỆN NHÃN NGÔI SAO Ở BLOCK CUỐI (CHỈ NORMAL MODE) ---
     if (window.chosenPlayMode === 'normal' && (currentBeatIndex - 1) === beatmapBeats.length - 1) {
-        tile.add(createStarLabel());
+        const starLabel = createStarLabel();
+        if (isDash && tile.userData && tile.userData.isDashTile) {
+            const physicalLength = tile.userData.physicalLength || (dashInfo && dashInfo.dashLength) || 0;
+            starLabel.position.y = physicalLength / 2;
+        } else {
+            starLabel.position.y = 0;
+        }
+        starLabel.position.z = 1.2;
+        tile.add(starLabel);
         tile.userData.isFinalStarTile = true;
     }
 

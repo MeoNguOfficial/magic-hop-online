@@ -251,7 +251,7 @@
   "limit_beatmap_audio_100": "100 曲",
   "limit_beatmap_audio_unlimited": "制限なし",
   "btn_update": "今すぐデータを更新",
-  "btn_clear_cache": "ミュージック キャッシュをクリア",
+  "btn_clear_cache": "キャッシュ消去",
   "btn_clear_beatmap_cache": "ビートマップ キャッシュをクリア",
   "btn_delete_cache": "キャッシュをクリア",
   "msg_confirm_delete_song_cache": "曲「{name}」のキャッシュ (オーディオとビートマップ) をクリアしてもよろしいですか?",

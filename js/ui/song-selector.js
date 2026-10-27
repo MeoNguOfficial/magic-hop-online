@@ -522,6 +522,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-lg border hover:border-cyan-400/40 flex flex-col transition-all duration-200`;
         opt.dataset.index = originalIndex;
         const isExpanded = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === originalIndex);
+        const isKnownCached = (song.loaded && song.beats && song.beats.length > 4) || song._isCached === true;
         
         opt.innerHTML = `
             <div class="song-option-main flex justify-between items-center w-full pointer-events-none">
@@ -542,28 +543,37 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                 </div>
             </div>
             <!-- Expandable details -->
-            <div class="song-option-details ${isExpanded ? 'flex' : 'hidden'} flex-col gap-1.5 mt-2 pt-2 border-t border-cyan-500/20 w-full pointer-events-auto">
-                <div class="flex justify-between items-center gap-2">
-                    <button class="play-btn flex-1 py-1.5 text-[10px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-500/30 rounded flex items-center justify-center gap-1 hover:bg-cyan-900/60 transition-all font-orbitron uppercase">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div class="song-option-details ${isExpanded ? 'flex' : 'hidden'} flex-col mt-2 pt-2 border-t border-cyan-500/20 w-full pointer-events-auto">
+                <div class="flex items-stretch gap-1.5 sm:gap-2 w-full">
+                    <!-- Nút 1: CLEAR CACHE (Cột trái, màu đỏ mờ để tránh giật mắt) -->
+                    <button class="clear-cache-btn flex-1 py-1.5 px-1 rounded flex flex-col items-center justify-center gap-1 font-orbitron uppercase transition-all duration-200 text-red-400/75 bg-red-950/20 border border-red-500/20 hover:bg-red-900/40 hover:text-red-300 hover:border-red-500/40 ${isKnownCached ? 'opacity-85 hover:opacity-100 cursor-pointer' : 'opacity-20 cursor-not-allowed'}" ${isKnownCached ? '' : 'disabled'} title="${typeof t === 'function' ? t('btn_clear_cache') : 'XÓA CACHE'}">
+                        <svg class="w-4 h-4 shrink-0 opacity-80" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        <span class="text-[9.5px] sm:text-[10px] font-semibold tracking-tight text-center leading-tight line-clamp-1 truncate max-w-full">
+                            ${typeof t === 'function' ? t('btn_clear_cache') : 'XÓA CACHE'}
+                        </span>
+                    </button>
+
+                    <!-- Nút 2: PLAY NOW (Cột giữa, chính, to và sáng nhất) -->
+                    <button class="play-btn flex-1 py-1.5 px-2 rounded flex flex-col items-center justify-center gap-0.5 font-orbitron uppercase transition-all duration-200 text-cyan-300 bg-gradient-to-b from-cyan-950/70 via-cyan-900/50 to-cyan-950/80 border-2 border-cyan-400/80 hover:border-cyan-300 hover:text-white hover:from-cyan-900/70 hover:to-cyan-800/60 shadow-[0_0_12px_rgba(6,182,212,0.35)] hover:shadow-[0_0_18px_rgba(6,182,212,0.6)] group/play cursor-pointer" style="flex: 1.25;" title="${typeof t === 'function' ? t('play_song') : 'CHƠI'}">
+                        <svg class="w-5 h-5 text-cyan-300 group-hover/play:text-cyan-100 shrink-0 filter drop-shadow-[0_0_4px_rgba(6,182,212,0.5)] transition-transform duration-200 group-hover/play:scale-105" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        ${typeof t === 'function' ? t('play_song') : 'CHƠI'}
+                        <span class="text-[11px] sm:text-xs font-black tracking-wider text-center leading-tight text-cyan-300 group-hover/play:text-white truncate max-w-full">
+                            ${typeof t === 'function' ? t('play_song') : 'CHƠI'}
+                        </span>
                     </button>
-                </div>
-                <div class="flex justify-between items-center gap-2">
-                    <button class="clear-cache-btn flex-1 py-1.5 text-[10px] font-bold text-red-400 bg-red-950/40 border border-red-500/30 rounded flex items-center justify-center gap-1 hover:bg-red-900/60 transition-all font-orbitron uppercase hidden">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                        ${typeof t === 'function' ? t('btn_clear_cache') : 'XÓA CACHE'}
-                    </button>
-                    <button class="bxh-btn flex-1 py-1.5 text-[10px] font-bold text-yellow-400 bg-yellow-950/40 border border-yellow-500/30 rounded flex items-center justify-center gap-1 hover:bg-yellow-900/60 transition-all font-orbitron uppercase">
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+                    <!-- Nút 3: RANKING / LEADERBOARD (Cột phải, icon cúp/bục) -->
+                    <button class="bxh-btn flex-1 py-1.5 px-1 rounded flex flex-col items-center justify-center gap-1 font-orbitron uppercase transition-all duration-200 text-yellow-400/85 bg-yellow-950/20 border border-yellow-500/30 hover:bg-yellow-900/40 hover:text-yellow-300 hover:border-yellow-400/50 cursor-pointer" title="${typeof t === 'function' ? t('leaderboard') : 'BXH'}">
+                        <svg class="w-4 h-4 text-yellow-400/85 shrink-0" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                        ${typeof t === 'function' ? t('leaderboard') : 'BXH'}
+                        <span class="text-[9.5px] sm:text-[10px] font-semibold tracking-tight text-center leading-tight line-clamp-1 truncate max-w-full">
+                            ${typeof t === 'function' ? t('leaderboard') : 'BXH'}
+                        </span>
                     </button>
                 </div>
             </div>
@@ -607,6 +617,9 @@ function renderSongList(filterTerm = null, specificIndices = null) {
             }
 
             if (clearCacheBtn) {
+                if (clearCacheBtn.disabled || clearCacheBtn.classList.contains('cursor-not-allowed')) {
+                    return;
+                }
                 if (typeof playClickSound === 'function') playClickSound();
                 if (typeof showCyberModal === 'function') {
                     showCyberModal({
@@ -681,10 +694,14 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         details.classList.remove('hidden');
                         if (expandIcon) expandIcon.classList.add('rotate-180');
                         
-                        // Check cache to show clear button
+                        // Check cache to show/enable clear button
                         if (opt.dataset.isCached === 'true' || opt.dataset.isCached === true) {
                             const cBtn = details.querySelector('.clear-cache-btn');
-                            if (cBtn) cBtn.classList.remove('hidden');
+                            if (cBtn) {
+                                cBtn.classList.remove('opacity-20', 'cursor-not-allowed', 'hidden');
+                                cBtn.classList.add('opacity-85', 'hover:opacity-100', 'cursor-pointer');
+                                cBtn.removeAttribute('disabled');
+                            }
                         }
 
                         if (isAnimEnabled && typeof anime !== 'undefined') {
@@ -758,7 +775,6 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         }
 
         // Tối ưu thuật toán: Kiểm tra nhanh trạng thái Cache cả audio và JSON beatmap (đồng bộ trước, async dự phòng)
-        const isKnownCached = (song.loaded && song.beats && song.beats.length > 4) || song._isCached === true;
         if (isKnownCached) {
             opt.dataset.isCached = 'true';
             const statusDiv = opt.querySelector(`#cache-status-${originalIndex}`);
@@ -784,8 +800,10 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                     }
                     const details = opt.querySelector('.song-option-details');
                     const cBtn = opt.querySelector('.clear-cache-btn');
-                    if (details && !details.classList.contains('hidden') && cBtn) {
-                        cBtn.classList.remove('hidden');
+                    if (cBtn) {
+                        cBtn.classList.remove('opacity-20', 'cursor-not-allowed', 'hidden');
+                        cBtn.classList.add('opacity-85', 'hover:opacity-100', 'cursor-pointer');
+                        cBtn.removeAttribute('disabled');
                     }
                 }
             });

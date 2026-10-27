@@ -232,7 +232,7 @@
   "limit_beatmap_audio_100": "100 songs",
   "limit_beatmap_audio_unlimited": "No Limit",
   "btn_update": "Update Data Now",
-  "btn_clear_cache": "Clear Music Cache",
+  "btn_clear_cache": "Clear Cache",
   "btn_clear_beatmap_cache": "Clear Beatmap Cache",
   "btn_delete_cache": "Clear cache",
   "msg_confirm_delete_song_cache": "Are you sure you want to clear the cache (audio and beatmap) for the song \"{name}\"?",

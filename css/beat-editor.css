@@ -430,6 +430,448 @@ p.subtitle {
     color: #000 !important;
 }
 
+/* --- TIMELINE DAW TOOLBAR --- */
+.timeline-toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #090a0d;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    user-select: none;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+/* Hàng trên: Tốc độ (trái) - Transport (giữa) - Zoom (phải) */
+.tb-row-transport {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+}
+
+.tb-transport-center {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.speed-controls,
+.zoom-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #181b23;
+    padding: 4px 8px;
+    border-radius: 7px;
+    border: 1px solid var(--border-color);
+    box-sizing: border-box;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.speed-controls .speed-label,
+.zoom-controls .zoom-label {
+    min-width: unset;
+    font-size: 0.78rem;
+    white-space: nowrap;
+}
+
+.speed-btn,
+.zoom-btn {
+    background: #2d313f;
+    color: white;
+    border: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 13px;
+    transition: background 0.15s;
+    padding: 0;
+}
+
+.speed-btn:hover,
+.zoom-btn:hover {
+    background: var(--primary);
+    color: var(--bg-color);
+}
+
+.speed-slider,
+.zoom-slider {
+    width: 65px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.pitch-toggle-btn {
+    padding: 2px 7px;
+    font-size: 0.72rem;
+    border-radius: 5px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
+}
+
+/* Hàng dưới: Tất cả các nút thao tác còn lại */
+.tb-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tb-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.tb-divider {
+    width: 1px;
+    height: 22px;
+    background: var(--border-color);
+    margin: 0 4px;
+    flex-shrink: 0;
+}
+
+.tb-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 11px;
+    border-radius: 7px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-color);
+    background: #181b23;
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    white-space: nowrap;
+    user-select: none;
+    line-height: 1;
+}
+
+.tb-btn:hover:not(:disabled) {
+    background: #232734;
+    border-color: rgba(0, 212, 255, 0.4);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.4);
+}
+
+.tb-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.tb-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    filter: grayscale(85%);
+    pointer-events: none;
+}
+
+.tb-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
+/* Play button (Primary hero action in toolbar - Icon Only) */
+.tb-btn.tb-play {
+    background: linear-gradient(135deg, #00b894, #00cec9);
+    color: #04251d;
+    border-color: transparent;
+    font-weight: 700;
+    padding: 6px 14px;
+    min-width: 46px;
+    height: 34px;
+    box-shadow: 0 0 12px rgba(0, 184, 148, 0.35);
+    justify-content: center;
+}
+
+.tb-btn.tb-play:hover:not(:disabled) {
+    background: linear-gradient(135deg, #00d2a8, #00dfd8);
+    box-shadow: 0 0 18px rgba(0, 184, 148, 0.55);
+    color: #000;
+}
+
+.tb-btn.tb-play.is-playing {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(243, 156, 18, 0.45);
+}
+
+.tb-play-icon {
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* Navigation & Step buttons (Icon Only) */
+.tb-btn.tb-nav,
+.tb-btn.tb-step {
+    padding: 6px 9px;
+    min-width: 34px;
+    height: 34px;
+    justify-content: center;
+}
+
+/* Record button (Icon Only) */
+.tb-btn.tb-record {
+    background: rgba(214, 48, 49, 0.15);
+    border-color: rgba(214, 48, 49, 0.4);
+    color: #ff7675;
+    padding: 6px 9px;
+    min-width: 34px;
+    height: 34px;
+    justify-content: center;
+}
+
+.tb-btn.tb-record:hover:not(:disabled) {
+    background: var(--danger);
+    color: #fff;
+    border-color: var(--danger);
+    box-shadow: 0 0 12px rgba(214, 48, 49, 0.4);
+}
+
+.tb-rec-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff7675;
+    display: inline-block;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.tb-btn.tb-record:hover:not(:disabled) .tb-rec-dot {
+    background: #fff;
+    transform: scale(1.15);
+}
+
+.tb-btn.tb-record.is-recording {
+    background: var(--danger);
+    color: #fff;
+    box-shadow: 0 0 14px rgba(214, 48, 49, 0.6);
+}
+
+.tb-btn.tb-record.is-recording .tb-rec-dot {
+    background: #fff;
+    animation: tb-rec-pulse 1s infinite alternate ease-in-out;
+}
+
+@keyframes tb-rec-pulse {
+    0% { transform: scale(0.85); opacity: 0.7; }
+    100% { transform: scale(1.25); opacity: 1; }
+}
+
+/* Add Beat button */
+.tb-btn.tb-add {
+    background: rgba(162, 155, 254, 0.15);
+    border-color: rgba(162, 155, 254, 0.4);
+    color: var(--accent);
+}
+
+.tb-btn.tb-add:hover:not(:disabled) {
+    background: var(--accent);
+    color: #0d0e12;
+    box-shadow: 0 0 12px rgba(162, 155, 254, 0.4);
+}
+
+/* Dash button */
+.tb-btn.tb-dash {
+    background: rgba(255, 170, 0, 0.12);
+    border-color: rgba(255, 170, 0, 0.35);
+    color: #ffaa00;
+}
+
+.tb-btn.tb-dash:hover:not(:disabled) {
+    background: #ffaa00;
+    color: #000;
+    box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+}
+
+/* Delete button */
+.tb-btn.tb-del {
+    background: rgba(214, 48, 49, 0.1);
+    border-color: rgba(214, 48, 49, 0.3);
+    color: #ff7675;
+}
+
+.tb-btn.tb-del:hover:not(:disabled) {
+    background: var(--danger);
+    color: #fff;
+    box-shadow: 0 0 10px rgba(214, 48, 49, 0.35);
+}
+
+/* Quick Align button */
+.tb-btn.tb-align {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.3);
+    color: var(--primary);
+}
+
+.tb-btn.tb-align:hover:not(:disabled) {
+    background: var(--primary);
+    color: #0d0e12;
+    box-shadow: 0 0 12px rgba(0, 212, 255, 0.35);
+}
+
+/* Undo / Redo buttons */
+.tb-btn.tb-undo:hover:not(:disabled) {
+    background: #e17055;
+    color: #fff;
+    border-color: #e17055;
+}
+
+.tb-btn.tb-redo:hover:not(:disabled) {
+    background: #6c5ce7;
+    color: #fff;
+    border-color: #6c5ce7;
+}
+
+/* Export / Save / Reset buttons */
+.tb-btn.tb-export:hover:not(:disabled) {
+    background: #0984e3;
+    color: #fff;
+    border-color: #0984e3;
+}
+
+.tb-btn.tb-save {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.35);
+    color: #10b981;
+}
+
+.tb-btn.tb-save:hover:not(:disabled) {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+}
+
+.tb-btn.tb-reset:hover:not(:disabled) {
+    background: #4a5568;
+    color: #fff;
+}
+
+#controlPanel {
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+@media (max-width: 860px) {
+    /* Khi màn hình hẹp / mobile: Chỉ hiện icon, ẩn hoàn toàn text nhãn */
+    .tb-text {
+        display: none !important;
+    }
+    
+    .timeline-panel {
+        padding: 14px 10px;
+    }
+
+    .timeline-toolbar {
+        padding: 8px 10px;
+        gap: 8px;
+    }
+
+    .tb-row-transport {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .tb-transport-center {
+        width: 100%;
+        justify-content: center;
+        gap: 4px;
+        flex-wrap: nowrap;
+    }
+
+    .tb-btn {
+        padding: 6px 8px;
+        min-width: 32px;
+        height: 32px;
+        justify-content: center;
+        gap: 0;
+    }
+
+    .tb-btn.tb-play {
+        min-width: 44px;
+        height: 34px;
+        padding: 6px 12px;
+    }
+
+    .tb-play-icon {
+        margin-right: 0;
+        font-size: 14px;
+    }
+
+    .tb-rec-dot {
+        width: 10px;
+        height: 10px;
+    }
+
+    .speed-controls,
+    .zoom-controls {
+        height: 30px;
+        padding: 3px 6px;
+        gap: 4px;
+    }
+
+    .speed-slider,
+    .zoom-slider {
+        width: 50px;
+    }
+
+    .speed-btn,
+    .zoom-btn {
+        width: 20px;
+        height: 20px;
+        font-size: 11px;
+    }
+
+    .pitch-toggle-btn {
+        height: 20px;
+        padding: 1px 6px;
+        font-size: 0.72rem;
+    }
+
+    .tb-row-actions {
+        justify-content: center;
+        gap: 4px;
+        padding-top: 8px;
+    }
+
+    .tb-group {
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .tb-divider {
+        height: 18px;
+        margin: 0 2px;
+    }
+}
+
 .workspace {
     display: grid;
     grid-template-columns: 1fr;

@@ -252,7 +252,7 @@
   "limit_beatmap_audio_100": "100 песен",
   "limit_beatmap_audio_unlimited": "Без ограничений",
   "btn_update": "Обновить данные сейчас",
-  "btn_clear_cache": "Очистить кэш музыки",
+  "btn_clear_cache": "Очистить кэш",
   "btn_clear_beatmap_cache": "Очистить кэш биткарт",
   "btn_delete_cache": "Очистить кеш",
   "msg_confirm_delete_song_cache": "Вы уверены, что хотите очистить кеш (аудио и битмап) для песни \"{name}\"?",

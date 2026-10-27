@@ -12,6 +12,16 @@ const resetBtn = document.getElementById("resetBtn");
 const autoGenerateBtn = document.getElementById("autoGenerateBtn");
 const saveMemoryBtn = document.getElementById("saveMemoryBtn");
 
+// Toolbar buttons
+const toStartBtn = document.getElementById("toStartBtn");
+const prevBeatBtn = document.getElementById("prevBeatBtn");
+const nextBeatBtn = document.getElementById("nextBeatBtn");
+const prevFrameBtn = document.getElementById("prevFrameBtn");
+const nextFrameBtn = document.getElementById("nextFrameBtn");
+const dashToggleBtn = document.getElementById("dashToggleBtn");
+const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+const quickAlignBtn = document.getElementById("quickAlignBtn");
+
 const memoryBtn = document.getElementById("memoryBtn");
 const exitBtn = document.getElementById("exitBtn");
 
@@ -181,14 +191,25 @@ function formatMinutesSeconds(t) {
     return `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 }
 
+function setPlayBtnState(isPlaying) {
+    if (!playBtn) return;
+    if (isPlaying) {
+        playBtn.innerHTML = '<span class="tb-play-icon">⏸</span>';
+        playBtn.classList.add("is-playing");
+    } else {
+        playBtn.innerHTML = '<span class="tb-play-icon">▶</span>';
+        playBtn.classList.remove("is-playing");
+    }
+}
+
 function togglePlayPause() {
     if (!audio.src) return;
     if (audio.paused) {
         audio.play();
-        playBtn.textContent = "⏸ Tạm dừng";
+        setPlayBtnState(true);
     } else {
         audio.pause();
-        playBtn.textContent = "▶ Phát";
+        setPlayBtnState(false);
     }
 }
 
@@ -197,8 +218,64 @@ function playFromStart() {
     audio.currentTime = 0;
     if (audio.paused) {
         audio.play();
-        playBtn.textContent = "⏸ Tạm dừng";
+        setPlayBtnState(true);
     }
+}
+
+function stepFrame(delta) {
+    if (!audio.src) return;
+    const newTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + delta));
+    audio.currentTime = Number(newTime.toFixed(3));
+    playTickSound(700, 0.03);
+}
+
+function jumpPrevBeat() {
+    if (!audio.src || beats.length === 0) return;
+    const curTime = audio.currentTime;
+    const tolerance = 0.05;
+    let target = null;
+    for (let i = beats.length - 1; i >= 0; i--) {
+        const t = getBeatStartTime(beats[i]);
+        if (t < curTime - tolerance) {
+            target = t;
+            break;
+        }
+    }
+    if (target !== null) {
+        audio.currentTime = Math.max(0, target);
+        playTickSound(900, 0.04);
+    } else {
+        audio.currentTime = 0;
+    }
+}
+
+function jumpNextBeat() {
+    if (!audio.src || beats.length === 0) return;
+    const curTime = audio.currentTime;
+    const tolerance = 0.05;
+    let target = null;
+    for (let i = 0; i < beats.length; i++) {
+        const t = getBeatStartTime(beats[i]);
+        if (t > curTime + tolerance) {
+            target = t;
+            break;
+        }
+    }
+    if (target !== null) {
+        audio.currentTime = Math.min(audio.duration || target, target);
+        playTickSound(900, 0.04);
+    }
+}
+
+function deleteSelectedBeats() {
+    if (selectedBeatsIndices.size === 0) return;
+    pushHistory();
+    Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => {
+        beats.splice(index, 1);
+    });
+    clearSelection();
+    updateBeatList();
+    playTickSound(400, 0.1);
 }
 
 function updateTime() {
@@ -275,6 +352,11 @@ function loadFile(file) {
     resetBtn.disabled = false;
     autoGenerateBtn.disabled = false;
     if (saveMemoryBtn) saveMemoryBtn.disabled = false;
+    if (toStartBtn) toStartBtn.disabled = false;
+    if (prevBeatBtn) prevBeatBtn.disabled = false;
+    if (nextBeatBtn) nextBeatBtn.disabled = false;
+    if (prevFrameBtn) prevFrameBtn.disabled = false;
+    if (nextFrameBtn) nextFrameBtn.disabled = false;
 
     status.textContent = "Sẵn sàng";
     status.className = "";
@@ -316,6 +398,11 @@ async function loadFromAdmin() {
         exportBtn.disabled = false;
         resetBtn.disabled = false;
         if (saveMemoryBtn) saveMemoryBtn.disabled = false;
+        if (toStartBtn) toStartBtn.disabled = false;
+        if (prevBeatBtn) prevBeatBtn.disabled = false;
+        if (nextBeatBtn) nextBeatBtn.disabled = false;
+        if (prevFrameBtn) prevFrameBtn.disabled = false;
+        if (nextFrameBtn) nextFrameBtn.disabled = false;
         autoGenerateBtn.disabled = true; // Disable AI until buffer is loaded
         
         status.textContent = "Đang tải dữ liệu âm thanh...";
@@ -386,7 +473,7 @@ pitchToggleBtn.onclick = () => {
 };
 
 function applyPlaybackRate() {
-    speedLabel.textContent = `Tốc độ: ${playbackRate.toFixed(2)}x`;
+    speedLabel.innerHTML = `<span class="tb-text">Tốc độ: </span>${playbackRate.toFixed(2)}x`;
     audio.playbackRate = playbackRate;
     // preservesPitch được hỗ trợ bởi hầu hết trình duyệt hiện đại (Chrome, Firefox, Safari)
     if (typeof audio.preservesPitch !== "undefined") {
@@ -423,7 +510,7 @@ timelineViewport.addEventListener("wheel", (e) => {
 }, { passive: false });
 
 function applyZoom() {
-    zoomLabel.textContent = `Zoom: ${zoomLevel}x`;
+    zoomLabel.innerHTML = `<span class="tb-text">Zoom: </span>${zoomLevel}x`;
     timelineContainer.style.width = `${zoomLevel * 100}%`;
     renderRuler();
     renderTimelineMarkers();
@@ -462,6 +549,27 @@ function updateSelectionIndicator() {
         selectionLabel.textContent = `Đã chọn: ${selectedBeatsIndices.size}`;
     } else {
         selectionIndicator.style.display = "none";
+    }
+
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.disabled = (selectedBeatsIndices.size === 0);
+    }
+    if (quickAlignBtn) {
+        quickAlignBtn.disabled = (selectedBeatsIndices.size < 2);
+    }
+    if (dashToggleBtn) {
+        if (selectedBeatsIndices.size === 1) {
+            const idx = Array.from(selectedBeatsIndices)[0];
+            const isDash = isDashBeat(beats[idx]);
+            dashToggleBtn.disabled = !isDash;
+            dashToggleBtn.title = isDash ? "Tách Gạch Lướt thành 2 mốc đơn (D)" : "Chọn 2 mốc nhịp để gộp thành Gạch Lướt (D)";
+        } else if (selectedBeatsIndices.size === 2) {
+            dashToggleBtn.disabled = false;
+            dashToggleBtn.title = "Gộp 2 mốc nhịp đã chọn thành Gạch Lướt (D)";
+        } else {
+            dashToggleBtn.disabled = true;
+            dashToggleBtn.title = "Chọn 2 mốc nhịp để gộp thành Gạch Lướt (D)";
+        }
     }
 
     const markers = timelineBeats.querySelectorAll(".timeline-beat-marker");
@@ -565,7 +673,7 @@ timelineContainer.addEventListener("dblclick", (e) => {
 
 recordBtn.onclick = () => {
     if (isCountingDown) return;
-    audio.pause(); audio.currentTime = 0; playBtn.textContent = "▶ Phát";
+    audio.pause(); audio.currentTime = 0; setPlayBtnState(false);
     isCountingDown = true;
     countdownOverlay.classList.add("active");
 
@@ -598,9 +706,10 @@ function startRecording() {
     beats = [0]; recording = true; clearSelection();
     status.textContent = "🔴 Đang ghi beat... (Nhấn phím F, J, Z hoặc X để thêm nhịp gốc)";
     status.className = "active";
+    if (recordBtn) recordBtn.classList.add("is-recording");
     updateBeatList();
     updateUndoRedoUI();
-    audio.currentTime = 0; audio.play(); playBtn.textContent = "⏸ Tạm dừng";
+    audio.currentTime = 0; audio.play(); setPlayBtnState(true);
 }
 
 addCurrentBtn.onclick = () => {
@@ -1443,13 +1552,7 @@ ctxCopy.onclick = (e) => { e.stopPropagation(); copySelectedBeats(); hideContext
 ctxPaste.onclick = (e) => { e.stopPropagation(); pasteBeats(lastTargetTimeForContext); hideContextMenu(); };
 ctxDelete.onclick = (e) => {
     e.stopPropagation();
-    if (selectedBeatsIndices.size > 0) {
-        pushHistory();
-        Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); });
-        clearSelection();
-        updateBeatList();
-        playTickSound(400, 0.1);
-    }
+    deleteSelectedBeats();
     hideContextMenu();
 };
 if (ctxToggleDash) {
@@ -1482,7 +1585,24 @@ document.addEventListener("keydown", e => {
     if (!e.ctrlKey && key === "d") { e.preventDefault(); toggleDashBeat(); return; }
     if (e.ctrlKey && key === "g") { e.preventDefault(); openGroupActions(); return; }
     if (!e.ctrlKey && key === "e") { e.preventDefault(); quickGroupAlign(); return; }
-    if (e.ctrlKey && e.key === "ArrowLeft") { e.preventDefault(); playFromStart(); return; }
+    if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        if (e.ctrlKey) playFromStart();
+        else if (e.shiftKey) jumpPrevBeat();
+        else stepFrame(-0.05);
+        return;
+    }
+    if (e.code === "ArrowRight") {
+        e.preventDefault();
+        if (e.shiftKey) jumpNextBeat();
+        else stepFrame(0.05);
+        return;
+    }
+    if (e.code === "Home") {
+        e.preventDefault();
+        if (audio.src) audio.currentTime = 0;
+        return;
+    }
     if (e.ctrlKey && key === "c") { e.preventDefault(); copySelectedBeats(); return; }
     if (e.ctrlKey && key === "v") { e.preventDefault(); if (audio.src) pasteBeats(audio.currentTime); return; }
     if (e.ctrlKey && key === "a") { e.preventDefault(); if (beats.length > 0) { selectedBeatsIndices.clear(); beats.forEach((_, index) => { if (index > 0) selectedBeatsIndices.add(index); }); updateSelectionIndicator(); playTickSound(1000, 0.05); } return; }
@@ -1490,11 +1610,7 @@ document.addEventListener("keydown", e => {
 
     if ((e.key === "Delete" || e.key === "Backspace") && selectedBeatsIndices.size > 0) {
         e.preventDefault();
-        pushHistory();
-        Array.from(selectedBeatsIndices).sort((a, b) => b - a).forEach((index) => { beats.splice(index, 1); });
-        clearSelection();
-        updateBeatList();
-        playTickSound(400, 0.1);
+        deleteSelectedBeats();
         return;
     }
     if ((e.ctrlKey && e.shiftKey && key === "z") || (e.ctrlKey && key === "y")) {
@@ -1512,6 +1628,29 @@ document.addEventListener("keydown", e => {
 
 undoBtn.onclick = () => undo();
 if (redoBtn) redoBtn.onclick = () => redo();
+
+if (toStartBtn) toStartBtn.onclick = () => { if (audio.src) audio.currentTime = 0; };
+if (prevBeatBtn) prevBeatBtn.onclick = () => jumpPrevBeat();
+if (nextBeatBtn) nextBeatBtn.onclick = () => jumpNextBeat();
+if (prevFrameBtn) prevFrameBtn.onclick = () => stepFrame(-0.05);
+if (nextFrameBtn) nextFrameBtn.onclick = () => stepFrame(0.05);
+if (dashToggleBtn) dashToggleBtn.onclick = () => toggleDashBeat();
+if (deleteSelectedBtn) deleteSelectedBtn.onclick = () => deleteSelectedBeats();
+if (quickAlignBtn) quickAlignBtn.onclick = () => quickGroupAlign();
+
+audio.addEventListener("play", () => setPlayBtnState(true));
+audio.addEventListener("pause", () => {
+    setPlayBtnState(false);
+    if (recording) {
+        recording = false;
+        if (recordBtn) recordBtn.classList.remove("is-recording");
+        if (status.textContent.includes("Đang ghi beat")) {
+            status.textContent = "Sẵn sàng";
+            status.className = "";
+        }
+    }
+});
+audio.addEventListener("ended", () => setPlayBtnState(false));
 
 exportBtn.onclick = () => {
     const data = { song: currentProjectName, beats: beats };
@@ -1532,8 +1671,9 @@ cancelResetBtn.onclick = () => confirmModal.classList.remove("active");
 confirmResetBtn.onclick = () => {
     if (beats.length > 0) pushHistory();
     audio.pause(); audio.currentTime = 0; beats = []; recording = false; isCountingDown = false; clearSelection();
+    if (recordBtn) recordBtn.classList.remove("is-recording");
     timeLabel.textContent = "00:00.000"; status.textContent = "Sẵn sàng (Đã đặt lại danh sách beat)"; status.className = ""; beatCount.textContent = "Beat: 0"; output.value = ""; timelineBeats.innerHTML = "";
-    playBtn.textContent = "▶ Phát"; updateUndoRedoUI(); confirmModal.classList.remove("active");
+    setPlayBtnState(false); updateUndoRedoUI(); updateSelectionIndicator(); confirmModal.classList.remove("active");
     if (typeof lastSavedBeatsStr !== 'undefined') lastSavedBeatsStr = "[]";
 };
 

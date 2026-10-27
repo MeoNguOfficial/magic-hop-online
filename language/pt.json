@@ -252,7 +252,7 @@
   "btn_click_again_to_confirm": "Clique novamente para confirmar!",
   "btn_clear_all_storage": "Limpar todos os dados",
   "btn_update": "Atualizar dados agora",
-  "btn_clear_cache": "Limpar cache de músicas",
+  "btn_clear_cache": "Limpar cache",
   "btn_clear_beatmap_cache": "Limpar cache do Beatmap",
   "btn_delete_cache": "Limpar cache",
   "msg_confirm_delete_song_cache": "Tem certeza de que deseja limpar o cache (áudio e beatmap) da música \"{name}\"?",

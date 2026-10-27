@@ -53,23 +53,8 @@
                 <span id="durationInfo" style="color: var(--primary); font-family: monospace;">--:-- / --:--</span>
             </div>
             
-            <div class="timeline-controls-group">
-                <div class="selection-indicator" id="selectionIndicator" style="display: none;">
-                    <span class="selection-label" id="selectionLabel">Đã chọn: 0</span>
-                </div>
-                <div class="speed-controls" title="Điều chỉnh tốc độ phát âm thanh (Không đổi mốc thời gian gốc)">
-                    <span class="speed-label" id="speedLabel">Tốc độ: 1.0x</span>
-                    <button class="speed-btn" id="speedOutBtn">−</button>
-                    <input type="range" class="speed-slider" id="speedSlider" min="0.25" max="2.0" value="1.0" step="0.05">
-                    <button class="speed-btn" id="speedInBtn">+</button>
-                    <button class="pitch-toggle-btn active" id="pitchToggleBtn" title="Bật/tắt giữ nguyên cao độ giọng (Preserved Pitch). Khi BẬT: tốc độ thay đổi nhưng giọng không bị biến dạng.">🎵 Pitch</button>
-                </div>
-                <div class="zoom-controls">
-                    <span class="zoom-label" id="zoomLabel">Zoom: 1x</span>
-                    <button class="zoom-btn" id="zoomOutBtn" title="Thu nhỏ timeline">−</button>
-                    <input type="range" class="zoom-slider" id="zoomSlider" min="1" max="30" value="1" step="0.5">
-                    <button class="zoom-btn" id="zoomInBtn" title="Phóng to timeline">+</button>
-                </div>
+            <div class="selection-indicator" id="selectionIndicator" style="display: none;">
+                <span class="selection-label" id="selectionLabel">Đã chọn: 0</span>
             </div>
         </div>
 
@@ -79,6 +64,109 @@
                 <div class="timeline-ruler" id="timelineRuler"></div>
                 <div class="timeline-playhead" id="timelinePlayhead" style="left: 0%;"></div>
                 <div id="timelineBeats"></div>
+            </div>
+        </div>
+
+        <!-- Toolbar Thao Tác & Điều Khiển Timeline (DAW Toolbar) -->
+        <div class="timeline-toolbar" id="timelineToolbar">
+            <!-- HÀNG TRÊN: Tốc độ (trái) - Điều khiển phát Transport (giữa) - Zoom (phải) -->
+            <div class="tb-row tb-row-transport">
+                <!-- Bên trái: Điều chỉnh tốc độ phát -->
+                <div class="speed-controls" title="Điều chỉnh tốc độ phát âm thanh (Không đổi mốc thời gian gốc)">
+                    <span class="speed-label" id="speedLabel"><span class="tb-text">Tốc độ: </span>1.0x</span>
+                    <button class="speed-btn" id="speedOutBtn">−</button>
+                    <input type="range" class="speed-slider" id="speedSlider" min="0.25" max="2.0" value="1.0" step="0.05">
+                    <button class="speed-btn" id="speedInBtn">+</button>
+                    <button class="pitch-toggle-btn active" id="pitchToggleBtn" title="Bật/tắt giữ nguyên cao độ giọng (Preserved Pitch). Khi BẬT: tốc độ thay đổi nhưng giọng không bị biến dạng.">🎵<span class="tb-text"> Pitch</span></button>
+                </div>
+
+                <!-- Ở giữa: Cụm nút điều khiển phát & Frame Stepping -->
+                <div class="tb-transport-center">
+                    <button class="tb-btn tb-nav" id="toStartBtn" disabled title="Về đầu bài (Ctrl+← / Home)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/></svg>
+                    </button>
+                    <button class="tb-btn tb-nav" id="prevBeatBtn" disabled title="Nhảy về Beat trước (Shift+←)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="4" x2="6" y2="20"/><polygon points="20 4 8 12 20 20 20 4"/></svg>
+                    </button>
+                    <button class="tb-btn tb-step" id="prevFrameBtn" disabled title="Lùi 1 Frame 0.05s (←)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+
+                    <button class="tb-btn tb-play" id="playBtn" disabled title="Phát / Tạm dừng (Space)">
+                        <span class="tb-play-icon">▶</span>
+                    </button>
+
+                    <button class="tb-btn tb-step" id="nextFrameBtn" disabled title="Tiến 1 Frame 0.05s (→)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                    <button class="tb-btn tb-nav" id="nextBeatBtn" disabled title="Nhảy tới Beat sau (Shift+→)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="4 4 16 12 4 20 4 4"/><line x1="18" y1="4" x2="18" y2="20"/></svg>
+                    </button>
+
+                    <button class="tb-btn tb-record" id="recordBtn" disabled title="Ghi Beat theo thời gian thực (F / J / Z / X)">
+                        <span class="tb-rec-dot"></span>
+                    </button>
+                </div>
+
+                <!-- Bên phải: Điều chỉnh Zoom timeline -->
+                <div class="zoom-controls">
+                    <span class="zoom-label" id="zoomLabel"><span class="tb-text">Zoom: </span>1x</span>
+                    <button class="zoom-btn" id="zoomOutBtn" title="Thu nhỏ timeline">−</button>
+                    <input type="range" class="zoom-slider" id="zoomSlider" min="1" max="30" value="1" step="0.5">
+                    <button class="zoom-btn" id="zoomInBtn" title="Phóng to timeline">+</button>
+                </div>
+            </div>
+
+            <!-- HÀNG DƯỚI: Tất cả các nút công cụ còn lại -->
+            <div class="tb-row tb-row-actions">
+                <div class="tb-group">
+                    <button class="tb-btn tb-undo" id="undoBtn" disabled title="Hoàn tác (Ctrl+Z)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+                        <span class="tb-text">Undo</span>
+                    </button>
+                    <button class="tb-btn tb-redo" id="redoBtn" disabled title="Làm lại (Ctrl+Y)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13"/></svg>
+                        <span class="tb-text">Redo</span>
+                    </button>
+                </div>
+
+                <div class="tb-divider"></div>
+
+                <div class="tb-group">
+                    <button class="tb-btn tb-add" id="addCurrentBtn" disabled title="Thêm Beat tại vị trí hiện tại (F / J / Z / X)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        <span class="tb-text">Thêm Beat</span>
+                    </button>
+                    <button class="tb-btn tb-dash" id="dashToggleBtn" disabled title="Chuyển đổi / Gộp Gạch Lướt (D)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        <span class="tb-text">Gạch Lướt</span>
+                    </button>
+                    <button class="tb-btn tb-del" id="deleteSelectedBtn" disabled title="Xóa các beat đang chọn (Del / Backspace)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        <span class="tb-text">Xóa</span>
+                    </button>
+                    <button class="tb-btn tb-align" id="quickAlignBtn" disabled title="Căn đều các beat đang chọn (E)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="12" x2="9" y2="12"/><line x1="21" y1="18" x2="7" y2="18"/></svg>
+                        <span class="tb-text">Căn đều</span>
+                    </button>
+                </div>
+
+                <div class="tb-divider"></div>
+
+                <div class="tb-group">
+                    <button class="tb-btn tb-export" id="exportBtn" disabled title="Xuất Beatmap JSON">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        <span class="tb-text">Xuất JSON</span>
+                    </button>
+                    <button class="tb-btn tb-save" id="saveMemoryBtn" disabled title="Lưu vào Lịch sử trình duyệt">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        <span class="tb-text">Lưu</span>
+                    </button>
+                    <button class="tb-btn tb-reset" id="resetBtn" disabled title="Làm lại từ đầu">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l5.67-5.67"/></svg>
+                        <span class="tb-text">Làm lại</span>
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -111,25 +199,16 @@
             </div>
 
             <div style="position: relative; z-index: 10;">
-                <div id="time">00:00.000</div>
-                <div id="status">Sẵn sàng</div>
-                <div id="beatCount">Beat: 0</div>
-            </div>
-
-            <div class="controls" style="position: relative; z-index: 10;">
-                <button class="play" id="playBtn" disabled>▶ Phát</button>
-                <button class="record" id="recordBtn" disabled>⏺ Ghi Beat</button>
-                <button class="add-current" id="addCurrentBtn" disabled>➕ Thêm Beat</button>
-                <button class="undo" id="undoBtn" disabled title="Hoàn tác thao tác trước (Ctrl+Z)">↶ Hoàn tác (Undo)</button>
-                <button class="redo" id="redoBtn" disabled title="Làm lại thao tác vừa hoàn tác (Ctrl+Y / Ctrl+Shift+Z)">↷ Làm lại (Redo)</button>
-                <button class="export" id="exportBtn" disabled>📦 Xuất JSON</button>
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <button class="export" id="saveMemoryBtn" disabled style="background: #10b981; margin: 0;">💾 Lưu vào Lịch sử</button>
-                    <label style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 4px; cursor: pointer;">
-                        <input type="checkbox" id="autoSaveToggle" checked> Tự động lưu
-                    </label>
+                <div style="display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                    <div id="time">00:00.000</div>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <div id="beatCount" style="margin: 0;">Beat: 0</div>
+                        <label style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;">
+                            <input type="checkbox" id="autoSaveToggle" checked> Tự động lưu
+                        </label>
+                    </div>
                 </div>
-                <button class="reset-btn" id="resetBtn" disabled>🔄 Làm lại từ đầu</button>
+                <div id="status" style="margin-bottom: 15px;">Sẵn sàng</div>
             </div>
 
             <!-- Tự động Tạo Beat bằng các Mô Hình khác nhau -->
