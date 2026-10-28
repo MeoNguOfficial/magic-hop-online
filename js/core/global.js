@@ -108,20 +108,22 @@ const togglePreservePitch = document.getElementById('toggle-preserve-pitch');
 const limitBeatmapAudioSelect = document.getElementById('limit-beatmap-audio-select');
 
 // --- FULLSCREEN HELPERS ---
+const FULLSCREEN_ENTER_METHODS = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'];
+const FULLSCREEN_EXIT_METHODS = ['exitFullscreen', 'webkitExitFullscreen', 'mozCancelFullScreen', 'msExitFullscreen'];
+
 function triggerEnterFullscreen() {
     const docElm = document.documentElement;
-    if (docElm.requestFullscreen) {
-        docElm.requestFullscreen().then(() => {
+    const method = FULLSCREEN_ENTER_METHODS.find(m => docElm[m]);
+    if (!method) return;
+
+    const result = docElm[method]();
+    // Chỉ API chuẩn trả về Promise
+    if (method === 'requestFullscreen' && result && typeof result.then === 'function') {
+        result.then(() => {
             if (navigator.keyboard && typeof navigator.keyboard.lock === 'function') {
                 navigator.keyboard.lock(['Escape']).catch(err => console.warn('[Fullscreen] Lock Escape failed:', err));
             }
         }).catch(err => console.warn('[Fullscreen] Lỗi:', err));
-    } else if (docElm.webkitRequestFullscreen) {
-        docElm.webkitRequestFullscreen();
-    } else if (docElm.mozRequestFullScreen) {
-        docElm.mozRequestFullScreen();
-    } else if (docElm.msRequestFullscreen) {
-        docElm.msRequestFullscreen();
     }
 }
 
@@ -129,18 +131,33 @@ function triggerExitFullscreen() {
     if (navigator.keyboard && typeof navigator.keyboard.unlock === 'function') {
         navigator.keyboard.unlock();
     }
-    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-        return;
+    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement ||
+                         document.mozFullScreenElement || document.msFullscreenElement;
+    if (!isFullscreen) return;
+
+    const method = FULLSCREEN_EXIT_METHODS.find(m => document[m]);
+    if (!method) return;
+
+    const result = document[method]();
+    if (method === 'exitFullscreen' && result && typeof result.catch === 'function') {
+        result.catch(err => console.warn('[Fullscreen] Lỗi:', err));
     }
-    if (document.exitFullscreen) {
-        document.exitFullscreen().catch(err => console.warn('[Fullscreen] Lỗi:', err));
-    } else if (document.webkitExitFullscreen) {
-        document.webkitExitFullscreen();
-    } else if (document.mozCancelFullScreen) {
-        document.mozCancelFullScreen();
-    } else if (document.msExitFullscreen) {
-        document.msExitFullscreen();
-    }
+}
+
+// --- MENU AUDIO HELPERS (dùng chung cho nhiều nhánh trong changeSong) ---
+function getMenuTargetVolume() {
+    if (typeof isMenuMuted !== 'undefined' && isMenuMuted) return 0;
+    return typeof menuVolume !== 'undefined' ? menuVolume : 0.5;
+}
+
+// Mở lại filter + gain của nhạc menu (ramp 0.1s). Yêu cầu menuFilterNode/menuGainNode tồn tại.
+function rampMenuAudioOpen(now) {
+    menuFilterNode.frequency.cancelScheduledValues(now);
+    menuGainNode.gain.cancelScheduledValues(now);
+    menuFilterNode.frequency.setValueAtTime(menuFilterNode.frequency.value, now);
+    menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
+    menuFilterNode.frequency.linearRampToValueAtTime(22050, now + 0.1);
+    menuGainNode.gain.linearRampToValueAtTime(getMenuTargetVolume(), now + 0.1);
 }
 
 // --- BIẾN THREE.JS ---
@@ -402,14 +419,9 @@ async function changeSong(index, autoStart = false) {
                     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
                     if (menuFilterNode && menuGainNode) {
                         const now = audioCtx.currentTime;
-                        menuFilterNode.frequency.cancelScheduledValues(now);
-                        menuGainNode.gain.cancelScheduledValues(now);
-                        menuFilterNode.frequency.setValueAtTime(menuFilterNode.frequency.value, now);
-                        menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
-                        menuFilterNode.frequency.linearRampToValueAtTime(22050, now + 0.1);
-                        menuGainNode.gain.linearRampToValueAtTime((typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.5), now + 0.1);
+                        rampMenuAudioOpen(now);
                     } else if (!audioCtx && menuAudio) {
-                        menuAudio.volume = (typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.5);
+                        menuAudio.volume = getMenuTargetVolume();
                     }
                     const playPromise = menuAudio.play();
                     if (playPromise !== undefined) {
@@ -603,14 +615,9 @@ async function changeSong(index, autoStart = false) {
     if (!autoStart) {
         if (menuFilterNode && menuGainNode && currentPreviewIndex === -1) {
             const now = audioCtx.currentTime;
-            menuFilterNode.frequency.cancelScheduledValues(now);
-            menuGainNode.gain.cancelScheduledValues(now);
-            menuFilterNode.frequency.setValueAtTime(menuFilterNode.frequency.value, now);
-            menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
-            menuFilterNode.frequency.linearRampToValueAtTime(22050, now + 0.1);
-            menuGainNode.gain.linearRampToValueAtTime((typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.5), now + 0.1);
+            rampMenuAudioOpen(now);
         } else if (!audioCtx && menuAudio) {
-            menuAudio.volume = (typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.5);
+            menuAudio.volume = getMenuTargetVolume();
         }
         const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
         if (!isIntroVisible && menuAudio && currentPreviewIndex === -1) {
@@ -971,27 +978,19 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
     const hasHardPassed = (isRage && isNormalModePassed) || ragePassed || !!currentSong?.is_hard_mode_passed;
     const hasAsianPassed = (isAsian && isNormalModePassed) || asianPassed || !!currentSong?.is_asian_mode_passed;
 
-    if (isEasy) {
-        payload.easy_mode_score = finalScore;
-        payload.is_easy_mode = 1;
-        payload.mode = 'easy';
-        if (hasEasyPassed) payload.is_easy_mode_passed = 1;
-    } else if (isAsian) {
-        payload.asian_mode_score = finalScore;
-        payload.is_asian_mode = 1;
-        payload.mode = 'asian';
-        if (hasAsianPassed) payload.is_asian_mode_passed = 1;
-    } else if (isRage) {
-        payload.hard_mode_score = finalScore;
-        payload.is_hard_mode = 1;
-        payload.is_rage_mode = 1;
-        payload.mode = 'hard';
-        if (hasHardPassed) payload.is_hard_mode_passed = 1;
-    } else {
-        payload.score = finalScore;
-        payload.mode = 'normal';
-        if (hasNormalPassed) payload.is_normal_mode_passed = 1;
-    }
+    // Ưu tiên độ khó giống logic cũ: Easy > Asian > Hard > Normal
+    const modeConfig = isEasy
+        ? { mode: 'easy', scoreKey: 'easy_mode_score', flags: { is_easy_mode: 1 }, passedKey: 'is_easy_mode_passed', passed: hasEasyPassed }
+        : isAsian
+            ? { mode: 'asian', scoreKey: 'asian_mode_score', flags: { is_asian_mode: 1 }, passedKey: 'is_asian_mode_passed', passed: hasAsianPassed }
+            : isRage
+                ? { mode: 'hard', scoreKey: 'hard_mode_score', flags: { is_hard_mode: 1, is_rage_mode: 1 }, passedKey: 'is_hard_mode_passed', passed: hasHardPassed }
+                : { mode: 'normal', scoreKey: 'score', flags: {}, passedKey: 'is_normal_mode_passed', passed: hasNormalPassed };
+
+    payload[modeConfig.scoreKey] = finalScore;
+    Object.assign(payload, modeConfig.flags);
+    payload.mode = modeConfig.mode;
+    if (modeConfig.passed) payload[modeConfig.passedKey] = 1;
 
     if (Array.isArray(beatsInput) && beatsInput.length > 0) {
         payload.beat = beatsInput;
@@ -1306,13 +1305,11 @@ if (adminSpeedGainReset) {
     });
 }
 
+const GLOW_HEIGHT_BY_QUALITY = { hd: 0.75, fhd: 1.5, qhd: 1.75, uhd: 2.0 };
+
 function getCurrentGlowHeight() {
     if (typeof currentGraphicsQuality === 'undefined') return 1.5;
-    if (currentGraphicsQuality === 'hd') return 0.75;
-    if (currentGraphicsQuality === 'fhd') return 1.5;
-    if (currentGraphicsQuality === 'qhd') return 1.75;
-    if (currentGraphicsQuality === 'uhd') return 2.0;
-    return 1.5; // Default / Fallback
+    return GLOW_HEIGHT_BY_QUALITY[currentGraphicsQuality] ?? 1.5; // Default / Fallback
 }
 
 function isGlowEnabled() {
@@ -1421,44 +1418,44 @@ document.addEventListener('keydown', function (event) {
 // ============================================================
 // HỆ THỐNG GIAO DIỆN NỀN & MÀU KHUNG/TEXT THEO ĐỘ KHÓ (MAIN MENU THEME)
 // ============================================================
-function updateMainMenuTheme() {
-    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
-    const isHard  = window.HardModeManager && window.HardModeManager.isEnabled;
-    const isEasy  = window.EasyModeManager && window.EasyModeManager.isEnabled;
-
-    let theme = {
+const MAIN_MENU_THEMES = {
+    normal: {
         name: 'normal',
         primaryColor: '#22d3ee',        // Neon Cyan
         borderColor: 'rgba(6, 182, 212, 0.45)',
         glowColor: 'rgba(6, 182, 212, 0.3)',
         activeTabBg: 'rgba(6, 182, 212, 0.15)'
-    };
-
-    if (isAsian) {
-        theme = {
-            name: 'asian',
-            primaryColor: '#f43f5e',     // Red / Crimson
-            borderColor: 'rgba(239, 68, 68, 0.65)',
-            glowColor: 'rgba(239, 68, 68, 0.45)',
-            activeTabBg: 'rgba(239, 68, 68, 0.15)'
-        };
-    } else if (isHard) {
-        theme = {
-            name: 'hard',
-            primaryColor: '#fbbf24',     // Amber / Flame Orange
-            borderColor: 'rgba(245, 158, 11, 0.55)',
-            glowColor: 'rgba(245, 158, 11, 0.35)',
-            activeTabBg: 'rgba(245, 158, 11, 0.15)'
-        };
-    } else if (isEasy) {
-        theme = {
-            name: 'easy',
-            primaryColor: '#34d399',     // Emerald Green
-            borderColor: 'rgba(16, 185, 129, 0.55)',
-            glowColor: 'rgba(16, 185, 129, 0.35)',
-            activeTabBg: 'rgba(16, 185, 129, 0.15)'
-        };
+    },
+    asian: {
+        name: 'asian',
+        primaryColor: '#f43f5e',        // Red / Crimson
+        borderColor: 'rgba(239, 68, 68, 0.65)',
+        glowColor: 'rgba(239, 68, 68, 0.45)',
+        activeTabBg: 'rgba(239, 68, 68, 0.15)'
+    },
+    hard: {
+        name: 'hard',
+        primaryColor: '#fbbf24',        // Amber / Flame Orange
+        borderColor: 'rgba(245, 158, 11, 0.55)',
+        glowColor: 'rgba(245, 158, 11, 0.35)',
+        activeTabBg: 'rgba(245, 158, 11, 0.15)'
+    },
+    easy: {
+        name: 'easy',
+        primaryColor: '#34d399',        // Emerald Green
+        borderColor: 'rgba(16, 185, 129, 0.55)',
+        glowColor: 'rgba(16, 185, 129, 0.35)',
+        activeTabBg: 'rgba(16, 185, 129, 0.15)'
     }
+};
+
+function updateMainMenuTheme() {
+    const isAsian = window.AsianModeManager && window.AsianModeManager.isEnabled;
+    const isHard  = window.HardModeManager && window.HardModeManager.isEnabled;
+    const isEasy  = window.EasyModeManager && window.EasyModeManager.isEnabled;
+
+    // Ưu tiên: Asian > Hard > Easy > Normal
+    const theme = MAIN_MENU_THEMES[isAsian ? 'asian' : isHard ? 'hard' : isEasy ? 'easy' : 'normal'];
 
     // Dynamic Style Tag Injection to apply theme to ALL UI elements seamlessly
     let styleTag = document.getElementById('dynamic-difficulty-theme-style');

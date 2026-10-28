@@ -627,6 +627,40 @@ function initBallTrail() {
     }
 }
 
+// --- HELPER: tránh lặp lại cụm if/else ở nhiều nhánh hạ cánh ---
+function isFinalStarTile(tile) {
+    return !!(tile && tile.userData && tile.userData.isFinalStarTile);
+}
+
+function isFinalStarLanding(tile) {
+    return window.chosenPlayMode === 'normal' && isFinalStarTile(tile);
+}
+
+function clearDashState() {
+    isDashing = false;
+    window.isDashing = false;
+    dashTargetTile = null;
+    window.dashTargetTile = null;
+    window.dashStartTime = 0;
+    window.dashEndTime = 0;
+}
+
+function startVictoryTransition() {
+    if (isVictoryTransition) return;
+    isVictoryTransition = true;
+    victoryTimeElapsed = 0;
+    victoryCameraDecay = 1.0;
+    ballVictoryVelocityY = 32; // Khởi động nhảy cao
+    if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
+        starCollectAudio.currentTime = 0;
+        starCollectAudio.play().catch(() => { });
+    } else if (typeof newBestAudio !== 'undefined' && newBestAudio) {
+        newBestAudio.currentTime = 0;
+        newBestAudio.play().catch(() => { });
+    }
+    if (typeof fadeOutGameAudio === 'function') fadeOutGameAudio(1.2);
+}
+
 // --- BẮT ĐẦU ROUND MỚI KHI HẠ CÁNH LÊN TILE ROUND-START (dùng cho cả gạch thường và Dash) ---
 function applyRoundStartLanding(tile) {
     if (!tile || !tile.userData || !tile.userData.isRoundStart) return;
@@ -2774,9 +2808,9 @@ function animate() {
             const uData = tile.userData;
             const isDashActive = uData.isDashTile && isDashing && dashTargetTile === tile;
             const hasBounce = (uData.b !== undefined && uData.b > 0) ||
-                              (uData.bounceY !== undefined && uData.bounceY !== 0) ||
-                              (uData.springVelocityY !== undefined && uData.springVelocityY !== 0) ||
-                              isDashActive;
+                (uData.bounceY !== undefined && uData.bounceY !== 0) ||
+                (uData.springVelocityY !== undefined && uData.springVelocityY !== 0) ||
+                isDashActive;
             const needsScale = uData.scale !== targetTileScaleCached;
             const needsHitbox = uData.hitboxMesh && (!uData._hitboxInit || uData.hitboxMesh.visible !== isHitboxVisibleCached);
 
@@ -3112,12 +3146,7 @@ function animate() {
                         dashTargetTile.userData.springVelocityY = 12.0; // Bật trả lại vị trí khi bóng trượt rơi
                     }
                     isFalling = true;
-                    isDashing = false;
-                    window.isDashing = false;
-                    dashTargetTile = null;
-                    window.dashTargetTile = null;
-                    window.dashStartTime = 0;
-                    window.dashEndTime = 0;
+                    clearDashState();
                     fallVelocityY = -5;
                     fallVelocityZ = baseBallVelocityZ * gameSpeed;
                     fallVelocityX = (ballTargetX - ball.position.x) * 15;
@@ -3190,35 +3219,17 @@ function animate() {
 
                         // Dash tile đã được làm mờ ngay khi chạm điểm đầu (entrance)
                         const finishedDashTile = dashTargetTile;
-                        isDashing = false;
-                        window.isDashing = false;
-                        dashTargetTile = null;
-                        window.dashTargetTile = null;
-                        window.dashStartTime = 0;
-                        window.dashEndTime = 0;
+                        clearDashState();
 
                         // Kiểm tra nếu đây là block cuối cùng trong normal mode (Final Star Tile)
-                        const isFinalDash = (window.chosenPlayMode === 'normal') && (
-                            (finishedDashTile && finishedDashTile.userData && finishedDashTile.userData.isFinalStarTile) ||
-                            (tiles[currentTileIndex] && tiles[currentTileIndex].userData && tiles[currentTileIndex].userData.isFinalStarTile) ||
-                            (currentTileIndex >= tiles.length - 1)
+                        const isFinalDash = window.chosenPlayMode === 'normal' && (
+                            isFinalStarTile(finishedDashTile) ||
+                            isFinalStarTile(tiles[currentTileIndex]) ||
+                            currentTileIndex >= tiles.length - 1
                         );
 
                         if (isFinalDash) {
-                            isVictoryTransition = true;
-                            victoryTimeElapsed = 0;
-                            victoryCameraDecay = 1.0;
-                            ballVictoryVelocityY = 32;
-                            if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
-                                starCollectAudio.currentTime = 0;
-                                starCollectAudio.play().catch(() => { });
-                            } else if (typeof newBestAudio !== 'undefined' && newBestAudio) {
-                                newBestAudio.currentTime = 0;
-                                newBestAudio.play().catch(() => { });
-                            }
-                            if (typeof fadeOutGameAudio === 'function') {
-                                fadeOutGameAudio(1.2);
-                            }
+                            startVictoryTransition();
                         } else {
                             // Super Hop landing audio
                             if (typeof landingAudio !== 'undefined' && landingAudio) {
@@ -3401,18 +3412,8 @@ function animate() {
                             totalTilesJumped++;
 
                             const landedTileVal = tiles[currentTileIndex];
-                            if (window.chosenPlayMode === 'normal' && landedTileVal && landedTileVal.userData && landedTileVal.userData.isFinalStarTile) {
-                                isVictoryTransition = true;
-                                victoryTimeElapsed = 0;
-                                ballVictoryVelocityY = 32; // Khởi động nhảy cao
-                                if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
-                                    starCollectAudio.currentTime = 0;
-                                    starCollectAudio.play().catch(() => { });
-                                } else if (newBestAudio) {
-                                    newBestAudio.currentTime = 0;
-                                    newBestAudio.play().catch(() => { });
-                                }
-                                fadeOutGameAudio(1.2);
+                            if (isFinalStarLanding(landedTileVal)) {
+                                startVictoryTransition();
                             } else {
                                 const currentTile = tiles[currentTileIndex];
                                 if (currentTile && currentTile.userData.isRoundStart) {
@@ -3442,22 +3443,7 @@ function animate() {
                         }
                     } else {
                         if (window.chosenPlayMode === 'normal' && currentTileIndex === tiles.length - 1) {
-                            if (!isVictoryTransition) {
-                                isVictoryTransition = true;
-                                victoryTimeElapsed = 0;
-                                victoryCameraDecay = 1.0;
-                                ballVictoryVelocityY = 32;
-                                if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
-                                    starCollectAudio.currentTime = 0;
-                                    starCollectAudio.play().catch(() => { });
-                                } else if (typeof newBestAudio !== 'undefined' && newBestAudio) {
-                                    newBestAudio.currentTime = 0;
-                                    newBestAudio.play().catch(() => { });
-                                }
-                                if (typeof fadeOutGameAudio === 'function') {
-                                    fadeOutGameAudio(1.2);
-                                }
-                            }
+                            startVictoryTransition();
                         } else {
                             gameOver();
                         }
@@ -3611,18 +3597,8 @@ function animate() {
                     totalTilesJumped++;
 
                     const landedTileVal = tiles[currentTileIndex];
-                    if (window.chosenPlayMode === 'normal' && landedTileVal && landedTileVal.userData && landedTileVal.userData.isFinalStarTile) {
-                        isVictoryTransition = true;
-                        victoryTimeElapsed = 0;
-                        ballVictoryVelocityY = 32;
-                        if (typeof starCollectAudio !== 'undefined' && starCollectAudio) {
-                            starCollectAudio.currentTime = 0;
-                            starCollectAudio.play().catch(() => { });
-                        } else if (newBestAudio) {
-                            newBestAudio.currentTime = 0;
-                            newBestAudio.play().catch(() => { });
-                        }
-                        fadeOutGameAudio(1.2);
+                    if (isFinalStarLanding(landedTileVal)) {
+                        startVictoryTransition();
                     } else {
                         const currentTile = tiles[currentTileIndex];
                         if (currentTile && currentTile.userData.isRoundStart) {
