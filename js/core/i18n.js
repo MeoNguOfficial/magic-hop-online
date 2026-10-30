@@ -160,6 +160,10 @@ function applyTranslations() {
     if (typeof window.adjustTabsKerning === 'function') {
         window.adjustTabsKerning();
     }
+
+    if (typeof window.updateFullscreenUI === 'function') {
+        window.updateFullscreenUI();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async () => {

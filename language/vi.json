@@ -516,7 +516,6 @@
   "admin_btn_load_prev_hidden": "Bài Hát Ẩn Trang Trước",
   "admin_btn_load_next_hidden": "Bài Hát Ẩn Trang Sau",
   "admin_btn_load_more_data": "Tải Thêm Bản Ghi",
-
   "msg_confirm_reload": "Bạn vẫn muốn tiếp tục tải lại trang?",
   "score_title": "ĐIỂM SỐ CUỐI CÙNG",
   "lbl_best_score": "KỶ LỤC",
@@ -565,5 +564,11 @@
   "msg_record_deleted": "Đã xóa {count} mục dữ liệu",
   "msg_record_delete_err": "Không thể xóa kỷ lục: {err}",
   "account_switcher_login_needed": "Cần Đăng Nhập",
-  "account_switcher_logged_in": "Đã Đăng Nhập"
+  "account_switcher_logged_in": "Đã Đăng Nhập",
+  "btn_fullscreen": "FULLSCREEN",
+  "btn_exit_fullscreen": "EXIT FS",
+  "title_fullscreen": "Toàn màn hình (F11)",
+  "title_exit_fullscreen": "Thoát toàn màn hình (ESC / F11)",
+  "auto_fullscreen_bypassed_badge": "(Đang toàn màn hình)",
+  "auto_fullscreen_bypassed_tip": "Đang ở chế độ toàn màn hình: Tùy chọn này tạm thời được bỏ qua (bypass)."
 }

@@ -516,7 +516,6 @@
   "admin_btn_load_prev_hidden": "Previous Hidden Songs",
   "admin_btn_load_next_hidden": "Next Hidden Songs",
   "admin_btn_load_more_data": "Load More Records",
-
   "msg_confirm_reload": "Do you still want to proceed and reload the page?",
   "score_title": "FINAL SCORE",
   "lbl_best_score": "BEST SCORE",
@@ -565,5 +564,11 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "Login Needed",
-  "account_switcher_logged_in": "Logged In"
+  "account_switcher_logged_in": "Logged In",
+  "btn_fullscreen": "FULLSCREEN",
+  "btn_exit_fullscreen": "EXIT FS",
+  "title_fullscreen": "Fullscreen (F11)",
+  "title_exit_fullscreen": "Exit Fullscreen (ESC / F11)",
+  "auto_fullscreen_bypassed_badge": "(Fullscreen Active)",
+  "auto_fullscreen_bypassed_tip": "Currently in fullscreen mode: This option is bypassed."
 }

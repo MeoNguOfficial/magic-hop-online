@@ -1585,9 +1585,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleAutoFullscreen) {
         toggleAutoFullscreen.checked = autoFullscreenEnabled;
         toggleAutoFullscreen.addEventListener('change', (e) => {
+            if (typeof isCurrentlyFullscreen === 'function' && isCurrentlyFullscreen()) {
+                return;
+            }
             autoFullscreenEnabled = e.target.checked;
             localStorage.setItem('autoFullscreenEnabled', autoFullscreenEnabled);
         });
+    }
+    if (typeof window.updateFullscreenUI === 'function') {
+        window.updateFullscreenUI();
     }
 
     const toggleShowFps = document.getElementById('toggle-show-fps');

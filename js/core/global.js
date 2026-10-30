@@ -111,6 +111,14 @@ const limitBeatmapAudioSelect = document.getElementById('limit-beatmap-audio-sel
 const FULLSCREEN_ENTER_METHODS = ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullScreen', 'msRequestFullscreen'];
 const FULLSCREEN_EXIT_METHODS = ['exitFullscreen', 'webkitExitFullscreen', 'mozCancelFullScreen', 'msExitFullscreen'];
 
+window.enteredByAutoFullscreen = false;
+
+function isCurrentlyFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement ||
+              document.mozFullScreenElement || document.msFullscreenElement);
+}
+window.isCurrentlyFullscreen = isCurrentlyFullscreen;
+
 function triggerEnterFullscreen() {
     const docElm = document.documentElement;
     const method = FULLSCREEN_ENTER_METHODS.find(m => docElm[m]);
@@ -118,11 +126,12 @@ function triggerEnterFullscreen() {
 
     const result = docElm[method]();
     // Chỉ API chuẩn trả về Promise
-    if (method === 'requestFullscreen' && result && typeof result.then === 'function') {
+    if (result && typeof result.then === 'function') {
         result.then(() => {
             if (navigator.keyboard && typeof navigator.keyboard.lock === 'function') {
                 navigator.keyboard.lock(['Escape']).catch(err => console.warn('[Fullscreen] Lock Escape failed:', err));
             }
+            updateFullscreenUI();
         }).catch(err => console.warn('[Fullscreen] Lỗi:', err));
     }
 }
@@ -131,17 +140,112 @@ function triggerExitFullscreen() {
     if (navigator.keyboard && typeof navigator.keyboard.unlock === 'function') {
         navigator.keyboard.unlock();
     }
-    const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement ||
-                         document.mozFullScreenElement || document.msFullscreenElement;
+    const isFullscreen = isCurrentlyFullscreen();
     if (!isFullscreen) return;
 
     const method = FULLSCREEN_EXIT_METHODS.find(m => document[m]);
     if (!method) return;
 
     const result = document[method]();
-    if (method === 'exitFullscreen' && result && typeof result.catch === 'function') {
+    if (result && typeof result.then === 'function') {
+        result.then(() => {
+            updateFullscreenUI();
+        }).catch(err => console.warn('[Fullscreen] Lỗi:', err));
+    } else if (result && typeof result.catch === 'function') {
         result.catch(err => console.warn('[Fullscreen] Lỗi:', err));
     }
+}
+
+function toggleFullscreen() {
+    if (isCurrentlyFullscreen()) {
+        window.enteredByAutoFullscreen = false;
+        triggerExitFullscreen();
+    } else {
+        window.enteredByAutoFullscreen = false;
+        triggerEnterFullscreen();
+    }
+}
+window.toggleFullscreen = toggleFullscreen;
+
+function updateFullscreenUI() {
+    const isFs = isCurrentlyFullscreen();
+
+    // 1. Cập nhật các nút Fullscreen trên Header (Desktop & Mobile)
+    const fsBtns = document.querySelectorAll('.header-fullscreen-toggle');
+    fsBtns.forEach(btn => {
+        const enterIcon = btn.querySelector('.fullscreen-icon-enter');
+        const exitIcon = btn.querySelector('.fullscreen-icon-exit');
+        const textSpan = btn.querySelector('.fullscreen-btn-text');
+
+        if (isFs) {
+            btn.classList.add('active-fullscreen', 'border-pink-500/50', 'text-pink-400', 'bg-pink-950/30', 'shadow-[0_0_12px_rgba(236,72,153,0.3)]');
+            btn.classList.remove('border-cyan-500/40', 'text-cyan-400', 'bg-black/40', 'shadow-[0_0_10px_rgba(6,182,212,0.15)]');
+            if (enterIcon) enterIcon.classList.add('hidden');
+            if (exitIcon) exitIcon.classList.remove('hidden');
+            if (textSpan) textSpan.textContent = typeof t === 'function' ? t('btn_exit_fullscreen') : 'EXIT FS';
+            btn.title = typeof t === 'function' ? t('title_exit_fullscreen') : 'Thoát toàn màn hình (ESC / F11)';
+        } else {
+            btn.classList.remove('active-fullscreen', 'border-pink-500/50', 'text-pink-400', 'bg-pink-950/30', 'shadow-[0_0_12px_rgba(236,72,153,0.3)]');
+            btn.classList.add('border-cyan-500/40', 'text-cyan-400', 'bg-black/40', 'shadow-[0_0_10px_rgba(6,182,212,0.15)]');
+            if (enterIcon) enterIcon.classList.remove('hidden');
+            if (exitIcon) exitIcon.classList.add('hidden');
+            if (textSpan) textSpan.textContent = typeof t === 'function' ? t('btn_fullscreen') : 'FULLSCREEN';
+            btn.title = typeof t === 'function' ? t('title_fullscreen') : 'Toàn màn hình (F11)';
+        }
+    });
+
+    // 2. Làm mờ và vô hiệu hóa / bypass tùy chọn "Tự động toàn màn hình" trong Settings khi đang ở toàn màn hình sẵn
+    const toggleAutoFs = document.getElementById('toggle-auto-fullscreen');
+    const labelAutoFs = document.getElementById('label-auto-fullscreen');
+    const bypassBadge = document.getElementById('auto-fullscreen-bypass-badge');
+
+    if (toggleAutoFs) {
+        if (isFs) {
+            toggleAutoFs.disabled = true;
+            if (labelAutoFs) {
+                labelAutoFs.classList.add('opacity-40', 'pointer-events-none');
+                labelAutoFs.title = typeof t === 'function' ? t('auto_fullscreen_bypassed_tip') : 'Đang ở chế độ toàn màn hình: Tùy chọn này tạm thời được bỏ qua (bypass).';
+            }
+            if (bypassBadge) bypassBadge.classList.remove('hidden');
+        } else {
+            toggleAutoFs.disabled = false;
+            toggleAutoFs.checked = (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled);
+            if (labelAutoFs) {
+                labelAutoFs.classList.remove('opacity-40', 'pointer-events-none');
+                labelAutoFs.removeAttribute('title');
+            }
+            if (bypassBadge) bypassBadge.classList.add('hidden');
+        }
+    }
+}
+window.updateFullscreenUI = updateFullscreenUI;
+
+// Lắng nghe thay đổi toàn màn hình từ hệ thống / trình duyệt
+['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+    document.addEventListener(evt, () => {
+        if (!isCurrentlyFullscreen()) {
+            window.enteredByAutoFullscreen = false;
+        }
+        updateFullscreenUI();
+    });
+});
+
+function initFullscreenButtons() {
+    document.querySelectorAll('.header-fullscreen-toggle').forEach(btn => {
+        if (!btn._fsBound) {
+            btn._fsBound = true;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleFullscreen();
+            });
+        }
+    });
+    updateFullscreenUI();
+}
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFullscreenButtons);
+} else {
+    initFullscreenButtons();
 }
 
 // --- MENU AUDIO HELPERS (dùng chung cho nhiều nhánh trong changeSong) ---
@@ -361,7 +465,15 @@ async function changeSong(index, autoStart = false) {
     // --- HIỆN LOADING NGAY LẬP TỨC KHI NHẤN PLAY ---
     if (autoStart) {
         if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled) {
-            triggerEnterFullscreen();
+            if (!isCurrentlyFullscreen()) {
+                window.enteredByAutoFullscreen = true;
+                triggerEnterFullscreen();
+            } else {
+                // Bỏ qua (bypass) auto-fullscreen vì đã ở chế độ toàn màn hình sẵn
+                window.enteredByAutoFullscreen = false;
+            }
+        } else {
+            window.enteredByAutoFullscreen = false;
         }
         isSongLoadingCancelled = false;
         loadingOverlay.style.display = 'flex';
@@ -405,8 +517,9 @@ async function changeSong(index, autoStart = false) {
             loadingCancelBtn.addEventListener('click', () => {
                 isSongLoadingCancelled = true;
                 loadingOverlay.style.display = 'none';
-                if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled) {
+                if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
                     triggerExitFullscreen();
+                    window.enteredByAutoFullscreen = false;
                 }
                 if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
                 if (tipInterval) clearInterval(tipInterval);
@@ -484,8 +597,9 @@ async function changeSong(index, autoStart = false) {
     // Nếu quá trình nạp map bị lỗi (Timeout/Network) hoặc bị hủy
     if (isSongLoadingCancelled || requestId !== currentChangeSongRequest) {
         if (tipInterval) clearInterval(tipInterval);
-        if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled) {
+        if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
             triggerExitFullscreen();
+            window.enteredByAutoFullscreen = false;
         }
         return;
     }
@@ -507,8 +621,9 @@ async function changeSong(index, autoStart = false) {
         if (!isCached) {
             if (autoStart) {
                 loadingOverlay.style.display = 'none';
-                if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled) {
+                if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
                     triggerExitFullscreen();
+                    window.enteredByAutoFullscreen = false;
                 }
             }
             if (tipInterval) clearInterval(tipInterval);
@@ -1541,7 +1656,11 @@ function updateMainMenuTheme() {
         #nav-menu-wrapper > div {
             color: ${theme.primaryColor} !important;
         }
-        #nav-menu-toggle {
+        #nav-menu-toggle, #mobile-fullscreen-btn {
+            border-color: ${theme.borderColor} !important;
+            color: ${theme.primaryColor} !important;
+        }
+        #header-fullscreen-btn:not(.active-fullscreen) {
             border-color: ${theme.borderColor} !important;
             color: ${theme.primaryColor} !important;
         }

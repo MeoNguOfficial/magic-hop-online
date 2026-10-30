@@ -1606,7 +1606,7 @@ async function initThree() {
 
     // Phím ESC và Nút thoát nhanh
     window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled) {
+        if (e.key === 'Escape' && typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
             e.preventDefault();
         }
         keys[e.key] = true;
@@ -5539,8 +5539,9 @@ function returnToMenu() {
         window.RageGameOverFireManager.stop();
     }
     isPlaying = false;
-    if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled) {
+    if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
         triggerExitFullscreen();
+        window.enteredByAutoFullscreen = false;
     }
     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
         if (typeof anime.remove === 'function') {
