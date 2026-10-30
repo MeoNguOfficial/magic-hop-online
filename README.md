@@ -487,9 +487,9 @@ const playlistSource = [
 
 ## 📜 Giấy phép & Bản quyền (License & Credits)
 
-Dự án phát hành dưới điều khoản **MEOTN OPEN SOURCE LICENSE**:
-- **Sử dụng tự do & Phi thương mại:** Bạn được tự do sử dụng, sao chép, tùy biến, học tập và trải nghiệm dự án cho mục đích cá nhân, giáo dục hoặc phi thương mại.
-- **Sử dụng thương mại:** Mọi hành vi sử dụng cho mục đích thương mại (kinh doanh, bán phần mềm, tích hợp dịch vụ thu phí) đều cần có sự liên hệ và cấp phép chính thức từ tác giả.
+Dự án phát hành dưới điều khoản **MIT License**:
+- Bạn được tự do sử dụng, sao chép, sửa đổi, hợp nhất, xuất bản, phân phối và sử dụng cho cả mục đích cá nhân lẫn thương mại theo các điều khoản của giấy phép MIT.
+
 - Xem chi tiết điều khoản tại [LICENSE](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/LICENSE) hoặc trang giao diện [license.html](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/license.html).
 
 ---

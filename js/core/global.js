@@ -1071,13 +1071,17 @@ if (secretCreditBtn) {
                         <span class="text-gray-500">${isVi ? 'Cung cấp (Powered by):' : 'Powered by:'}</span>
                         <span class="text-pink-400 font-bold drop-shadow-[0_0_5px_rgba(236,72,153,0.5)]">MeoTN Digital</span>
                     </div>
-                    <div class="flex justify-between">
+                    <div class="flex justify-between border-b border-cyan-500/10 pb-2">
                         <span class="text-gray-500">${isVi ? 'Nền tảng (Engine):' : 'Engine:'}</span>
                         <span class="text-gray-300 font-bold">MeoTN HOP v3.5</span>
                     </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">${isVi ? 'Giấy phép (License):' : 'License:'}</span>
+                        <a href="license.html" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 font-bold underline drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] transition-colors">MIT License</a>
+                    </div>
                 </div>
                 <div class="mt-4 text-center">
-                    <p class="text-[10px] text-gray-500 leading-relaxed font-bold">${isVi ? 'Dự án game âm nhạc phi thương mại. Cảm ơn bạn đã trải nghiệm!' : 'Non-commercial music game project. Thanks for playing!'}</p>
+                    <p class="text-[10px] text-gray-500 leading-relaxed font-bold">${isVi ? 'Dự án game âm nhạc mã nguồn mở (MIT). Cảm ơn bạn đã trải nghiệm!' : 'Open-source music game project (MIT). Thanks for playing!'}</p>
                     <p class="text-[10px] text-gray-400 mt-2 font-bold">${isVi ? 'Nếu cần thêm thông tin, vui lòng liên hệ:' : 'For inquiries, please contact:'}</p>
                     <a href="mailto:tranquockhanh.leaf@gmail.com" class="text-[11px] text-cyan-400 hover:text-cyan-300 underline font-orbitron font-bold drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] mt-1 block">tranquockhanh.leaf@gmail.com</a>
                 </div>
