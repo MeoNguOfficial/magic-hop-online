@@ -162,6 +162,7 @@ function updateConnectionStatusIndicator(source = 'server') {
     badges.forEach(badge => {
         const dot = badge.querySelector('.connection-status-dot');
         const text = badge.querySelector('.connection-status-text');
+        const icon = badge.querySelector('.connection-status-icon');
 
         if (isServer) {
             badge.classList.remove('border-yellow-500/40', 'bg-yellow-950/20', 'shadow-[0_0_10px_rgba(234,179,8,0.2)]', 'shadow-[0_0_8px_rgba(234,179,8,0.2)]');
@@ -170,6 +171,10 @@ function updateConnectionStatusIndicator(source = 'server') {
             if (dot) {
                 dot.classList.remove('bg-yellow-400', 'shadow-[0_0_8px_#facc15]', 'shadow-[0_0_6px_#facc15]');
                 dot.classList.add('bg-emerald-400', 'shadow-[0_0_8px_#10b981]');
+            }
+            if (icon) {
+                icon.classList.remove('text-yellow-400');
+                icon.classList.add('text-emerald-400');
             }
             if (text) {
                 text.classList.remove('text-yellow-400');
@@ -183,6 +188,10 @@ function updateConnectionStatusIndicator(source = 'server') {
             if (dot) {
                 dot.classList.remove('bg-emerald-400', 'shadow-[0_0_8px_#10b981]', 'shadow-[0_0_6px_#10b981]');
                 dot.classList.add('bg-yellow-400', 'shadow-[0_0_8px_#facc15]');
+            }
+            if (icon) {
+                icon.classList.remove('text-emerald-400');
+                icon.classList.add('text-yellow-400');
             }
             if (text) {
                 text.classList.remove('text-emerald-400');
@@ -201,12 +210,16 @@ if (typeof document !== 'undefined') {
         const badge = e.target.closest('.connection-status-badge');
         if (badge && window.ApiService && typeof window.ApiService.checkHealth === 'function') {
             const dot = badge.querySelector('.connection-status-dot');
+            const icon = badge.querySelector('.connection-status-icon');
             if (dot) dot.classList.add('animate-spin');
+            if (icon) icon.classList.add('animate-pulse');
             window.ApiService.checkHealth({ force: true }).then((res) => {
                 if (dot) dot.classList.remove('animate-spin');
+                if (icon) icon.classList.remove('animate-pulse');
                 updateConnectionStatusIndicator(res.isHealthy ? 'server' : 'cache');
             }).catch(() => {
                 if (dot) dot.classList.remove('animate-spin');
+                if (icon) icon.classList.remove('animate-pulse');
                 updateConnectionStatusIndicator('cache');
             });
         }
