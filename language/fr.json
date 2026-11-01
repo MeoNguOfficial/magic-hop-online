@@ -234,6 +234,8 @@
   "behind_desc": "Nombre de blocs gardés derrière vous.",
   "rel_pc_title": "Mouvement relatif (glisser PC)",
   "rel_pc_desc": "Cliquez et faites glisser pour vous déplacer (comme sur mobile).",
+  "pointer_lock_title": "Verrouillage du curseur Pointer Lock (PC)",
+  "pointer_lock_desc": "Verrouille et masque le curseur dans le canvas pour diriger, faites glisser à l'infini sans quitter la fenêtre.",
   "raw_input_title": "Entrée brute (PC)",
   "raw_input_desc": "Désactive tous les effets de lissage. La balle réagit instantanément 1:1 avec le mouvement de la souris.",
   "spawn_title": "Bloquer l'apparition",

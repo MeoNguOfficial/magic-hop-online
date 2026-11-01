@@ -31,6 +31,7 @@ const dedicatedGpuNoteEl = document.getElementById('dedicated-gpu-note');
 const togglePerfMode = document.getElementById('toggle-perf-mode');
 const toggleShockwaves = document.getElementById('toggle-shockwaves');
 const toggleRelativePC = document.getElementById('toggle-relative-pc');
+const togglePointerLock = document.getElementById('toggle-pointer-lock');
 const toggleRawInput = document.getElementById('toggle-raw-input');
 const toggleAntialiasing = document.getElementById('toggle-antialiasing');
 const toggleDynamicColors = document.getElementById('toggle-dynamic-colors');
@@ -358,8 +359,21 @@ let nonPerfectStreak = 0;
 let currentTileScale = 1.0;
 let lastInputX = 0;
 let isMouseDown = false;
+let pointerLockControlEnabled = localStorage.getItem('pointerLockControlEnabled') === 'true';
+let pointerLockExitExpected = false;
 let currentBeatHits = [];
 window.currentBeatHits = currentBeatHits;
+
+if (togglePointerLock) {
+    togglePointerLock.checked = pointerLockControlEnabled;
+    togglePointerLock.addEventListener('change', () => {
+        pointerLockControlEnabled = togglePointerLock.checked;
+        localStorage.setItem('pointerLockControlEnabled', pointerLockControlEnabled ? 'true' : 'false');
+        if (!pointerLockControlEnabled && typeof releaseGameplayPointerLock === 'function') {
+            releaseGameplayPointerLock();
+        }
+    });
+}
 
 // --- THÔNG SỐ VẬT LÝ ---
 let baseBallVelocityZ = -18; //Vận tốc lướt của block

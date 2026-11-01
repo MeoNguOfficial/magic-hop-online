@@ -214,6 +214,8 @@
   "behind_desc": "Number of blocks kept behind you.",
   "rel_pc_title": "Relative Movement (PC Drag)",
   "rel_pc_desc": "Click and drag to move (like on mobile).",
+  "pointer_lock_title": "Pointer Lock Control (PC)",
+  "pointer_lock_desc": "Locks and hides the mouse cursor in canvas to steer, drag infinitely without leaving the window.",
   "raw_input_title": "Raw Input (PC)",
   "raw_input_desc": "Disables all smoothing effects. Ball reacts instantly 1:1 with mouse movement.",
   "spawn_title": "Block Spawn",

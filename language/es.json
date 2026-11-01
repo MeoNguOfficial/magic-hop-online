@@ -234,6 +234,8 @@
   "behind_desc": "Número de bloques que se mantienen detrás de ti.",
   "rel_pc_title": "Movimiento relativo (arrastre de PC)",
   "rel_pc_desc": "Haga clic y arrastre para moverse (como en móvil).",
+  "pointer_lock_title": "Bloqueo de puntero Pointer Lock (PC)",
+  "pointer_lock_desc": "Bloquea y oculta el cursor en el canvas para dirigir, arrastre infinitamente sin salir de la ventana.",
   "raw_input_title": "Entrada sin formato (PC)",
   "raw_input_desc": "Desactiva todos los efectos de suavizado. La bola reacciona instantáneamente 1:1 con el movimiento del mouse.",
   "spawn_title": "Aparición de bloques",

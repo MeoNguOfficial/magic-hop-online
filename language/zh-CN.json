@@ -230,6 +230,8 @@
   "behind_desc": "保留在您身后的块数。",
   "rel_pc_title": "相对移动（PC 拖动）",
   "rel_pc_desc": "单击并拖动进行移动（就像在移动设备上一样）。",
+  "pointer_lock_title": "光标锁定控制 (PC)",
+  "pointer_lock_desc": "将鼠标锁定并隐藏在画布中以控制球，无限拖动且不离开窗口。",
   "raw_input_title": "原始输入 (PC)",
   "raw_input_desc": "禁用所有平滑效果。球会随着鼠标移动立即做出 1:1 反应。",
   "spawn_title": "块生成",

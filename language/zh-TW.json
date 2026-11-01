@@ -199,6 +199,8 @@
   "behind_desc": "保留在您身後的區塊數。",
   "rel_pc_title": "相對移動（PC 拖曳）",
   "rel_pc_desc": "點擊並拖曳進行移動（就像在行動裝置上一樣）。",
+  "pointer_lock_title": "游標鎖定控制 (PC)",
+  "pointer_lock_desc": "將滑鼠鎖定並隱藏在畫布中以控制球，無限拖曳且不離開視窗。",
   "raw_input_title": "原始輸入 (PC)",
   "raw_input_desc": "停用所有平滑效果。球會隨著滑鼠移動立即做出 1:1 反應。",
   "spawn_title": "區塊生成",

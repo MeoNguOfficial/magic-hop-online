@@ -10,6 +10,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'graphicsAPI',
     'preferDiscreteGpu',
     'isRelativePC',
+    'pointerLockControlEnabled',
     'rawInputEnabled',
     'bgParticlesEnabled',
     'antialiasingEnabled',
@@ -1209,6 +1210,13 @@ function applySettings() {
         isRelativePC = toggleRelativePC.checked;
         localStorage.setItem('isRelativePC', isRelativePC);
     }
+    if (typeof togglePointerLock !== 'undefined' && togglePointerLock) {
+        pointerLockControlEnabled = togglePointerLock.checked;
+        localStorage.setItem('pointerLockControlEnabled', pointerLockControlEnabled ? 'true' : 'false');
+        if (!pointerLockControlEnabled && typeof releaseGameplayPointerLock === 'function') {
+            releaseGameplayPointerLock();
+        }
+    }
     if (typeof toggleRawInput !== 'undefined' && toggleRawInput) {
         rawInputEnabled = toggleRawInput.checked;
         localStorage.setItem('rawInputEnabled', rawInputEnabled);
@@ -1745,6 +1753,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (toggleShockwaves) toggleShockwaves.addEventListener('change', applySettings);
     if (toggleRelativePC) toggleRelativePC.addEventListener('change', applySettings);
+    if (typeof togglePointerLock !== 'undefined' && togglePointerLock) togglePointerLock.addEventListener('change', applySettings);
     if (typeof toggleRawInput !== 'undefined' && toggleRawInput) toggleRawInput.addEventListener('change', applySettings);
     if (toggleAntialiasing) toggleAntialiasing.addEventListener('change', applySettings);
     if (toggleDynamicColors) toggleDynamicColors.addEventListener('change', applySettings);

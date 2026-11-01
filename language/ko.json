@@ -231,6 +231,8 @@
   "behind_desc": "뒤에 있는 블록 수.",
   "rel_pc_title": "상대 이동(PC 끌기)",
   "rel_pc_desc": "클릭하고 끌어서 이동하세요(예: 모바일).",
+  "pointer_lock_title": "포인터 잠금 제어 (PC)",
+  "pointer_lock_desc": "마우스 커서를 캔버스에 잠그고 숨겨 공을 조종하며, 창을 벗어나지 않고 무한 드래그합니다.",
   "raw_input_title": "원시 입력(PC)",
   "raw_input_desc": "모든 스무딩 효과를 비활성화합니다. 공은 마우스 움직임에 따라 즉시 1:1로 반응합니다.",
   "spawn_title": "블록 생성",

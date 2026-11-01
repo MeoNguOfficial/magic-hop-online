@@ -214,6 +214,8 @@
   "behind_desc": "Số lượng khối được giữ lại phía sau bạn.",
   "rel_pc_title": "Di chuyển tương đối (PC Drag)",
   "rel_pc_desc": "Nhấn giữ chuột và kéo để di chuyển (giống điện thoại).",
+  "pointer_lock_title": "Khóa chuột Pointer Lock (PC)",
+  "pointer_lock_desc": "Khóa và ẩn con trỏ chuột vào canvas để lái bóng, kéo vô hạn không rời cửa sổ.",
   "raw_input_title": "Raw Input (PC)",
   "raw_input_desc": "Loại bỏ độ trễ làm mượt (smoothing). Bóng phản hồi ngay lập tức 1:1 với chuột.",
   "spawn_title": "Xuất hiện gạch",

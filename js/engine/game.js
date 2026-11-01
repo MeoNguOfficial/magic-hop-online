@@ -918,6 +918,116 @@ function onInputMove(clientX) {
     ballTargetX = normalizedX * 6.75;
 }
 
+// --- POINTER LOCK CONTROL (PC) ---
+function isPointerLockActive() {
+    const currentLockEl = document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement;
+    return typeof renderer !== 'undefined' && !!renderer && !!renderer.domElement && currentLockEl === renderer.domElement;
+}
+
+function isAutoControlMode(useStorage) {
+    if (window.AutoplayManager && typeof window.AutoplayManager.shouldBypassInput === 'function' && window.AutoplayManager.shouldBypassInput()) {
+        return true;
+    }
+    if (typeof relaxModeEnabled !== 'undefined' && relaxModeEnabled) {
+        return true;
+    }
+    if (useStorage && typeof localStorage !== 'undefined' && localStorage.getItem('relaxModeEnabled') === 'true') {
+        return true;
+    }
+    return false;
+}
+
+function canUsePointerLockControl() {
+    if (typeof pointerLockControlEnabled === 'undefined' || !pointerLockControlEnabled) {
+        if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: setting-off');
+        return false;
+    }
+    if (typeof isRelativePC !== 'undefined' && isRelativePC) {
+        if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: relative-drag-on');
+        return false;
+    }
+    if (isAutoControlMode(true)) {
+        if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: autoplay-bot-relax');
+        return false;
+    }
+    if (typeof window.matchMedia === 'function') {
+        const hasFine = window.matchMedia('(pointer: fine)').matches || window.matchMedia('(any-pointer: fine)').matches;
+        if (!hasFine) {
+            if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: touch-device');
+            return false;
+        }
+    }
+    if (typeof renderer === 'undefined' || !renderer || !renderer.domElement || typeof renderer.domElement.requestPointerLock !== 'function') {
+        if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: unsupported');
+        return false;
+    }
+    return true;
+}
+
+let unadjustedMovementSupported = true;
+
+function requestGameplayPointerLock() {
+    if (!canUsePointerLockControl()) return;
+    if (typeof renderer === 'undefined' || !renderer || !renderer.domElement) return;
+
+    if (unadjustedMovementSupported) {
+        try {
+            const promise = renderer.domElement.requestPointerLock({ unadjustedMovement: true });
+            if (promise && typeof promise.catch === 'function') {
+                promise.catch((err) => {
+                    unadjustedMovementSupported = false;
+                    if (window.DEBUG_POINTERLOCK) console.warn('[PointerLock] unadjustedMovement rejected, fallback standard lock:', err);
+                    try {
+                        renderer.domElement.requestPointerLock();
+                    } catch (fallbackErr) {
+                        console.warn('[PointerLock] Fallback requestPointerLock failed:', fallbackErr);
+                    }
+                });
+            }
+            return;
+        } catch (err) {
+            unadjustedMovementSupported = false;
+            if (window.DEBUG_POINTERLOCK) console.warn('[PointerLock] unadjustedMovement threw error, fallback standard lock:', err);
+        }
+    }
+
+    try {
+        renderer.domElement.requestPointerLock();
+    } catch (fallbackErr) {
+        console.warn('[PointerLock] requestPointerLock failed:', fallbackErr);
+    }
+}
+
+function releaseGameplayPointerLock() {
+    if (isPointerLockActive()) {
+        pointerLockExitExpected = true;
+        try {
+            document.exitPointerLock();
+        } catch (e) {
+            console.warn('[PointerLock] exitPointerLock error:', e);
+        }
+    }
+}
+
+function handlePointerLockMove(e) {
+    if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) || isAutoControlMode(false)) {
+        return;
+    }
+    let deltaX = (typeof e.movementX !== 'undefined') ? e.movementX : (e.mozMovementX || e.webkitMovementX || 0);
+    if (deltaX === 0 || Math.abs(deltaX) > 400) {
+        return;
+    }
+    if (typeof invertControlsEnabled !== 'undefined' && invertControlsEnabled) {
+        deltaX = -deltaX;
+    }
+    if (typeof window.cachedControlWidth === 'undefined') {
+        window.cachedControlWidth = Math.min(window.innerWidth, window.innerHeight * 0.83);
+    }
+    const currentSens = typeof sensitivity !== 'undefined' ? sensitivity : 1.0;
+    const nextTargetX = ballTargetX + (deltaX / window.cachedControlWidth) * 13.5 * currentSens;
+    ballTargetX = Math.max(-6.75, Math.min(6.75, nextTargetX));
+}
+
 function onWindowResize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
@@ -1523,6 +1633,13 @@ async function initThree() {
     window.addEventListener('mousedown', (e) => {
         if (isTouchActive) return;
         if (e.button !== 0) return; // Chỉ cho phép chuột trái điều khiển
+        if (isPlaying && canUsePointerLockControl() && !isPointerLockActive()) {
+            requestGameplayPointerLock();
+        }
+        if (isPointerLockActive()) {
+            if (window.EasyModeManager) window.EasyModeManager.triggerPressEffect();
+            return;
+        }
         isMouseDown = true;
         lastInputX = e.clientX;
         window.absoluteControlCenter = e.clientX;
@@ -1538,6 +1655,13 @@ async function initThree() {
 
     window.addEventListener('mousemove', (e) => {
         if (isTouchActive) return;
+        if (isPointerLockActive()) {
+            if (!(typeof isRelativePC !== 'undefined' && isRelativePC)) {
+                handlePointerLockMove(e);
+                return;
+            }
+            releaseGameplayPointerLock();
+        }
         if (isRelativePC) {
             // Kiểm tra xem chuột trái có đang được nhấn giữ thực tế không
             const isLeftDown = (e.buttons !== undefined) ? (e.buttons & 1) === 1 : isMouseDown;
@@ -1603,6 +1727,38 @@ async function initThree() {
     }, { passive: false });
 
     window.addEventListener('resize', onWindowResize);
+
+    const onPointerLockChange = () => {
+        const isLocked = isPointerLockActive();
+        if (isLocked) {
+            isMouseDown = false;
+            if (window.DEBUG_POINTERLOCK) {
+                console.log('[PointerLock] ĐÃ khóa');
+            }
+        } else {
+            const wasExpected = pointerLockExitExpected;
+            pointerLockExitExpected = false;
+            if (window.DEBUG_POINTERLOCK) {
+                console.log(`[PointerLock] MẤT khóa (game chủ động: ${wasExpected}, isPlaying: ${isPlaying})`);
+            }
+            if (wasExpected) {
+                return;
+            }
+            if (isPlaying && (typeof pointerLockControlEnabled !== 'undefined' && pointerLockControlEnabled)) {
+                pauseGame();
+            }
+        }
+    };
+    document.addEventListener('pointerlockchange', onPointerLockChange);
+    document.addEventListener('mozpointerlockchange', onPointerLockChange);
+    document.addEventListener('webkitpointerlockchange', onPointerLockChange);
+
+    const onPointerLockError = (e) => {
+        console.warn('[PointerLock] pointerlockerror encountered, falling back to standard mouse control:', e);
+    };
+    document.addEventListener('pointerlockerror', onPointerLockError);
+    document.addEventListener('mozpointerlockerror', onPointerLockError);
+    document.addEventListener('webkitpointerlockerror', onPointerLockError);
 
     // Phím ESC và Nút thoát nhanh
     window.addEventListener('keydown', (e) => {
@@ -1842,6 +1998,7 @@ async function initThree() {
 
     if (toggleShockwaves) toggleShockwaves.checked = shockwavesEnabled;
     if (toggleRelativePC) toggleRelativePC.checked = isRelativePC;
+    if (togglePointerLock) togglePointerLock.checked = pointerLockControlEnabled;
     if (typeof toggleRawInput !== 'undefined' && toggleRawInput) toggleRawInput.checked = rawInputEnabled;
     if (toggleAntialiasing) toggleAntialiasing.checked = antialiasingEnabled;
     if (toggleDynamicColors) toggleDynamicColors.checked = dynamicColorsEnabled;
@@ -1882,6 +2039,7 @@ async function initThree() {
     if (uiVolumeSlider) uiVolumeSlider.value = uiVolume;
     if (typeof breakBlockVolumeSlider !== 'undefined' && breakBlockVolumeSlider) breakBlockVolumeSlider.value = typeof breakBlockVolume !== 'undefined' ? breakBlockVolume : 0.8;
     if (toggleRelativePC) toggleRelativePC.checked = isRelativePC;
+    if (togglePointerLock) togglePointerLock.checked = pointerLockControlEnabled;
 
     // ĐỒNG BỘ UI SETTINGS TRƯỚC KHI APPLY
     if (toggleTileBounce) toggleTileBounce.checked = tileBounceEnabled;
@@ -1899,13 +2057,27 @@ async function initThree() {
 
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const pcRelativeContainer = document.getElementById('pc-relative-container');
+    const pcPointerLockContainer = document.getElementById('pc-pointer-lock-container');
     const rawInputContainer = document.getElementById('raw-input-container');
     if (isMobile) {
         if (pcRelativeContainer) pcRelativeContainer.style.display = 'none';
+        if (pcPointerLockContainer) pcPointerLockContainer.style.display = 'none';
         if (rawInputContainer) rawInputContainer.style.display = 'none';
     }
 
     if (sfxVolumeSlider) sfxVolumeSlider.value = sfxVolume;
+
+    if (togglePointerLock && !togglePointerLock._hasPointerLockListener) {
+        togglePointerLock._hasPointerLockListener = true;
+        togglePointerLock.checked = pointerLockControlEnabled;
+        togglePointerLock.addEventListener('change', () => {
+            pointerLockControlEnabled = togglePointerLock.checked;
+            localStorage.setItem('pointerLockControlEnabled', pointerLockControlEnabled ? 'true' : 'false');
+            if (!pointerLockControlEnabled) {
+                releaseGameplayPointerLock();
+            }
+        });
+    }
 
     applySettings();
     updateBackgroundStyle();
@@ -4490,6 +4662,7 @@ window.DefaultGameOverParticleManager = {
 
 // --- GAME OVER ---
 async function gameOver() {
+    releaseGameplayPointerLock();
     isPlaying = false;
     const maxSpeedReached = gameSpeed;
     isVictoryTransition = false;
@@ -5530,6 +5703,7 @@ function setupGameStates() {
 }
 
 function returnToMenu() {
+    releaseGameplayPointerLock();
     const centerHud = document.getElementById('center-hud');
     if (centerHud) centerHud.style.display = 'none';
     const topLeftHud = document.getElementById('top-left-hud');
@@ -5679,6 +5853,10 @@ function showTapToOverlay(type = 'start') {
                 });
             }
             return;
+        }
+
+        if (!e || e.type === 'click' || e.type === 'mousedown' || e.type === 'pointerdown') {
+            requestGameplayPointerLock();
         }
 
         tapToPlayOverlay.style.display = 'none';
@@ -6151,6 +6329,7 @@ function startCountdown() {
 }
 
 function pauseGame() {
+    releaseGameplayPointerLock();
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) return;
     isPlaying = false;
     if (audio) audio.pause();
