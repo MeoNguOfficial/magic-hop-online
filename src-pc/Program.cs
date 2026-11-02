@@ -1,4 +1,12 @@
+using System;
+using System.Diagnostics;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Cyber Beat Hopper")]
 [assembly: AssemblyProduct("Cyber Beat Hopper")]
@@ -6,15 +14,6 @@ using System.Reflection;
 [assembly: AssemblyFileVersion("1.0.7.0")]
 [assembly: AssemblyInformationalVersion("1.0.7")]
 [assembly: AssemblyCopyright("Copyright © 2026 MeoTN Gaming")]
-
-using System;
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Net.Sockets;
-using System.Text;
-using System.Threading;
-using System.Windows.Forms;
 
 namespace CyberBeatHopper
 {
