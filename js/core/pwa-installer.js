@@ -74,47 +74,116 @@ function isPWAInstalled() {
         window.navigator.standalone === true ||
         (document.referrer && document.referrer.includes('android-app://')) ||
         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pwa_installed') === 'true') ||
-        (typeof localStorage !== 'undefined' && localStorage.getItem('pwa_installed') === 'true')
+        (typeof localStorage !== 'undefined' && localStorage.getItem('pwa_installed') === 'true') ||
+        (typeof window !== 'undefined' && window._isPWAInstalledNative)
     );
 }
+
+// Tự động kiểm tra PWA đã cài đặt qua API trình duyệt
+if (typeof navigator !== 'undefined' && 'getInstalledRelatedApps' in navigator) {
+    navigator.getInstalledRelatedApps().then(apps => {
+        if (apps && apps.length > 0) {
+            window._isPWAInstalledNative = true;
+            try { localStorage.setItem('pwa_installed', 'true'); } catch(e){}
+            if (typeof checkPWAInstallationStatus === 'function') checkPWAInstallationStatus();
+        }
+    }).catch(() => {});
+}
 window.isPWAInstalled = isPWAInstalled;
+
+/**
+ * Nhận diện hệ điều hành / thiết bị của người dùng để ưu tiên bản tải (Featured Hero Card)
+ */
+function detectUserDevicePlatform() {
+    const ua = (navigator.userAgent || '').toLowerCase();
+    const platform = (navigator.platform || '').toLowerCase();
+    if (/android/i.test(ua)) return 'android';
+    if (/iphone|ipad|ipod/i.test(ua) || (platform.includes('mac') && navigator.maxTouchPoints > 1)) return 'ios';
+    if (/mac/i.test(platform) || /macintosh/i.test(ua)) return 'macos';
+    return 'windows';
+}
+
+/**
+ * Tự động đồng bộ Featured Hero Card và danh sách nền tảng khác theo thiết bị
+ */
+function updateHeroPlatformCard() {
+    const dev = detectUserDevicePlatform();
+    const heroTitle = document.getElementById('hero-platform-title');
+    const heroDesc = document.getElementById('hero-platform-desc');
+    const heroBtn = document.getElementById('hero-action-btn');
+    const rowPC = document.getElementById('row-opt-pc');
+    const rowAPK = document.getElementById('row-opt-apk');
+
+    const downloadText = (typeof t === 'function' ? t('download_btn_download') : null) || 'TẢI VỀ';
+    const pcTitle = (typeof t === 'function' ? t('download_opt_pc_title') : null) || 'PC Windows (.exe)';
+    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.7 · 48 MB';
+    const apkTitle = (typeof t === 'function' ? t('download_opt_apk_title') : null) || 'Android (APK)';
+    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.0.7 · 32 MB';
+
+    if (dev === 'android') {
+        if (heroTitle) {
+            heroTitle.textContent = apkTitle;
+            heroTitle.setAttribute('data-i18n', 'download_opt_apk_title');
+        }
+        if (heroDesc) {
+            heroDesc.textContent = apkDesc;
+            heroDesc.setAttribute('data-i18n', 'download_opt_apk_desc');
+        }
+        if (heroBtn) {
+            heroBtn.textContent = downloadText;
+            heroBtn.setAttribute('data-i18n', 'download_btn_download');
+            heroBtn.href = window._cachedApkDownloadUrl || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest';
+        }
+        if (rowAPK) rowAPK.classList.add('hidden');
+        if (rowPC) rowPC.classList.remove('hidden');
+    } else {
+        if (heroTitle) {
+            heroTitle.textContent = pcTitle;
+            heroTitle.setAttribute('data-i18n', 'download_opt_pc_title');
+        }
+        if (heroDesc) {
+            heroDesc.textContent = pcDesc;
+            heroDesc.setAttribute('data-i18n', 'download_opt_pc_desc');
+        }
+        if (heroBtn) {
+            heroBtn.textContent = downloadText;
+            heroBtn.setAttribute('data-i18n', 'download_btn_download');
+            heroBtn.href = window._cachedPcDownloadUrl || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest';
+        }
+        if (rowPC) rowPC.classList.add('hidden');
+        if (rowAPK) rowAPK.classList.remove('hidden');
+    }
+}
+window.updateHeroPlatformCard = updateHeroPlatformCard;
 
 /**
  * Cập nhật trạng thái hiển thị của tùy chọn PWA trong modal tải ứng dụng
  */
 function checkPWAInstallationStatus() {
     const pwaBtn = document.getElementById('download-opt-pwa');
-    const badge = document.getElementById('pwa-badge-status');
     const desc = document.getElementById('pwa-desc-text');
     if (!pwaBtn) return;
 
     const isInstalled = isPWAInstalled();
     const isStandalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
 
+    const runningText = (typeof t === 'function' ? t('download_btn_running') : null) || 'ĐANG CHẠY';
+    const openText = (typeof t === 'function' ? t('download_btn_open') : null) || 'MỞ APP';
+    const installText = (typeof t === 'function' ? t('download_btn_install') : null) || 'CÀI ĐẶT';
+
     if (isStandalone) {
-        if (badge) {
-            badge.textContent = 'Đang chạy';
-            badge.className = 'text-[9px] font-orbitron px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 font-bold tracking-wider shadow-[0_0_8px_rgba(16,185,129,0.3)] whitespace-nowrap';
-        }
-        if (desc) desc.textContent = 'Bạn đang chơi trực tiếp trên ứng dụng PWA này';
-        pwaBtn.textContent = 'ĐANG CHẠY';
-        pwaBtn.className = 'shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-emerald-950/60 text-emerald-400 font-orbitron font-bold text-xs uppercase rounded-xl border border-emerald-500/40 cursor-default text-center whitespace-nowrap';
+        if (desc) desc.textContent = (typeof t === 'function' ? t('download_opt_pwa_desc') : 'Cài trực tiếp, mở tức thì, chơi được khi offline.');
+        pwaBtn.textContent = runningText;
+        pwaBtn.setAttribute('data-i18n', 'download_btn_running');
+        pwaBtn.className = 'shrink-0 px-4 py-2 border border-emerald-500/50 bg-emerald-950/40 text-emerald-400 font-orbitron font-bold text-xs uppercase rounded-lg cursor-default whitespace-nowrap';
     } else if (isInstalled) {
-        if (badge) {
-            badge.textContent = 'Đã cài đặt';
-            badge.className = 'text-[9px] font-orbitron px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold tracking-wider shadow-[0_0_8px_rgba(6,182,212,0.3)] whitespace-nowrap';
-        }
-        if (desc) desc.textContent = 'Ứng dụng đã sẵn sàng trên thiết bị của bạn';
-        pwaBtn.textContent = 'MỞ APP';
-        pwaBtn.className = 'cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-slate-950 font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all active:scale-95 text-center whitespace-nowrap';
+        pwaBtn.textContent = openText;
+        pwaBtn.setAttribute('data-i18n', 'download_btn_open');
+        pwaBtn.className = 'shrink-0 px-4 py-2 border border-cyan-400/80 bg-cyan-500/20 text-cyan-300 font-orbitron font-bold text-xs uppercase rounded-lg transition-all active:scale-95 cursor-pointer whitespace-nowrap shadow-[0_0_10px_rgba(6,182,212,0.25)]';
     } else {
-        if (badge) {
-            badge.textContent = 'Khuyên dùng';
-            badge.className = 'text-[9px] font-orbitron px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-400/40 font-bold tracking-wider shadow-[0_0_8px_rgba(6,182,212,0.3)] whitespace-nowrap';
-        }
-        if (desc) desc.textContent = 'Cài đặt trực tiếp, khởi động tức thì, hỗ trợ chơi Offline';
-        pwaBtn.textContent = 'CÀI ĐẶT';
-        pwaBtn.className = 'cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-slate-950 font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all active:scale-95 text-center whitespace-nowrap';
+        pwaBtn.textContent = installText;
+        pwaBtn.setAttribute('data-i18n', 'download_btn_install');
+        pwaBtn.className = 'shrink-0 px-4 py-2 border border-cyan-500/60 hover:bg-cyan-500/15 text-cyan-400 font-orbitron font-bold text-xs uppercase rounded-lg transition-all active:scale-95 cursor-pointer whitespace-nowrap';
     }
 }
 window.checkPWAInstallationStatus = checkPWAInstallationStatus;
@@ -123,12 +192,22 @@ window.checkPWAInstallationStatus = checkPWAInstallationStatus;
  * Hiển thị thông báo hướng dẫn khi người dùng mở PWA đã cài đặt
  */
 function showPWAInstalledPromptGuide() {
-    if (typeof showCustomNotification === 'function') {
-        showCustomNotification('Ứng dụng Cyber Beat Hopper đã được cài đặt! Bạn có thể mở biểu tượng trên màn hình chính (Desktop) hoặc thanh tác vụ.', 'info');
-    } else if (typeof showToast === 'function') {
-        showToast('Ứng dụng đã được cài đặt trên thiết bị của bạn!');
+    const lang = typeof activeLang !== 'undefined' ? activeLang : 'vi';
+    const title = typeof t === 'function' ? t('install_app_title') : 'TẢI APP';
+    const msg = lang === 'vi'
+        ? "Ứng dụng Cyber Beat Hopper đã được cài đặt trên máy của bạn!\n\n💡 Cách mở ứng dụng:\n1. Bấm vào biểu tượng [⊞↗] trên góc phải thanh địa chỉ (URL) Chrome để chọn 'Mở ứng dụng'.\n2. Hoặc tìm mở trực tiếp từ màn hình chính (Desktop) / Start Menu."
+        : "Cyber Beat Hopper is already installed on your device!\n\n💡 How to open:\n1. Click the [⊞↗] icon on the right side of the Chrome address bar to select 'Open app'.\n2. Or open directly from your Desktop / Start Menu.";
+
+    if (typeof showCyberModal === 'function') {
+        showCyberModal({
+            title: title,
+            message: msg,
+            type: 'alert'
+        });
+    } else if (typeof showCustomNotification === 'function') {
+        showCustomNotification(msg, 'info');
     } else {
-        alert('Cyber Beat Hopper đã được cài đặt trên máy của bạn. Hãy mở trực tiếp từ màn hình chính!');
+        alert(msg);
     }
 }
 window.showPWAInstalledPromptGuide = showPWAInstalledPromptGuide;
@@ -151,7 +230,7 @@ function compareSemVer(v1, v2) {
 }
 
 /**
- * Mở Modal Tải Ứng Dụng Đa Nền Tảng (PWA, PC Windows, Android APK, iOS, macOS)
+ * Mở Modal Tải Ứng Dụng Đa Nền Tảng (Thiết kế Cyberpunk hiện đại, Featured Platform & Nền tảng khác)
  */
 function showDownloadAppModal() {
     const modal = document.getElementById('download-app-modal');
@@ -160,9 +239,10 @@ function showDownloadAppModal() {
         return;
     }
 
-    // Cập nhật link tải mới nhất từ version.json nếu có
+    if (typeof updateHeroPlatformCard === 'function') updateHeroPlatformCard();
     if (typeof fetchLatestDownloadLinks === 'function') fetchLatestDownloadLinks();
     if (typeof checkPWAInstallationStatus === 'function') checkPWAInstallationStatus();
+    if (typeof applyTranslations === 'function') applyTranslations();
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -498,10 +578,13 @@ document.addEventListener('DOMContentLoaded', () => {
             e.preventDefault();
             e.stopPropagation();
             closeDownloadAppModal();
-            if (window.globalDeferredPrompt) {
-                showPWAInstallGuide();
-            } else if (isPWAInstalled()) {
+            if (isPWAInstalled()) {
+                try {
+                    window.open(window.location.origin + window.location.pathname, '_blank');
+                } catch (err) {}
                 showPWAInstalledPromptGuide();
+            } else if (window.globalDeferredPrompt) {
+                showPWAInstallGuide();
             } else {
                 showPWAInstallGuide();
             }

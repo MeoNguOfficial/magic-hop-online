@@ -166,6 +166,28 @@ function applyTranslations() {
     }
 }
 
+window.setGameLanguage = function (lang) {
+    if (!availableLangs.includes(lang)) return;
+    localStorage.setItem('selectedLanguage', lang);
+    userLang = lang;
+    detectLanguage();
+    applyTranslations();
+    if (typeof window.checkPWAInstallationStatus === 'function') {
+        window.checkPWAInstallationStatus();
+    }
+};
+
+window.showNotifyMe = function (platform) {
+    const msg = (typeof t === 'function' ? t('download_notify_toast') : null) || 'Cảm ơn bạn! Phiên bản này sẽ sớm có mặt trong bản cập nhật tới.';
+    if (typeof showCustomNotification === 'function') {
+        showCustomNotification(msg, 'info');
+    } else if (typeof showToast === 'function') {
+        showToast(msg);
+    } else {
+        alert(msg);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
     try {
         await translationsPromise;

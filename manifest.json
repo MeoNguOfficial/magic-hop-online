@@ -71,5 +71,16 @@
       "type": "image/png",
       "form_factor": "narrow"
     }
-  ]
+  ],
+  "scope": "./",
+  "launch_handler": {
+    "client_mode": "auto"
+  },
+  "related_applications": [
+    {
+      "platform": "webapp",
+      "url": "./manifest.json"
+    }
+  ],
+  "prefer_related_applications": false
 }
