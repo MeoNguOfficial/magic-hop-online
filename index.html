@@ -2946,7 +2946,7 @@
                             <p id="pwa-desc-text" class="text-[11px] sm:text-xs text-slate-400 font-sans mt-0.5 leading-snug">Cài đặt trực tiếp, khởi động tức thì, hỗ trợ chơi Offline</p>
                         </div>
                     </div>
-                    <button id="download-opt-pwa" type="button" class="cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-slate-950 font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all active:scale-95 text-center">
+                    <button id="download-opt-pwa" type="button" class="cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-slate-950 font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all active:scale-95 text-center whitespace-nowrap">
                         Cài đặt
                     </button>
                 </div>
@@ -2965,7 +2965,7 @@
                             <p class="text-[11px] sm:text-xs text-slate-400 font-sans mt-0.5 leading-snug">Tối ưu đồ họa Three.js, mượt 144Hz+, không cần cài đặt</p>
                         </div>
                     </div>
-                    <a id="download-opt-pc" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank" class="cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] transition-all active:scale-95 text-center inline-block">
+                    <a id="download-opt-pc" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank" class="cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] transition-all active:scale-95 text-center inline-block whitespace-nowrap">
                         Tải về
                     </a>
                 </div>
@@ -2984,7 +2984,7 @@
                             <p class="text-[11px] sm:text-xs text-slate-400 font-sans mt-0.5 leading-snug">Dành cho điện thoại & tablet Android, cảm ứng cực nhạy</p>
                         </div>
                     </div>
-                    <a id="download-opt-apk" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank" class="cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.7)] transition-all active:scale-95 text-center inline-block">
+                    <a id="download-opt-apk" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank" class="cursor-pointer shrink-0 min-w-[96px] sm:min-w-[108px] px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-orbitron font-black text-xs uppercase rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.4)] hover:shadow-[0_0_25px_rgba(16,185,129,0.7)] transition-all active:scale-95 text-center inline-block whitespace-nowrap">
                         Tải về
                     </a>
                 </div>
@@ -3348,10 +3348,11 @@
             // "js/ui/alert.js"
         ];
 
+        const SCRIPT_BUILD_VERSION = '1.0.7.2';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = src;
+                s.src = src + (src.includes('?') ? '&' : '?') + 'v=' + SCRIPT_BUILD_VERSION;
                 s.async = false;
                 s.onload = resolve;
                 s.onerror = reject;

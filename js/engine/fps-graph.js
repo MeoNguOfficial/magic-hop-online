@@ -168,7 +168,7 @@
             }
 
             // Chỉ vẽ biểu đồ nếu biểu đồ đang bật
-            if (isGraphVisible && ctx && (now - lastDrawTime >= 30)) {
+            if (isGraphVisible && ctx && (now - lastDrawTime >= 66)) {
                 lastDrawTime = now;
                 this.draw(currentFps);
             }

@@ -1805,6 +1805,9 @@ async function initThree() {
                 if (!p.el) return;
                 if (btn.id === p.id) {
                     p.el.classList.remove('hidden');
+                    if (btn.id === 'nav-settings' && typeof window.applyPlatformUIAdjustments === 'function') {
+                        window.applyPlatformUIAdjustments();
+                    }
                     if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
                         p.el.style.opacity = 0;
                         p.el.style.transform = 'translateY(10px)';
@@ -2648,18 +2651,20 @@ function animate() {
     if (typeof showFpsEnabled !== 'undefined' && showFpsEnabled) {
         fpsFrameCount++;
         const elapsedFps = now - fpsLastTime;
-        if (elapsedFps >= 100) {
-            if (elapsedFps > 250) {
+        if (elapsedFps >= 180) {
+            if (elapsedFps > 400) {
                 // Nếu khoảng thời gian đo bị gián đoạn do pause, chuyển tab hoặc hitch OS,
                 // reset bộ đếm để không tính ra mẫu FPS rác (1-10 FPS) làm biến dạng đồ thị.
                 fpsFrameCount = 0;
                 fpsLastTime = now;
             } else {
                 let fpsValue = Math.round((fpsFrameCount * 1000) / elapsedFps);
-                if (fpsValue >= 140 && fpsValue <= 146) fpsValue = 144;
-                else if (fpsValue >= 118 && fpsValue <= 122) fpsValue = 120;
-                else if (fpsValue >= 58 && fpsValue <= 62) fpsValue = 60;
-                else if (fpsValue >= 236 && fpsValue <= 244) fpsValue = 240;
+                // Làm mịn tần số quét màn hình chuẩn (chống jitter quantization giữa chu kỳ đồng hồ 180ms và tần số 144Hz)
+                if (fpsValue >= 136 && fpsValue <= 148) fpsValue = 144;
+                else if (fpsValue >= 114 && fpsValue <= 124) fpsValue = 120;
+                else if (fpsValue >= 158 && fpsValue <= 168) fpsValue = 165;
+                else if (fpsValue >= 56 && fpsValue <= 64) fpsValue = 60;
+                else if (fpsValue >= 228 && fpsValue <= 248) fpsValue = 240;
 
                 fpsFrameCount = 0;
                 fpsLastTime = now;
@@ -2783,17 +2788,18 @@ function animate() {
                 }
                 // Tốc độ game speed có thể lên rất cao, nhưng tốc độ phát nhạc audio.playbackRate vẫn giữ trần 3.0x
                 const targetPlaybackRate = Math.min(3.0, gameSpeed);
-                // Làm mượt tốc độ phát nhạc (Smooth Audio Glissando / Continuous Interpolation)
-                // Cập nhật mượt mà mỗi ~45ms với bước vi chỉnh siêu nhỏ (<= 0.004) để triệt tiêu hoàn toàn méo tiếng / giật nấc
+                // Làm mượt tốc độ phát nhạc siêu vi mô (Continuous Audio Glissando / Smooth Linear Interpolation)
+                // Cập nhật mỗi ~35ms với bước vi chỉnh cực nhỏ (<= 0.003) và độ chính xác 1/1000
+                // Triệt tiêu hoàn toàn hiện tượng nhảy nấc / giật bậc thang bất ngờ, đảm bảo âm nhạc tăng tốc êm dịu, mượt mà tự nhiên
                 if (typeof window._lastAudioPlaybackRateSetTime === 'undefined') {
                     window._lastAudioPlaybackRateSetTime = 0;
                 }
                 const timeSinceLastRateSet = now - window._lastAudioPlaybackRateSetTime;
-                if (timeSinceLastRateSet >= 45) {
+                if (timeSinceLastRateSet >= 35) {
                     const currentRate = audio.playbackRate;
                     const diff = targetPlaybackRate - currentRate;
-                    if (Math.abs(diff) >= 0.002) {
-                        const maxStep = 0.004;
+                    if (Math.abs(diff) >= 0.001) {
+                        const maxStep = 0.003;
                         const step = Math.sign(diff) * Math.min(Math.abs(diff), maxStep);
                         audio.playbackRate = Math.round((currentRate + step) * 1000) / 1000;
                         window._lastAudioPlaybackRateSetTime = now;
