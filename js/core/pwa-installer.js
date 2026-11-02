@@ -94,6 +94,7 @@ function showDownloadAppModal() {
 
     // Cập nhật link tải mới nhất từ version.json nếu có
     fetchLatestDownloadLinks();
+    checkPWAInstallationStatus();
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -425,9 +426,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const pwaBtn = document.getElementById('download-opt-pwa');
     if (pwaBtn) {
-        pwaBtn.onclick = () => {
+        pwaBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
             closeDownloadAppModal();
-            showPWAInstallGuide();
+            if (window.globalDeferredPrompt) {
+                showPWAInstallGuide();
+            } else if (isPWAInstalled) {
+                showPWAInstalledPromptGuide();
+            } else {
+                showPWAInstallGuide();
+            }
         };
     }
 
