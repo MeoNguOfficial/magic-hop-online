@@ -367,8 +367,8 @@
   "chat_filter_closed": "Closed",
   "particle_title": "霓虹粒子 (Particles)",
   "particle_desc": "在空间中添加漂浮的发光粒子（较为消耗 GPU）。",
-  "max_fps_title": "最大 FPS 限制",
-  "max_fps_desc": "限制游戏的最大每秒帧数 (FPS)。",
+  "max_fps_title": "最大FPS滑块",
+  "max_fps_desc": "拖动滑块将FPS限制在1至屏幕最高刷新率之间。",
   "max_fps_unlimited": "无限制",
   "max_fps_vsync": "设备垂直同步",
   "max_fps_eco": "节能 (60 FPS)",
@@ -588,5 +588,16 @@
   "download_btn_install": "安装",
   "download_btn_open": "打开应用",
   "download_btn_running": "正在运行",
-  "download_notify_toast": "感谢关注！该版本即将在后续更新中发布。"
+  "download_notify_toast": "感谢关注！该版本即将在后续更新中发布。",
+  "fps_sync_mode_title": "FPS同步模式",
+  "fps_sync_mode_desc": "选择帧同步方式或锁定至刷新率。",
+  "fps_mode_vsync": "VSync（屏幕垂直同步）",
+  "fps_mode_custom": "自定义（最大FPS滑块）",
+  "fps_mode_eco": "节能 - Eco（60 FPS）",
+  "fps_mode_lite": "流畅 - Lite（120 FPS）",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "无限制"
 }

@@ -367,8 +367,8 @@
   "msg_loading_data": "LOADING DATA...",
   "btn_load_more": "LOAD MORE DATA",
   "msg_error_retry": "Error, retry",
-  "max_fps_title": "最大 FPS 限制",
-  "max_fps_desc": "限制遊戲的最大每秒幀數 (FPS)。",
+  "max_fps_title": "最大FPS滑桿",
+  "max_fps_desc": "拖曳滑桿將FPS限制在1至螢幕最高更新率之間。",
   "max_fps_unlimited": "無限制",
   "max_fps_vsync": "設備垂直同步",
   "max_fps_eco": "節能 (60 FPS)",
@@ -588,5 +588,16 @@
   "download_btn_install": "安裝",
   "download_btn_open": "開啟應用",
   "download_btn_running": "正在執行",
-  "download_notify_toast": "感謝關注！該版本即將在後續更新中釋出。"
+  "download_notify_toast": "感謝關注！該版本即將在後續更新中釋出。",
+  "fps_sync_mode_title": "FPS同步模式",
+  "fps_sync_mode_desc": "選擇幀同步方式或鎖定至更新率。",
+  "fps_mode_vsync": "VSync（螢幕垂直同步）",
+  "fps_mode_custom": "自訂（最大FPS滑桿）",
+  "fps_mode_eco": "省電 - Eco（60 FPS）",
+  "fps_mode_lite": "流暢 - Lite（120 FPS）",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "無限制"
 }

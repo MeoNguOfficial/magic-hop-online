@@ -368,8 +368,8 @@
   "auto_fullscreen_desc": "Автоматически переходить в полноэкранный режим при игре и выходить при возврате в меню.",
   "webgl_disabled_title": "WEBGL НЕ ПОДДЕРЖИВАЕТСЯ",
   "webgl_disabled_msg": "Ваш браузер или устройство не поддерживает WebGL (или он отключен).<br>Для рендеринга 3D-графики Cyber Beat Hopper требуется WebGL. Пожалуйста, включите WebGL или попробуйте другой современный браузер.",
-  "max_fps_title": "Максимальный лимит FPS",
-  "max_fps_desc": "Ограничить максимальное количество кадров в секунду (FPS) в игре.",
+  "max_fps_title": "Ползунок макс. FPS",
+  "max_fps_desc": "Перетащите для ограничения FPS от 1 до максимальной частоты экрана.",
   "max_fps_unlimited": "Без ограничений",
   "max_fps_vsync": "VSync Устройство",
   "max_fps_eco": "Эко (60 FPS)",
@@ -588,5 +588,16 @@
   "download_btn_install": "УСТАНОВИТЬ",
   "download_btn_open": "ОТКРЫТЬ",
   "download_btn_running": "ЗАПУЩЕНО",
-  "download_notify_toast": "Спасибо! Скоро будет доступно."
+  "download_notify_toast": "Спасибо! Скоро будет доступно.",
+  "fps_sync_mode_title": "Режим синхронизации FPS",
+  "fps_sync_mode_desc": "Выберите метод синхронизации кадров или ограничение частоты обновления.",
+  "fps_mode_vsync": "VSync (Синхронизация экрана)",
+  "fps_mode_custom": "Пользовательский (Ползунок макс. FPS)",
+  "fps_mode_eco": "Энергосбережение - Eco (60 FPS)",
+  "fps_mode_lite": "Lite (120 FPS)",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "Без ограничений"
 }

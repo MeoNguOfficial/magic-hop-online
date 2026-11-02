@@ -359,8 +359,8 @@
   "perf_warning_title": "CẢNH BÁO HIỆU NĂNG",
   "perf_warning_desc": "Lựa chọn chất lượng đồ họa cực cao <strong class=\"text-cyan-400 font-bold\">(QHD/UHD)</strong> yêu cầu cấu hình thiết bị <strong class=\"text-yellow-400 font-bold\">rất mạnh</strong>.<br>Thiết bị của bạn có thể bị <strong class=\"text-pink-400 font-bold\">sụt giảm hiệu năng</strong> (giật lag, sụt khung hình) hoặc <strong class=\"text-pink-400 font-bold\">nóng lên nhanh chóng</strong>.<br><br><span class=\"text-cyan-300 font-bold\">Bạn có chắc chắn muốn tiếp tục?</span>",
   "vol_low_warn": "⚠️ Âm lượng nhạc game quá thấp! Nhấp để khôi phục về 80% ⚠️",
-  "max_fps_title": "Giới hạn FPS",
-  "max_fps_desc": "Giới hạn số khung hình trên giây (FPS) tối đa của trò chơi.",
+  "max_fps_title": "Thanh trượt Max FPS",
+  "max_fps_desc": "Kéo để giới hạn FPS từ 1 đến tần số quét tối đa của màn hình.",
   "max_fps_unlimited": "Không giới hạn",
   "max_fps_vsync": "Vs thiết bị",
   "max_fps_eco": "Eco (60 FPS)",
@@ -592,5 +592,16 @@
   "download_btn_install": "CÀI ĐẶT",
   "download_btn_open": "MỞ APP",
   "download_btn_running": "ĐANG CHẠY",
-  "download_notify_toast": "Cảm ơn bạn! Phiên bản này sẽ sớm có mặt trong bản cập nhật tới."
+  "download_notify_toast": "Cảm ơn bạn! Phiên bản này sẽ sớm có mặt trong bản cập nhật tới.",
+  "fps_sync_mode_title": "Kiểu đồng bộ FPS",
+  "fps_sync_mode_desc": "Chọn phương thức đồng bộ khung hình hoặc khóa cứng theo tần số quét.",
+  "fps_mode_vsync": "VSync (Đồng bộ màn hình)",
+  "fps_mode_custom": "Tùy chỉnh (Thanh trượt Max FPS)",
+  "fps_mode_eco": "Tiết kiệm - Eco (60 FPS)",
+  "fps_mode_lite": "Lite (120 FPS)",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "Không giới hạn (Unlimited)"
 }

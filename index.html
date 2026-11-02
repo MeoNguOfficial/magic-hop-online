@@ -2275,17 +2275,51 @@
                                             class="accent-cyan-400 w-4 h-4">
                                     </label>
 
-                                    <div class="space-y-1">
-                                        <div
-                                            class="flex justify-between text-[10px] text-cyan-400 font-bold font-orbitron">
-                                            <span data-i18n="max_fps_title">Giới hạn FPS</span>
-                                            <span id="max-fps-value" class="text-cyan-400 font-bold font-orbitron">Không
-                                                giới hạn</span>
+                                    <!-- Cài đặt Đồng bộ & Giới hạn FPS -->
+                                    <div class="space-y-2.5 p-3 rounded-xl bg-slate-900/40 border border-cyan-500/20">
+                                        <!-- Kiểu đồng bộ FPS (FPS Sync Mode) -->
+                                        <div class="space-y-1">
+                                            <div class="flex items-center justify-between text-xs text-gray-300">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="font-bold uppercase text-gray-200 font-orbitron text-[11px]"
+                                                        data-i18n="fps_sync_mode_title">Kiểu đồng bộ FPS</span>
+                                                    <span id="detected-hz-badge"
+                                                        class="px-1.5 py-0.5 rounded text-[9px] font-orbitron font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 tracking-wider">--Hz</span>
+                                                </div>
+                                            </div>
+                                            <p class="text-[9px] text-gray-500 font-sans" data-i18n="fps_sync_mode_desc">
+                                                Chọn phương thức đồng bộ khung hình hoặc khóa cứng theo tần số quét.
+                                            </p>
+                                            <select id="fps-sync-mode-select"
+                                                class="w-full bg-[#0c081e] text-white border border-cyan-500/30 p-2 rounded-lg text-xs focus:outline-none cursor-pointer font-orbitron">
+                                                <option value="vsync" data-i18n="fps_mode_vsync">VSync (Đồng bộ màn hình)</option>
+                                                <option value="custom" data-i18n="fps_mode_custom">Tùy chỉnh (Thanh trượt Max FPS)</option>
+                                                <option value="eco" data-i18n="fps_mode_eco">Tiết kiệm - Eco (60 FPS)</option>
+                                                <option value="lite" data-i18n="fps_mode_lite">Lite (120 FPS)</option>
+                                                <option value="144" data-i18n="fps_mode_144">144 FPS</option>
+                                                <option value="165" data-i18n="fps_mode_165">165 FPS</option>
+                                                <option value="240" data-i18n="fps_mode_240">240 FPS</option>
+                                                <option value="360" data-i18n="fps_mode_360">360 FPS</option>
+                                                <option value="unlimited" data-i18n="fps_mode_unlimited">Không giới hạn (Unlimited)</option>
+                                            </select>
                                         </div>
-                                        <p class="text-[9px] text-gray-500" data-i18n="max_fps_desc">Giới hạn số khung
-                                            hình trên giây (FPS) tối đa của trò chơi.</p>
-                                        <input type="range" id="max-fps-slider" min="0" max="362" step="1" value="0"
-                                            class="w-full h-1 bg-gray-800 rounded-lg appearance-none accent-cyan-400 cursor-pointer">
+
+                                        <!-- Thanh trượt Max FPS (Max FPS Slider) -->
+                                        <div id="max-fps-slider-container" class="space-y-1 pt-1 border-t border-slate-800/80 transition-all">
+                                            <div class="flex justify-between text-[10px] text-cyan-400 font-bold font-orbitron">
+                                                <span data-i18n="max_fps_title">Thanh trượt Max FPS</span>
+                                                <span id="max-fps-value" class="text-cyan-400 font-bold font-orbitron">-- FPS</span>
+                                            </div>
+                                            <p class="text-[9px] text-gray-500 font-sans" data-i18n="max_fps_desc">
+                                                Kéo để giới hạn FPS từ 1 đến tần số quét tối đa của màn hình.
+                                            </p>
+                                            <input type="range" id="max-fps-slider" min="1" max="144" step="1" value="144"
+                                                class="w-full h-1 bg-gray-800 rounded-lg appearance-none accent-cyan-400 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-opacity">
+                                            <div class="flex justify-between text-[8px] text-gray-500 font-orbitron">
+                                                <span>1 FPS</span>
+                                                <span id="max-fps-slider-bound">-- FPS</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -3252,23 +3286,7 @@
                 });
             }
 
-            // Max FPS slider sync
-            const maxFpsSlider = document.getElementById('max-fps-slider');
-            const maxFpsValue = document.getElementById('max-fps-value');
-            if (maxFpsSlider && maxFpsValue) {
-                maxFpsSlider.addEventListener('input', (e) => {
-                    const val = parseInt(e.target.value);
-                    if (val === 0) {
-                        maxFpsValue.textContent = typeof t === 'function' ? t('max_fps_unlimited') : 'Không giới hạn';
-                    } else if (val === 361) {
-                        maxFpsValue.textContent = typeof t === 'function' ? t('max_fps_vsync') : 'Vs thiết bị';
-                    } else if (val === 362) {
-                        maxFpsValue.textContent = typeof t === 'function' ? t('max_fps_eco') : 'Eco (60 FPS)';
-                    } else {
-                        maxFpsValue.textContent = val + ' FPS';
-                    }
-                });
-            }
+            // Max FPS UI is synchronized centrally by js/ui/settings.js
 
             // Horizontal drag to scroll for Setting Tabs (PC Support)
             const tabsContainer = document.querySelector('.settings-tabs-container');
@@ -3395,7 +3413,7 @@
             // "js/ui/alert.js"
         ];
 
-        const SCRIPT_BUILD_VERSION = '1.0.7.3';
+        const SCRIPT_BUILD_VERSION = '1.0.7.4';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');

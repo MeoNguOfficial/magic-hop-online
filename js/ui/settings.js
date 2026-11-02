@@ -43,6 +43,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'scrollbarMode',
     'tileDetailScale',
     'maxFps',
+    'fpsSyncMode',
     'blocksAheadLimit',
     'blocksBehindLimit',
     'hardModeEnabled',
@@ -238,8 +239,286 @@ if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.setAttribute('data-display-font-size', settingsFontSize);
 }
 let tileDetailScale = localStorage.getItem('tileDetailScale') !== null ? parseFloat(localStorage.getItem('tileDetailScale')) : 1.0;
-let maxFps = localStorage.getItem('maxFps') !== null ? parseInt(localStorage.getItem('maxFps')) : 0;
+// Screen Refresh Rate & FPS Synchronization Mode Management
+window.screenRefreshRate = window.screenRefreshRate || 144;
+let fpsSyncMode = localStorage.getItem('fpsSyncMode') || 'vsync';
+let maxFps = localStorage.getItem('maxFps') !== null ? parseInt(localStorage.getItem('maxFps')) : 144;
+
+// Migration from legacy single-slider values (0 = unlimited, 361 = vsync, 362 = eco)
+if (maxFps === 361) {
+    fpsSyncMode = 'vsync';
+    maxFps = 144;
+    localStorage.setItem('fpsSyncMode', 'vsync');
+    localStorage.setItem('maxFps', maxFps);
+} else if (maxFps === 362) {
+    fpsSyncMode = 'eco';
+    maxFps = 60;
+    localStorage.setItem('fpsSyncMode', 'eco');
+    localStorage.setItem('maxFps', maxFps);
+} else if (maxFps === 0) {
+    fpsSyncMode = 'unlimited';
+    maxFps = 144;
+    localStorage.setItem('fpsSyncMode', 'unlimited');
+    localStorage.setItem('maxFps', maxFps);
+}
+
+window.fpsSyncMode = fpsSyncMode;
 window.maxFps = maxFps;
+
+/**
+ * Lấy giới hạn FPS thực tế cho vòng lặp render animate()
+ * @returns {number} 0 nếu không giới hạn / VSync tự nhiên, hoặc số FPS cụ thể (60, 120, 144...)
+ */
+function getEffectiveMaxFps() {
+    const mode = window.fpsSyncMode || 'vsync';
+    if (mode === 'vsync' || mode === 'unlimited') {
+        return 0; // Để trình duyệt chạy ở nhịp rAF tự nhiên của màn hình
+    }
+    if (mode === 'eco') return 60;
+    if (mode === 'lite') return 120;
+    if (mode === '144') return 144;
+    if (mode === '165') return 165;
+    if (mode === '240') return 240;
+    if (mode === '360') return 360;
+    if (mode === 'custom') {
+        const maxLimit = window.screenRefreshRate || 360;
+        const val = typeof window.maxFps === 'number' ? window.maxFps : 60;
+        return Math.max(1, Math.min(maxLimit, val));
+    }
+    return 0;
+}
+window.getEffectiveMaxFps = getEffectiveMaxFps;
+
+/**
+ * Lấy mục tiêu FPS thực tế cho hệ thống đánh giá hiệu năng (Adaptive Performance)
+ */
+function getEffectiveTargetFps() {
+    const mode = window.fpsSyncMode || 'vsync';
+    const screenHz = window.screenRefreshRate || 60;
+    if (mode === 'vsync' || mode === 'unlimited') return screenHz;
+    if (mode === 'eco') return 60;
+    if (mode === 'lite') return 120;
+    if (mode === '144') return 144;
+    if (mode === '165') return 165;
+    if (mode === '240') return 240;
+    if (mode === '360') return 360;
+    if (mode === 'custom') return Math.max(1, Math.min(screenHz, window.maxFps || screenHz));
+    return screenHz;
+}
+window.getEffectiveTargetFps = getEffectiveTargetFps;
+
+/**
+ * Đồng bộ giao diện cài đặt FPS (Select Kiểu đồng bộ & Thanh trượt Max FPS)
+ */
+function updateFpsSyncUI() {
+    const modeSelect = document.getElementById('fps-sync-mode-select');
+    const slider = document.getElementById('max-fps-slider');
+    const valueText = document.getElementById('max-fps-value');
+    const sliderContainer = document.getElementById('max-fps-slider-container');
+    const boundLabel = document.getElementById('max-fps-slider-bound');
+    const badge = document.getElementById('detected-hz-badge');
+
+    const currentHz = window.screenRefreshRate || 60;
+    if (badge) badge.textContent = currentHz + 'Hz';
+    if (boundLabel) boundLabel.textContent = currentHz + ' FPS';
+
+    const mode = window.fpsSyncMode || 'vsync';
+    if (modeSelect && modeSelect.value !== mode) {
+        modeSelect.value = mode;
+    }
+
+    if (slider) {
+        slider.min = '1';
+        slider.max = currentHz.toString();
+    }
+
+    if (mode === 'custom') {
+        if (slider) {
+            slider.disabled = false;
+            slider.value = Math.max(1, Math.min(currentHz, window.maxFps || currentHz));
+        }
+        if (sliderContainer) {
+            sliderContainer.classList.remove('opacity-50');
+        }
+        if (valueText) {
+            valueText.textContent = (slider ? slider.value : window.maxFps) + ' FPS';
+        }
+    } else if (mode === 'vsync') {
+        if (slider) {
+            slider.disabled = true;
+            slider.value = currentHz;
+        }
+        if (sliderContainer) {
+            sliderContainer.classList.add('opacity-50');
+        }
+        if (valueText) {
+            valueText.textContent = 'VSync (' + currentHz + ' Hz)';
+        }
+    } else if (mode === 'eco') {
+        if (slider) {
+            slider.disabled = true;
+            slider.value = Math.min(60, currentHz);
+        }
+        if (sliderContainer) {
+            sliderContainer.classList.add('opacity-50');
+        }
+        if (valueText) {
+            valueText.textContent = (typeof t === 'function' ? t('fps_mode_eco') : null) || 'Eco (60 FPS)';
+        }
+    } else if (mode === 'lite') {
+        if (slider) {
+            slider.disabled = true;
+            slider.value = Math.min(120, currentHz);
+        }
+        if (sliderContainer) {
+            sliderContainer.classList.add('opacity-50');
+        }
+        if (valueText) {
+            valueText.textContent = (typeof t === 'function' ? t('fps_mode_lite') : null) || 'Lite (120 FPS)';
+        }
+    } else if (mode === 'unlimited') {
+        if (slider) {
+            slider.disabled = true;
+            slider.value = currentHz;
+        }
+        if (sliderContainer) {
+            sliderContainer.classList.add('opacity-50');
+        }
+        if (valueText) {
+            valueText.textContent = (typeof t === 'function' ? t('fps_mode_unlimited') : null) || 'Không giới hạn';
+        }
+    } else {
+        // Mốc cố định 144, 165, 240, 360
+        const targetNum = parseInt(mode) || currentHz;
+        if (slider) {
+            slider.disabled = true;
+            slider.value = targetNum;
+        }
+        if (sliderContainer) {
+            sliderContainer.classList.add('opacity-50');
+        }
+        if (valueText) {
+            valueText.textContent = targetNum + ' FPS';
+        }
+    }
+}
+window.updateFpsSyncUI = updateFpsSyncUI;
+
+/**
+ * Áp dụng giới hạn tần số quét màn hình vào menu và kích hoạt Fallback Logic
+ */
+function applyRefreshRateBound(detectedHz) {
+    if (!detectedHz || detectedHz < 30) detectedHz = 60;
+    window.screenRefreshRate = detectedHz;
+
+    const modeSelect = document.getElementById('fps-sync-mode-select');
+    const rateMap = {
+        'lite': 120,
+        '144': 144,
+        '165': 165,
+        '240': 240,
+        '360': 360
+    };
+
+    if (modeSelect) {
+        // Logic hiển thị thông minh: Ẩn/disable các mốc cao hơn tần số quét màn hình
+        for (const [optKey, reqHz] of Object.entries(rateMap)) {
+            const opt = modeSelect.querySelector('option[value="' + optKey + '"]');
+            if (opt) {
+                if (reqHz > detectedHz) {
+                    opt.style.display = 'none';
+                    opt.disabled = true;
+                } else {
+                    opt.style.display = '';
+                    opt.disabled = false;
+                }
+            }
+        }
+
+        // Xử lý sự cố & Thay đổi màn hình (Fallback Logic)
+        let curMode = window.fpsSyncMode || 'vsync';
+        if (rateMap[curMode] && rateMap[curMode] > detectedHz) {
+            curMode = 'vsync';
+            window.fpsSyncMode = curMode;
+            localStorage.setItem('fpsSyncMode', curMode);
+            modeSelect.value = curMode;
+        }
+    }
+
+    // Fallback: nếu thanh trượt Max FPS cũ cao hơn tần số quét mới, hạ về mức tối đa của màn hình
+    if (window.maxFps > detectedHz) {
+        window.maxFps = detectedHz;
+        localStorage.setItem('maxFps', detectedHz);
+    }
+
+    updateFpsSyncUI();
+}
+window.applyRefreshRateBound = applyRefreshRateBound;
+
+/**
+ * Tự động đo tần số quét tối đa của màn hình hiện tại (Display Refresh Rate)
+ */
+let isMeasuringRefreshRate = false;
+function detectScreenRefreshRate(callback) {
+    if (isMeasuringRefreshRate) return;
+    isMeasuringRefreshRate = true;
+
+    let frameTimes = [];
+    let count = 0;
+    let lastTime = performance.now();
+
+    function sample(now) {
+        const delta = now - lastTime;
+        lastTime = now;
+        if (delta > 1.2 && delta < 100) {
+            frameTimes.push(delta);
+        }
+        count++;
+        if (count < 35) {
+            requestAnimationFrame(sample);
+        } else {
+            isMeasuringRefreshRate = false;
+            if (frameTimes.length < 10) {
+                if (callback) callback(window.screenRefreshRate || 60);
+                return;
+            }
+            frameTimes.sort((a, b) => a - b);
+            const medianDelta = frameTimes[Math.floor(frameTimes.length / 2)];
+            const rawHz = 1000 / medianDelta;
+
+            const standardBuckets = [60, 75, 90, 120, 144, 165, 180, 240, 360, 480, 540];
+            let detected = Math.round(rawHz);
+            for (const std of standardBuckets) {
+                if (Math.abs(rawHz - std) <= std * 0.055) {
+                    detected = std;
+                    break;
+                }
+            }
+            if (detected < 30) detected = 60;
+
+            applyRefreshRateBound(detected);
+            if (callback) callback(detected);
+        }
+    }
+    requestAnimationFrame(sample);
+}
+window.detectScreenRefreshRate = detectScreenRefreshRate;
+
+// Lắng nghe thay đổi kích thước cửa sổ hoặc kéo sang màn hình khác
+let resizeRefreshTimeout = null;
+window.addEventListener('resize', () => {
+    if (resizeRefreshTimeout) clearTimeout(resizeRefreshTimeout);
+    resizeRefreshTimeout = setTimeout(() => {
+        detectScreenRefreshRate();
+    }, 300);
+});
+
+// Đo tần số quét ngay khi khởi động
+if (typeof requestAnimationFrame !== 'undefined') {
+    setTimeout(() => {
+        detectScreenRefreshRate();
+    }, 80);
+}
 
 /**
  * Format chuỗi tên GPU từ ANGLE / WebGL / WebGPU
@@ -1182,22 +1461,21 @@ function applySettings() {
         window.debouncedLocalStorageSet('blocksBehindLimit', blocksBehindLimit);
         if (blocksBehindValue) blocksBehindValue.innerText = blocksBehindLimit;
     }
+    const fpsSyncModeSelectEl = document.getElementById('fps-sync-mode-select');
+    if (fpsSyncModeSelectEl) {
+        fpsSyncMode = fpsSyncModeSelectEl.value;
+        window.fpsSyncMode = fpsSyncMode;
+        window.debouncedLocalStorageSet('fpsSyncMode', fpsSyncMode);
+    }
     if (maxFpsSlider) {
-        window.maxFps = parseInt(maxFpsSlider.value);
-        maxFps = window.maxFps;
-        window.debouncedLocalStorageSet('maxFps', maxFps);
-        if (maxFpsValue) {
-            if (maxFps === 0) {
-                maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_unlimited') : 'Không giới hạn';
-            } else if (maxFps === 361) {
-                maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_vsync') : 'Vs thiết bị';
-            } else if (maxFps === 362) {
-                maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_eco') : 'Eco (60 FPS)';
-            } else {
-                maxFpsValue.innerText = `${maxFps} FPS`;
-            }
+        const sliderVal = parseInt(maxFpsSlider.value);
+        if (!isNaN(sliderVal)) {
+            window.maxFps = sliderVal;
+            maxFps = sliderVal;
+            window.debouncedLocalStorageSet('maxFps', maxFps);
         }
     }
+    updateFpsSyncUI();
     updateObjectPoolingLimits();
     if (toggleRelativePC) {
         isRelativePC = toggleRelativePC.checked;
@@ -1766,11 +2044,31 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof tileDetailSlider !== 'undefined' && tileDetailSlider) tileDetailSlider.addEventListener('input', applySettings);
     if (blocksAheadSlider) blocksAheadSlider.addEventListener('input', applySettings);
     if (blocksBehindSlider) blocksBehindSlider.addEventListener('input', applySettings);
+    const fpsSyncModeSelectEl = document.getElementById('fps-sync-mode-select');
+    if (fpsSyncModeSelectEl) {
+        fpsSyncModeSelectEl.addEventListener('change', () => {
+            window.fpsSyncMode = fpsSyncModeSelectEl.value;
+            fpsSyncMode = window.fpsSyncMode;
+            localStorage.setItem('fpsSyncMode', fpsSyncMode);
+            updateFpsSyncUI();
+            applySettings();
+        });
+    }
+
     if (maxFpsSlider) {
-        maxFpsSlider.addEventListener('input', applySettings);
+        maxFpsSlider.addEventListener('input', () => {
+            const val = parseInt(maxFpsSlider.value);
+            if (!isNaN(val)) {
+                window.maxFps = val;
+                maxFps = val;
+                window.debouncedLocalStorageSet('maxFps', maxFps);
+                if (maxFpsValue) maxFpsValue.innerText = val + ' FPS';
+            }
+            applySettings();
+        });
         maxFpsSlider.addEventListener('change', (e) => {
             const val = parseInt(e.target.value);
-            if (val >= 1 && val < 30) {
+            if (val >= 1 && val < 30 && window.fpsSyncMode === 'custom') {
                 if (typeof showCyberModal === 'function') {
                     showCyberModal({
                         title: typeof t === 'function' ? t('low_fps_warning_title') : "CẢNH BÁO FPS THẤP",
@@ -1779,12 +2077,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmText: typeof t === 'function' ? t('btn_confirm') : "TIẾP TỤC",
                         cancelText: typeof t === 'function' ? t('btn_cancel') : "HỦY",
                         onConfirm: () => {
-                            // Keep the selected value
+                            // Giữ nguyên giá trị đã chọn
                         },
                         onCancel: () => {
-                            // Revert to 0 (Unlimited)
-                            maxFpsSlider.value = 0;
-                            maxFpsSlider.dispatchEvent(new Event('input'));
+                            const curHz = window.screenRefreshRate || 60;
+                            maxFpsSlider.value = curHz;
+                            window.maxFps = curHz;
+                            localStorage.setItem('maxFps', curHz);
+                            updateFpsSyncUI();
                             applySettings();
                         }
                     });

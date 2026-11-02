@@ -359,8 +359,8 @@
   "perf_warning_title": "PERFORMANCE WARNING",
   "perf_warning_desc": "Selecting ultra-high graphics quality <strong class=\"text-cyan-400 font-bold\">(QHD/UHD)</strong> requires a <strong class=\"text-yellow-400 font-bold\">very powerful device</strong>.<br>Your device may experience <strong class=\"text-pink-400 font-bold\">performance drops</strong> (stuttering, frame drops) or <strong class=\"text-pink-400 font-bold\">heat up quickly</strong>.<br><br><span class=\"text-cyan-300 font-bold\">Are you sure you want to proceed?</span>",
   "vol_low_warn": "⚠️ Game volume is too low! Click here to restore to 80% ⚠️",
-  "max_fps_title": "Max FPS Limit",
-  "max_fps_desc": "Limit the maximum frames per second (FPS) of the game.",
+  "max_fps_title": "Max FPS Slider",
+  "max_fps_desc": "Drag to limit FPS from 1 to display max refresh rate.",
   "max_fps_unlimited": "Unlimited",
   "max_fps_vsync": "VSync Device",
   "max_fps_eco": "Eco (60 FPS)",
@@ -592,5 +592,16 @@
   "download_btn_install": "INSTALL",
   "download_btn_open": "OPEN APP",
   "download_btn_running": "RUNNING",
-  "download_notify_toast": "Thank you! This version will be available in an upcoming update."
+  "download_notify_toast": "Thank you! This version will be available in an upcoming update.",
+  "fps_sync_mode_title": "FPS Sync Mode",
+  "fps_sync_mode_desc": "Select frame synchronization method or lock to refresh rate.",
+  "fps_mode_vsync": "VSync (Display Sync)",
+  "fps_mode_custom": "Custom (Max FPS Slider)",
+  "fps_mode_eco": "Power Saver - Eco (60 FPS)",
+  "fps_mode_lite": "Lite (120 FPS)",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "Unlimited"
 }

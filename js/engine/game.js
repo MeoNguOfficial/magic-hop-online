@@ -2018,20 +2018,8 @@ async function initThree() {
     if (typeof tileDetailSlider !== 'undefined' && tileDetailSlider) tileDetailSlider.value = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
     if (blocksAheadSlider) blocksAheadSlider.value = blocksAheadLimit;
     if (blocksBehindSlider) blocksBehindSlider.value = blocksBehindLimit;
-    if (typeof maxFpsSlider !== 'undefined' && maxFpsSlider) {
-        maxFpsSlider.value = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);
-        if (typeof maxFpsValue !== 'undefined' && maxFpsValue) {
-            const currentVal = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);
-            if (currentVal === 0) {
-                maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_unlimited') : 'Không giới hạn';
-            } else if (currentVal === 361) {
-                maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_vsync') : 'Vs thiết bị';
-            } else if (currentVal === 362) {
-                maxFpsValue.innerText = typeof t === 'function' ? t('max_fps_eco') : 'Eco (60 FPS)';
-            } else {
-                maxFpsValue.innerText = `${currentVal} FPS`;
-            }
-        }
+    if (typeof window.updateFpsSyncUI === 'function') {
+        window.updateFpsSyncUI();
     }
     if (menuVolumeSlider) menuVolumeSlider.value = menuVolume;
     if (typeof playSfxVolumeSlider !== 'undefined' && playSfxVolumeSlider) playSfxVolumeSlider.value = typeof playSfxVolume !== 'undefined' ? playSfxVolume : 0.8;
@@ -2616,15 +2604,14 @@ function animate() {
     requestAnimationFrame(animate);
 
     const now = performance.now();
-    let limitValue = typeof window.maxFps !== 'undefined' ? window.maxFps : (typeof maxFps !== 'undefined' ? maxFps : 0);
-    if (limitValue === 362) {
-        limitValue = 60; // Eco locks to 60 FPS
-    }
+    const limitValue = (typeof window.getEffectiveMaxFps === 'function')
+        ? window.getEffectiveMaxFps()
+        : (typeof window.maxFps !== 'undefined' ? window.maxFps : 0);
 
-    if (limitValue > 0 && limitValue <= 360 && limitValue !== 361) {
+    if (limitValue > 0) {
         const frameDuration = 1000 / limitValue;
         const elapsed = now - lastFrameTime;
-        if (elapsed < frameDuration - 1.5) {
+        if (elapsed < frameDuration - 1.2) {
             return;
         }
         lastFrameTime = now - (elapsed % frameDuration);

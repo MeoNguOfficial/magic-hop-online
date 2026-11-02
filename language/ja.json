@@ -368,8 +368,8 @@
   "webgl_disabled_title": "WEBGL はサポートされていません",
   "webgl_disabled_msg": "お使いのブラウザまたはデバイスは WebGL をサポートしていません (または無効になっています)。<br>Cyber Beat Hopper では 3D グラフィックをレンダリングするために WebGL が必要です。 WebGL を有効にするか、別の最新のブラウザを試してください。",
   "tab_language": "Language",
-  "max_fps_title": "最大FPS制限",
-  "max_fps_desc": "ゲームの1秒あたりの最大フレーム数（FPS）を制限します。",
+  "max_fps_title": "最大FPSスライダー",
+  "max_fps_desc": "1からディスプレイの最大リフレッシュレートまでFPSを制限します。",
   "max_fps_unlimited": "無制限",
   "max_fps_vsync": "デバイスVSync",
   "max_fps_eco": "省エネ (60 FPS)",
@@ -588,5 +588,16 @@
   "download_btn_install": "インストール",
   "download_btn_open": "アプリを開く",
   "download_btn_running": "実行中",
-  "download_notify_toast": "ありがとうございます！近日中に公開予定です。"
+  "download_notify_toast": "ありがとうございます！近日中に公開予定です。",
+  "fps_sync_mode_title": "FPS同期モード",
+  "fps_sync_mode_desc": "フレーム同期方法またはリフレッシュレート制限を選択します。",
+  "fps_mode_vsync": "VSync（ディスプレイ同期）",
+  "fps_mode_custom": "カスタム（最大FPSスライダー）",
+  "fps_mode_eco": "省電力 - Eco（60 FPS）",
+  "fps_mode_lite": "Lite（120 FPS）",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "無制限"
 }

@@ -109,16 +109,9 @@
 
         evaluatePerformance: function (avgFps, intervalSec) {
             // Tự động nhận diện tần số quét màn hình (60Hz, 120Hz, 144Hz, 240Hz)
-            let targetFps = 60;
-            if (typeof window.maxFps !== 'undefined' && window.maxFps > 0 && window.maxFps <= 360 && window.maxFps !== 362) {
-                targetFps = window.maxFps;
-            } else if (this.maxDetectedFps > 180) {
-                targetFps = 240;
-            } else if (this.maxDetectedFps > 130) {
-                targetFps = 144;
-            } else if (this.maxDetectedFps > 95) {
-                targetFps = 120;
-            }
+            let targetFps = (typeof window.getEffectiveTargetFps === 'function')
+                ? window.getEffectiveTargetFps()
+                : (typeof window.screenRefreshRate === 'number' ? window.screenRefreshRate : 60);
 
             const criticalThreshold = targetFps * 0.75; // Sụt giảm sâu > 25% (VD: < 108 FPS trên 144Hz)
             const lowThreshold = targetFps * 0.85;      // Drop hơn 15% dưới target (VD: < 122 FPS trên 144Hz)

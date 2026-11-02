@@ -367,8 +367,8 @@
   "tab_language": "Language",
   "account_current_password_incorrect": "The current password is incorrect.",
   "effect_title": "이펙트",
-  "max_fps_title": "최대 FPS 제한",
-  "max_fps_desc": "게임의 초당 최대 프레임 수(FPS)를 제한합니다.",
+  "max_fps_title": "최대 FPS 슬라이더",
+  "max_fps_desc": "1부터 디스플레이 최대 주사율까지 FPS를 제한합니다.",
   "max_fps_unlimited": "무제한",
   "max_fps_vsync": "기기 VSync",
   "max_fps_eco": "절전 (60 FPS)",
@@ -588,5 +588,16 @@
   "download_btn_install": "설치",
   "download_btn_open": "앱 열기",
   "download_btn_running": "실행 중",
-  "download_notify_toast": "감사합니다! 곧 출시될 예정입니다."
+  "download_notify_toast": "감사합니다! 곧 출시될 예정입니다.",
+  "fps_sync_mode_title": "FPS 동기화 모드",
+  "fps_sync_mode_desc": "프레임 동기화 방식 또는 주사율 고정 방식을 선택합니다.",
+  "fps_mode_vsync": "VSync (디스플레이 동기화)",
+  "fps_mode_custom": "사용자 정의 (최대 FPS 슬라이더)",
+  "fps_mode_eco": "절전 모드 - Eco (60 FPS)",
+  "fps_mode_lite": "라이트 (120 FPS)",
+  "fps_mode_144": "144 FPS",
+  "fps_mode_165": "165 FPS",
+  "fps_mode_240": "240 FPS",
+  "fps_mode_360": "360 FPS",
+  "fps_mode_unlimited": "무제한"
 }

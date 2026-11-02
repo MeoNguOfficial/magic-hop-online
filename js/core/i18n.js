@@ -164,6 +164,10 @@ function applyTranslations() {
     if (typeof window.updateFullscreenUI === 'function') {
         window.updateFullscreenUI();
     }
+
+    if (typeof window.updateFpsSyncUI === 'function') {
+        window.updateFpsSyncUI();
+    }
 }
 
 window.setGameLanguage = function (lang) {
