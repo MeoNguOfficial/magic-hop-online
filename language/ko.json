@@ -257,7 +257,7 @@
   "msg_confirm_delete_song_cache": "\"{name}\" 노래에 대한 캐시(오디오 및 비트맵)를 지우시겠습니까?",
   "msg_beatmap_cleared": "모든 비트맵 캐시가 지워졌습니다! 지도는 재생되면 다시 다운로드됩니다.",
   "btn_reset": "데이터 지우기(재설정)",
-  "btn_install": "앱 다운로드(PWA)",
+  "btn_install": "앱 다운로드",
   "install_app_title": "앱 설치",
   "install_ios_guide": "iOS: Safari에서 '공유' 아이콘을 탭한 다음 '홈 화면에 추가'를 선택하여 설치하세요. 게임.",
   "sw_auto_update_title": "앱 자동 업데이트",
@@ -531,7 +531,7 @@
   "dedicated_gpu_detected_note": "외장 그래픽 카드(Dedicated GPU)가 감지되었습니다.",
   "discrete_gpu_change_title": "외장 GPU 설정",
   "discrete_gpu_change_desc": "GPU 설정을 적용하려면 페이지를 다시 로드해야 합니다. 지금 다시 로드하시겠습니까?",
-  "mobile_optimize_notice": "PC 플레이 권장, 현재 모바일에 맞게 최적화 중입니다. 기다려 주시기 바랍니다",
+  "mobile_optimize_notice": "앱 버전이 이제 제공됩니다",
   "personalize_pattern_solid": "Solid",
   "personalize_pattern_wireframe": "Wire",
   "personalize_pattern_checkerboard": "Checkerboard",
@@ -568,5 +568,7 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "로그인 필요",
-  "account_switcher_logged_in": "로그인됨"
+  "account_switcher_logged_in": "로그인됨",
+  "download_app_modal_title": "CYBER BEAT HOPPER 다운로드",
+  "download_app_modal_desc": "기기에 맞는 버전을 선택하세요"
 }

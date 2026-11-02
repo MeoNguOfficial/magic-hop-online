@@ -260,7 +260,7 @@
   "msg_confirm_delete_song_cache": "Вы уверены, что хотите очистить кеш (аудио и битмап) для песни \"{name}\"?",
   "msg_beatmap_cleared": "Весь кеш битмап очищен! Карты будут повторно загружены при воспроизведении.",
   "btn_reset": "Очистить данные (сброс)",
-  "btn_install": "Загрузить приложение (PWA)",
+  "btn_install": "Загрузить приложение",
   "install_app_title": "УСТАНОВИТЬ ПРИЛОЖЕНИЕ",
   "install_ios_guide": "На iOS: коснитесь значка «Поделиться» в Safari, затем выберите «Добавить на главный экран», чтобы установить игра.",
   "sw_auto_update_title": "Приложение автоматического обновления",
@@ -531,7 +531,7 @@
   "dedicated_gpu_detected_note": "Устройство оснащено дискретной видеокартой (Dedicated GPU).",
   "discrete_gpu_change_title": "НАСТРОЙКА ДИСКРЕТНОЙ GPU",
   "discrete_gpu_change_desc": "Для применения настроек GPU требуется перезагрузка страницы. Перезагрузить сейчас?",
-  "mobile_optimize_notice": "Рекомендуется играть на ПК, в настоящее время оптимизируется для мобильных устройств, пожалуйста, подождите",
+  "mobile_optimize_notice": "Версия приложения уже доступна",
   "personalize_pattern_solid": "Solid",
   "personalize_pattern_wireframe": "Wire",
   "personalize_pattern_checkerboard": "Checkerboard",
@@ -568,5 +568,7 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "Требуется Вход",
-  "account_switcher_logged_in": "В сети"
+  "account_switcher_logged_in": "В сети",
+  "download_app_modal_title": "СКАЧАТЬ CYBER BEAT HOPPER",
+  "download_app_modal_desc": "Выберите версию для вашего устройства"
 }

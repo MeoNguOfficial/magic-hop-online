@@ -191,13 +191,6 @@ let rawPerfMode = localStorage.getItem('performanceModeEnabled');
 let performanceModeEnabled = false;
 if (rawPerfMode !== null) {
     performanceModeEnabled = JSON.parse(rawPerfMode) === true;
-} else {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    const isWeakCPU = navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4;
-    if (isMobile || isWeakCPU) {
-        performanceModeEnabled = true;
-        localStorage.setItem('performanceModeEnabled', 'true');
-    }
 }
 let currentGraphicsQuality = localStorage.getItem('graphicsQuality') || 'fhd';
 let rawAPI = 'webgl';
@@ -2043,7 +2036,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const installAppBtn = document.getElementById('install-app-btn');
     if (installAppBtn) {
         installAppBtn.addEventListener('click', () => {
-            if (typeof showPWAInstallGuide === 'function') showPWAInstallGuide();
+            if (typeof showDownloadAppModal === 'function') {
+                showDownloadAppModal();
+            } else if (typeof showPWAInstallGuide === 'function') {
+                showPWAInstallGuide();
+            }
         });
     }
 

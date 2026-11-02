@@ -452,28 +452,31 @@ function renderLoggedInState(user) {
             </div>
             
             <!-- ACCOUNT SUBTAB CONTENT -->
-            <div id="subtab-content-account" class="space-y-4 animate-fade-in">
-                <div class="bg-black/40 border border-cyan-500/30 rounded-xl p-6 text-center shadow-lg shadow-cyan-500/10 mt-2">
-                    <div class="w-16 h-16 mx-auto bg-cyan-900/50 border-2 border-cyan-400/50 rounded-full flex items-center justify-center mb-4 shadow-[0_0_15px_rgba(34,211,238,0.3)]">
-                        <svg class="w-8 h-8 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+            <div id="subtab-content-account" class="space-y-3 animate-fade-in">
+                <div class="bg-black/40 border border-cyan-500/30 rounded-xl p-5 text-center shadow-lg shadow-cyan-500/10 mt-1 mb-1">
+                    <div class="w-14 h-14 mx-auto bg-cyan-900/50 border-2 border-cyan-400/50 rounded-full flex items-center justify-center mb-3 shadow-[0_0_15px_rgba(34,211,238,0.3)]">
+                        <svg class="w-7 h-7 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"></path>
                         </svg>
                     </div>
-                    <p class="text-xs text-gray-400 font-orbitron mb-1"><span data-i18n="account_welcome">${t('account_welcome')}</span></p>
-                    <h4 class="text-lg font-bold text-cyan-400 font-orbitron uppercase tracking-widest truncate px-2">${user.realname || user.name || user.username || 'PLAYER'}</h4>
-                    <p class="text-[11px] text-gray-500 mt-1 font-orbitron truncate px-2">${user.email || ''}</p>
+                    <p class="text-xs text-gray-400 font-orbitron mb-0.5"><span data-i18n="account_welcome">${t('account_welcome')}</span></p>
+                    <h4 class="text-base font-bold text-cyan-400 font-orbitron uppercase tracking-widest truncate px-2">${user.realname || user.name || user.username || 'PLAYER'}</h4>
+                    <p class="text-[11px] text-gray-500 mt-0.5 font-orbitron truncate px-2">${user.email || ''}</p>
                     
-                    <div class="mt-4 pt-4 border-t border-cyan-500/20">
-                         <div class="text-[10px] text-gray-500 uppercase tracking-widest font-orbitron mb-1" data-i18n="account_status">${t('account_status')}</div>
+                    <div class="mt-3 pt-3 border-t border-cyan-500/20">
+                         <div class="text-[10px] text-gray-500 uppercase tracking-widest font-orbitron mb-0.5" data-i18n="account_status">${t('account_status')}</div>
                          <div class="text-xs text-green-400 font-bold font-orbitron uppercase tracking-wider animate-pulse" data-i18n="account_online">${t('account_online')}</div>
                     </div>
                 </div>
 
-                <button id="btn-edit-info" class="w-full py-3 text-xs font-bold text-yellow-400 border border-yellow-500/30 hover:bg-yellow-950/20 rounded uppercase font-orbitron transition-all mt-4" data-i18n="account_btn_edit">${t('account_btn_edit')}</button>
-                <button id="btn-change-password" class="w-full py-3 text-xs font-bold text-purple-400 border border-purple-500/30 hover:bg-purple-950/20 rounded uppercase font-orbitron transition-all mt-2" data-i18n="account_btn_change_password">${t('account_btn_change_password')}</button>
-                <button id="btn-switch-account" class="w-full py-3 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all mt-2" data-i18n="account_btn_switch">${t('account_btn_switch') || 'CHUYỂN ĐỔI TÀI KHOẢN'}</button>
-                <button id="btn-logout" class="w-full py-3 text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-950/20 rounded uppercase font-orbitron transition-all mt-4" data-i18n="account_logout">${t('account_logout')}</button>
-                <button id="btn-delete-account" class="w-full py-3 text-xs font-bold text-red-600 border border-red-600/30 hover:bg-red-950/30 rounded uppercase font-orbitron transition-all mt-2" data-i18n="account_btn_delete_account">${t('account_btn_delete_account')}</button>
+                <!-- ACTIONS BUTTON GROUP (Khoảng cách gọn gàng, vừa vặn) -->
+                <div class="space-y-2">
+                    <button id="btn-edit-info" class="w-full py-2.5 px-4 text-xs font-bold text-yellow-400 border border-yellow-500/30 hover:bg-yellow-950/20 rounded-lg uppercase font-orbitron transition-all" data-i18n="account_btn_edit">${t('account_btn_edit')}</button>
+                    <button id="btn-change-password" class="w-full py-2.5 px-4 text-xs font-bold text-purple-400 border border-purple-500/30 hover:bg-purple-950/20 rounded-lg uppercase font-orbitron transition-all" data-i18n="account_btn_change_password">${t('account_btn_change_password')}</button>
+                    <button id="btn-switch-account" class="w-full py-2.5 px-4 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded-lg uppercase font-orbitron transition-all" data-i18n="account_btn_switch">${t('account_btn_switch') || 'CHUYỂN ĐỔI TÀI KHOẢN'}</button>
+                    <button id="btn-logout" class="w-full py-2.5 px-4 text-xs font-bold text-red-400 border border-red-500/30 hover:bg-red-950/20 rounded-lg uppercase font-orbitron transition-all" data-i18n="account_logout">${t('account_logout')}</button>
+                    <button id="btn-delete-account" class="w-full py-2.5 px-4 text-xs font-bold text-red-600 border border-red-600/30 hover:bg-red-950/30 rounded-lg uppercase font-orbitron transition-all" data-i18n="account_btn_delete_account">${t('account_btn_delete_account')}</button>
+                </div>
             </div>
 
             <!-- CHAT SUBTAB CONTENT -->
@@ -525,8 +528,8 @@ function renderLoggedInState(user) {
                     </div>
                     <p class="text-xs text-gray-400 mb-4 font-orbitron" data-i18n="admin_dashboard_tools">${t('admin_dashboard_tools')}</p>
                     <div class="space-y-2">
-                        <a href="admin.html" target="_blank" class="w-full block py-3 text-xs font-bold text-white bg-pink-600/80 hover:bg-pink-500 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(236,72,153,0.3)]">Admin Dashboard</a>
-                        <a href="beat_editor.html" target="_blank" class="w-full block py-3 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] text-center">Beat Editor Pro</a>
+                        <a href="admin.html" onclick="event.preventDefault(); window.openExternalWebApp('admin.html');" target="_blank" class="w-full block py-3 text-xs font-bold text-white bg-pink-600/80 hover:bg-pink-500 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(236,72,153,0.3)] cursor-pointer">Admin Dashboard</a>
+                        <a href="beat_editor.html" onclick="event.preventDefault(); window.openExternalWebApp('beat_editor.html');" target="_blank" class="w-full block py-3 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] text-center cursor-pointer">Beat Editor Pro</a>
                         <button id="btn-open-admin-modal-inside" class="w-full py-3 text-xs font-bold text-pink-400 border border-pink-500/30 hover:bg-pink-950/20 rounded uppercase font-orbitron transition-all" data-i18n="admin_open_ingame">${t('admin_open_ingame')}</button>
                     </div>
                 </div>

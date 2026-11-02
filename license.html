@@ -93,6 +93,14 @@
     <div class="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent blur-[2px]"></div>
 
     <div class="w-full max-w-3xl my-8">
+        <!-- Top Back Navigation -->
+        <div class="flex justify-between items-center mb-4 px-1">
+            <button onclick="closeOrGoBack()" class="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-cyan-500/30 bg-slate-900/80 hover:bg-cyan-950/60 text-cyan-400 text-xs font-orbitron transition-all">
+                ← Về Game / Back
+            </button>
+            <span class="text-[10px] font-orbitron tracking-widest text-slate-500 uppercase">Cyber Beat Hopper</span>
+        </div>
+
         <!-- Logo / Title -->
         <div class="text-center mb-8">
             <h2 class="text-[11px] font-orbitron tracking-[0.4em] text-cyan-400/70 uppercase">Cyber Beat Hopper</h2>
@@ -215,15 +223,31 @@
 
             <!-- Footer Close/Back button -->
             <div class="flex justify-center pt-4">
-                <button onclick="window.close()" class="px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black text-xs font-orbitron tracking-[0.2em] rounded-md transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.75)] transform active:scale-95 uppercase">
-                    Đóng / Close
+                <button onclick="closeOrGoBack()" class="cursor-pointer px-8 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-400 hover:to-cyan-500 text-slate-950 font-black text-xs font-orbitron tracking-[0.2em] rounded-md transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.4)] hover:shadow-[0_0_25px_rgba(6,182,212,0.75)] transform active:scale-95 uppercase">
+                    ← Đóng / Quay Lại (Close)
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Script to toggle language tabs -->
+    <!-- Script to toggle language tabs & handle close/back navigation -->
     <script>
+        function closeOrGoBack() {
+            if (window.parent && window.parent !== window && typeof window.parent.closeInGameViewer === 'function') {
+                window.parent.closeInGameViewer();
+                return;
+            }
+            if (window.opener && !window.opener.closed) {
+                window.close();
+                return;
+            }
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.location.href = 'index.html';
+            }
+        }
+
         function switchLanguage(lang) {
             const tabVi = document.getElementById('tab-vi');
             const tabEn = document.getElementById('tab-en');

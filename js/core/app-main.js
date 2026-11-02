@@ -182,9 +182,21 @@
     let nativeInterval = null;
     let trapElement = null;
 
+    // Phát hiện môi trường Desktop App độc lập (Tauri, WebView2, Edge App Mode)
+    const isDesktopApp = !!(
+        window.__TAURI__ ||
+        window.__TAURI_INTERNALS__ ||
+        (window.chrome && window.chrome.webview) ||
+        window.__DESKTOP_APP__ ||
+        window.location.protocol === 'tauri:' ||
+        window.location.protocol === 'asset:' ||
+        window.matchMedia('(display-mode: standalone)').matches
+    );
+    window.isDesktopApp = isDesktopApp;
+
     // Tầng 1: Window Size Difference (Phát hiện DevTools dạng Docked trên mọi trình duyệt)
     function checkSizeMismatch() {
-        if (isAllowedBypass()) return false;
+        if (isAllowedBypass() || isDesktopApp) return false;
         const thresholdWidth = 160;
         const thresholdHeight = 200;
         const wDiff = window.outerWidth - window.innerWidth;

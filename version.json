@@ -1,0 +1,14 @@
+{
+  "version": "1.0.7",
+  "versionCode": 1793596800,
+  "releaseDate": "2026-11-02",
+  "changelog": {
+    "vi": "Phiên bản v1.0.7: Đa nền tảng độc lập (PC Windows & Android APK - NO Electron), Bảo toàn dữ liệu 100% sau cập nhật, In-Game Page Viewer (Admin & Beat Editor), Menu Tải App 5 nền tảng và bộ kiểm tra cập nhật tự động đa tầng.",
+    "en": "Version v1.0.7: Standalone Multiplatform (PC Windows & Android APK - NO Electron), 100% Data Persistence across updates, In-Game Page Viewer (Admin & Beat Editor), 5-Platform Download App modal and multi-tier auto update checker."
+  },
+  "downloads": {
+    "pc": "https://github.com/MeoNguOfficial/magic-hop-online/releases/latest",
+    "apk": "https://github.com/MeoNguOfficial/magic-hop-online/releases/latest",
+    "web": "https://magic-hop.vercel.app"
+  }
+}

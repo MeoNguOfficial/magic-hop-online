@@ -1,12 +1,28 @@
 {
   "name": "magic-hop-online",
-  "version": "1.0.6",
-  "description": "**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.6**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp lối chơi nảy gạch theo giai điệu dồn dập, kết nối Online, hỗ trợ PWA và hệ thống tùy biến sâu rộng.",
+  "version": "1.0.7",
+  "description": "**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.7**, phát triển trên nền tảng *MeoTN HOP ENGINE v3.6*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp lối chơi nảy gạch theo giai điệu dồn dập, kết nối Online, hỗ trợ PWA và hệ thống tùy biến sâu rộng.",
   "main": "sw.js",
   "scripts": {
     "css:dev": "tailwindcss -i css/input.css -o css/tailwind.min.css --watch",
     "css:build": "tailwindcss -i css/input.css -o css/tailwind.min.css --minify",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "app:run": "scripts\\launch-desktop.bat",
+    "build:pc": "scripts\\build-pc.bat",
+    "build:apk": "scripts\\build-apk.bat",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "cap:setup": "scripts\\setup-mobile-capacitor.bat",
+    "cap:sync": "cap sync",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
+    "cap:build:android": "cap build android",
+    "tauri:android:init": "tauri android init",
+    "tauri:android:dev": "tauri android dev",
+    "tauri:android:build": "tauri android build",
+    "tauri:ios:init": "tauri ios init",
+    "tauri:ios:dev": "tauri ios dev",
+    "tauri:ios:build": "tauri ios build"
   },
   "repository": {
     "type": "git",
@@ -21,6 +37,9 @@
   },
   "homepage": "https://github.com/MeoNguOfficial/magic-hop-online#readme",
   "devDependencies": {
+    "@capacitor/android": "^8.6.0",
+    "@capacitor/cli": "^8.6.0",
+    "@capacitor/core": "^8.6.0",
     "@tailwindcss/cli": "^4.3.3",
     "tailwindcss": "^4.3.3"
   },

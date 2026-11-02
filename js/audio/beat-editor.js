@@ -1861,7 +1861,7 @@ if (exitBtn) {
         if (isDirty()) {
             exitModal.classList.add("active");
         } else {
-            window.location.href = "index.html"; 
+            exitBeatEditor(); 
         }
     };
 }
@@ -1869,11 +1869,23 @@ if (exitBtn) {
 if (exitSaveBtn) {
     exitSaveBtn.onclick = () => {
         saveHistory(getCleanSongName(), beats);
-        window.location.href = "index.html";
+        exitBeatEditor();
     };
 }
 
-if (exitNoSaveBtn) exitNoSaveBtn.onclick = () => window.location.href = "index.html";
+function exitBeatEditor() {
+    if (window.parent && window.parent !== window && typeof window.parent.closeInGameViewer === 'function') {
+        window.parent.closeInGameViewer();
+        return;
+    }
+    if (window.opener && !window.opener.closed) {
+        window.close();
+        return;
+    }
+    window.location.href = "index.html";
+}
+
+if (exitNoSaveBtn) exitNoSaveBtn.onclick = () => exitBeatEditor();
 if (exitCancelBtn) exitCancelBtn.onclick = () => exitModal.classList.remove("active");
 if (exitModal) exitModal.addEventListener("click", e => { if (e.target === exitModal) exitModal.classList.remove("active"); });
 

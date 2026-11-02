@@ -1,9 +1,81 @@
-# 🎵 Cyber Beat Hopper (v1.0.6)
+# 🎵 Cyber Beat Hopper (v1.0.7)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.6**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA) và hệ thống tùy biến sâu rộng.
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.7**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
 
 ---
-## 🚀 Phiên Bản v1.0.6 Có gì mới?
+## 🚀 Phiên Bản v1.0.7 Có gì mới?
+
+# 🚀 UPDATE LOG: BẢN PHÁT HÀNH ĐA NỀN TẢNG (PC STANDALONE & ANDROID APK - NO ELECTRON), BẢO TOÀN DỮ LIỆU 100%, IN-GAME PAGE VIEWER & MODAL TẢI APP 5 NỀN TẢNG (RELEASE v1.0.7)
+
+Chào các bạn, bản cập nhật **v1.0.7** là cột mốc đột phá đưa **Cyber Beat Hopper** chính thức trở thành tựa game đa nền tảng độc lập hoàn chỉnh: ra mắt bản Native Desktop cho PC Windows siêu nhẹ và Android APK (nói KHÔNG với Electron), bảo toàn 100% dữ liệu game sau mỗi lần cập nhật, tích hợp In-Game Page Viewer loại bỏ hoàn toàn lỗi Access Denied, thiết kế lại toàn diện hệ thống Tải App 5 nền tảng và bộ kiểm tra cập nhật tự động đa tầng:
+
+---
+
+### 🖥️ 1. BẢN ĐÓNG GÓI ĐA NỀN TẢNG NATIVE ĐỘC LẬP - NÓI KHÔNG VỚI ELECTRON (STANDALONE PC & ANDROID APK)
+- **Kiến trúc PC Windows Standalone Siêu Nhẹ (C# Winsock + WebView2 / Chromium):**
+  - Loại bỏ hoàn toàn sự cồng kềnh của Electron (tiết kiệm hàng trăm MB dung lượng RAM và hàng trăm MB kích thước file cài đặt).
+  - Tích hợp máy chủ C# Winsock đa luồng tĩnh (`src-pc/Program.cs`) phục vụ assets cục bộ kết hợp khởi chạy nhân Chromium với cấu hình tối ưu phần cứng cao cấp:
+    `--enable-gpu-rasterization --enable-zero-copy --enable-features=AudioWorkletRealtimeThread --app="..."`
+  - Đảm bảo tốc độ quét khung hình cực cao (144Hz, 165Hz, 240Hz+), độ trễ âm thanh gần như bằng 0 (AudioWorklet Realtime Thread).
+- **Bản Android APK Native (Capacitor):**
+  - Đóng gói toàn diện cho thiết bị di động và máy tính bảng Android.
+  - Tối ưu hóa phản hồi cảm ứng đa điểm độ trễ thấp, hỗ trợ toàn màn hình tràn viền (`viewport-fit=cover`) và tăng tốc WebGL.
+- **Bộ phím tắt & Bảo vệ Native Desktop (`desktop-app.js`):**
+  - Hỗ trợ phím **F11** chuyển đổi toàn màn hình mượt mà.
+  - Vô hiệu hóa chuột phải mặc định trình duyệt (vẫn giữ nguyên menu ngữ cảnh bài hát và các ô nhập liệu).
+  - Khóa các phím tắt gây biến dạng tỷ lệ 3D: Ctrl + `+`/`-`/`0` (zoom), Ctrl+P (in), Ctrl+S (lưu trang).
+  - **Bảo vệ ván đấu đang chơi:** Tự động chặn phím F5 / Ctrl+R khi đang chơi dở bài (`isPlaying`) để bảo vệ điểm số kỷ lục của người chơi.
+
+---
+
+### 💾 2. BẢO TOÀN DỮ LIỆU TUYỆT ĐỐI 100% KHI CẬP NHẬT APP (DATA PERSISTENCE ACROSS UPDATES)
+- **Cố định Origin máy chủ PC (Port tĩnh 38281):**
+  - Khắc phục triệt để lỗi người chơi bị mất toàn bộ kỷ lục điểm số, bài hát lưu trong máy và phiên đăng nhập sau mỗi lần mở lại hoặc cập nhật bản PC mới.
+  - Cố định cổng mạng `38281` kết hợp lưu trữ thư mục người dùng riêng biệt tại `%LOCALAPPDATA%\CyberBeatHopper\UserData` (miễn nhiễm với cơ chế tự dọn dẹp Disk Cleanup của Windows).
+- **Bảo vệ dữ liệu Android APK (`hasFragileUserData="true"`):**
+  - Khai báo cờ an toàn trên `AndroidManifest.xml` giúp giữ lại toàn bộ dữ liệu ứng dụng khi nâng cấp.
+  - Tự động sinh mã `versionCode` động theo thời gian thực trong `build.gradle`, đảm bảo cài đè bản cập nhật mới mượt mà không xung đột phiên bản.
+
+---
+
+### 🎮 3. IN-GAME PAGE VIEWER - XEM TRANG TRỰC TIẾP TRONG GAME (ZERO ACCESS DENIED)
+- **Trình xem In-Game Page Viewer Cyberpunk (`#page-viewer-modal`):**
+  - Mở trực tiếp các trang phụ ngay bên trong game: **Admin Dashboard (`admin.html`)**, **Beat Editor Pro (`beat_editor.html`)**, **Điều khoản dịch vụ (`terms.html`)**, **Giấy phép bản quyền (`license.html`)**.
+  - **Dùng chung 100% Session & Storage:** Chạy cùng origin với game, token tài khoản Admin tự động kế thừa $\rightarrow$ **triệt tiêu 100% lỗi "ACCESS DENIED"**.
+  - **Bảo mật tối đa:** Không để lộ Session Token ra thanh địa chỉ URL bên ngoài.
+  - **Quay về game tức thì (Zero Reload):** Đóng mở nhẹ nhàng bằng phím `Escape`, nút `✕` hoặc nút *"VỀ GAME"* mà không cần tải lại trang web hay khởi tạo lại engine Three.js, bảo toàn vẹn nguyên tiến trình chơi và âm nhạc.
+  - **Nút "Mở Cửa Sổ Riêng":** Cho phép mở ra tab trình duyệt độc lập khi quản trị viên muốn làm việc trên màn hình phụ.
+
+---
+
+### 📲 4. GIAO DIỆN TẢI APP 5 NỀN TẢNG (UNIFIED DOWNLOAD APP MODAL)
+- **Thay thế nút "Tải App (PWA)" cũ trên Web:**
+  - Nâng cấp thành nút chung **"Tải App"** mở modal Cyberpunk sang trọng với 5 tùy chọn nền tảng rõ ràng:
+    1. **Trình duyệt (PWA):** Cài đặt Web App chơi ngoại tuyến tức thì.
+    2. **PC Windows (.exe):** Bản đóng gói Standalone tối ưu Three.js 144Hz+.
+    3. **Android (File APK):** Tải trực tiếp gói cài đặt APK cho điện thoại.
+    4. **iOS (iPhone / iPad):** Nhãn *Coming Soon* (hướng dẫn tạm thời dùng Safari Add to Home Screen).
+    5. **macOS (Apple Silicon & Intel):** Nhãn *Coming Soon* (bản thử nghiệm).
+- **Tự động thích ứng giao diện theo nền tảng:** Khi chạy trên bản đóng gói (PC EXE hoặc Android APK), nút "Tải App" sẽ tự động ẩn đi và mở rộng nút **"Kiểm tra bản cập nhật App"** ra toàn màn hình.
+
+---
+
+### 🔄 5. BỘ KIỂM TRA BẢN CẬP NHẬT TỰ ĐỘNG ĐA TẦNG (MULTI-TIER UPDATE CHECKER & version.json)
+- **Cơ chế Semantic Versioning độc lập:**
+  - So sánh phiên bản chuẩn xác (`compareSemVer`) độc lập với Service Worker trên bản PC và APK.
+- **Dự phòng đa tầng (Multi-tier Fallback):**
+  - Tự động lấy thông tin từ GitHub Raw $\rightarrow$ Vercel Web App $\rightarrow$ Local `./version.json`.
+  - Khắc phục lỗi CORS 503 bằng cấu hình `vercel.json` hỗ trợ `Access-Control-Allow-Origin: *`.
+  - Tự động kiểm tra bản cập nhật trong nền 3.5s sau khi khởi động app mà không gây giật lag FPS.
+
+---
+
+### 🔐 6. FORM ĐĂNG NHẬP ADMIN TRỰC TIẾP & DÁN TOKEN (FALLBACK TAB NGOÀI)
+- Khi mở `admin.html` trên trình duyệt ngoài độc lập (chưa có token), hệ thống không còn hiện màn hình cụt đường nữa mà tự động hiển thị **Form đăng nhập Admin trực tiếp** (Email/Tài khoản + Mật khẩu) cùng nút **"📋 Dán Token từ Game"**, cho phép đăng nhập và truy cập bảng quản trị tức thì.
+
+---
+
+## 🚀 Bản trước đó: Phiên Bản v1.0.6 Có gì mới?
 
 # 🚀 UPDATE LOG: TÍNH NĂNG MỚI DASH TILE (GẠCH LƯỚT SIÊU TỐC), NÂNG CẤP AUTOPLAY & TRIỆT TIÊU 100% DROP FPS (RELEASE v1.0.6)
 
@@ -494,4 +566,4 @@ Dự án phát hành dưới điều khoản **MIT License**:
 
 ---
 
-*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.6*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.7*

@@ -240,7 +240,7 @@
   "msg_confirm_delete_song_cache": "Are you sure you want to clear the cache (audio and beatmap) for the song \"{name}\"?",
   "msg_beatmap_cleared": "All beatmap cache cleared! Maps will be re-downloaded when played.",
   "btn_reset": "Clear Data (Reset)",
-  "btn_install": "Download App (PWA)",
+  "btn_install": "Download App",
   "install_app_title": "INSTALL APP",
   "install_ios_guide": "On iOS: Tap the 'Share' icon in Safari, then select 'Add to Home Screen' to install the game.",
   "sw_auto_update_title": "Auto Update App",
@@ -532,7 +532,7 @@
   "discrete_gpu_change_title": "DISCRETE GPU SETTING",
   "discrete_gpu_change_desc": "Changing GPU settings requires reloading the page for the browser to apply. Reload now?",
   "discrete_gpu_windows_hint": "Tip: On Windows laptops, if the browser still uses integrated GPU, open Windows Settings > Display > Graphics and set your browser to 'High Performance'.",
-  "mobile_optimize_notice": "Recommended to play on medium-high spec devices or better",
+  "mobile_optimize_notice": "App version is now available",
   "personalize_ball_color": "Ball Color",
   "color_dynamic": "Dynamic Color",
   "color_cyan": "Cyan",
@@ -572,5 +572,7 @@
   "title_fullscreen": "Fullscreen (F11)",
   "title_exit_fullscreen": "Exit Fullscreen (ESC / F11)",
   "auto_fullscreen_bypassed_badge": "(Fullscreen Active)",
-  "auto_fullscreen_bypassed_tip": "Currently in fullscreen mode: This option is bypassed."
+  "auto_fullscreen_bypassed_tip": "Currently in fullscreen mode: This option is bypassed.",
+  "download_app_modal_title": "DOWNLOAD CYBER BEAT HOPPER",
+  "download_app_modal_desc": "Choose the version that fits your device"
 }

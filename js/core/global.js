@@ -1189,7 +1189,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.6' : 'Version 1.0.6'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.7' : 'Version 1.0.7'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
@@ -1202,11 +1202,11 @@ if (secretCreditBtn) {
                     </div>
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
                         <span class="text-gray-500">${isVi ? 'Nền tảng (Engine):' : 'Engine:'}</span>
-                        <span class="text-gray-300 font-bold">MeoTN HOP v3.5</span>
+                        <span class="text-gray-300 font-bold">MeoTN HOP v3.6</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-500">${isVi ? 'Giấy phép (License):' : 'License:'}</span>
-                        <a href="license.html" target="_blank" rel="noopener noreferrer" class="text-cyan-400 hover:text-cyan-300 font-bold underline drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] transition-colors">MIT License</a>
+                        <a href="license.html" onclick="event.preventDefault(); window.openInGameViewer('license.html', 'MIT LICENSE');" class="text-cyan-400 hover:text-cyan-300 font-bold underline drop-shadow-[0_0_5px_rgba(34,211,238,0.5)] transition-colors cursor-pointer">MIT License</a>
                     </div>
                 </div>
                 <div class="mt-4 text-center">
@@ -1723,3 +1723,118 @@ window.debouncedLocalStorageSet = (function() {
         }, delay);
     };
 })();
+
+
+// ============================================================
+// IN-GAME PAGE VIEWER (Xem License, Terms, v.v. trực tiếp không làm reload game)
+// ============================================================
+window.openInGameViewer = function(url, title) {
+    const modal = document.getElementById('page-viewer-modal');
+    const iframe = document.getElementById('page-viewer-iframe');
+    const titleEl = document.getElementById('page-viewer-title');
+    const extBtn = document.getElementById('page-viewer-open-external');
+    if (!modal || !iframe) {
+        window.open(url, '_blank');
+        return;
+    }
+
+    if (titleEl) {
+        titleEl.textContent = title || 'Cyber Beat Hopper';
+    }
+    if (extBtn) {
+        extBtn.onclick = (e) => {
+            e.stopPropagation();
+            window.open(url, '_blank');
+        };
+    }
+    iframe.src = url;
+    modal.classList.remove('hidden');
+    modal.style.display = 'flex';
+};
+
+window.closeInGameViewer = function() {
+    const modal = document.getElementById('page-viewer-modal');
+    const iframe = document.getElementById('page-viewer-iframe');
+    if (!modal) return;
+
+    modal.classList.add('hidden');
+    modal.style.display = 'none';
+    if (iframe) {
+        iframe.src = 'about:blank';
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const closeBtn = document.getElementById('page-viewer-close-btn');
+    if (closeBtn) {
+        closeBtn.onclick = window.closeInGameViewer;
+    }
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('page-viewer-modal');
+        if (modal && modal.style.display !== 'none' && !modal.classList.contains('hidden')) {
+            window.closeInGameViewer();
+        }
+    }
+});
+
+// Chặn các link mở license.html và terms.html trên toàn bộ ứng dụng để nạp qua In-Game Viewer
+document.addEventListener('click', (e) => {
+    const link = e.target.closest && e.target.closest('a');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    if (href.endsWith('license.html') || href.includes('license.html')) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.openInGameViewer('license.html', 'MIT LICENSE - CYBER BEAT HOPPER');
+        return;
+    }
+    if (href.endsWith('terms.html') || href.includes('terms.html')) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.openInGameViewer('terms.html', 'TERMS OF SERVICE / ĐIỀU KHOẢN DỊCH VỤ');
+        return;
+    }
+}, true);
+
+
+// ============================================================
+// IN-GAME VIEWER (Mở Beat Editor & Admin Panel qua In-Game Viewer)
+// + Sử dụng chung 100% localStorage (Token Admin có sẵn, không Access Denied)
+// + Không lộ token ra ngoài URL
+// + Không cần tải lại (reload) toàn bộ game khi đóng mở
+// ============================================================
+window.openExternalWebApp = function(pathOrUrl) {
+    if (pathOrUrl.includes('admin.html')) {
+        window.openInGameViewer('admin.html', 'ADMIN DASHBOARD - BẢNG QUẢN TRỊ');
+    } else if (pathOrUrl.includes('beat_editor.html')) {
+        window.openInGameViewer('beat_editor.html', 'BEAT EDITOR PRO - BIÊN TẬP NHỊP');
+    } else {
+        window.openInGameViewer(pathOrUrl, 'CYBER BEAT HOPPER');
+    }
+};
+
+// Đảm bảo click vào link admin.html và beat_editor.html luôn mở qua In-Game Viewer
+document.addEventListener('click', (e) => {
+    const link = e.target.closest && e.target.closest('a');
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!href) return;
+
+    if (href.endsWith('admin.html') || href.includes('admin.html')) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.openInGameViewer('admin.html', 'ADMIN DASHBOARD - BẢNG QUẢN TRỊ');
+        return;
+    }
+    if (href.endsWith('beat_editor.html') || href.includes('beat_editor.html')) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.openInGameViewer('beat_editor.html', 'BEAT EDITOR PRO - BIÊN TẬP NHỊP');
+        return;
+    }
+}, true);

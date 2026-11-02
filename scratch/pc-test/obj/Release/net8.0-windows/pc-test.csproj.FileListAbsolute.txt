@@ -1,0 +1,15 @@
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\bin\Release\net8.0-windows\pc-test.exe
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\bin\Release\net8.0-windows\pc-test.deps.json
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\bin\Release\net8.0-windows\pc-test.runtimeconfig.json
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\bin\Release\net8.0-windows\pc-test.dll
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\bin\Release\net8.0-windows\pc-test.pdb
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.GeneratedMSBuildEditorConfig.editorconfig
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.AssemblyInfoInputs.cache
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.AssemblyInfo.cs
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.csproj.CoreCompileInputs.cache
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.sourcelink.json
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.dll
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\refint\pc-test.dll
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.pdb
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\pc-test.genruntimeconfig.cache
+D:\MeoTN Games\MagicHopGame\magic-hop-online\scratch\pc-test\obj\Release\net8.0-windows\ref\pc-test.dll

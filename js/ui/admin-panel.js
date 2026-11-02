@@ -436,10 +436,12 @@ async function checkAuth() {
     const authDesc = document.getElementById('admin-auth-desc');
     const authIcon = document.getElementById('admin-auth-icon');
     const authActions = document.getElementById('admin-auth-actions');
+    const loginForm = document.getElementById('admin-auth-login-form');
 
     loginOverlay?.classList.remove('hidden');
 
     const setStatusSuccess = () => {
+        if (loginForm) loginForm.classList.add('hidden');
         if (authCard) authCard.className = "bg-green-950/40 border border-green-500/50 p-8 rounded-xl shadow-[0_0_30px_rgba(34,197,94,0.25)] w-full max-w-md text-center transition-all duration-300";
         if (authIcon) {
             authIcon.className = "w-16 h-16 bg-green-900/30 border border-green-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(34,197,94,0.4)]";
@@ -458,7 +460,7 @@ async function checkAuth() {
 
     const token = localStorage.getItem('auth_token');
     if (!token) {
-        showNoPermission();
+        showLoginForm("Vui lòng đăng nhập tài khoản Quản trị viên để truy cập Bảng điều khiển.");
         return;
     }
 
@@ -467,24 +469,56 @@ async function checkAuth() {
         const user = res.data?.data?.user || res.data?.data || res.data;
         if (user && (user.role === 'admin' || user.is_admin == 1 || user.is_admin === true || user.id === 1)) {
             setStatusSuccess();
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 1200));
             loginOverlay?.classList.add('hidden');
             showDashboard(user);
         } else {
             logToConsole('Access Denied: Not an admin', 'error');
-            showNoPermission();
+            showNoPermission("Tài khoản hiện tại không có quyền Admin! Vui lòng đăng nhập tài khoản Admin khác.");
         }
     } catch (err) {
-        showNoPermission();
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        showLoginForm("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại tài khoản Admin.");
     }
 }
 
-function showNoPermission() {
+function showLoginForm(descText) {
     const authCard = document.getElementById('admin-auth-card');
     const authTitle = document.getElementById('admin-auth-title');
     const authDesc = document.getElementById('admin-auth-desc');
     const authIcon = document.getElementById('admin-auth-icon');
     const authActions = document.getElementById('admin-auth-actions');
+    const loginForm = document.getElementById('admin-auth-login-form');
+    const errorBox = document.getElementById('admin-login-error');
+
+    loginOverlay?.classList.remove('hidden');
+    if (authCard) authCard.className = "bg-cyan-950/40 border border-cyan-500/50 p-8 rounded-xl shadow-[0_0_30px_rgba(6,182,212,0.25)] w-full max-w-md text-center transition-all duration-300";
+    if (authIcon) {
+        authIcon.className = "w-16 h-16 bg-cyan-900/30 border border-cyan-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_15px_rgba(6,182,212,0.4)]";
+        authIcon.innerHTML = `<svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>`;
+    }
+    if (authTitle) {
+        authTitle.innerText = "XÁC THỰC QUẢN TRỊ";
+        authTitle.className = "text-xl font-orbitron font-bold text-cyan-400 mb-2 uppercase tracking-widest";
+    }
+    if (authDesc) {
+        authDesc.innerText = descText || "Vui lòng đăng nhập tài khoản Admin để truy cập";
+        authDesc.className = "text-gray-300 text-xs font-orbitron leading-relaxed mb-4";
+    }
+    if (loginForm) loginForm.classList.remove('hidden');
+    if (authActions) authActions.classList.remove('hidden');
+    if (errorBox) errorBox.classList.add('hidden');
+    adminUserName?.classList.add('hidden');
+}
+
+function showNoPermission(descText) {
+    const authCard = document.getElementById('admin-auth-card');
+    const authTitle = document.getElementById('admin-auth-title');
+    const authDesc = document.getElementById('admin-auth-desc');
+    const authIcon = document.getElementById('admin-auth-icon');
+    const authActions = document.getElementById('admin-auth-actions');
+    const loginForm = document.getElementById('admin-auth-login-form');
 
     loginOverlay?.classList.remove('hidden');
     if (authCard) authCard.className = "bg-red-950/40 border border-red-500/50 p-8 rounded-xl shadow-[0_0_30px_rgba(239,68,68,0.25)] w-full max-w-md text-center transition-all duration-300";
@@ -497,11 +531,87 @@ function showNoPermission() {
         authTitle.className = "text-xl font-orbitron font-bold text-red-500 mb-2 uppercase tracking-widest";
     }
     if (authDesc) {
-        authDesc.innerText = "Tài khoản của bạn không có quyền Admin! Vui lòng quay lại game hoặc đăng nhập tài khoản Admin từ trang chủ.";
+        authDesc.innerText = descText || "Tài khoản của bạn không có quyền Admin! Vui lòng đăng nhập bằng tài khoản Admin.";
         authDesc.className = "text-gray-300 text-xs font-orbitron leading-relaxed mb-4";
     }
+    if (loginForm) loginForm.classList.remove('hidden');
     if (authActions) authActions.classList.remove('hidden');
     adminUserName?.classList.add('hidden');
+}
+
+// Khởi tạo Form đăng nhập Admin trực tiếp & Dán Token
+function initAdminAuthForm() {
+    const loginForm = document.getElementById('admin-auth-login-form');
+    const usernameInput = document.getElementById('admin-login-username');
+    const passwordInput = document.getElementById('admin-login-password');
+    const errorBox = document.getElementById('admin-login-error');
+    const submitBtn = document.getElementById('admin-btn-submit-login');
+    const pasteTokenBtn = document.getElementById('admin-btn-paste-token');
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = usernameInput ? usernameInput.value.trim() : '';
+            const password = passwordInput ? passwordInput.value : '';
+            if (!username || !password) return;
+
+            if (errorBox) errorBox.classList.add('hidden');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerText = 'ĐANG XÁC THỰC...';
+            }
+
+            try {
+                await ApiService.login({ username, password });
+                const meRes = await ApiService.getMe();
+                const user = meRes.data?.data?.user || meRes.data?.data || meRes.data;
+                if (user && (user.role === 'admin' || user.is_admin == 1 || user.is_admin === true || user.id === 1)) {
+                    if (submitBtn) submitBtn.innerText = 'THÀNH CÔNG!';
+                    initAdminAuthForm();
+checkAuth();
+                } else {
+                    if (errorBox) {
+                        errorBox.innerText = 'Tài khoản này không có quyền Admin! Vui lòng thử tài khoản khác.';
+                        errorBox.classList.remove('hidden');
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerText = 'ĐĂNG NHẬP ADMIN';
+                    }
+                }
+            } catch (err) {
+                if (errorBox) {
+                    const msg = err.response?.data?.message || 'Đăng nhập thất bại! Vui lòng kiểm tra lại tài khoản hoặc mật khẩu.';
+                    errorBox.innerText = msg;
+                    errorBox.classList.remove('hidden');
+                }
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'ĐĂNG NHẬP ADMIN';
+                }
+            }
+        });
+    }
+
+    if (pasteTokenBtn) {
+        pasteTokenBtn.addEventListener('click', async () => {
+            let token = '';
+            if (navigator.clipboard && navigator.clipboard.readText) {
+                try {
+                    token = await navigator.clipboard.readText();
+                } catch { }
+            }
+            if (!token || token.length < 10) {
+                token = prompt('Dán mã Session Token của bạn từ game vào đây:');
+            }
+            if (token && token.trim()) {
+                const cleanToken = token.trim();
+                localStorage.setItem('auth_token', cleanToken);
+                if (errorBox) errorBox.classList.add('hidden');
+                checkAuth();
+            }
+        });
+    }
 }
 
 // ============================================================
@@ -1934,7 +2044,11 @@ function renderAdminBeatmapsTable() {
                     };
                     localStorage.setItem('beatEditor_import_request', JSON.stringify(importData));
                     if (typeof logToConsole === 'function') logToConsole(`Đang mở ${map.title} trong Beat Editor...`, 'success');
-                    window.open('beat_editor.html', '_blank');
+                    if (typeof window.openExternalWebApp === 'function') {
+                        window.openExternalWebApp('beat_editor.html');
+                    } else {
+                        window.open('beat_editor.html', '_blank');
+                    }
                 }
             }
         });
@@ -3114,6 +3228,7 @@ function initAdminScoreTabs() {
 
 initAdminFilters();
 initAdminScoreTabs();
+if (typeof initAdminAuthForm === 'function') initAdminAuthForm();
 checkAuth();
 
 // --- GAME SETTINGS INITIALIZATION ---

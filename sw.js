@@ -4,8 +4,8 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.0.62';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.62';
+const STATIC_CACHE = 'magic-hop-static-v1.0.0.70';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.0.70';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
@@ -72,6 +72,13 @@ const CORE_ASSETS = [
     './js/ui/chat.js',
     './js/ui/admin-panel.js',
     './js/core/pwa-installer.js',
+    './beat_editor.html',
+    './admin.html',
+    './terms.html',
+    './license.html',
+    './js/core/mobile-app.js',
+    './js/core/desktop-app.js',
+    './version.json',
     './js/ui/tos-warning.js',
     './js/ui/alert.js',
     'https://flagcdn.io/flags/4x3/vn.svg',

@@ -260,7 +260,7 @@
   "msg_confirm_delete_song_cache": "¿Estás seguro de que deseas borrar el caché (audio y mapa de ritmos) de la canción \"{name}\"?",
   "msg_beatmap_cleared": "¡Todo el caché de mapas de ritmos borrado! Los mapas se volverán a descargar cuando se jueguen.",
   "btn_reset": "Borrar datos (restablecer)",
-  "btn_install": "Descargar aplicación (PWA)",
+  "btn_install": "Descargar aplicación",
   "install_app_title": "INSTALAR LA APLICACIÓN",
   "install_ios_guide": "En iOS: toca el ícono \"Compartir\" en Safari, luego selecciona \"Agregar a la pantalla de inicio\" para instalar el juego.",
   "sw_auto_update_title": "Aplicación de actualización automática",
@@ -531,7 +531,7 @@
   "dedicated_gpu_detected_note": "El dispositivo cuenta con tarjeta gráfica dedicada (GPU dedicada).",
   "discrete_gpu_change_title": "CONFIGURACIÓN DE GPU DEDICADA",
   "discrete_gpu_change_desc": "Cambiar la configuración de GPU requiere recargar la página. ¿Recargar ahora?",
-  "mobile_optimize_notice": "Recomendado jugar en PC, actualmente optimizando para móvil, por favor sea paciente",
+  "mobile_optimize_notice": "La versión de la aplicación ya está disponible",
   "personalize_pattern_solid": "Solid",
   "personalize_pattern_wireframe": "Wire",
   "personalize_pattern_checkerboard": "Checkerboard",
@@ -568,5 +568,7 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "Inicio Necesario",
-  "account_switcher_logged_in": "Conectado"
+  "account_switcher_logged_in": "Conectado",
+  "download_app_modal_title": "DESCARGAR CYBER BEAT HOPPER",
+  "download_app_modal_desc": "Elige la versión adecuada para tu dispositivo"
 }

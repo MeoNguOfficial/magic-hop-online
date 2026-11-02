@@ -260,7 +260,7 @@
   "msg_confirm_delete_song_cache": "Tem certeza de que deseja limpar o cache (áudio e beatmap) da música \"{name}\"?",
   "msg_beatmap_cleared": "Todo o cache do beatmap foi limpo! Os mapas serão baixados novamente quando jogados.",
   "btn_reset": "Limpar dados (redefinir)",
-  "btn_install": "Baixar aplicativo (PWA)",
+  "btn_install": "Baixar aplicativo",
   "install_app_title": "INSTALAR APLICATIVO",
   "install_ios_guide": "No iOS: toque no ícone \"Compartilhar\" no Safari e selecione \"Adicionar à tela inicial\" para instalar o jogo.",
   "sw_auto_update_title": "Atualização automática do aplicativo",
@@ -531,7 +531,7 @@
   "dedicated_gpu_detected_note": "O dispositivo possui placa de vídeo dedicada (GPU dedicada).",
   "discrete_gpu_change_title": "CONFIGURAÇÃO DE GPU DEDICADA",
   "discrete_gpu_change_desc": "A alteração das configurações de GPU requer o recarregamento da página. Recarregar agora?",
-  "mobile_optimize_notice": "Recomendado jogar no PC, atualmente otimizando para celular, por favor seja paciente",
+  "mobile_optimize_notice": "A versão do aplicativo já está disponível",
   "personalize_pattern_solid": "Solid",
   "personalize_pattern_wireframe": "Wire",
   "personalize_pattern_checkerboard": "Checkerboard",
@@ -568,5 +568,7 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "Login Necessário",
-  "account_switcher_logged_in": "Logado"
+  "account_switcher_logged_in": "Logado",
+  "download_app_modal_title": "BAIXAR CYBER BEAT HOPPER",
+  "download_app_modal_desc": "Escolha a versão compatível com seu dispositivo"
 }

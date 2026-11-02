@@ -4,3 +4,11 @@ upcoming_features.md
 node_modules/
 testcase.md
 AI-AGENT.md
+DESKTOP_APP_GUIDE.md
+MOBILE_APP_GUIDE.md
+src-tauri/target/
+android/
+ios/
+www/
+dist-apk/
+dist-pc/

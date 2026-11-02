@@ -259,7 +259,7 @@
   "msg_confirm_delete_song_cache": "曲「{name}」のキャッシュ (オーディオとビートマップ) をクリアしてもよろしいですか?",
   "msg_beatmap_cleared": "すべてのビートマップ キャッシュがクリアされました。マップはプレイ時に再ダウンロードされます。",
   "btn_reset": "データのクリア (リセット)",
-  "btn_install": "アプリのダウンロード (PWA)",
+  "btn_install": "アプリのダウンロード",
   "install_app_title": "アプリのインストール",
   "install_ios_guide": "iOS の場合: Safari で [共有] アイコンをタップし、[ホーム画面に追加] を選択してゲームをインストールします。",
   "sw_auto_update_title": "アプリの自動更新",
@@ -531,7 +531,7 @@
   "dedicated_gpu_detected_note": "専用グラフィックスカード（外部GPU）が検出されました。",
   "discrete_gpu_change_title": "専用GPU設定",
   "discrete_gpu_change_desc": "GPU設定の変更を適用するにはページの再読み込みが必要です。今すぐ再読み込みしますか？",
-  "mobile_optimize_notice": "PCでのプレイを推奨します。現在モバイル向けに最適化中です。お待ちください",
+  "mobile_optimize_notice": "アプリ版が利用可能になりました",
   "personalize_pattern_solid": "Solid",
   "personalize_pattern_wireframe": "Wire",
   "personalize_pattern_checkerboard": "Checkerboard",
@@ -568,5 +568,7 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "ログインが必要",
-  "account_switcher_logged_in": "ログイン済み"
+  "account_switcher_logged_in": "ログイン済み",
+  "download_app_modal_title": "CYBER BEAT HOPPER をダウンロード",
+  "download_app_modal_desc": "お使いのデバイスに合ったバージョンを選択してください"
 }

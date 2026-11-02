@@ -22,12 +22,12 @@
             const dict = {
                 vi: {
                     title: "ĐIỀU KHOẢN DỊCH VỤ",
-                    message: "Chào mừng đến với Magic Hop Online! Bằng việc chơi game này, hãy tuân thủ <a href='terms.html' target='_blank' class='text-cyan-400 hover:underline font-bold'>điều khoản dịch vụ</a> của chúng tôi.",
+                    message: "Chào mừng đến với Magic Hop Online! Bằng việc chơi game này, hãy tuân thủ <a href='terms.html' onclick=\"event.preventDefault(); window.openInGameViewer('terms.html', 'ĐIỀU KHOẢN DỊCH VỤ');\" class='text-cyan-400 hover:underline font-bold cursor-pointer'>điều khoản dịch vụ</a> của chúng tôi.",
                     confirm: "ĐỒNG Ý VÀ CHƠI"
                 },
                 en: {
                     title: "TERMS OF SERVICE",
-                    message: "Welcome to Magic Hop Online! By playing this game, please comply with our <a href='terms.html' target='_blank' class='text-cyan-400 hover:underline font-bold'>terms of service</a>.",
+                    message: "Welcome to Magic Hop Online! By playing this game, please comply with our <a href='terms.html' onclick=\"event.preventDefault(); window.openInGameViewer('terms.html', 'TERMS OF SERVICE');\" class='text-cyan-400 hover:underline font-bold cursor-pointer'>terms of service</a>.",
                     confirm: "AGREE AND PLAY"
                 }
             };

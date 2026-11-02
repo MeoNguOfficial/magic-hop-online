@@ -256,7 +256,7 @@
   "msg_confirm_delete_song_cache": "您确定要清除歌曲“{name}”的缓存（音频和节拍图）吗？",
   "msg_beatmap_cleared": "所有节拍图缓存均已清除！播放地图时将重新下载地图。",
   "btn_reset": "清除数据（重置）",
-  "btn_install": "下载应用程序 (PWA)",
+  "btn_install": "下载应用程序",
   "install_app_title": "安装应用程序",
   "install_ios_guide": "在 iOS 上：点按 Safari 中的“共享”图标，然后选择“添加到主屏幕”以安装游戏。",
   "sw_auto_update_title": "自动更新应用",
@@ -531,7 +531,7 @@
   "dedicated_gpu_detected_note": "检测到设备配备独立显卡 (Dedicated GPU)。",
   "discrete_gpu_change_title": "独立显卡设置",
   "discrete_gpu_change_desc": "更改 GPU 设置需要重新加载页面以生效。是否立即重新加载？",
-  "mobile_optimize_notice": "建议在PC上游玩，目前正在针对手机进行优化，请耐心等待",
+  "mobile_optimize_notice": "应用版本现已推出",
   "personalize_pattern_solid": "Solid",
   "personalize_pattern_wireframe": "Wire",
   "personalize_pattern_checkerboard": "Checkerboard",
@@ -568,5 +568,7 @@
   "msg_record_deleted": "Deleted {count} data entries",
   "msg_record_delete_err": "Cannot delete record: {err}",
   "account_switcher_login_needed": "需要登录",
-  "account_switcher_logged_in": "已登录"
+  "account_switcher_logged_in": "已登录",
+  "download_app_modal_title": "下载 CYBER BEAT HOPPER",
+  "download_app_modal_desc": "选择适合您设备的版本"
 }

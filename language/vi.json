@@ -240,7 +240,7 @@
   "msg_confirm_delete_song_cache": "Bạn có chắc chắn muốn xóa bộ nhớ đệm (âm thanh và bản đồ) của bài hát \"{name}\" không?",
   "msg_beatmap_cleared": "Đã xóa toàn bộ bộ nhớ đệm beatmap! Bản đồ sẽ được tải lại khi chơi.",
   "btn_reset": "Xóa dữ liệu (Làm mới)",
-  "btn_install": "Tải App (PWA)",
+  "btn_install": "Tải App",
   "install_app_title": "CÀI ĐẶT ỨNG DỤNG",
   "install_ios_guide": "Trên iOS: Nhấn biểu tượng 'Chia sẻ' (Share) trên trình duyệt Safari, sau đó chọn 'Thêm vào màn hình chính' (Add to Home Screen) để cài đặt game.",
   "sw_auto_update_title": "Tự động cập nhật App",
@@ -532,7 +532,7 @@
   "discrete_gpu_change_title": "CÀI ĐẶT GPU CHUYÊN DỤNG",
   "discrete_gpu_change_desc": "Thay đổi cài đặt GPU yêu cầu tải lại trang để trình duyệt áp dụng GPU mới. Tải lại ngay?",
   "discrete_gpu_windows_hint": "Mẹo: Trên Windows laptop, nếu trình duyệt vẫn chưa chuyển GPU rời, hãy mở Windows Settings > Display > Graphics và đặt trình duyệt thành 'High Performance'.",
-  "mobile_optimize_notice": "Khuyến nghị chơi trên thiết bị cấu hình trung bình cao trở lên",
+  "mobile_optimize_notice": "Phiên bản ứng dụng đã có sẵn",
   "personalize_ball_color": "Màu Bóng",
   "color_dynamic": "Màu động",
   "color_cyan": "Xanh Lơ",
@@ -572,5 +572,7 @@
   "title_fullscreen": "Toàn màn hình (F11)",
   "title_exit_fullscreen": "Thoát toàn màn hình (ESC / F11)",
   "auto_fullscreen_bypassed_badge": "(Đang toàn màn hình)",
-  "auto_fullscreen_bypassed_tip": "Đang ở chế độ toàn màn hình: Tùy chọn này tạm thời được bỏ qua (bypass)."
+  "auto_fullscreen_bypassed_tip": "Đang ở chế độ toàn màn hình: Tùy chọn này tạm thời được bỏ qua (bypass).",
+  "download_app_modal_title": "TẢI CYBER BEAT HOPPER",
+  "download_app_modal_desc": "Chọn phiên bản phù hợp với thiết bị của bạn"
 }

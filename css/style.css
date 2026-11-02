@@ -1,3 +1,11 @@
+/* --- SAFE AREA INSETS (DÀNH CHO IPHONE NOTCH, DYNAMIC ISLAND & ANDROID GESTURE BAR) --- */
+:root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+}
+
 html, body {
     margin: 0;
     overflow: hidden;
@@ -6,6 +14,15 @@ html, body {
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overscroll-behavior: none;
+}
+
+/* Đảm bảo HUD trên mobile không bị che bởi tai thỏ / Dynamic Island */
+#top-left-hud {
+    top: max(1.5rem, calc(var(--sat) + 0.5rem)) !important;
+    left: max(1.5rem, calc(var(--sal) + 0.5rem)) !important;
 }
 
 .font-orbitron { font-family: 'Orbitron', sans-serif; }
