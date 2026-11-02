@@ -82,5 +82,11 @@
       "url": "./manifest.json"
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "categories": [
+    "games",
+    "music",
+    "entertainment"
+  ],
+  "lang": "vi"
 }

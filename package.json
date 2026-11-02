@@ -28,7 +28,20 @@
     "type": "git",
     "url": "git+https://github.com/MeoNguOfficial/magic-hop-online.git"
   },
-  "keywords": [],
+  "keywords": [
+    "game",
+    "video-game",
+    "rhythm-game",
+    "music-game",
+    "cyberpunk",
+    "threejs",
+    "webgl",
+    "pwa",
+    "android",
+    "windows",
+    "macos",
+    "ios"
+  ],
   "author": "",
   "license": "MIT",
   "type": "commonjs",

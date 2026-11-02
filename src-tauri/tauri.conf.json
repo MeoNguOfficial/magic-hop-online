@@ -32,7 +32,13 @@
       "../icons/icon-128x128.png",
       "../icons/icon-512x512.png",
       "../favicon.ico"
-    ]
+    ],
+    "category": "Game",
+    "shortDescription": "3D Cyberpunk Rhythm Game",
+    "longDescription": "Cyber Beat Hopper is a 3D cyberpunk rhythm game running on Three.js WebGL.",
+    "macOS": {
+      "category": "public.app-category.music-games",
+      "minimumSystemVersion": "10.15"
+    }
   }
 }
-

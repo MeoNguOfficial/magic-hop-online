@@ -10,6 +10,8 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("Cyber Beat Hopper")]
 [assembly: AssemblyProduct("Cyber Beat Hopper")]
+[assembly: AssemblyDescription("Cyber Beat Hopper - 3D Cyberpunk Rhythm Game")]
+[assembly: AssemblyCompany("MeoTN Gaming")]
 [assembly: AssemblyVersion("1.0.7.0")]
 [assembly: AssemblyFileVersion("1.0.7.0")]
 [assembly: AssemblyInformationalVersion("1.0.7")]
