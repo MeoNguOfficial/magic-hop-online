@@ -1193,7 +1193,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.7' : 'Version 1.0.7'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.8' : 'Version 1.0.8'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
@@ -1842,3 +1842,186 @@ document.addEventListener('click', (e) => {
         return;
     }
 }, true);
+
+
+// ============================================================
+// CYBER TOAST NOTIFICATION & GAMEPLAY PROTECTION
+// ============================================================
+window.showGameToast = function (msg, duration, type) {
+    if (duration === undefined) duration = 3200;
+    if (type === undefined) type = 'warning';
+
+    let container = document.getElementById('game-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'game-toast-container';
+        container.style.cssText = 'position:fixed;top:28px;left:50%;transform:translateX(-50%);z-index:9999999;display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none;max-width:92vw;width:max-content;';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    const isError = type === 'error';
+    const isSuccess = type === 'success';
+    const borderColor = isError ? 'rgba(239, 68, 68, 0.85)' : (isSuccess ? 'rgba(34, 197, 94, 0.85)' : 'rgba(245, 158, 11, 0.85)');
+    const glowColor = isError ? 'rgba(239, 68, 68, 0.45)' : (isSuccess ? 'rgba(34, 197, 94, 0.45)' : 'rgba(245, 158, 11, 0.45)');
+    const iconColor = isError ? '#ef4444' : (isSuccess ? '#22c55e' : '#f59e0b');
+
+    const iconSvg = isSuccess
+        ? '<svg style="width:20px;height:20px;flex-shrink:0;color:' + iconColor + ';" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+        : '<svg style="width:20px;height:20px;flex-shrink:0;color:' + iconColor + ';" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
+
+    toast.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 20px;background:rgba(8,13,24,0.94);border:1.5px solid ' + borderColor + ';border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.75),0 0 20px ' + glowColor + ';color:#f8fafc;font-family:Rajdhani,Orbitron,Segoe UI,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transform:translateY(-24px) scale(0.95);opacity:0;transition:transform 0.28s cubic-bezier(0.16,1,0.3,1),opacity 0.28s ease;pointer-events:auto;';
+    toast.innerHTML = iconSvg + '<span>' + msg + '</span>';
+
+    container.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.style.transform = 'translateY(0) scale(1)';
+        toast.style.opacity = '1';
+    });
+
+    setTimeout(() => {
+        toast.style.transform = 'translateY(-16px) scale(0.95)';
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 320);
+    }, duration);
+};
+window.showToast = window.showGameToast;
+
+// Kiểm tra xem người chơi có đang trong ván game tích cực (cần bảo vệ chống quay lại ngoài ý muốn)
+window.isGamePlayActive = function () {
+    // 1. Nếu màn hình Menu bắt đầu (start-screen) đang hiển thị -> KHÔNG phải đang chơi
+    const startScreenEl = document.getElementById('start-screen') || (typeof startScreen !== 'undefined' ? startScreen : null);
+    if (startScreenEl && startScreenEl.style.display !== 'none' && startScreenEl.style.display !== '' && parseFloat(startScreenEl.style.opacity || '1') > 0.1) {
+        return false;
+    }
+
+    // 2. Nếu màn hình Game Over đang hiển thị -> KHÔNG chặn
+    const goScreenEl = document.getElementById('gameover-screen') || (typeof gameoverScreen !== 'undefined' ? gameoverScreen : null);
+    if (goScreenEl && goScreenEl.style.display === 'flex' && parseFloat(goScreenEl.style.opacity || '1') > 0.1) {
+        return false;
+    }
+
+    // 3. Kiểm tra cờ trạng thái game
+    const playing = (typeof window.isPlaying !== 'undefined' ? window.isPlaying : (typeof isPlaying !== 'undefined' ? isPlaying : false));
+    const started = (typeof window.gameStarted !== 'undefined' ? window.gameStarted : (typeof gameStarted !== 'undefined' ? gameStarted : false));
+    const failing = (typeof window.isFailTransition !== 'undefined' ? window.isFailTransition : (typeof isFailTransition !== 'undefined' ? isFailTransition : false));
+    const victory = (typeof window.isVictoryTransition !== 'undefined' ? window.isVictoryTransition : (typeof isVictoryTransition !== 'undefined' ? isVictoryTransition : false));
+
+    return !!((playing || started) && !failing && !victory);
+};
+
+// Xử lý khi chặn hành vi quay lại (Alt+<-, Hardware Back, Popstate, Backspace)
+window.handleBlockedBackNavigation = function () {
+    // Tự động tạm dừng game nếu đang chạy để người chơi không bị rớt bóng / hỏng ván
+    const playing = (typeof window.isPlaying !== 'undefined' ? window.isPlaying : (typeof isPlaying !== 'undefined' ? isPlaying : false));
+    if (playing) {
+        if (typeof pauseGame === 'function') {
+            pauseGame();
+        } else if (typeof window.pauseGame === 'function') {
+            window.pauseGame();
+        }
+    }
+
+    // Lấy thông báo theo ngôn ngữ hiện tại
+    const msg = (typeof t === 'function' ? t('msg_back_blocked') : null) || 'Đã chặn quay lại để bảo vệ ván đấu của bạn!';
+    if (typeof window.showGameToast === 'function') {
+        window.showGameToast(msg, 3200, 'warning');
+    }
+    console.log('%c[NavigationGuard] ' + msg, 'color: #f59e0b; font-weight: bold;');
+};
+
+
+// Đóng bất kỳ modal/popup nào đang mở (Ưu tiên nút Back đóng hộp thoại trước khi thoát app)
+window.closeAnyOpenModal = function () {
+    // 1. In-game page viewer modal
+    const pageViewer = document.getElementById('page-viewer-modal');
+    if (pageViewer && pageViewer.style.display !== 'none' && !pageViewer.classList.contains('hidden')) {
+        if (typeof window.closeInGameViewer === 'function') {
+            window.closeInGameViewer();
+        } else {
+            pageViewer.classList.add('hidden');
+            pageViewer.style.display = 'none';
+        }
+        return true;
+    }
+
+    // 2. Download App modal
+    const downloadModal = document.getElementById('download-app-modal');
+    if (downloadModal && downloadModal.style.display !== 'none' && !downloadModal.classList.contains('hidden')) {
+        const closeBtn = document.getElementById('close-download-app-modal');
+        if (closeBtn) {
+            closeBtn.click();
+        } else {
+            downloadModal.classList.add('hidden');
+            downloadModal.style.display = 'none';
+        }
+        return true;
+    }
+
+    // 3. Cyber modal
+    const cyberModal = document.getElementById('cyber-modal');
+    if (cyberModal && cyberModal.style.display !== 'none' && !cyberModal.classList.contains('hidden')) {
+        cyberModal.classList.add('hidden');
+        cyberModal.style.display = 'none';
+        return true;
+    }
+
+    // 4. Các modal thông dụng khác
+    const openModals = document.querySelectorAll('#settings-modal:not(.hidden), #song-selector-modal:not(.hidden), #account-modal:not(.hidden), #tos-modal:not(.hidden), #admin-panel-modal:not(.hidden)');
+    for (let i = 0; i < openModals.length; i++) {
+        const modal = openModals[i];
+        if (modal.style.display !== 'none') {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+            return true;
+        }
+    }
+
+    return false;
+};
+
+// Xử lý nút Back khi không ở trạng thái chơi game (Yêu cầu nhấn 2 lần để thoát)
+let lastBackPressTimestamp = 0;
+const DOUBLE_BACK_DELAY = 2200; // Khoảng thời gian cho phép nhấn lần 2 (2.2 giây)
+
+window.handleMenuBackPress = function () {
+    // 1. Nếu có modal/hộp thoại đang mở -> Đóng modal trước
+    if (typeof window.closeAnyOpenModal === 'function' && window.closeAnyOpenModal()) {
+        return false;
+    }
+
+    // 2. Nếu đang ở màn hình Game Over -> Trở về Menu chính
+    const goScreenEl = document.getElementById('gameover-screen') || (typeof gameoverScreen !== 'undefined' ? gameoverScreen : null);
+    if (goScreenEl && goScreenEl.style.display === 'flex' && parseFloat(goScreenEl.style.opacity || '1') > 0.1) {
+        if (typeof returnToMenu === 'function') {
+            returnToMenu();
+            return false;
+        }
+    }
+
+    // 3. Nhấn 2 lần để thoát game
+    const now = Date.now();
+    if (now - lastBackPressTimestamp < DOUBLE_BACK_DELAY) {
+        // Lần thứ 2: Thực hiện thoát
+        lastBackPressTimestamp = 0;
+        if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App && typeof window.Capacitor.Plugins.App.exitApp === 'function') {
+            window.Capacitor.Plugins.App.exitApp();
+        } else if (window.DesktopAppManager && typeof window.DesktopAppManager.exitApp === 'function' && window.isDesktopApp) {
+            window.DesktopAppManager.exitApp();
+        } else if (typeof window.close === 'function') {
+            window.close();
+        }
+        return true;
+    } else {
+        // Lần thứ 1: Cảnh báo "Nhấn lại lần nữa để thoát"
+        lastBackPressTimestamp = now;
+        const exitMsg = (typeof t === 'function' ? t('msg_press_back_again_to_exit') : null) || 'Nhấn lại lần nữa để thoát';
+        if (typeof window.showGameToast === 'function') {
+            window.showGameToast(exitMsg, 2200, 'warning');
+        }
+        return false;
+    }
+};

@@ -86,53 +86,80 @@
     function setupAndroidBackButton() {
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
-                // Nếu đang mở In-Game Page Viewer (license, terms) -> Bấm Back để đóng viewer ngay
-                const pageViewer = document.getElementById('page-viewer-modal');
-                if (pageViewer && pageViewer.style.display !== 'none' && !pageViewer.classList.contains('hidden')) {
-                    if (typeof window.closeInGameViewer === 'function') {
-                        window.closeInGameViewer();
-                    } else {
-                        pageViewer.classList.add('hidden');
-                        pageViewer.style.display = 'none';
-                    }
-                    return;
-                }
+                // 1. Nếu đang chơi ván game -> Chặn thoát, tạm dừng game và thông báo bảo vệ
+                const isActivePlay = (typeof window.isGamePlayActive === 'function')
+                    ? window.isGamePlayActive()
+                    : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
 
-                // Nếu đang chơi ván game -> Bấm Back để tạm dừng (Pause)
-                if (typeof isPlaying !== 'undefined' && isPlaying && typeof isFailTransition !== 'undefined' && !isFailTransition) {
-                    if (typeof pauseGame === 'function') {
+                if (isActivePlay) {
+                    if (typeof window.handleBlockedBackNavigation === 'function') {
+                        window.handleBlockedBackNavigation();
+                    } else if (typeof pauseGame === 'function') {
                         pauseGame();
                     }
                     return;
                 }
 
-                // Nếu đang mở bất kỳ popup/modal nào -> Bấm Back để đóng popup
-                const openModals = document.querySelectorAll('#settings-modal:not(.hidden), #song-selector-modal:not(.hidden), #account-modal:not(.hidden), #tos-modal:not(.hidden)');
-                if (openModals.length > 0) {
-                    openModals.forEach(modal => {
-                        modal.classList.add('hidden');
-                        modal.style.display = 'none';
-                    });
-                    return;
-                }
-
-                // Nếu đang ở màn hình Game Over hoặc Pause Menu -> Trở về Menu chính
-                const centerHud = document.getElementById('center-hud');
-                if (centerHud && centerHud.style.display !== 'none') {
-                    if (typeof returnToMenu === 'function') {
-                        returnToMenu();
-                        return;
-                    }
-                }
-
-                // Nếu ở Menu chính -> Thoát app hoặc hỏi xác nhận
-                if (canGoBack) {
-                    window.history.back();
-                } else {
-                    window.Capacitor.Plugins.App.exitApp();
+                // 2. Khi KHÔNG ở trong trận đấu: Đóng popup hoặc yêu cầu nhấn 2 lần để thoát
+                if (typeof window.handleMenuBackPress === 'function') {
+                    window.handleMenuBackPress();
                 }
             });
         }
+    }
+
+    // --- 3.1. TRÌNH BẢO VỆ ĐIỀU HƯỚNG TOÀN CẦU (SWIPE BACK GESTURE, BROWSER BACK & POPSTATE) ---
+    function setupUniversalNavigationGuard() {
+        // Đảm bảo có state trong history để bắt popstate ngay từ menu
+        try {
+            if (!window.history.state || !window.history.state.gameSessionInitialized) {
+                window.history.replaceState({ gameSessionInitialized: true, root: true }, document.title, window.location.href);
+                window.history.pushState({ gameSessionInitialized: true, inApp: true }, document.title, window.location.href);
+            }
+        } catch (e) {}
+
+        // A. Bắt sự kiện popstate (khi vuốt cạnh màn hình trên iOS Safari/Android Chrome hoặc ấn nút Back trình duyệt)
+        window.addEventListener('popstate', function (e) {
+            const isActivePlay = (typeof window.isGamePlayActive === 'function')
+                ? window.isGamePlayActive()
+                : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
+
+            if (isActivePlay) {
+                // Khôi phục lại state trong history ngay lập tức để không bị điều hướng ra khỏi game
+                try {
+                    window.history.pushState({ gameSessionInitialized: true, inGamePlaySession: true }, document.title, window.location.href);
+                } catch (err) {}
+
+                // Chặn, pause game và hiển thị Cyber Toast cảnh báo
+                if (typeof window.handleBlockedBackNavigation === 'function') {
+                    window.handleBlockedBackNavigation();
+                }
+                return;
+            }
+
+            // Khi KHÔNG ở trong trận đấu: Đóng modal hoặc yêu cầu nhấn 2 lần để thoát
+            if (typeof window.handleMenuBackPress === 'function') {
+                const exited = window.handleMenuBackPress();
+                if (!exited) {
+                    try {
+                        window.history.pushState({ gameSessionInitialized: true, inApp: true }, document.title, window.location.href);
+                    } catch (err) {}
+                }
+            }
+        });
+
+        // B. Cảnh báo trước khi đóng tab hoặc tải lại trang khi đang trong ván chơi
+        window.addEventListener('beforeunload', function (e) {
+            const isActivePlay = (typeof window.isGamePlayActive === 'function')
+                ? window.isGamePlayActive()
+                : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
+
+            if (isActivePlay) {
+                e.preventDefault();
+                e.returnValue = '';
+                return '';
+            }
+        });
     }
 
     // --- 4. QUẢN LÝ VÒNG ĐỜI ỨNG DỤNG (APP LIFECYCLE) CHO MOBILE ---
@@ -188,6 +215,9 @@
 
     // Khởi tạo các thành phần khi tải trang
     function initMobileApp() {
+        // Kích hoạt bộ bảo vệ điều hướng toàn cầu cho cả Mobile và Desktop Web
+        setupUniversalNavigationGuard();
+
         if (isMobileDevice) {
             document.body.classList.add('mobile-device-mode');
             unlockWebAudioForIOS();

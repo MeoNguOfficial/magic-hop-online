@@ -84,13 +84,80 @@
             return;
         }
 
-        // Chặn phím Reload (F5, Ctrl+R) khi đang trong bài hát (isPlaying) để người chơi không bị mất điểm số / kỷ lục
-        const inActivePlay = typeof isPlaying !== 'undefined' && isPlaying && typeof isFailTransition !== 'undefined' && !isFailTransition;
-        if (inActivePlay) {
+        // Kiểm tra xem người chơi có đang trong ván game tích cực hay không
+        const isActivePlay = (typeof window.isGamePlayActive === 'function')
+            ? window.isGamePlayActive()
+            : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
+
+        const isAltLeft = e.altKey && (e.key === 'ArrowLeft' || e.code === 'ArrowLeft' || e.keyCode === 37);
+        const isBrowserBackKey = e.key === 'BrowserBack' || e.code === 'BrowserBack' || e.keyCode === 166;
+        const isMacBackKey = (e.metaKey || e.ctrlKey) && (e.key === '[' || e.keyCode === 219);
+        const isInputElement = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
+        const isBackspaceBack = (e.key === 'Backspace' || e.keyCode === 8) && !isInputElement;
+
+        if (isActivePlay) {
+            // A. Khi đang chơi ván đấu: Chặn hoàn toàn phím quay lại và bảo vệ ván đấu
+            if (isAltLeft || isBrowserBackKey || isMacBackKey || isBackspaceBack) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof window.handleBlockedBackNavigation === 'function') {
+                    window.handleBlockedBackNavigation();
+                }
+                return;
+            }
+
+            // B. Chặn phím Reload (F5, Ctrl+R, Cmd+R) khi đang chơi để người chơi không bị mất điểm số / kỷ lục
             if (e.key === 'F5' || e.keyCode === 116 || ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R' || e.keyCode === 82))) {
                 e.preventDefault();
+                e.stopPropagation();
+                if (typeof window.showGameToast === 'function') {
+                    const msg = (typeof t === 'function' ? t('msg_back_blocked') : null) || 'Đã chặn tải lại để bảo vệ ván đấu của bạn!';
+                    window.showGameToast(msg, 3000, 'warning');
+                }
                 console.log("[DesktopApp] Đã bảo vệ tiến trình chơi: chặn reload ngoài ý muốn");
                 return;
+            }
+        } else {
+            // C. Khi KHÔNG ở trong ván đấu: Xử lý đóng modal hoặc nhấn 2 lần để thoát
+            if (isAltLeft || isBrowserBackKey || isMacBackKey || isBackspaceBack) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (typeof window.handleMenuBackPress === 'function') {
+                    window.handleMenuBackPress();
+                }
+                return;
+            }
+        }
+    }, { capture: true });
+
+    // 2.1. Chặn nút Back/Forward trên chuột gaming (Mouse Button 3 & 4)
+    window.addEventListener('auxclick', function (e) {
+        if (e.button === 3 || e.button === 4) {
+            e.preventDefault();
+            e.stopPropagation();
+            const isActive = (typeof window.isGamePlayActive === 'function')
+                ? window.isGamePlayActive()
+                : (typeof isPlaying !== 'undefined' && isPlaying);
+            if (isActive) {
+                if (typeof window.handleBlockedBackNavigation === 'function') {
+                    window.handleBlockedBackNavigation();
+                }
+            } else {
+                if (typeof window.handleMenuBackPress === 'function') {
+                    window.handleMenuBackPress();
+                }
+            }
+        }
+    }, { capture: true });
+
+    window.addEventListener('mouseup', function (e) {
+        if (e.button === 3 || e.button === 4) {
+            const isActive = (typeof window.isGamePlayActive === 'function')
+                ? window.isGamePlayActive()
+                : (typeof isPlaying !== 'undefined' && isPlaying);
+            if (isActive) {
+                e.preventDefault();
+                e.stopPropagation();
             }
         }
     }, { capture: true });

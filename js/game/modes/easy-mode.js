@@ -348,10 +348,41 @@ document.addEventListener('DOMContentLoaded', () => {
         toggleEasyMode.checked = window.EasyModeManager.isEnabled;
         toggleEasyMode.addEventListener('change', (e) => {
             window.EasyModeManager.setMode(e.target.checked);
+            if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
         });
     }
+
+    const toggleNormalMode = document.getElementById('toggle-normal-mode');
+    if (toggleNormalMode) {
+        toggleNormalMode.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                if (window.EasyModeManager) window.EasyModeManager.setMode(false);
+                if (window.HardModeManager) window.HardModeManager.setMode(false);
+                if (window.AsianModeManager) window.AsianModeManager.setMode(false);
+            }
+            if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
+        });
+    }
+    if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
 
     if (window.EasyModeManager && typeof window.EasyModeManager.updateMenuBackground === 'function') {
         window.EasyModeManager.updateMenuBackground();
     }
 });
+
+window.syncDifficultyToggles = function () {
+    const isEasy = !!(window.EasyModeManager && window.EasyModeManager.isEnabled);
+    const isHard = !!(window.HardModeManager && window.HardModeManager.isEnabled);
+    const isAsian = !!(window.AsianModeManager && window.AsianModeManager.isEnabled);
+    const isNormal = !isEasy && !isHard && !isAsian;
+
+    const tEasy = document.getElementById('toggle-easy-mode');
+    const tHard = document.getElementById('toggle-hard-mode');
+    const tAsian = document.getElementById('toggle-asian-mode');
+    const tNormal = document.getElementById('toggle-normal-mode');
+
+    if (tEasy && tEasy.checked !== isEasy) tEasy.checked = isEasy;
+    if (tHard && tHard.checked !== isHard) tHard.checked = isHard;
+    if (tAsian && tAsian.checked !== isAsian) tAsian.checked = isAsian;
+    if (tNormal && tNormal.checked !== isNormal) tNormal.checked = isNormal;
+};

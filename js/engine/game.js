@@ -5114,6 +5114,8 @@ async function gameOver() {
 function resetGameScene() {
     gameStarted = false;
     isPlaying = false;
+    window.isPlaying = false;
+    window.gameStarted = false;
 
     if (countdownInterval) {
         clearInterval(countdownInterval);
@@ -5686,6 +5688,11 @@ function setupGameStates() {
     accumulatedSongTime = 0;
     gameStarted = true;
     isPlaying = true;
+    window.isPlaying = true;
+    window.gameStarted = true;
+    try {
+        window.history.pushState({ inGamePlaySession: true }, document.title, window.location.href);
+    } catch (e) {}
     clock.getDelta();
     clock.getDelta();
 
@@ -5706,6 +5713,8 @@ function returnToMenu() {
         window.RageGameOverFireManager.stop();
     }
     isPlaying = false;
+    window.isPlaying = false;
+    window.gameStarted = false;
     if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
         triggerExitFullscreen();
         window.enteredByAutoFullscreen = false;
@@ -6325,6 +6334,7 @@ function pauseGame() {
     releaseGameplayPointerLock();
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) return;
     isPlaying = false;
+    window.isPlaying = false;
     if (audio) audio.pause();
 
     const now = performance.now();
@@ -6337,6 +6347,7 @@ function pauseGame() {
 
 function resumeGame() {
     isPlaying = true;
+    window.isPlaying = true;
     clock.getDelta();
 
     const now = performance.now();
@@ -6355,6 +6366,8 @@ function resumeGame() {
         }
     }
 }
+window.pauseGame = pauseGame;
+window.resumeGame = resumeGame;
 
 // Tạm dừng khi mất focus hoặc chuyển tab
 window.addEventListener('blur', pauseGame);

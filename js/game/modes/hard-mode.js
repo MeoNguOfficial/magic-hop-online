@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleHardMode) {
         toggleHardMode.checked = window.HardModeManager.isEnabled;
         toggleHardMode.addEventListener('change', (e) => {
-            window.HardModeManager.setMode(e.target.checked);
+            window.HardModeManager.setMode(e.target.checked); if (typeof window.syncDifficultyToggles === "function") window.syncDifficultyToggles();
         });
     }
 

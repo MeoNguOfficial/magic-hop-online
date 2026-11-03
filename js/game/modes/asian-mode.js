@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleAsianMode) {
         toggleAsianMode.checked = window.AsianModeManager.isEnabled;
         toggleAsianMode.addEventListener('change', (e) => {
-            window.AsianModeManager.setMode(e.target.checked);
+            window.AsianModeManager.setMode(e.target.checked); if (typeof window.syncDifficultyToggles === "function") window.syncDifficultyToggles();
         });
     }
 

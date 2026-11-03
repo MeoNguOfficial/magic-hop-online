@@ -1,10 +1,10 @@
 {
-  "version": "1.0.7",
+  "version": "1.0.8",
   "versionCode": 1793596800,
-  "releaseDate": "2026-11-02",
+  "releaseDate": "2026-11-03",
   "changelog": {
-    "vi": "Phiên bản v1.0.7: Đa nền tảng độc lập (PC Windows & Android APK - NO Electron), Bảo toàn dữ liệu 100% sau cập nhật, In-Game Page Viewer (Admin & Beat Editor), Menu Tải App 5 nền tảng và bộ kiểm tra cập nhật tự động đa tầng.",
-    "en": "Version v1.0.7: Standalone Multiplatform (PC Windows & Android APK - NO Electron), 100% Data Persistence across updates, In-Game Page Viewer (Admin & Beat Editor), 5-Platform Download App modal and multi-tier auto update checker."
+    "vi": "Phiên bản v1.0.8: Cơ chế chống vô tình thoát/quay lại trong trận đấu (Anti-Back Protection), tính năng nhấn 2 lần nút Back để thoát game khi ở menu chính, tái cấu trúc menu cài đặt FPS theo tần số quét thực tế của màn hình (Smart FPS Sync Mode), và hoàn thiện đóng gói chính thức v1.0.8.",
+    "en": "Version v1.0.8: In-game Back Navigation Protection (Anti-Back), Double-tap Back to exit at main menu, Smart Refresh Rate-based FPS Settings menu, and official v1.0.8 packaging."
   },
   "downloads": {
     "pc": "https://github.com/MeoNguOfficial/magic-hop-online/releases/latest",

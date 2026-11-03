@@ -15,6 +15,25 @@
             var rawSm = localStorage.getItem('scrollbarMode');
             document.documentElement.setAttribute('data-scrollbar-mode', (rawSm === 'hidden') ? 'hidden' : 'auto');
         } catch (e) { }
+
+        // Nhận diện sớm môi trường App (Native PC EXE, Android APK, Standalone PWA) để ẩn banner tải app ngay lập tức
+        try {
+            var isEarlyApp = !!(
+                (window.chrome && window.chrome.webview) ||
+                window.__TAURI__ ||
+                window.__DESKTOP_APP__ ||
+                window.location.search.indexOf('app=standalone') !== -1 ||
+                (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+                window.navigator.standalone === true ||
+                window.location.port === '38281' ||
+                window.location.port === '9091' ||
+                window.location.protocol === 'capacitor:' ||
+                window.location.origin === 'https://localhost'
+            );
+            if (isEarlyApp) {
+                document.documentElement.classList.add('in-app-mode');
+            }
+        } catch (e) { }
     </script>
 
     <!-- ANTI DEVTOOLS & CONSOLE GATEWAY (ADMIN ONLY) -->
@@ -189,6 +208,12 @@
 
         .font-orbitron {
             font-family: 'Orbitron', sans-serif;
+        }
+
+        .in-app-mode #mobile-optimize-notice,
+        body.desktop-app-mode #mobile-optimize-notice,
+        body.in-app-mode #mobile-optimize-notice {
+            display: none !important;
         }
 
         .neon-glow-cyan {
@@ -821,9 +846,10 @@
                         </div>
                     </div>
 
-                    <p class="text-[9px] sm:text-[10px] text-yellow-400 font-bold mb-3 font-orbitron uppercase tracking-widest leading-relaxed bg-yellow-900/20 border border-yellow-500/30 p-2 rounded shadow-[0_0_10px_rgba(234,179,8,0.1)] text-center animate-pulse"
+                    <p id="mobile-optimize-notice" class="cursor-pointer group select-none text-[9px] sm:text-[10px] text-yellow-400 font-bold mb-3 font-orbitron uppercase tracking-widest leading-relaxed bg-yellow-900/20 hover:bg-yellow-900/35 border border-yellow-500/30 hover:border-yellow-400/60 p-2 rounded shadow-[0_0_10px_rgba(234,179,8,0.1)] text-center animate-pulse transition-all active:scale-[0.99]"
+                        onclick="if (typeof window.openDownloadAppModal === 'function') window.openDownloadAppModal(); else { var m = document.getElementById('download-app-modal'); if (m) { m.classList.remove('hidden'); m.style.display = 'flex'; } }"
                         data-i18n="mobile_optimize_notice">
-                        Phiên bản ứng dụng đã có sẵn
+                        Tải app ngay để đạt hiệu suất tốt nhất
                     </p>
 
                     <!-- Search Input -->
@@ -2645,17 +2671,32 @@
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-emerald-400 text-sm">🍀</span>
-                                                <h4 class="font-bold text-white text-sm" data-i18n="easy_mode_title">Chế
-                                                    độ Dễ (Easy Mode)</h4>
+                                                <h4 class="font-bold text-white text-sm" data-i18n="easy_mode_title">Chế độ Dễ (Easy Mode)</h4>
                                             </div>
-                                            <p class="text-xs text-gray-400" data-i18n="easy_mode_desc">Khối dưới 0.25s
-                                                thẳng hàng, 0.25s-0.8s lệch tối đa 1/2. Không tính kỷ lục & không mở
-                                                Endless.</p>
+                                            <p class="text-xs text-gray-400" data-i18n="easy_mode_desc">Độ khó dễ nhất</p>
                                         </div>
                                         <label class="relative inline-flex items-center cursor-pointer shrink-0">
                                             <input type="checkbox" id="toggle-easy-mode" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(16,185,129,0.3)]">
+                                            </div>
+                                        </label>
+                                    </div>
+
+                                    <!-- Normal Mode (Default) -->
+                                    <div id="normal-mode-container"
+                                        class="flex items-center justify-between p-3 rounded-lg bg-blue-950/20 border border-blue-500/20 hover:border-blue-400/50 transition-all duration-300">
+                                        <div class="pr-3">
+                                            <div class="flex items-center gap-1.5 mb-0.5">
+                                                <span class="text-blue-400 text-sm">⚡</span>
+                                                <h4 class="font-bold text-white text-sm" data-i18n="normal_mode_title">Chế độ Thường (Normal Mode)</h4>
+                                            </div>
+                                            <p class="text-xs text-gray-400" data-i18n="normal_mode_desc">Độ khó trung bình</p>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                            <input type="checkbox" id="toggle-normal-mode" class="sr-only peer">
+                                            <div
+                                                class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(59,130,246,0.3)]">
                                             </div>
                                         </label>
                                     </div>
@@ -2666,11 +2707,9 @@
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-orange-400 text-sm">🔥</span>
-                                                <h4 class="font-bold text-white text-sm" data-i18n="hard_mode_title">Chế
-                                                    độ Ức chế (Rage Mode)</h4>
+                                                <h4 class="font-bold text-white text-sm" data-i18n="hard_mode_title">Chế độ Ức chế (Rage Mode)</h4>
                                             </div>
-                                            <p class="text-xs text-gray-400" data-i18n="hard_mode_desc">Khối giả xuất
-                                                hiện liên tục và khối di chuyển hoạt động ở tốc độ cực cao.</p>
+                                            <p class="text-xs text-gray-400" data-i18n="hard_mode_desc">Độ khó khó</p>
                                         </div>
                                         <label class="relative inline-flex items-center cursor-pointer shrink-0">
                                             <input type="checkbox" id="toggle-hard-mode" class="sr-only peer">
@@ -2686,12 +2725,9 @@
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-red-400 text-sm">🔴</span>
-                                                <h4 class="font-bold text-white text-sm" data-i18n="asian_mode_title">
-                                                    Chế độ Ăn vạ (Asian Mode)</h4>
+                                                <h4 class="font-bold text-white text-sm" data-i18n="asian_mode_title">Chế độ Ăn vạ (Asian Mode)</h4>
                                             </div>
-                                            <p class="text-xs text-gray-400" data-i18n="asian_mode_desc">Siêu siêu khó:
-                                                Khối di chuyển tốc độ cực cao, khi không có khối giả gạch nhảy min 1
-                                                block. Không lưu kỷ lục.</p>
+                                            <p class="text-xs text-gray-400" data-i18n="asian_mode_desc">Độ khó rất khó</p>
                                         </div>
                                         <label class="relative inline-flex items-center cursor-pointer shrink-0">
                                             <input type="checkbox" id="toggle-asian-mode" class="sr-only peer">
@@ -2785,7 +2821,7 @@
                     </div>
                     <div id="secret-credit-btn"
                         class="shrink-0 text-center text-[10px] text-gray-500 mt-4 pt-4 border-t border-cyan-500/20 tracking-wide uppercase font-orbitron cursor-pointer select-none active:text-gray-400">
-                        MeoTN HOP ENGINE v3.6
+                        MeoTN HOP ENGINE v3.7 (Build v1.0.8)
                         <div class="mt-1 text-gray-600"><span class="text-cyan-500/60">MeoTN Gaming</span> | <span
                                 class="text-pink-500/60">Powered by MeoTN Digital</span> | <a href="license.html" onclick="event.preventDefault(); event.stopPropagation(); window.openInGameViewer ? window.openInGameViewer('license.html', 'MIT LICENSE') : window.open('license.html');" class="text-cyan-400/80 hover:text-cyan-300 underline pointer-events-auto cursor-pointer">MIT License</a></div>
                     </div>
@@ -3010,7 +3046,7 @@
                     PC Windows (.exe)
                 </h3>
                 <p id="hero-platform-desc" class="text-xs text-slate-400 font-sans mb-3 leading-relaxed" data-i18n="download_opt_pc_desc">
-                    Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.7 · 48 MB
+                    Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.8 · 48 MB
                 </p>
                 <a id="hero-action-btn" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
                     class="w-full block py-2.5 sm:py-3 bg-cyan-400 hover:bg-cyan-300 active:scale-[0.98] text-slate-950 font-orbitron font-black text-xs sm:text-sm uppercase tracking-widest rounded-xl text-center shadow-[0_0_18px_rgba(6,182,212,0.35)] transition-all cursor-pointer whitespace-nowrap" data-i18n="download_btn_download">
@@ -3050,7 +3086,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-orbitron font-bold text-xs sm:text-sm text-slate-200" data-i18n="download_opt_apk_title">Android (APK)</div>
-                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_apk_desc">v1.0.7 · 32 MB</div>
+                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_apk_desc">v1.0.8 · 32 MB</div>
                         </div>
                     </div>
                     <a id="download-opt-apk" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
@@ -3067,7 +3103,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-orbitron font-bold text-xs sm:text-sm text-slate-200" data-i18n="download_opt_pc_title">PC Windows (.exe)</div>
-                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_pc_desc">Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.7 · 48 MB</div>
+                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_pc_desc">Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.8 · 48 MB</div>
                         </div>
                     </div>
                     <a id="download-opt-pc" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
@@ -3413,7 +3449,7 @@
             // "js/ui/alert.js"
         ];
 
-        const SCRIPT_BUILD_VERSION = '1.0.7.4';
+        const SCRIPT_BUILD_VERSION = '1.0.8.0';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');

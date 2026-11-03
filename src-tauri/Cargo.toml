@@ -1,6 +1,6 @@
 [package]
 name = "cyber-beat-hopper"
-version = "1.0.7"
+version = "1.0.8"
 description = "Cyber Beat Hopper - 3D Rhythm Game by MeoTN Gaming"
 authors = ["MeoTN Gaming"]
 edition = "2021"

@@ -1,9 +1,58 @@
-# 🎵 Cyber Beat Hopper (v1.0.7)
+# 🎵 Cyber Beat Hopper (v1.0.8)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.7**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.8**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
 
 ---
-## 🚀 Phiên Bản v1.0.7 Có gì mới?
+## 🚀 Phiên Bản v1.0.8 Có gì mới?
+
+# 🚀 UPDATE LOG: CHỐNG THOÁT VÁN ĐẤU (ANTI-BACK SHIELD), NHẤN 2 LẦN NÚT BACK ĐỂ THOÁT (DOUBLE-TAP TO EXIT), CẢI TỔ MENU CÀI ĐẶT FPS THEO TẦN SỐ QUÉT & PHÁT HÀNH CHÍNH THỨC v1.0.8 (RELEASE v1.0.8)
+
+Chào các bạn, bản cập nhật **v1.0.8** tiếp tục nâng tầm trải nghiệm của **Cyber Beat Hopper** với các tính năng bảo vệ người chơi toàn diện, tái cấu trúc menu đồ họa thông minh và hoàn thiện cơ chế điều hướng chuẩn game native:
+
+---
+
+### 🛡️ 1. CƠ CHẾ BẢO VỆ VÁN ĐẤU TOÀN DIỆN (ANTI-BACK & RELOAD SHIELD)
+- **Chặn hoàn toàn các phím/thao tác điều hướng quay lại vô tình:**
+  - **PC Desktop & Web:** Chặn phím `Alt + <-`, macOS `Cmd + [`, `BrowserBack`, và `Backspace` (ngoài ô nhập liệu).
+  - **Gaming Mouse:** Chặn các nút Back phụ trên chuột chơi game (`Mouse Button 3 & 4`), ngăn chặn việc vô tình ấn trúng gây mất ván đấu.
+  - **Mobile & PWA:** Chặn nút Back phần cứng Android và cử chỉ vuốt từ cạnh viền màn hình (Edge Swipe Back) trên iOS Safari / Android Chrome thông qua cơ chế bẫy `popstate` và `beforeunload` toàn cầu.
+- **Tự động tạm dừng an toàn (Auto-Pause Protection):**
+  - Khi phát hiện người chơi ấn phím quay lại hoặc rời ván đấu bất ngờ, trò chơi tự động tạm dừng (`pauseGame`), hiển thị **Cyber Toast Notification** nổi bật với biểu tượng khiên bảo vệ và thông điệp đa ngôn ngữ: *"Đã chặn quay lại để bảo vệ ván đấu của bạn!"*.
+  - Người chơi không bao giờ bị rơi bóng hay mất kỷ lục điểm số đáng tiếc.
+
+---
+
+### 🚪 2. CƠ CHẾ NHẤN 2 LẦN NÚT BACK ĐỂ THOÁT (DOUBLE-TAP BACK TO EXIT)
+- **Bảo vệ người dùng khi ở ngoài trận đấu (Main Menu):**
+  - **Ưu tiên đóng cửa sổ (Modal Dismissal):** Nếu có bất kỳ popup hoặc modal nào đang mở (Cài đặt, Chọn bài hát, Tài khoản, Tải App, Admin Dashboard, In-game Viewer...), lần nhấn nút Back đầu tiên sẽ đóng modal đó lại mà không làm thoát game.
+  - **Nhấn lần 1 tại Menu chính:** Hiển thị thông báo Cyber Toast màu vàng ánh kim *"Nhấn lại lần nữa để thoát"* (`msg_press_back_again_to_exit`), giữ nguyên người chơi trong ứng dụng.
+  - **Nhấn lần 2 trong vòng 2.2 giây:** Ứng dụng xác nhận ý định của người chơi và thực hiện thoát game an toàn (hỗ trợ cả Android Capacitor, PC Standalone Native WebView2 và Web).
+
+---
+
+### ⚡ 3. TÁI CẤU TRÚC MENU CÀI ĐẶT FPS THÔNG MINH (SMART FPS SYNC MODE)
+- **Thanh trượt Max FPS động (Dynamic Refresh Rate Slider):**
+  - Phạm vi từ 1 FPS đến **Tần số quét tối đa thực tế của màn hình** (Max Refresh Rate). Người chơi có thể tùy chỉnh giới hạn FPS linh hoạt.
+- **Gom nhóm Kiểu đồng bộ FPS (FPS Sync Mode):**
+  - **Tùy chỉnh (Custom):** Áp dụng giá trị từ thanh trượt Max FPS.
+  - **Tiết kiệm (Eco):** Khóa cứng 60 FPS (tiết kiệm pin & tỏa nhiệt).
+  - **Lite:** Khóa cứng 120 FPS.
+  - **Các mốc tần số quét cố định:** 144, 165, 240, 360 FPS...
+  - **VSync:** Đồng bộ khung hình dọc theo màn hình, tự động vô hiệu hóa thanh trượt FPS.
+- **Hiển thị thông minh & Fallback màn hình:**
+  - Tự động ẩn các mốc FPS cao hơn tần số quét của màn hình hiện tại (ví dụ: màn hình 144Hz sẽ tự ẩn các mốc 165, 240, 360).
+  - Tự động hạ cấu hình FPS về mức tối đa của màn hình mới khi người dùng chuyển sang màn hình tần số quét thấp hơn.
+
+---
+
+### 🌐 4. ĐỊNH DANH TRÒ CHƠI ĐA NỀN TẢNG CHUẨN MỰC
+- Khai báo Schema.org `VideoGame` đầy đủ cho 6 nền tảng: Web Browser, Windows PC, Android, iOS, macOS, PWA.
+- Cập nhật bộ ngôn ngữ 10 quốc gia (`vi`, `en`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`).
+- Thiết kế lại toàn diện modal Tải App theo phong cách Cyberpunk hiện đại, phân loại badge thông minh cho từng thiết bị.
+
+---
+
+## 🚀 Bản trước đó: Phiên Bản v1.0.7 Có gì mới?
 
 # 🚀 UPDATE LOG: BẢN PHÁT HÀNH ĐA NỀN TẢNG (PC STANDALONE & ANDROID APK - NO ELECTRON), BẢO TOÀN DỮ LIỆU 100%, IN-GAME PAGE VIEWER & MODAL TẢI APP 5 NỀN TẢNG (RELEASE v1.0.7)
 
@@ -566,4 +615,4 @@ Dự án phát hành dưới điều khoản **MIT License**:
 
 ---
 
-*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.7*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.8*

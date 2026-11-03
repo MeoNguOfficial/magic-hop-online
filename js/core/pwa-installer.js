@@ -2,7 +2,7 @@
 //  pwa-installer.js — Quản lý Cài đặt Ứng dụng & Kiểm tra Cập nhật (PWA / PC / APK)
 // ============================================================
 
-window.APP_VERSION = '1.0.7';
+window.APP_VERSION = '1.0.8';
 
 let swRegistration = null;
 let isManualUpdateCheck = false;
@@ -41,9 +41,26 @@ window.isPackagedNativeApp = isPackagedNativeApp;
  */
 function applyPlatformUIAdjustments() {
     const isPackaged = isPackagedNativeApp();
+    const isPWA = isPWAInstalled();
+    const isInApp = isPackaged || isPWA || (typeof window.isDesktopApp !== 'undefined' && window.isDesktopApp) || (typeof window.isNativeMobileApp !== 'undefined' && window.isNativeMobileApp);
+
     const installAppBtn = document.getElementById('install-app-btn');
     const updateContainer = document.getElementById('app-update-actions-container');
     const checkAppUpdateBtn = document.getElementById('check-app-update-btn');
+    const notice = document.getElementById('mobile-optimize-notice');
+
+    // Ẩn hoàn toàn thông báo "Tải app ngay để đạt hiệu suất tốt nhất" khi đang ở trong App
+    if (notice) {
+        if (isInApp) {
+            notice.style.setProperty('display', 'none', 'important');
+        } else {
+            notice.style.display = '';
+        }
+    }
+    if (isInApp) {
+        document.documentElement.classList.add('in-app-mode');
+        document.body.classList.add('in-app-mode');
+    }
 
     if (isPackaged) {
         if (installAppBtn) {
@@ -116,9 +133,9 @@ function updateHeroPlatformCard() {
 
     const downloadText = (typeof t === 'function' ? t('download_btn_download') : null) || 'TẢI VỀ';
     const pcTitle = (typeof t === 'function' ? t('download_opt_pc_title') : null) || 'PC Windows (.exe)';
-    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.7 · 48 MB';
+    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.8 · 48 MB';
     const apkTitle = (typeof t === 'function' ? t('download_opt_apk_title') : null) || 'Android (APK)';
-    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.0.7 · 32 MB';
+    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.0.8 · 32 MB';
 
     if (dev === 'android') {
         if (heroTitle) {
