@@ -12,6 +12,9 @@
         window.__DESKTOP_APP__ ||
         window.location.protocol === 'tauri:' ||
         window.location.protocol === 'asset:' ||
+        window.location.search.indexOf('app=standalone') !== -1 ||
+        window.location.port === '38281' ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
         (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
         (window.matchMedia && window.matchMedia('(display-mode: window-controls-overlay)').matches)
     );
@@ -172,7 +175,16 @@
     // 4. Khởi tạo thuộc tính và meta hỗ trợ app khi DOM sẵn sàng
     function initAppMode() {
         if (window.isDesktopApp) {
-            document.body.classList.add('desktop-app-mode');
+            if (document.body) {
+                document.body.classList.add('desktop-app-mode');
+                document.body.classList.add('in-app-mode');
+            }
+            if (document.documentElement) {
+                document.documentElement.classList.add('in-app-mode');
+                document.documentElement.classList.add('desktop-app-mode');
+            }
+            const notice = document.getElementById('mobile-optimize-notice');
+            if (notice) notice.style.setProperty('display', 'none', 'important');
             console.log("%c[DesktopApp] Chế độ Native Game App đã được kích hoạt (NO Electron - Native WebView2/Tauri)", "color: #00ffff; font-weight: bold;");
         }
 

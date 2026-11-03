@@ -369,7 +369,8 @@ namespace CyberBeatHopper
                             "Content-Length: {4}\r\n" +
                             "Access-Control-Allow-Origin: *\r\n" +
                             "Accept-Ranges: bytes\r\n" +
-                            "Cache-Control: no-cache\r\n\r\n",
+                            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+                            "Pragma: no-cache\r\n\r\n",
                             mime, start, end, totalLength, rangeLength
                         );
                         byte[] hBytes = Encoding.UTF8.GetBytes(header);
@@ -397,7 +398,8 @@ namespace CyberBeatHopper
                             "Content-Length: {1}\r\n" +
                             "Access-Control-Allow-Origin: *\r\n" +
                             "Accept-Ranges: bytes\r\n" +
-                            "Cache-Control: no-cache\r\n\r\n",
+                            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+                            "Pragma: no-cache\r\n\r\n",
                             mime, totalLength
                         );
                         byte[] hBytes = Encoding.UTF8.GetBytes(header);

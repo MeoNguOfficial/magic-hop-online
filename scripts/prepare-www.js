@@ -54,6 +54,11 @@ targetDirs.forEach(targetDir => {
         fs.mkdirSync(targetDir, { recursive: true });
     }
     console.log(`[Build] Dang sao chep asset vao ${path.relative(rootDir, targetDir)}/ ...`);
+    // Dọn dẹp thư mục con www lồng nhau nếu có
+    const nestedSubWww = path.join(targetDir, 'www');
+    if (fs.existsSync(nestedSubWww)) {
+        try { fs.rmSync(nestedSubWww, { recursive: true, force: true }); } catch (e) { }
+    }
     for (const item of copyItems) {
         const srcPath = path.join(rootDir, item);
         const destPath = path.join(targetDir, item);
