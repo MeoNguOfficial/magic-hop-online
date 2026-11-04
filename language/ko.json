@@ -307,8 +307,8 @@
   "fake_blocks_desc": "가짜 블록은 실제 블록 옆에 무작위로 생성됩니다. 만지면 부서지고 넘어집니다.",
   "relax_mode_title": "휴식 모드 (Relax Mode)",
   "relax_mode_desc": "부드럽게 자동 재생됩니다. 재생하지 않고도 음악과 3D 영상을 즐겨보세요.",
-  "ext_cat_modes": "게임 모드 & 난이도",
-  "ext_cat_modes_desc": "난이도 및 게임플레이 메커니즘 설정",
+  "ext_cat_modes": "게임 모드",
+  "ext_cat_modes_desc": "특별 게임 모드",
   "ext_cat_assists": "보조 기능 & 조작 설정",
   "ext_cat_assists_desc": "점프 보조 도구 및 조작 방식 커스텀",
   "easy_mode_desc": "가장 쉬운 난이도",
@@ -603,5 +603,7 @@
   "msg_back_blocked": "게임 보호를 위해 뒤로 가기가 차단되었습니다!",
   "msg_press_back_again_to_exit": "종료하려면 뒤로 가기를 한 번 더 누르세요",
   "normal_mode_title": "일반 모드 (Normal Mode)",
-  "normal_mode_desc": "중간 난이도"
+  "normal_mode_desc": "중간 난이도",
+  "ext_cat_difficulty": "난이도",
+  "ext_cat_difficulty_desc": "난이도 및 도전 수준 설정"
 }

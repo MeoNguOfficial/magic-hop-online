@@ -581,7 +581,7 @@ function promptUserToUpdate(worker, isManual = false) {
 }
 
 // Khởi tạo các sự kiện modal tải ứng dụng
-document.addEventListener('DOMContentLoaded', () => {
+function initPwaInstallerUI() {
     applyPlatformUIAdjustments();
 
     const closeBtn = document.getElementById('close-download-app-modal');
@@ -616,7 +616,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPwaInstallerUI);
+} else {
+    initPwaInstallerUI();
+}
 
 window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {

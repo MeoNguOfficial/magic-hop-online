@@ -6,30 +6,21 @@ window.HardModeManager = {
     isEnabled: localStorage.getItem('hardModeEnabled') === 'true',
 
     setMode: function (enabled) {
-        this.isEnabled = enabled;
-        localStorage.setItem('hardModeEnabled', enabled);
-
-        // Cập nhật giao diện nếu có thay đổi
-        const toggleHardMode = document.getElementById('toggle-hard-mode');
-        if (toggleHardMode && toggleHardMode.checked !== enabled) {
-            toggleHardMode.checked = enabled;
-        }
-
-        // Tương khắc với các chế độ khác (Nếu bật Hard Mode -> Tắt Easy Mode & Asian Mode)
         if (enabled) {
-            if (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled) {
-                window.EasyModeManager.setMode(false);
+            if (typeof window.setDifficultyMode === 'function') {
+                window.setDifficultyMode('hard');
+            } else {
+                this.isEnabled = true;
+                localStorage.setItem('hardModeEnabled', 'true');
             }
-            if (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled) {
-                window.AsianModeManager.setMode(false);
+        } else {
+            if (typeof window.getActiveDifficultyMode === 'function' && window.getActiveDifficultyMode() === 'hard') {
+                window.setDifficultyMode('normal');
+            } else {
+                this.isEnabled = false;
+                localStorage.setItem('hardModeEnabled', 'false');
             }
         }
-
-        if (typeof window.syncDifficultyToggles === 'function') {
-            window.syncDifficultyToggles();
-        }
-
-        // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
         if (typeof window.updateMainMenuTheme === 'function') {
             window.updateMainMenuTheme();
         } else {
@@ -78,22 +69,6 @@ window.HardModeManager = {
         return this.isEnabled ? 0.15 : 0.2;
     }
 };
-
-// Khởi tạo sự kiện giao diện khi tải trang
-document.addEventListener('DOMContentLoaded', () => {
-    const toggleHardMode = document.getElementById('toggle-hard-mode');
-    if (toggleHardMode) {
-        toggleHardMode.checked = window.HardModeManager.isEnabled;
-        toggleHardMode.addEventListener('change', (e) => {
-            window.HardModeManager.setMode(e.target.checked); if (typeof window.syncDifficultyToggles === "function") window.syncDifficultyToggles();
-        });
-    }
-
-    // Áp dụng nền menu ban đầu
-    if (window.HardModeManager && typeof window.HardModeManager.updateMenuBackground === 'function') {
-        window.HardModeManager.updateMenuBackground();
-    }
-});
 
 // ============================================================
 // RageGameOverFireManager — Quản lý hiệu ứng Lửa Cam Game Over (Phiên bản Particle Glow)
@@ -363,15 +338,7 @@ window.RageGameOverFireManager = {
 
 // Khởi tạo sự kiện giao diện khi tải trang
 function initHardModeUI() {
-    const toggleHardMode = document.getElementById('toggle-hard-mode');
-    if (toggleHardMode) {
-        toggleHardMode.checked = window.HardModeManager.isEnabled;
-        toggleHardMode.onchange = (e) => {
-            window.HardModeManager.setMode(e.target.checked);
-            if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
-        };
-    }
-
+    if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
     if (window.HardModeManager && typeof window.HardModeManager.updateMenuBackground === 'function') {
         window.HardModeManager.updateMenuBackground();
     }

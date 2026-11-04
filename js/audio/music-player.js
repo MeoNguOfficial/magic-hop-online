@@ -184,7 +184,12 @@ window.MusicPlayer = {
             this.animationFrameId = requestAnimationFrame(draw);
             
             // Giới hạn tốc độ quét xuống ~30fps để tối ưu hiệu suất
-            if (time - this.lastVisTime < 33) return;
+            // Hỗ trợ tần số quét màn hình cao mượt mà (60Hz, 120Hz, 144Hz, 240Hz)
+            const targetHz = (typeof window.getEffectiveTargetFps === 'function')
+                ? window.getEffectiveTargetFps()
+                : (typeof window.screenRefreshRate === 'number' ? window.screenRefreshRate : 60);
+            const minVisInterval = targetHz > 60 ? (1000 / (targetHz * 1.05)) : 16;
+            if (time - this.lastVisTime < minVisInterval) return;
             this.lastVisTime = time;
             
             this.analyser.getByteFrequencyData(this.visDataArray);

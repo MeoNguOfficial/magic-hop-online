@@ -355,6 +355,7 @@ function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
     }
 }
 
+window.renderSongList = renderSongList;
 function renderSongList(filterTerm = null, specificIndices = null) {
     const currentRenderId = ++renderId;
     const selector = document.getElementById('song-selector');

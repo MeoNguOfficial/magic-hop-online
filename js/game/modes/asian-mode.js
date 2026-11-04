@@ -6,30 +6,21 @@ window.AsianModeManager = {
     isEnabled: localStorage.getItem('asianModeEnabled') === 'true',
 
     setMode: function (enabled) {
-        this.isEnabled = enabled;
-        localStorage.setItem('asianModeEnabled', enabled);
-
-        // Cập nhật giao diện nếu có thay đổi
-        const toggleAsianMode = document.getElementById('toggle-asian-mode');
-        if (toggleAsianMode && toggleAsianMode.checked !== enabled) {
-            toggleAsianMode.checked = enabled;
-        }
-
-        // Tương khắc với các chế độ khác (Nếu bật Asian Mode -> Tắt Easy Mode & Hard Mode)
         if (enabled) {
-            if (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled) {
-                window.EasyModeManager.setMode(false);
+            if (typeof window.setDifficultyMode === 'function') {
+                window.setDifficultyMode('asian');
+            } else {
+                this.isEnabled = true;
+                localStorage.setItem('asianModeEnabled', 'true');
             }
-            if (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled) {
-                window.HardModeManager.setMode(false);
+        } else {
+            if (typeof window.getActiveDifficultyMode === 'function' && window.getActiveDifficultyMode() === 'asian') {
+                window.setDifficultyMode('normal');
+            } else {
+                this.isEnabled = false;
+                localStorage.setItem('asianModeEnabled', 'false');
             }
         }
-
-        if (typeof window.syncDifficultyToggles === 'function') {
-            window.syncDifficultyToggles();
-        }
-
-        // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
         if (typeof window.updateMainMenuTheme === 'function') {
             window.updateMainMenuTheme();
         } else {
@@ -342,14 +333,7 @@ window.AsianGameOverFireManager = {
 
 // Khởi tạo sự kiện giao diện khi tải trang
 function initAsianModeUI() {
-    const toggleAsianMode = document.getElementById('toggle-asian-mode');
-    if (toggleAsianMode) {
-        toggleAsianMode.checked = window.AsianModeManager.isEnabled;
-        toggleAsianMode.onchange = (e) => {
-            window.AsianModeManager.setMode(e.target.checked);
-            if (typeof window.syncDifficultyToggles === "function") window.syncDifficultyToggles();
-        };
-    }
+    if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
 
     if (window.AsianModeManager && typeof window.AsianModeManager.updateMenuBackground === 'function') {
         window.AsianModeManager.updateMenuBackground();

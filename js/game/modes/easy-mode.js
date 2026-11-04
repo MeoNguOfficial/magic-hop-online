@@ -6,30 +6,21 @@ window.EasyModeManager = {
     isEnabled: localStorage.getItem('easyModeEnabled') === 'true',
 
     setMode: function (enabled) {
-        this.isEnabled = enabled;
-        localStorage.setItem('easyModeEnabled', enabled);
-
-        // Cập nhật giao diện nếu có thay đổi
-        const toggleEasyMode = document.getElementById('toggle-easy-mode');
-        if (toggleEasyMode && toggleEasyMode.checked !== enabled) {
-            toggleEasyMode.checked = enabled;
-        }
-
-        // Tương khắc với các chế độ khác (Nếu bật Easy Mode -> Tắt Hard Mode & Asian Mode)
         if (enabled) {
-            if (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled) {
-                window.HardModeManager.setMode(false);
+            if (typeof window.setDifficultyMode === 'function') {
+                window.setDifficultyMode('easy');
+            } else {
+                this.isEnabled = true;
+                localStorage.setItem('easyModeEnabled', 'true');
             }
-            if (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled) {
-                window.AsianModeManager.setMode(false);
+        } else {
+            if (typeof window.getActiveDifficultyMode === 'function' && window.getActiveDifficultyMode() === 'easy') {
+                window.setDifficultyMode('normal');
+            } else {
+                this.isEnabled = false;
+                localStorage.setItem('easyModeEnabled', 'false');
             }
         }
-
-        if (typeof window.syncDifficultyToggles === 'function') {
-            window.syncDifficultyToggles();
-        }
-
-        // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
         if (typeof window.updateMainMenuTheme === 'function') {
             window.updateMainMenuTheme();
         } else {
@@ -347,28 +338,6 @@ window.EasyGameOverCloverManager = {
 
 // Khởi tạo sự kiện giao diện khi tải trang
 function initEasyModeUI() {
-    const toggleEasyMode = document.getElementById('toggle-easy-mode');
-    if (toggleEasyMode) {
-        toggleEasyMode.checked = window.EasyModeManager.isEnabled;
-        toggleEasyMode.onchange = (e) => {
-            window.EasyModeManager.setMode(e.target.checked);
-            if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
-        };
-    }
-
-    const toggleNormalMode = document.getElementById('toggle-normal-mode');
-    if (toggleNormalMode) {
-        toggleNormalMode.onchange = (e) => {
-            if (e.target.checked) {
-                if (window.EasyModeManager) window.EasyModeManager.setMode(false);
-                if (window.HardModeManager) window.HardModeManager.setMode(false);
-                if (window.AsianModeManager) window.AsianModeManager.setMode(false);
-            } else {
-                e.target.checked = true;
-            }
-            if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
-        };
-    }
     if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
 
     if (window.EasyModeManager && typeof window.EasyModeManager.updateMenuBackground === 'function') {
@@ -381,41 +350,3 @@ if (document.readyState === 'loading') {
 } else {
     initEasyModeUI();
 }
-
-window.syncDifficultyToggles = function () {
-    const isEasy = !!(window.EasyModeManager && window.EasyModeManager.isEnabled);
-    const isHard = !!(window.HardModeManager && window.HardModeManager.isEnabled);
-    const isAsian = !!(window.AsianModeManager && window.AsianModeManager.isEnabled);
-    const isNormal = !isEasy && !isHard && !isAsian;
-
-    const tEasy = document.getElementById('toggle-easy-mode');
-    const tHard = document.getElementById('toggle-hard-mode');
-    const tAsian = document.getElementById('toggle-asian-mode');
-    const tNormal = document.getElementById('toggle-normal-mode');
-
-    if (tEasy && tEasy.checked !== isEasy) tEasy.checked = isEasy;
-    if (tHard && tHard.checked !== isHard) tHard.checked = isHard;
-    if (tAsian && tAsian.checked !== isAsian) tAsian.checked = isAsian;
-    if (tNormal && tNormal.checked !== isNormal) tNormal.checked = isNormal;
-
-    const cEasy = document.getElementById('easy-mode-container');
-    const cNormal = document.getElementById('normal-mode-container');
-    const cHard = document.getElementById('hard-mode-container');
-    const cAsian = document.getElementById('asian-mode-container');
-
-    const updateContainer = (el, active, activeBorder, activeGlow, inactiveBorder) => {
-        if (!el) return;
-        if (active) {
-            el.classList.add(activeBorder, activeGlow);
-            el.classList.remove(inactiveBorder);
-        } else {
-            el.classList.remove(activeBorder, activeGlow);
-            el.classList.add(inactiveBorder);
-        }
-    };
-
-    updateContainer(cNormal, isNormal, 'border-cyan-400', 'shadow-[0_0_12px_rgba(6,182,212,0.25)]', 'border-cyan-500/20');
-    updateContainer(cEasy, isEasy, 'border-emerald-400', 'shadow-[0_0_12px_rgba(16,185,129,0.25)]', 'border-emerald-500/20');
-    updateContainer(cHard, isHard, 'border-orange-400', 'shadow-[0_0_12px_rgba(249,115,22,0.25)]', 'border-orange-500/20');
-    updateContainer(cAsian, isAsian, 'border-red-400', 'shadow-[0_0_12px_rgba(239,68,68,0.25)]', 'border-red-500/20');
-};

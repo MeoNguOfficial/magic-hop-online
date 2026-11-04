@@ -891,6 +891,30 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     50% { transform: scale(1.4); opacity: 1; }
 }
 
+/* Bảo đảm Magic Loader & Spinner luôn hoạt động khi UI Animations = OFF */
+body.disable-animations .magic-loader {
+    animation: magic-rotate 2s linear infinite !important;
+}
+body.disable-animations .magic-loader .loader-path {
+    animation: magic-dash 1.5s ease-in-out infinite !important;
+}
+body.disable-animations .magic-loader .loader-core {
+    animation: magic-pulse-core 1.5s ease-in-out infinite alternate !important;
+}
+body.disable-animations .animate-spin-clockwise {
+    animation: spin-clockwise 1.8s linear infinite !important;
+}
+body.disable-animations .animate-spin-counterclockwise {
+    animation: spin-counterclockwise 1.2s linear infinite !important;
+}
+body.disable-animations .animate-spin {
+    animation: spin-clockwise 1.2s linear infinite !important;
+}
+body.disable-animations #intro-progress-bar,
+body.disable-animations #music-progress-bar {
+    transition: width 0.12s linear !important;
+}
+
 /* ============================================================
    GPU-FIRST COMPOSITING & ZERO-LAYOUT-THRASHING HUD OPTIMIZATION
    ============================================================ */
@@ -930,4 +954,160 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     filter: drop-shadow(0 0 3px rgba(0, 240, 255, 0.45));
 }
 
+/* ============================================================ */
+/*  Difficulty & Extension Items - Fixed-Width Themed Borders   */
+/*  (Zero layout shift / no size change on click or hover)     */
+/* ============================================================ */
+.difficulty-item,
+.extension-item {
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-radius: 0.5rem !important;
+    box-sizing: border-box !important;
+    transition: border-color 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease !important;
+}
 
+/* --- 1. Chế độ Dễ (Easy Mode) - Emerald Green --- */
+#easy-mode-container {
+    border-color: rgba(16, 185, 129, 0.35) !important;
+    background-color: rgba(6, 78, 59, 0.22) !important;
+    box-shadow: none !important;
+}
+#easy-mode-container:hover {
+    border-color: rgba(16, 185, 129, 0.7) !important;
+    background-color: rgba(6, 78, 59, 0.35) !important;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.25) !important;
+}
+.difficulty-item.mode-active-easy,
+#easy-mode-container:has(#toggle-easy-mode:checked) {
+    border-color: #10b981 !important;
+    background-color: rgba(6, 78, 59, 0.55) !important;
+    box-shadow: 0 0 16px rgba(16, 185, 129, 0.55), inset 0 0 8px rgba(16, 185, 129, 0.2) !important;
+}
+
+/* --- 2. Chế độ Thường (Normal Mode) - Electric Cyan --- */
+#normal-mode-container {
+    border-color: rgba(0, 255, 255, 0.35) !important;
+    background-color: rgba(8, 47, 73, 0.25) !important;
+    box-shadow: none !important;
+}
+#normal-mode-container:hover {
+    border-color: rgba(0, 255, 255, 0.7) !important;
+    background-color: rgba(8, 47, 73, 0.4) !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.25) !important;
+}
+.difficulty-item.mode-active-normal,
+#normal-mode-container:has(#toggle-normal-mode:checked) {
+    border-color: #00ffff !important;
+    background-color: rgba(8, 47, 73, 0.55) !important;
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.55), inset 0 0 8px rgba(0, 255, 255, 0.2) !important;
+}
+
+/* --- 3. Chế độ Ức chế (Rage / Hard Mode) - Flame Orange --- */
+#hard-mode-container {
+    border-color: rgba(249, 115, 22, 0.35) !important;
+    background-color: rgba(124, 45, 18, 0.22) !important;
+    box-shadow: none !important;
+}
+#hard-mode-container:hover {
+    border-color: rgba(249, 115, 22, 0.7) !important;
+    background-color: rgba(124, 45, 18, 0.35) !important;
+    box-shadow: 0 0 10px rgba(249, 115, 22, 0.25) !important;
+}
+.difficulty-item.mode-active-hard,
+#hard-mode-container:has(#toggle-hard-mode:checked) {
+    border-color: #f97316 !important;
+    background-color: rgba(124, 45, 18, 0.55) !important;
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.55), inset 0 0 8px rgba(249, 115, 22, 0.2) !important;
+}
+
+/* --- 4. Chế độ Ăn vạ (Asian Mode) - Ultra Red --- */
+#asian-mode-container {
+    border-color: rgba(239, 68, 68, 0.35) !important;
+    background-color: rgba(127, 29, 29, 0.22) !important;
+    box-shadow: none !important;
+}
+#asian-mode-container:hover {
+    border-color: rgba(239, 68, 68, 0.7) !important;
+    background-color: rgba(127, 29, 29, 0.35) !important;
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.25) !important;
+}
+.difficulty-item.mode-active-asian,
+#asian-mode-container:has(#toggle-asian-mode:checked) {
+    border-color: #ef4444 !important;
+    background-color: rgba(127, 29, 29, 0.55) !important;
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.55), inset 0 0 8px rgba(239, 68, 68, 0.2) !important;
+}
+
+/* --- 5. Chế độ Thư giãn (Relax Mode) - Cyan --- */
+#relax-mode-container {
+    border-color: rgba(0, 255, 255, 0.35) !important;
+    background-color: rgba(8, 47, 73, 0.25) !important;
+    box-shadow: none !important;
+}
+#relax-mode-container:hover {
+    border-color: rgba(0, 255, 255, 0.7) !important;
+    background-color: rgba(8, 47, 73, 0.4) !important;
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.25) !important;
+}
+.extension-item.item-active-relax,
+#relax-mode-container:has(#toggle-relax-mode:checked) {
+    border-color: #00ffff !important;
+    background-color: rgba(8, 47, 73, 0.55) !important;
+    box-shadow: 0 0 16px rgba(0, 255, 255, 0.55), inset 0 0 8px rgba(0, 255, 255, 0.2) !important;
+}
+
+/* --- 6. Bot Assist (Aim Assist) - Neon Pink --- */
+#bot-assist-container {
+    border-color: rgba(236, 72, 153, 0.35) !important;
+    background-color: rgba(131, 24, 67, 0.22) !important;
+    box-shadow: none !important;
+}
+#bot-assist-container:hover {
+    border-color: rgba(236, 72, 153, 0.7) !important;
+    background-color: rgba(131, 24, 67, 0.35) !important;
+    box-shadow: 0 0 10px rgba(236, 72, 153, 0.25) !important;
+}
+.extension-item.item-active-bot,
+#bot-assist-container:has(#toggle-bot-assist:checked) {
+    border-color: #ec4899 !important;
+    background-color: rgba(131, 24, 67, 0.55) !important;
+    box-shadow: 0 0 16px rgba(236, 72, 153, 0.55), inset 0 0 8px rgba(236, 72, 153, 0.2) !important;
+}
+
+/* --- 7. Invert Controls - Neon Purple --- */
+#invert-controls-container {
+    border-color: rgba(168, 85, 247, 0.35) !important;
+    background-color: rgba(88, 28, 135, 0.22) !important;
+    box-shadow: none !important;
+}
+#invert-controls-container:hover {
+    border-color: rgba(168, 85, 247, 0.7) !important;
+    background-color: rgba(88, 28, 135, 0.35) !important;
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.25) !important;
+}
+.extension-item.item-active-invert,
+#invert-controls-container:has(#toggle-invert-controls:checked) {
+    border-color: #a855f7 !important;
+    background-color: rgba(88, 28, 135, 0.55) !important;
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.55), inset 0 0 8px rgba(168, 85, 247, 0.2) !important;
+}
+
+/* Cuộn mượt mà ở tần số quét cao (90Hz, 120Hz, 144Hz, 240Hz+) */
+html,
+body,
+.scrollable-container,
+#song-list-container,
+.settings-content-scroll,
+.tab-pane {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* Đảm bảo độ sắc nét tuyệt đối cho Font & Text (Crisp ClearType Rendering) */
+html, body {
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: subpixel-antialiased;
+    -moz-osx-font-smoothing: auto;
+}

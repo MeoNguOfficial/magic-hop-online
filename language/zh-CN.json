@@ -306,8 +306,8 @@
   "fake_blocks_desc": "假块在真实块旁边随机生成。触摸时它们会破裂并掉落。",
   "relax_mode_title": "放松模式 (Relax Mode)",
   "relax_mode_desc": "自动流畅播放。无需玩耍即可享受音乐 and 3D 视觉效果。",
-  "ext_cat_modes": "游戏模式与难度",
-  "ext_cat_modes_desc": "自定义关卡难度与游戏机制",
+  "ext_cat_modes": "游戏模式",
+  "ext_cat_modes_desc": "特殊游戏模式",
   "ext_cat_assists": "辅助与控制",
   "ext_cat_assists_desc": "跳跃辅助工具与操作方式自定义",
   "easy_mode_desc": "最简单难度",
@@ -603,5 +603,7 @@
   "msg_back_blocked": "已阻止后退以保护您的游戏进程！",
   "msg_press_back_again_to_exit": "再次按返回键退出游戏",
   "normal_mode_title": "普通模式 (Normal Mode)",
-  "normal_mode_desc": "中等难度"
+  "normal_mode_desc": "中等难度",
+  "ext_cat_difficulty": "难度",
+  "ext_cat_difficulty_desc": "自定义关卡难度与挑战"
 }

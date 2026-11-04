@@ -40,7 +40,18 @@ window.VisualizerManager = {
         if (this.isMobile === undefined) {
              this.isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         }
-        const visThrottle = (this.isMobile || currentGraphicsQuality === 'simple') ? (currentGraphicsQuality === 'simple' ? 0.066 : 0.033) : 0.016;
+        let visThrottle = 0.016;
+        if (currentGraphicsQuality === 'simple') {
+            visThrottle = 0.066;
+        } else if (this.isMobile && currentGraphicsQuality === 'low') {
+            visThrottle = 0.033;
+        } else {
+            // Tự động thích ứng tần số quét màn hình cao (90Hz, 120Hz, 144Hz, 240Hz)
+            const effectiveHz = (typeof window.getEffectiveTargetFps === 'function')
+                ? window.getEffectiveTargetFps()
+                : (typeof window.screenRefreshRate === 'number' ? window.screenRefreshRate : 60);
+            visThrottle = effectiveHz > 60 ? (1 / (effectiveHz * 1.05)) : 0.016;
+        }
 
         if (nowTime - this.lastVisTime < visThrottle) return;
         this.lastVisTime = nowTime;

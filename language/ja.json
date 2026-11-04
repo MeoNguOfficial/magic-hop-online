@@ -307,8 +307,8 @@
   "btn_next": "次",
   "fake_blocks_title": "偽のブロック",
   "fake_blocks_desc": "偽のブロックは本物のブロックの隣にランダムに生成されます。触れると壊れたり落ちたりします。",
-  "ext_cat_modes": "ゲームモード & 難易度",
-  "ext_cat_modes_desc": "ゲームの難易度とメカニクスをカスタマイズ",
+  "ext_cat_modes": "ゲームモード",
+  "ext_cat_modes_desc": "特別なゲームモード",
   "ext_cat_assists": "アシスト & 操作設定",
   "ext_cat_assists_desc": "ジャンプアシストツールと操作カスタマイズ",
   "relax_mode_title": "リラックスモード (Relax Mode)",
@@ -603,5 +603,7 @@
   "msg_back_blocked": "ゲーム保護のため前のページへの移動をブロックしました！",
   "msg_press_back_again_to_exit": "もう一度戻るを押すと終了します",
   "normal_mode_title": "ノーマルモード",
-  "normal_mode_desc": "中級難易度"
+  "normal_mode_desc": "中級難易度",
+  "ext_cat_difficulty": "難易度",
+  "ext_cat_difficulty_desc": "ゲームの難易度と挑戦をカスタマイズ"
 }

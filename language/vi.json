@@ -288,8 +288,8 @@
   "btn_next": "SAU",
   "fake_blocks_title": "Khối giả (Fake Blocks)",
   "fake_blocks_desc": "Khối giả mờ hơn, sinh ngẫu nhiên cạnh khối thật và sẽ vỡ khi chạm.",
-  "ext_cat_modes": "CHẾ ĐỘ CHƠI & ĐỘ KHÓ",
-  "ext_cat_modes_desc": "Tùy chỉnh độ khó và các cơ chế màn chơi",
+  "ext_cat_modes": "CHẾ ĐỘ CHƠI",
+  "ext_cat_modes_desc": "Các chế độ chơi đặc biệt",
   "ext_cat_assists": "BỔ TRỢ & ĐIỀU KHIỂN",
   "ext_cat_assists_desc": "Công cụ hỗ trợ nhảy và tùy chỉnh phương thức vuốt",
   "relax_mode_title": "Chế độ Thư giãn (Relax Mode)",
@@ -607,5 +607,7 @@
   "msg_back_blocked": "Đã chặn quay lại để bảo vệ ván đấu của bạn!",
   "msg_press_back_again_to_exit": "Nhấn lại lần nữa để thoát",
   "normal_mode_title": "Chế độ Thường (Normal Mode)",
-  "normal_mode_desc": "Độ khó trung bình"
+  "normal_mode_desc": "Độ khó trung bình",
+  "ext_cat_difficulty": "ĐỘ KHÓ",
+  "ext_cat_difficulty_desc": "Tùy chỉnh độ khó và thử thách màn chơi"
 }

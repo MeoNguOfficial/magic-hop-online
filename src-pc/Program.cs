@@ -115,7 +115,7 @@ namespace CyberBeatHopper
                     "--no-first-run --no-default-browser-check " +
                     "--disable-features=Translate,InterestFeedContentSuggestions " +
                     "--enable-features=OverlayScrollbar,VaapiVideoDecoder,AudioWorkletRealtimeThread " +
-                    "--enable-gpu-rasterization --enable-zero-copy",
+                    "--disable-frame-rate-limit --ignore-gpu-blocklist --enable-zero-copy --enable-smooth-scrolling --disable-background-timer-throttling --disable-renderer-backgrounding",
                     gameUrl, profileDir
                 );
 

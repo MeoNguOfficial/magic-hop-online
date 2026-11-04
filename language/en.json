@@ -288,8 +288,8 @@
   "btn_next": "NEXT",
   "fake_blocks_title": "Fake Blocks",
   "fake_blocks_desc": "Fake blocks spawn randomly next to real ones. They break and fall when touched.",
-  "ext_cat_modes": "GAME MODES & DIFFICULTY",
-  "ext_cat_modes_desc": "Customize game difficulty and gameplay mechanics",
+  "ext_cat_modes": "GAME MODES",
+  "ext_cat_modes_desc": "Special gameplay modes",
   "ext_cat_assists": "ASSISTS & CONTROLS",
   "ext_cat_assists_desc": "Jump assist tools and control customization",
   "relax_mode_title": "Relax Mode",
@@ -607,5 +607,7 @@
   "msg_back_blocked": "Back navigation blocked to protect your game!",
   "msg_press_back_again_to_exit": "Press back again to exit",
   "normal_mode_title": "Normal Mode",
-  "normal_mode_desc": "Medium difficulty"
+  "normal_mode_desc": "Medium difficulty",
+  "ext_cat_difficulty": "DIFFICULTY",
+  "ext_cat_difficulty_desc": "Customize gameplay difficulty and challenge"
 }

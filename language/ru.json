@@ -308,8 +308,8 @@
   "btn_next": "ДАЛЕЕ",
   "fake_blocks_title": "Фальшивые блоки",
   "fake_blocks_desc": "Фальшивые блоки появляются случайным образом рядом с настоящими. Они ломаются и падают при прикосновении.",
-  "ext_cat_modes": "ИГРОВЫЕ РЕЖИМЫ И СЛОЖНОСТЬ",
-  "ext_cat_modes_desc": "Настройка сложности и механик игры",
+  "ext_cat_modes": "ИГРОВЫЕ РЕЖИМЫ",
+  "ext_cat_modes_desc": "Особые игровые режимы",
   "ext_cat_assists": "ПОМОЩЬ И УПРАВЛЕНИЕ",
   "ext_cat_assists_desc": "Инструменты помощи при прыжке и настройка управления",
   "relax_mode_title": "Режим Релакса (Relax Mode)",
@@ -603,5 +603,7 @@
   "msg_back_blocked": "Переход назад заблокирован для защиты вашей игры!",
   "msg_press_back_again_to_exit": "Нажмите назад еще раз для выхода",
   "normal_mode_title": "Обычный режим (Normal Mode)",
-  "normal_mode_desc": "Средняя сложность"
+  "normal_mode_desc": "Средняя сложность",
+  "ext_cat_difficulty": "СЛОЖНОСТЬ",
+  "ext_cat_difficulty_desc": "Настройка сложности и вызова игры"
 }

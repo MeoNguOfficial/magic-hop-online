@@ -308,8 +308,8 @@
   "btn_next": "SIGUIENTE",
   "fake_blocks_title": "Bloques falsos",
   "fake_blocks_desc": "Los bloques falsos se generan aleatoriamente junto a los reales. Se rompen y caen al tocarlos.",
-  "ext_cat_modes": "MODOS DE JUEGO Y DIFICULTAD",
-  "ext_cat_modes_desc": "Personaliza la dificultad y mecánicas de juego",
+  "ext_cat_modes": "MODOS DE JUEGO",
+  "ext_cat_modes_desc": "Modos de juego especiales",
   "ext_cat_assists": "ASISTENCIAS Y CONTROLES",
   "ext_cat_assists_desc": "Herramientas de asistencia de salto y controles",
   "relax_mode_title": "Modo Relajado (Relax Mode)",
@@ -603,5 +603,7 @@
   "msg_back_blocked": "¡Navegación hacia atrás bloqueada para proteger tu partida!",
   "msg_press_back_again_to_exit": "Presione atrás de nuevo para salir",
   "normal_mode_title": "Modo Normal",
-  "normal_mode_desc": "Dificultad media"
+  "normal_mode_desc": "Dificultad media",
+  "ext_cat_difficulty": "DIFICULTAD",
+  "ext_cat_difficulty_desc": "Personaliza la dificultad y el desafío"
 }

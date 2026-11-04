@@ -884,7 +884,53 @@ function updateMutuallyExclusiveExtensions() {
             adminNaturalContainer.style.pointerEvents = 'auto';
         }
     }
+
+    if (typeof syncExtensionHighlights === 'function') {
+        syncExtensionHighlights();
+    }
 }
+
+function syncExtensionHighlights() {
+    const tRelax = document.getElementById('toggle-relax-mode');
+    const cRelax = document.getElementById('relax-mode-container');
+    if (cRelax && tRelax) {
+        cRelax.classList.add('extension-item');
+        if (tRelax.checked) {
+            cRelax.classList.add('item-active-relax');
+            cRelax.classList.remove('item-inactive');
+        } else {
+            cRelax.classList.remove('item-active-relax');
+            cRelax.classList.add('item-inactive');
+        }
+    }
+
+    const tBot = document.getElementById('toggle-bot-assist');
+    const cBot = document.getElementById('bot-assist-container');
+    if (cBot && tBot) {
+        cBot.classList.add('extension-item');
+        if (tBot.checked) {
+            cBot.classList.add('item-active-bot');
+            cBot.classList.remove('item-inactive');
+        } else {
+            cBot.classList.remove('item-active-bot');
+            cBot.classList.add('item-inactive');
+        }
+    }
+
+    const tInvert = document.getElementById('toggle-invert-controls');
+    const cInvert = document.getElementById('invert-controls-container');
+    if (cInvert && tInvert) {
+        cInvert.classList.add('extension-item');
+        if (tInvert.checked) {
+            cInvert.classList.add('item-active-invert');
+            cInvert.classList.remove('item-inactive');
+        } else {
+            cInvert.classList.remove('item-active-invert');
+            cInvert.classList.add('item-inactive');
+        }
+    }
+}
+window.syncExtensionHighlights = syncExtensionHighlights;
 
 function unloadFakeBlocksLogic() {
     const script = document.getElementById('fake-blocks-script');

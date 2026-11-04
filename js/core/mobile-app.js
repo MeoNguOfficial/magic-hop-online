@@ -86,22 +86,9 @@
     function setupAndroidBackButton() {
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('backButton', ({ canGoBack }) => {
-                // 1. Nếu đang chơi ván game -> Chặn thoát, tạm dừng game và thông báo bảo vệ
-                const isActivePlay = (typeof window.isGamePlayActive === 'function')
-                    ? window.isGamePlayActive()
-                    : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
-
-                if (isActivePlay) {
-                    if (typeof window.handleBlockedBackNavigation === 'function') {
-                        window.handleBlockedBackNavigation();
-                    } else if (typeof pauseGame === 'function') {
-                        pauseGame();
-                    }
-                    return;
-                }
-
-                // 2. Khi KHÔNG ở trong trận đấu: Đóng popup hoặc yêu cầu nhấn 2 lần để thoát
-                if (typeof window.handleMenuBackPress === 'function') {
+                if (typeof window.onAndroidNativeBackPressed === 'function') {
+                    window.onAndroidNativeBackPressed();
+                } else if (typeof window.handleMenuBackPress === 'function') {
                     window.handleMenuBackPress();
                 }
             });

@@ -1713,6 +1713,93 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(updateMainMenuTheme, 100);
 });
 
+// --- BỘ ĐIỀU HÀNH ĐỘ KHÓ TOÀN CỤC (MUTUALLY EXCLUSIVE DIFFICULTY MANAGER) ---
+window.getActiveDifficultyMode = function () {
+    if (localStorage.getItem('asianModeEnabled') === 'true') return 'asian';
+    if (localStorage.getItem('hardModeEnabled') === 'true') return 'hard';
+    if (localStorage.getItem('easyModeEnabled') === 'true') return 'easy';
+    return 'normal';
+};
+
+window.setDifficultyMode = function (targetMode) {
+    const mode = (targetMode === 'easy' || targetMode === 'hard' || targetMode === 'asian') ? targetMode : 'normal';
+
+    const isEasy = (mode === 'easy');
+    const isHard = (mode === 'hard');
+    const isAsian = (mode === 'asian');
+
+    localStorage.setItem('easyModeEnabled', isEasy ? 'true' : 'false');
+    localStorage.setItem('hardModeEnabled', isHard ? 'true' : 'false');
+    localStorage.setItem('asianModeEnabled', isAsian ? 'true' : 'false');
+
+    if (window.EasyModeManager) window.EasyModeManager.isEnabled = isEasy;
+    if (window.HardModeManager) window.HardModeManager.isEnabled = isHard;
+    if (window.AsianModeManager) window.AsianModeManager.isEnabled = isAsian;
+
+    if (typeof window.syncDifficultyToggles === 'function') {
+        window.syncDifficultyToggles();
+    }
+
+    if (typeof window.updateMainMenuTheme === 'function') {
+        window.updateMainMenuTheme();
+    }
+};
+
+window.syncDifficultyToggles = function () {
+    const activeMode = (typeof window.getActiveDifficultyMode === 'function')
+        ? window.getActiveDifficultyMode()
+        : 'normal';
+
+    const tEasy = document.getElementById('toggle-easy-mode');
+    const tNormal = document.getElementById('toggle-normal-mode');
+    const tHard = document.getElementById('toggle-hard-mode');
+    const tAsian = document.getElementById('toggle-asian-mode');
+
+    if (tEasy) tEasy.checked = (activeMode === 'easy');
+    if (tNormal) tNormal.checked = (activeMode === 'normal');
+    if (tHard) tHard.checked = (activeMode === 'hard');
+    if (tAsian) tAsian.checked = (activeMode === 'asian');
+
+    const cEasy = document.getElementById('easy-mode-container');
+    const cNormal = document.getElementById('normal-mode-container');
+    const cHard = document.getElementById('hard-mode-container');
+    const cAsian = document.getElementById('asian-mode-container');
+
+    const setItemActive = (el, isActive, activeClass) => {
+        if (!el) return;
+        el.classList.add('difficulty-item');
+        el.classList.remove('mode-active-normal', 'mode-active-easy', 'mode-active-hard', 'mode-active-asian');
+        if (isActive) {
+            el.classList.add(activeClass);
+        }
+    };
+
+    setItemActive(cNormal, activeMode === 'normal', 'mode-active-normal');
+    setItemActive(cEasy, activeMode === 'easy', 'mode-active-easy');
+    setItemActive(cHard, activeMode === 'hard', 'mode-active-hard');
+    setItemActive(cAsian, activeMode === 'asian', 'mode-active-asian');
+};
+
+function initDifficultyUIEvents() {
+    const radios = document.querySelectorAll('input[name="difficulty_mode"]');
+    radios.forEach(radio => {
+        radio.onchange = function (e) {
+            if (e.target.checked) {
+                window.setDifficultyMode(e.target.value);
+            }
+        };
+    });
+    if (typeof window.syncDifficultyToggles === 'function') {
+        window.syncDifficultyToggles();
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDifficultyUIEvents);
+} else {
+    initDifficultyUIEvents();
+}
+
 // --- TỐI ƯU HIỆU SUẤT (DEBOUNCE LOCAL STORAGE) ---
 window.debouncedLocalStorageSet = (function() {
     let timers = {};
@@ -1936,6 +2023,14 @@ window.handleBlockedBackNavigation = function () {
 
 // Đóng bất kỳ modal/popup nào đang mở (Ưu tiên nút Back đóng hộp thoại trước khi thoát app)
 window.closeAnyOpenModal = function () {
+    // 0. Nếu đang ở các tab con (Settings, Music, Personalize, Account) -> Trở về Tab Home
+    const panelHome = document.getElementById('panel-home');
+    const navHomeBtn = document.getElementById('nav-home');
+    if (panelHome && panelHome.classList.contains('hidden') && navHomeBtn) {
+        navHomeBtn.click();
+        return true;
+    }
+
     // 1. In-game page viewer modal
     const pageViewer = document.getElementById('page-viewer-modal');
     if (pageViewer && pageViewer.style.display !== 'none' && !pageViewer.classList.contains('hidden')) {
@@ -1988,7 +2083,7 @@ let lastBackPressTimestamp = 0;
 const DOUBLE_BACK_DELAY = 2200; // Khoảng thời gian cho phép nhấn lần 2 (2.2 giây)
 
 window.handleMenuBackPress = function () {
-    // 1. Nếu có modal/hộp thoại đang mở -> Đóng modal trước
+    // 1. Nếu có modal/hộp thoại/tab con đang mở -> Đóng/trở về Home trước
     if (typeof window.closeAnyOpenModal === 'function' && window.closeAnyOpenModal()) {
         return false;
     }
@@ -2007,13 +2102,38 @@ window.handleMenuBackPress = function () {
     if (now - lastBackPressTimestamp < DOUBLE_BACK_DELAY) {
         // Lần thứ 2: Thực hiện thoát
         lastBackPressTimestamp = 0;
+
+        // 3.1. Android Native App Bridge (APK)
+        if (window.AndroidNativeApp && typeof window.AndroidNativeApp.exitApp === 'function') {
+            window.AndroidNativeApp.exitApp();
+            return true;
+        }
+
+        // 3.2. Capacitor App Plugin fallback
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App && typeof window.Capacitor.Plugins.App.exitApp === 'function') {
             window.Capacitor.Plugins.App.exitApp();
-        } else if (window.DesktopAppManager && typeof window.DesktopAppManager.exitApp === 'function' && window.isDesktopApp) {
-            window.DesktopAppManager.exitApp();
-        } else if (typeof window.close === 'function') {
-            window.close();
+            return true;
         }
+
+        // 3.3. Desktop PC App
+        if (window.DesktopAppManager && typeof window.DesktopAppManager.exitApp === 'function' && window.isDesktopApp) {
+            window.DesktopAppManager.exitApp();
+            return true;
+        }
+
+        // 3.4. Mobile Browser / PWA fallback
+        try {
+            window.close();
+        } catch (e) {}
+
+        setTimeout(() => {
+            try {
+                window.history.go(-2);
+            } catch (e) {
+                window.history.back();
+            }
+        }, 80);
+
         return true;
     } else {
         // Lần thứ 1: Cảnh báo "Nhấn lại lần nữa để thoát"
@@ -2023,5 +2143,25 @@ window.handleMenuBackPress = function () {
             window.showGameToast(exitMsg, 2200, 'warning');
         }
         return false;
+    }
+};
+
+// Xử lý sự kiện nút Back từ Android Native (Cả phím cứng & cử chỉ vuốt cạnh)
+window.onAndroidNativeBackPressed = function () {
+    const isPlay = (typeof window.isGamePlayActive === 'function')
+        ? window.isGamePlayActive()
+        : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
+
+    if (isPlay) {
+        if (typeof window.handleBlockedBackNavigation === 'function') {
+            window.handleBlockedBackNavigation();
+        } else if (typeof pauseGame === 'function') {
+            pauseGame();
+        }
+        return;
+    }
+
+    if (typeof window.handleMenuBackPress === 'function') {
+        window.handleMenuBackPress();
     }
 };

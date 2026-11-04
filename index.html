@@ -22,16 +22,19 @@
                 (window.chrome && window.chrome.webview) ||
                 window.__TAURI__ ||
                 window.__DESKTOP_APP__ ||
-                window.location.search.indexOf('app=standalone') !== -1 ||
+                (window.location.search && window.location.search.indexOf('app=standalone') !== -1) ||
                 (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
                 window.navigator.standalone === true ||
                 window.location.port === '38281' ||
                 window.location.port === '9091' ||
                 window.location.protocol === 'capacitor:' ||
-                window.location.origin === 'https://localhost'
+                window.location.origin === 'https://localhost' ||
+                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
+                (typeof window.Capacitor !== 'undefined')
             );
             if (isEarlyApp) {
                 document.documentElement.classList.add('in-app-mode');
+                try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('app_mode', 'standalone'); } catch (e) {}
             }
         } catch (e) { }
     </script>
@@ -331,11 +334,61 @@
             }
         }
 
-        body.disable-animations *,
-        body.disable-animations *::before,
-        body.disable-animations *::after {
+        /* ============================================================ */
+        /*  TẮT HIỆU ỨNG GIAO DIỆN (UI ANIMATIONS: OFF)                 */
+        /*  Tắt chuyển cảnh UI, modal, nút bấm                         */
+        /*  BẢO VỆ TUYỆT ĐỐI TOÀN BỘ HIỆU ỨNG TẢI TRANG (LOADING)       */
+        /* ============================================================ */
+        body.disable-animations *:not(#intro-slide-loading *):not(#loading-overlay *):not(#intro-loading-container *):not(.magic-loader):not(.magic-loader *):not(.loader-path):not(.loader-core):not(.loader-track):not([class*="loader"]):not([class*="spinner"]):not(.animate-spin):not(.animate-spin-clockwise):not(.animate-spin-counterclockwise):not(.wave-icon-loading):not(.wave-icon-loading *):not(#intro-progress-bar):not(#music-progress-bar):not([role="progressbar"]):not([role="progressbar"] *):not(#lb-modal-list .animate-pulse):not(#loading-tip-title),
+        body.disable-animations *:not(#intro-slide-loading *):not(#loading-overlay *):not(#intro-loading-container *):not(.magic-loader):not(.magic-loader *):not(.loader-path):not(.loader-core):not(.loader-track):not([class*="loader"]):not([class*="spinner"]):not(.animate-spin):not(.animate-spin-clockwise):not(.animate-spin-counterclockwise):not(.wave-icon-loading):not(.wave-icon-loading *):not(#intro-progress-bar):not(#music-progress-bar):not([role="progressbar"]):not([role="progressbar"] *):not(#lb-modal-list .animate-pulse):not(#loading-tip-title)::before,
+        body.disable-animations *:not(#intro-slide-loading *):not(#loading-overlay *):not(#intro-loading-container *):not(.magic-loader):not(.magic-loader *):not(.loader-path):not(.loader-core):not(.loader-track):not([class*="loader"]):not([class*="spinner"]):not(.animate-spin):not(.animate-spin-clockwise):not(.animate-spin-counterclockwise):not(.wave-icon-loading):not(.wave-icon-loading *):not(#intro-progress-bar):not(#music-progress-bar):not([role="progressbar"]):not([role="progressbar"] *):not(#lb-modal-list .animate-pulse):not(#loading-tip-title)::after {
             animation: none !important;
             transition: none !important;
+        }
+
+        /* 1. Cyberpunk Magic Loader Animation */
+        body.disable-animations .magic-loader,
+        .magic-loader {
+            transform-origin: center !important;
+            animation: magic-rotate 2s linear infinite !important;
+            overflow: visible !important;
+        }
+        body.disable-animations .magic-loader .loader-path,
+        .magic-loader .loader-path {
+            animation: magic-dash 1.5s ease-in-out infinite !important;
+        }
+        body.disable-animations .magic-loader .loader-core,
+        .magic-loader .loader-core {
+            animation: magic-pulse-core 1.5s ease-in-out infinite alternate !important;
+        }
+
+        /* 2. Concentric & Spinner Animations */
+        body.disable-animations .animate-spin-clockwise,
+        .animate-spin-clockwise {
+            animation: spin-clockwise 1.8s linear infinite !important;
+        }
+        body.disable-animations .animate-spin-counterclockwise,
+        .animate-spin-counterclockwise {
+            animation: spin-counterclockwise 1.2s linear infinite !important;
+        }
+        body.disable-animations .animate-spin,
+        body.disable-animations [class*="animate-spin"],
+        .animate-spin {
+            animation: spin-clockwise 1.2s linear infinite !important;
+        }
+
+        /* 3. Loading Progress Bars & Pulse */
+        body.disable-animations #intro-progress-bar,
+        body.disable-animations #music-progress-bar,
+        body.disable-animations .loading-progress-bar,
+        body.disable-animations [role="progressbar"] {
+            transition: width 0.12s linear !important;
+        }
+        body.disable-animations #loading-overlay .animate-pulse,
+        body.disable-animations #intro-slide-loading .animate-pulse,
+        body.disable-animations #lb-modal-list .animate-pulse,
+        body.disable-animations #loading-tip-title {
+            animation: pulse 1.8s infinite ease-in-out !important;
         }
 
         body.lang-vi {
@@ -2648,7 +2701,7 @@
                                     sung cho trò chơi.</p>
                             </div>
 
-                            <!-- CATEGORY 1: Game Modes & Difficulty -->
+                            <!-- CATEGORY 1: Difficulty -->
                             <div class="space-y-3">
                                 <div class="flex items-center gap-2">
                                     <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="none" stroke="currentColor"
@@ -2658,16 +2711,14 @@
                                     </svg>
                                     <div>
                                         <h3 class="text-xs font-bold text-cyan-300 font-orbitron uppercase tracking-wider"
-                                            data-i18n="ext_cat_modes">CHẾ ĐỘ CHƠI & ĐỘ KHÓ</h3>
-                                        <p class="text-[9px] text-gray-500" data-i18n="ext_cat_modes_desc">Tùy chỉnh độ
-                                            khó và các cơ chế màn chơi</p>
+                                            data-i18n="ext_cat_difficulty">ĐỘ KHÓ</h3>
+                                        <p class="text-[9px] text-gray-500" data-i18n="ext_cat_difficulty_desc">Tùy chỉnh độ khó và thử thách màn chơi</p>
                                     </div>
                                 </div>
 
                                 <div class="space-y-2.5 pl-1">
                                     <!-- Easy Mode -->
-                                    <div id="easy-mode-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-emerald-950/20 border border-emerald-500/20 hover:border-emerald-400/50 transition-all duration-300">
+                                    <label for="toggle-easy-mode" id="easy-mode-container" class="difficulty-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-emerald-400 text-sm">🍀</span>
@@ -2675,17 +2726,16 @@
                                             </div>
                                             <p class="text-xs text-gray-400" data-i18n="easy_mode_desc">Độ khó dễ nhất</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                                            <input type="checkbox" id="toggle-easy-mode" class="sr-only peer">
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
+                                            <input type="radio" name="difficulty_mode" value="easy" id="toggle-easy-mode" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(16,185,129,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
 
                                     <!-- Normal Mode (Default) -->
-                                    <div id="normal-mode-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400/50 transition-all duration-300">
+                                    <label for="toggle-normal-mode" id="normal-mode-container" class="difficulty-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-cyan-400 text-sm">⚡</span>
@@ -2693,17 +2743,16 @@
                                             </div>
                                             <p class="text-xs text-gray-400" data-i18n="normal_mode_desc">Độ khó trung bình</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                                            <input type="checkbox" id="toggle-normal-mode" class="sr-only peer" checked>
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
+                                            <input type="radio" name="difficulty_mode" value="normal" id="toggle-normal-mode" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(6,182,212,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
 
                                     <!-- Hard Mode / Rage Mode -->
-                                    <div id="hard-mode-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-orange-950/20 border border-orange-500/20 hover:border-orange-400/50 transition-all duration-300">
+                                    <label for="toggle-hard-mode" id="hard-mode-container" class="difficulty-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-orange-400 text-sm">🔥</span>
@@ -2711,17 +2760,16 @@
                                             </div>
                                             <p class="text-xs text-gray-400" data-i18n="hard_mode_desc">Độ khó khó</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                                            <input type="checkbox" id="toggle-hard-mode" class="sr-only peer">
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
+                                            <input type="radio" name="difficulty_mode" value="hard" id="toggle-hard-mode" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(249,115,22,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
 
                                     <!-- Asian Mode -->
-                                    <div id="asian-mode-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-red-950/20 border border-red-500/20 hover:border-red-400/50 transition-all duration-300">
+                                    <label for="toggle-asian-mode" id="asian-mode-container" class="difficulty-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-red-400 text-sm">🔴</span>
@@ -2729,37 +2777,68 @@
                                             </div>
                                             <p class="text-xs text-gray-400" data-i18n="asian_mode_desc">Độ khó rất khó</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
-                                            <input type="checkbox" id="toggle-asian-mode" class="sr-only peer">
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
+                                            <input type="radio" name="difficulty_mode" value="asian" id="toggle-asian-mode" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(239,68,68,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
 
+                                    <script>
+                                        try {
+                                            (function () {
+                                                var mode = (localStorage.getItem('asianModeEnabled') === 'true') ? 'asian' :
+                                                           (localStorage.getItem('hardModeEnabled') === 'true') ? 'hard' :
+                                                           (localStorage.getItem('easyModeEnabled') === 'true') ? 'easy' : 'normal';
+                                                var r = document.getElementById('toggle-' + mode + '-mode');
+                                                if (r) r.checked = true;
+                                                var c = document.getElementById(mode + '-mode-container');
+                                                if (c) c.classList.add('difficulty-item', 'mode-active-' + mode);
+                                            })();
+                                        } catch (e) { }
+                                    </script>
+                                </div>
+                            </div>
+
+                            <!-- CATEGORY 2: Game Modes -->
+                            <div class="space-y-3 pt-3 border-t border-cyan-500/20">
+                                <div class="flex items-center gap-2">
+                                    <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="none" stroke="currentColor"
+                                        viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <div>
+                                        <h3 class="text-xs font-bold text-cyan-300 font-orbitron uppercase tracking-wider"
+                                            data-i18n="ext_cat_modes">CHẾ ĐỘ CHƠI</h3>
+                                        <p class="text-[9px] text-gray-500" data-i18n="ext_cat_modes_desc">Các chế độ chơi đặc biệt</p>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2.5 pl-1">
                                     <!-- Relax Mode -->
-                                    <div id="relax-mode-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-cyan-950/20 border border-cyan-500/20 hover:border-cyan-400/50 transition-all duration-300">
+                                    <label for="toggle-relax-mode" id="relax-mode-container" class="extension-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-cyan-400 text-sm">🎧</span>
-                                                <h4 class="font-bold text-white text-sm" data-i18n="relax_mode_title">
-                                                    Chế độ Thư giãn (Relax Mode)</h4>
+                                                <h4 class="font-bold text-white text-sm" data-i18n="relax_mode_title">Chế độ Thư giãn (Relax Mode)</h4>
                                             </div>
-                                            <p class="text-xs text-gray-400" data-i18n="relax_mode_desc">Máy tự động
-                                                nhảy mượt mà. Giúp bạn tận hưởng âm nhạc và không gian 3D.</p>
+                                            <p class="text-xs text-gray-400" data-i18n="relax_mode_desc">Máy tự động nhảy mượt mà. Giúp bạn tận hưởng âm nhạc và không gian 3D.</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
                                             <input type="checkbox" id="toggle-relax-mode" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(6,182,212,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 
-                            <!-- CATEGORY 2: Assists & Controls -->
+                            <!-- CATEGORY 3: Assists & Controls -->
                             <div class="space-y-3 pt-3 border-t border-cyan-500/20">
                                 <div class="flex items-center gap-2">
                                     <svg class="w-4 h-4 text-pink-400 shrink-0" fill="none" stroke="currentColor"
@@ -2777,8 +2856,7 @@
 
                                 <div class="space-y-2.5 pl-1">
                                     <!-- Bot Assist -->
-                                    <div id="bot-assist-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-pink-950/20 border border-pink-500/20 hover:border-pink-400/50 transition-all duration-300">
+                                    <label for="toggle-bot-assist" id="bot-assist-container" class="extension-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-pink-400 text-sm">🤖</span>
@@ -2788,17 +2866,16 @@
                                             <p class="text-xs text-gray-400" data-i18n="bot_assist_desc">Tự động chỉnh
                                                 bóng vào giữa nếu cách tâm không quá 50%. (Không lưu kỷ lục)</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
                                             <input type="checkbox" id="toggle-bot-assist" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(236,72,153,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
 
                                     <!-- Invert Controls -->
-                                    <div id="invert-controls-container"
-                                        class="flex items-center justify-between p-3 rounded-lg bg-purple-950/20 border border-purple-500/20 hover:border-purple-400/50 transition-all duration-300">
+                                    <label for="toggle-invert-controls" id="invert-controls-container" class="extension-item flex items-center justify-between p-3 rounded-lg cursor-pointer select-none">
                                         <div class="pr-3">
                                             <div class="flex items-center gap-1.5 mb-0.5">
                                                 <span class="text-purple-400 text-sm">🔄</span>
@@ -2808,15 +2885,49 @@
                                             <p class="text-xs text-gray-400" data-i18n="invert_controls_desc">Vuốt sang
                                                 trái bóng sẽ chạy sang phải và ngược lại.</p>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer shrink-0">
+                                        <div class="relative inline-flex items-center cursor-pointer shrink-0">
                                             <input type="checkbox" id="toggle-invert-controls" class="sr-only peer">
                                             <div
                                                 class="w-11 h-6 bg-gray-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-gray-300 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500 peer-checked:after:bg-white shadow-[0_0_10px_rgba(168,85,247,0.3)]">
                                             </div>
-                                        </label>
-                                    </div>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
+
+                            <script>
+                                try {
+                                    (function () {
+                                        var isRelax = (localStorage.getItem('relaxModeEnabled') === 'true');
+                                        var isBot = (localStorage.getItem('botAssistEnabled') === 'true');
+                                        var isInvert = (localStorage.getItem('invertControlsEnabled') === 'true');
+
+                                        var r = document.getElementById('toggle-relax-mode');
+                                        var cr = document.getElementById('relax-mode-container');
+                                        if (r) r.checked = isRelax;
+                                        if (cr) {
+                                            cr.classList.add('extension-item');
+                                            if (isRelax) cr.classList.add('item-active-relax');
+                                        }
+
+                                        var b = document.getElementById('toggle-bot-assist');
+                                        var cb = document.getElementById('bot-assist-container');
+                                        if (b) b.checked = isBot;
+                                        if (cb) {
+                                            cb.classList.add('extension-item');
+                                            if (isBot) cb.classList.add('item-active-bot');
+                                        }
+
+                                        var inv = document.getElementById('toggle-invert-controls');
+                                        var cinv = document.getElementById('invert-controls-container');
+                                        if (inv) inv.checked = isInvert;
+                                        if (cinv) {
+                                            cinv.classList.add('extension-item');
+                                            if (isInvert) cinv.classList.add('item-active-invert');
+                                        }
+                                    })();
+                                } catch (e) { }
+                            </script>
                         </div>
                     </div>
                     <div id="secret-credit-btn"
@@ -3449,7 +3560,7 @@
             // "js/ui/alert.js"
         ];
 
-        const SCRIPT_BUILD_VERSION = '1.0.8.1';
+        const SCRIPT_BUILD_VERSION = '1.0.8.8';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
