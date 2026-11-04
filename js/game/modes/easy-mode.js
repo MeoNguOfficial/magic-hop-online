@@ -25,6 +25,10 @@ window.EasyModeManager = {
             }
         }
 
+        if (typeof window.syncDifficultyToggles === 'function') {
+            window.syncDifficultyToggles();
+        }
+
         // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
         if (typeof window.updateMainMenuTheme === 'function') {
             window.updateMainMenuTheme();
@@ -342,33 +346,41 @@ window.EasyGameOverCloverManager = {
 };
 
 // Khởi tạo sự kiện giao diện khi tải trang
-document.addEventListener('DOMContentLoaded', () => {
+function initEasyModeUI() {
     const toggleEasyMode = document.getElementById('toggle-easy-mode');
     if (toggleEasyMode) {
         toggleEasyMode.checked = window.EasyModeManager.isEnabled;
-        toggleEasyMode.addEventListener('change', (e) => {
+        toggleEasyMode.onchange = (e) => {
             window.EasyModeManager.setMode(e.target.checked);
             if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
-        });
+        };
     }
 
     const toggleNormalMode = document.getElementById('toggle-normal-mode');
     if (toggleNormalMode) {
-        toggleNormalMode.addEventListener('change', (e) => {
+        toggleNormalMode.onchange = (e) => {
             if (e.target.checked) {
                 if (window.EasyModeManager) window.EasyModeManager.setMode(false);
                 if (window.HardModeManager) window.HardModeManager.setMode(false);
                 if (window.AsianModeManager) window.AsianModeManager.setMode(false);
+            } else {
+                e.target.checked = true;
             }
             if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
-        });
+        };
     }
     if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
 
     if (window.EasyModeManager && typeof window.EasyModeManager.updateMenuBackground === 'function') {
         window.EasyModeManager.updateMenuBackground();
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEasyModeUI);
+} else {
+    initEasyModeUI();
+}
 
 window.syncDifficultyToggles = function () {
     const isEasy = !!(window.EasyModeManager && window.EasyModeManager.isEnabled);
@@ -385,4 +397,25 @@ window.syncDifficultyToggles = function () {
     if (tHard && tHard.checked !== isHard) tHard.checked = isHard;
     if (tAsian && tAsian.checked !== isAsian) tAsian.checked = isAsian;
     if (tNormal && tNormal.checked !== isNormal) tNormal.checked = isNormal;
+
+    const cEasy = document.getElementById('easy-mode-container');
+    const cNormal = document.getElementById('normal-mode-container');
+    const cHard = document.getElementById('hard-mode-container');
+    const cAsian = document.getElementById('asian-mode-container');
+
+    const updateContainer = (el, active, activeBorder, activeGlow, inactiveBorder) => {
+        if (!el) return;
+        if (active) {
+            el.classList.add(activeBorder, activeGlow);
+            el.classList.remove(inactiveBorder);
+        } else {
+            el.classList.remove(activeBorder, activeGlow);
+            el.classList.add(inactiveBorder);
+        }
+    };
+
+    updateContainer(cNormal, isNormal, 'border-cyan-400', 'shadow-[0_0_12px_rgba(6,182,212,0.25)]', 'border-cyan-500/20');
+    updateContainer(cEasy, isEasy, 'border-emerald-400', 'shadow-[0_0_12px_rgba(16,185,129,0.25)]', 'border-emerald-500/20');
+    updateContainer(cHard, isHard, 'border-orange-400', 'shadow-[0_0_12px_rgba(249,115,22,0.25)]', 'border-orange-500/20');
+    updateContainer(cAsian, isAsian, 'border-red-400', 'shadow-[0_0_12px_rgba(239,68,68,0.25)]', 'border-red-500/20');
 };

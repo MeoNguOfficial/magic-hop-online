@@ -25,6 +25,10 @@ window.HardModeManager = {
             }
         }
 
+        if (typeof window.syncDifficultyToggles === 'function') {
+            window.syncDifficultyToggles();
+        }
+
         // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
         if (typeof window.updateMainMenuTheme === 'function') {
             window.updateMainMenuTheme();
@@ -356,4 +360,26 @@ window.RageGameOverFireManager = {
         ctx.globalAlpha = 1.0;
     }
 };
+
+// Khởi tạo sự kiện giao diện khi tải trang
+function initHardModeUI() {
+    const toggleHardMode = document.getElementById('toggle-hard-mode');
+    if (toggleHardMode) {
+        toggleHardMode.checked = window.HardModeManager.isEnabled;
+        toggleHardMode.onchange = (e) => {
+            window.HardModeManager.setMode(e.target.checked);
+            if (typeof window.syncDifficultyToggles === 'function') window.syncDifficultyToggles();
+        };
+    }
+
+    if (window.HardModeManager && typeof window.HardModeManager.updateMenuBackground === 'function') {
+        window.HardModeManager.updateMenuBackground();
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initHardModeUI);
+} else {
+    initHardModeUI();
+}
 

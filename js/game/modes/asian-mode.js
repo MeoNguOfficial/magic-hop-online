@@ -25,6 +25,10 @@ window.AsianModeManager = {
             }
         }
 
+        if (typeof window.syncDifficultyToggles === 'function') {
+            window.syncDifficultyToggles();
+        }
+
         // Cập nhật nền menu chính & màu sắc chủ đề theo độ khó
         if (typeof window.updateMainMenuTheme === 'function') {
             window.updateMainMenuTheme();
@@ -337,16 +341,23 @@ window.AsianGameOverFireManager = {
 };
 
 // Khởi tạo sự kiện giao diện khi tải trang
-document.addEventListener('DOMContentLoaded', () => {
+function initAsianModeUI() {
     const toggleAsianMode = document.getElementById('toggle-asian-mode');
     if (toggleAsianMode) {
         toggleAsianMode.checked = window.AsianModeManager.isEnabled;
-        toggleAsianMode.addEventListener('change', (e) => {
-            window.AsianModeManager.setMode(e.target.checked); if (typeof window.syncDifficultyToggles === "function") window.syncDifficultyToggles();
-        });
+        toggleAsianMode.onchange = (e) => {
+            window.AsianModeManager.setMode(e.target.checked);
+            if (typeof window.syncDifficultyToggles === "function") window.syncDifficultyToggles();
+        };
     }
 
     if (window.AsianModeManager && typeof window.AsianModeManager.updateMenuBackground === 'function') {
         window.AsianModeManager.updateMenuBackground();
     }
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAsianModeUI);
+} else {
+    initAsianModeUI();
+}
