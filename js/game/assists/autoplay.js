@@ -32,6 +32,8 @@ window.AutoplayManager = {
             if (this._lastDisplay !== 'flex') {
                 if (this._btn) this._btn.style.display = 'flex';
                 this._lastDisplay = 'flex';
+                const pauseBtn = document.getElementById('ingame-pause-btn');
+                if (pauseBtn) pauseBtn.style.display = 'none';
             }
 
             if (typeof isHoldingBtn !== 'undefined' && (isHoldingBtn || (typeof keys !== 'undefined' && keys['Escape']))) {
@@ -60,6 +62,10 @@ window.AutoplayManager = {
             if (this._lastDisplay !== 'none') {
                 if (this._btn) this._btn.style.display = 'none';
                 this._lastDisplay = 'none';
+                if (typeof isPlaying !== 'undefined' && isPlaying && !isFailTransition) {
+                    const pauseBtn = document.getElementById('ingame-pause-btn');
+                    if (pauseBtn) pauseBtn.style.display = 'flex';
+                }
             }
             if (typeof holdTime !== 'undefined') holdTime = 0;
             if (this._lastDashOffset !== 176) {

@@ -1,10 +1,10 @@
 {
-  "version": "1.0.8",
-  "versionCode": 1793596800,
-  "releaseDate": "2026-11-03",
+  "version": "1.0.9",
+  "versionCode": 1793894400,
+  "releaseDate": "2026-11-05",
   "changelog": {
-    "vi": "Phiên bản v1.0.8: Cơ chế chống vô tình thoát/quay lại trong trận đấu (Anti-Back Protection), tính năng nhấn 2 lần nút Back để thoát game khi ở menu chính, tái cấu trúc menu cài đặt FPS theo tần số quét thực tế của màn hình (Smart FPS Sync Mode), và hoàn thiện đóng gói chính thức v1.0.8.",
-    "en": "Version v1.0.8: In-game Back Navigation Protection (Anti-Back), Double-tap Back to exit at main menu, Smart Refresh Rate-based FPS Settings menu, and official v1.0.8 packaging."
+    "vi": "Phiên bản v1.0.9: Ra mắt Đĩa than nổi bật (Featured Vinyl Disc Hero) tại màn hình chọn bài có thể nhấp chơi ngay và cuộn mượt mà cùng danh sách bài hát; cải tiến UI chơi game trên mobile/tablet màn hình ngang (APK); tối ưu hiệu suất toàn diện Three.js & WebGL; tinh chỉnh giao diện APK toàn màn hình chuẩn immersive; sửa lỗi nhạc nền khi chuyển tab và màn hình intro.",
+    "en": "Version v1.0.9: Introduced Featured Vinyl Disc Hero on the song selector with Quick Play and smooth scroll transition; Enhanced in-game HUD for mobile/tablet landscape mode (APK); Game engine and WebGL performance optimizations; Cleaned up APK controls with native immersive fullscreen; Fixed background music pause/resume and intro state."
   },
   "downloads": {
     "pc": "https://github.com/MeoNguOfficial/magic-hop-online/releases/latest",

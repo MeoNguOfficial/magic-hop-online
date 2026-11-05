@@ -16,6 +16,20 @@
         window.matchMedia('(display-mode: standalone)').matches
     );
 
+    const isAndroidAPK = !!(
+        window.AndroidNativeApp ||
+        (window.Capacitor && (
+            (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+            (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android')
+        )) ||
+        window.location.protocol === 'capacitor:' ||
+        (window.location.origin === 'https://localhost' && /Android/i.test(navigator.userAgent))
+    );
+    if (isAndroidAPK) {
+        document.documentElement.classList.add('android-apk-mode');
+        window.isAndroidAPK = true;
+    }
+
     window.isMobileDevice = isMobileDevice;
     window.isNativeMobileApp = isNativeMobileApp;
 

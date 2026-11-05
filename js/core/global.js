@@ -184,7 +184,46 @@ function toggleFullscreen() {
 }
 window.toggleFullscreen = toggleFullscreen;
 
+function checkIsAndroidAPK() {
+    try {
+        if (window.isAndroidAPK || (document.documentElement && document.documentElement.classList.contains('android-apk-mode'))) {
+            return true;
+        }
+        if (typeof window.AndroidNativeApp !== 'undefined') {
+            return true;
+        }
+        if (typeof window.Capacitor !== 'undefined') {
+            if (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) {
+                return true;
+            }
+            if (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android') {
+                return true;
+            }
+        }
+        if (window.location.protocol === 'capacitor:') {
+            return true;
+        }
+        if (window.location.origin === 'https://localhost' && /Android/i.test(navigator.userAgent)) {
+            return true;
+        }
+    } catch (e) {}
+    return false;
+}
+window.checkIsAndroidAPK = checkIsAndroidAPK;
+
 function updateFullscreenUI() {
+    if (checkIsAndroidAPK()) {
+        document.documentElement.classList.add('android-apk-mode');
+        document.querySelectorAll('.header-fullscreen-toggle').forEach(btn => {
+            btn.style.setProperty('display', 'none', 'important');
+        });
+        const autoFsOption = document.getElementById('label-auto-fullscreen');
+        if (autoFsOption) {
+            autoFsOption.style.setProperty('display', 'none', 'important');
+        }
+        return;
+    }
+
     const isFs = isCurrentlyFullscreen();
 
     // 1. Cập nhật các nút Fullscreen trên Header (Desktop & Mobile)
@@ -248,6 +287,17 @@ window.updateFullscreenUI = updateFullscreenUI;
 });
 
 function initFullscreenButtons() {
+    if (checkIsAndroidAPK()) {
+        document.documentElement.classList.add('android-apk-mode');
+        document.querySelectorAll('.header-fullscreen-toggle').forEach(btn => {
+            btn.style.setProperty('display', 'none', 'important');
+        });
+        const autoFsOption = document.getElementById('label-auto-fullscreen');
+        if (autoFsOption) {
+            autoFsOption.style.setProperty('display', 'none', 'important');
+        }
+        return;
+    }
     document.querySelectorAll('.header-fullscreen-toggle').forEach(btn => {
         if (!btn._fsBound) {
             btn._fsBound = true;
@@ -675,6 +725,7 @@ async function changeSong(index, autoStart = false) {
 
     selectedSongIndex = index;
     localStorage.setItem('selectedSongIndex', index);
+    if (typeof window.updateFeaturedDisc === 'function') window.updateFeaturedDisc(index);
     if (activePlaylist && activePlaylist[index]) {
         const curSong = activePlaylist[index];
         if (curSong.id) localStorage.setItem('selectedSongId', curSong.id);
@@ -719,8 +770,8 @@ async function changeSong(index, autoStart = false) {
     }
     if (!autoStart && typeof renderSongList === 'function' && typeof currentFilterTerm !== 'undefined') {
         renderSongList(currentFilterTerm);
-        const selector = document.getElementById('song-selector');
-        if (selector) selector.scrollTop = 0;
+        const scrollBox = document.getElementById('song-scroll-container') || document.getElementById('song-selector');
+        if (scrollBox) scrollBox.scrollTop = 0;
     }
 
     let changeSongBeats = activePlaylist[index].beats;
@@ -1205,7 +1256,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.8' : 'Version 1.0.8'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.9' : 'Version 1.0.9'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
@@ -1218,7 +1269,7 @@ if (secretCreditBtn) {
                     </div>
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
                         <span class="text-gray-500">${isVi ? 'Nền tảng (Engine):' : 'Engine:'}</span>
-                        <span class="text-gray-300 font-bold">MeoTN HOP v3.6</span>
+                        <span class="text-gray-300 font-bold">MeoTN HOP v3.7</span>
                     </div>
                     <div class="flex justify-between">
                         <span class="text-gray-500">${isVi ? 'Giấy phép (License):' : 'License:'}</span>

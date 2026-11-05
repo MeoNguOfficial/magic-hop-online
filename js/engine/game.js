@@ -1535,7 +1535,8 @@ async function initThree() {
         antialias: isAntialias,
         powerPreference: activePowerPref,
         alpha: false,
-        stencil: false
+        stencil: false,
+        desynchronized: true
     };
     const context = canvas.getContext('webgl2', glOptions);
 
@@ -2620,6 +2621,7 @@ function animate() {
     }
 
     let delta = clock.getDelta();
+    const elapsedTime = clock.getElapsedTime();
     let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
 
     if (window.AdaptivePerformanceManager) {
@@ -2659,7 +2661,8 @@ function animate() {
                 if (window.FPSGraphManager) {
                     window.FPSGraphManager.record(now, fpsValue, delta);
                 } else {
-                    const fpsTextEl = document.getElementById('fps-value-text');
+                    let fpsTextEl = window._cachedFpsTextEl;
+                    if (!fpsTextEl) { fpsTextEl = document.getElementById('fps-value-text'); window._cachedFpsTextEl = fpsTextEl; }
                     if (fpsTextEl) {
                         if (window.lastDisplayedFps !== fpsValue) {
                             fpsTextEl.textContent = `FPS: ${fpsValue}`;
@@ -2735,7 +2738,7 @@ function animate() {
 
         // --- RENDER VISUALIZER ---
         if (typeof VisualizerManager !== 'undefined') {
-            const nowTime = clock.getElapsedTime();
+            const nowTime = elapsedTime;
             VisualizerManager.update(nowTime, isPlaying, isFailTransition, typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition, currentGraphicsQuality);
         }
 
@@ -2843,7 +2846,7 @@ function animate() {
         }
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
-        const time = clock.getElapsedTime();
+        const time = elapsedTime;
 
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
@@ -3870,7 +3873,7 @@ function animate() {
             let targetGlowIntensity = 0;
 
             if (typeof ballGlowEnabled !== 'undefined' && ballGlowEnabled && comboCount >= 6 && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
-                const time = clock.getElapsedTime();
+                const time = elapsedTime;
                 let glowColor = comboCount >= 15 ? 0xff00ff : (comboCount >= 8 ? 0xffaa00 : 0xffff00);
                 if (ballGlowMesh.material && ballGlowMesh.material.color && ballGlowMesh.material.color.getHex() !== glowColor) {
                     ballGlowMesh.material.color.setHex(glowColor);
@@ -3979,6 +3982,9 @@ function cleanUpOldObjects() {
     if (typeof window.MovingBlocksManager !== 'undefined') {
         window.MovingBlocksManager.reset();
     }
+
+    const ingamePauseBtn = document.getElementById('ingame-pause-btn');
+    if (ingamePauseBtn) ingamePauseBtn.style.display = 'none';
 }
 
 function fadeOutGameAudio(durationSeconds = 1.0) {
@@ -5598,11 +5604,39 @@ function startGame() {
     }
 }
 
+function initInGamePauseBtn() {
+    const btn = document.getElementById('ingame-pause-btn');
+    if (!btn || btn._hasPauseListener) return;
+    btn._hasPauseListener = true;
+
+    const stopEvt = (e) => {
+        e.stopPropagation();
+    };
+    ['touchstart', 'touchend', 'mousedown', 'pointerdown'].forEach(evt => btn.addEventListener(evt, stopEvt));
+
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (typeof pauseGame === 'function') {
+            pauseGame();
+        } else if (typeof window.pauseGame === 'function') {
+            window.pauseGame();
+        }
+    });
+}
+
 function setupGameStates() {
     const centerHud = document.getElementById('center-hud');
     if (centerHud) centerHud.style.display = 'flex';
     const topLeftHud = document.getElementById('top-left-hud');
     if (topLeftHud) topLeftHud.style.display = 'flex';
+
+    initInGamePauseBtn();
+    const ingamePauseBtn = document.getElementById('ingame-pause-btn');
+    const isAuto = (typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay);
+    if (ingamePauseBtn) {
+        ingamePauseBtn.style.display = isAuto ? 'none' : 'flex';
+    }
 
     if (window.AdaptivePerformanceManager) {
         window.AdaptivePerformanceManager.reset();
@@ -5711,6 +5745,8 @@ function returnToMenu() {
     if (centerHud) centerHud.style.display = 'none';
     const topLeftHud = document.getElementById('top-left-hud');
     if (topLeftHud) topLeftHud.style.display = 'none';
+    const ingamePauseBtn = document.getElementById('ingame-pause-btn');
+    if (ingamePauseBtn) ingamePauseBtn.style.display = 'none';
 
     if (window.RageGameOverFireManager) {
         window.RageGameOverFireManager.stop();
@@ -6338,6 +6374,10 @@ function pauseGame() {
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) return;
     isPlaying = false;
     window.isPlaying = false;
+
+    const ingamePauseBtn = document.getElementById('ingame-pause-btn');
+    if (ingamePauseBtn) ingamePauseBtn.style.display = 'none';
+
     if (audio) audio.pause();
 
     const now = performance.now();
@@ -6352,6 +6392,12 @@ function resumeGame() {
     isPlaying = true;
     window.isPlaying = true;
     clock.getDelta();
+
+    const ingamePauseBtn = document.getElementById('ingame-pause-btn');
+    const isAuto = (typeof isAutoplay !== 'undefined' && isAutoplay) || (typeof isNaturalAutoplay !== 'undefined' && isNaturalAutoplay);
+    if (ingamePauseBtn) {
+        ingamePauseBtn.style.display = isAuto ? 'none' : 'flex';
+    }
 
     const now = performance.now();
     lastFrameTime = now;
@@ -6472,6 +6518,7 @@ async function bootGame() {
         }
 
         selectedSongIndex = foundIndex !== -1 ? foundIndex : 0;
+        if (typeof window.updateFeaturedDisc === 'function') window.updateFeaturedDisc(selectedSongIndex);
 
         await initThree();
 

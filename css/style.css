@@ -19,10 +19,78 @@ html, body {
     overscroll-behavior: none;
 }
 
-/* Đảm bảo HUD trên mobile không bị che bởi tai thỏ / Dynamic Island */
+/* --- IN-GAME HUD LAYOUT & RESPONSIVE ANCHORS --- */
 #top-left-hud {
-    top: max(1.5rem, calc(var(--sat) + 0.5rem)) !important;
-    left: max(1.5rem, calc(var(--sal) + 0.5rem)) !important;
+    top: max(0.85rem, calc(var(--sat) + 0.35rem)) !important;
+    left: max(0.85rem, calc(var(--sal) + 0.5rem)) !important;
+}
+
+#ingame-pause-btn,
+#autoplay-back-btn {
+    top: max(0.85rem, calc(var(--sat) + 0.35rem)) !important;
+    right: max(0.85rem, calc(var(--sar) + 0.5rem)) !important;
+}
+
+/* 1. Tối ưu hóa Center HUD trên màn hình ngang (Landscape mobile & tablet) - tạo không gian thoáng đãng như PC */
+@media (orientation: landscape) and (max-height: 720px) {
+    #center-hud {
+        top: max(2.75rem, calc(var(--sat) + 9.2vh)) !important;
+    }
+    #score {
+        font-size: clamp(2.4rem, 8vh, 3.4rem) !important;
+        line-height: 1.05 !important;
+    }
+    #combo-ui-wrapper {
+        min-height: 1.6em !important;
+        margin-top: 2px !important;
+    }
+    #combo-ui {
+        font-size: clamp(1rem, 3.5vh, 1.4rem) !important;
+        padding-top: 2px !important;
+        padding-bottom: 2px !important;
+        white-space: nowrap !important;
+    }
+    #autoplay-indicator {
+        font-size: clamp(0.7rem, 2vh, 0.85rem) !important;
+        margin-top: 2px !important;
+    }
+}
+
+/* 2. Màn hình ngang lớn (PC Desktop / Large Tablet height > 720px) */
+@media (orientation: landscape) and (min-height: 721px) {
+    #center-hud {
+        top: 8% !important;
+    }
+    #score {
+        font-size: clamp(3.2rem, 5.5vw, 4.5rem) !important;
+        line-height: 1.1 !important;
+    }
+}
+
+/* 3. Màn hình dọc (Portrait: Mobile Phone & Tablet dọc) */
+@media (orientation: portrait) {
+    #center-hud {
+        /* Đặt an toàn bên dưới cụm FPS góc trái và nút Pause góc phải, tuyệt đối không bị đè ngang */
+        top: max(6.25rem, calc(var(--sat) + 5.25rem)) !important;
+    }
+    #score {
+        font-size: clamp(2.6rem, 11vw, 3.8rem) !important;
+        line-height: 1.1 !important;
+    }
+    #combo-ui-wrapper {
+        min-height: 2em !important;
+        margin-top: 0.25rem !important;
+    }
+    #combo-ui {
+        font-size: clamp(1.1rem, 5vw, 1.6rem) !important;
+        padding-top: 4px !important;
+        padding-bottom: 4px !important;
+        white-space: nowrap !important;
+    }
+    #autoplay-indicator {
+        font-size: clamp(0.75rem, 3.2vw, 0.95rem) !important;
+        margin-top: 0.25rem !important;
+    }
 }
 
 .font-orbitron { font-family: 'Orbitron', sans-serif; }
@@ -1111,3 +1179,227 @@ html, body {
     -webkit-font-smoothing: subpixel-antialiased;
     -moz-osx-font-smoothing: auto;
 }
+
+/* --- FEATURED VINYL DISC HERO COMPONENT (SELECT SONG SCREEN) --- */
+.featured-vinyl-disc {
+    width: 175px !important;
+    height: 175px !important;
+    min-width: 175px !important;
+    min-height: 175px !important;
+    border-radius: 9999px !important;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: conic-gradient(
+        from 180deg at 50% 50%,
+        #e11d48 0deg,
+        #f97316 55deg,
+        #fbbf24 110deg,
+        #a855f7 180deg,
+        #7c3aed 235deg,
+        #2563eb 290deg,
+        #ec4899 340deg,
+        #e11d48 360deg
+    );
+    box-shadow: 0 0 36px rgba(236, 72, 153, 0.4), 0 0 18px rgba(6, 182, 212, 0.35);
+    animation: featuredDiscIdleSpin 28s linear infinite;
+    transform-origin: center center;
+    will-change: transform;
+    cursor: pointer;
+}
+
+@media (min-width: 640px) {
+    .featured-vinyl-disc {
+        width: 215px !important;
+        height: 215px !important;
+        min-width: 215px !important;
+        min-height: 215px !important;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+    .featured-vinyl-disc {
+        width: 145px !important;
+        height: 145px !important;
+        min-width: 145px !important;
+        min-height: 145px !important;
+    }
+}
+
+.featured-vinyl-grooves {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: repeating-radial-gradient(
+        circle at 50% 50%,
+        transparent 0,
+        transparent 3px,
+        rgba(0, 0, 0, 0.16) 3.5px,
+        rgba(255, 255, 255, 0.05) 4px,
+        transparent 5px
+    );
+    opacity: 0.9;
+    pointer-events: none;
+}
+
+.featured-disc-center-ring {
+    width: 32% !important;
+    height: 32% !important;
+    border-radius: 9999px !important;
+    background-color: #080310 !important;
+    border: 3px solid rgba(0, 0, 0, 0.85) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.9), 0 0 4px rgba(255, 255, 255, 0.15) !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+.featured-disc-center-dot {
+    width: 40% !important;
+    height: 40% !important;
+    border-radius: 9999px !important;
+    background: radial-gradient(circle at 35% 35%, #fef08a 0%, #f59e0b 60%, #b45309 100%) !important;
+    border: 1px solid #fde047 !important;
+    box-shadow: 0 0 12px #f59e0b !important;
+    position: relative !important;
+    z-index: 20 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+.featured-disc-center-hole {
+    width: 30% !important;
+    height: 30% !important;
+    border-radius: 9999px !important;
+    background-color: #080310 !important;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8) !important;
+}
+
+.featured-disc-play-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: rgba(4, 2, 10, 0.35);
+    backdrop-filter: blur(1.5px);
+    -webkit-backdrop-filter: blur(1.5px);
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.2s ease;
+    z-index: 30;
+}
+
+#featured-disc-card:hover .featured-disc-play-overlay,
+.featured-disc-play-overlay:hover {
+    opacity: 1;
+}
+
+.featured-disc-play-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    background: rgba(6, 182, 212, 0.9);
+    color: #040814;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 22px #06b6d4;
+    transition: transform 0.2s ease;
+}
+
+#featured-disc-card:hover .featured-disc-play-icon {
+    transform: scale(1.1);
+}
+
+.featured-nav-btn {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    border-radius: 9999px !important;
+    background: rgba(4, 8, 20, 0.6) !important;
+    border: 1.5px solid rgba(6, 182, 212, 0.35) !important;
+    color: #22d3ee !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    cursor: pointer !important;
+    box-shadow: 0 0 12px rgba(6, 182, 212, 0.2) !important;
+    user-select: none !important;
+}
+
+.featured-nav-btn:hover {
+    background: rgba(8, 28, 48, 0.8) !important;
+    border-color: #22d3ee !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 18px rgba(6, 182, 212, 0.5) !important;
+    transform: scale(1.08) !important;
+}
+
+.featured-nav-btn:active {
+    transform: scale(0.92) !important;
+}
+
+@keyframes featuredDiscIdleSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes featuredDiscStepSpin {
+    0% { transform: scale(0.9) rotate(-15deg); }
+    50% { transform: scale(1.06) rotate(25deg); }
+    100% { transform: scale(1) rotate(0deg); }
+}
+
+.featured-disc-stepping {
+    animation: featuredDiscStepSpin 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+/* Search & Filters Collapsible Transition (Mượt mà không dùng display: none để giữ animation) */
+#song-search-filter-section {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    margin-bottom: 0 !important;
+    transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.25s ease,
+                margin-bottom 0.3s ease;
+    will-change: max-height, opacity, margin-bottom;
+}
+
+#song-search-filter-section.is-expanded {
+    max-height: 260px !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    margin-bottom: 0.75rem !important;
+}
+
+#featured-disc-hero {
+    margin-top: 0 !important;
+    padding-top: 8px !important;
+}
+
+@media (min-width: 640px) {
+    #featured-disc-hero {
+        margin-top: 0 !important;
+        padding-top: 12px !important;
+    }
+}
+
+/* --- ANDROID APK FULLSCREEN EXCLUSION --- */
+/* Trên Android APK đã chạy chế độ Immersive tràn viền sẵn (cả ngang & dọc), ẩn các nút toàn màn hình và tùy chọn tự động toàn màn hình */
+html.android-apk-mode .header-fullscreen-toggle,
+html.android-apk-mode #header-fullscreen-btn,
+html.android-apk-mode #mobile-fullscreen-btn,
+html.android-apk-mode #label-auto-fullscreen {
+    display: none !important;
+}
+
+

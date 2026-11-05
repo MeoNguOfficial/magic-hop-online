@@ -1,9 +1,57 @@
-# 🎵 Cyber Beat Hopper (v1.0.8)
+# 🎵 Cyber Beat Hopper (v1.0.9)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.8**, phát triển trên nền tảng *MeoTN HOP ENGINE*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.9**, phát triển trên nền tảng *MeoTN HOP ENGINE v3.7*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
 
 ---
-## 🚀 Phiên Bản v1.0.8 Có gì mới?
+## 🚀 Phiên Bản v1.0.9 Có gì mới?
+
+# 🚀 UPDATE LOG: HERO ĐĨA THAN VINYL NỔI BẬT (FEATURED VINYL DISC), CẢI TỔ UI LANDSCAPE MOBILE/TABLET (APK), TỐI ƯU HIỆU SUẤT GAME THREE.JS & PHÁT HÀNH CHÍNH THỨC v1.0.9 (RELEASE v1.0.9)
+
+Chào các bạn, bản cập nhật **v1.0.9** mang đến bước nhảy vọt về mặt thẩm mỹ thị giác và trải nghiệm mượt mà cho **Cyber Beat Hopper**: giới thiệu cụm Hero Đĩa Than Vinyl 3D tương tác tại màn hình chọn bài hát, nâng cấp toàn diện giao diện HUD chiến đấu khi chơi trên thiết bị di động/máy tính bảng xoay ngang (APK Landscape), tối ưu hóa sâu kiến trúc Three.js & WebGL, cùng cơ chế điều khiển Native tràn viền chuẩn Immersive:
+
+---
+
+### 💿 1. CỤM HERO ĐĨA THAN VINYL NỔI BẬT (FEATURED VINYL DISC HERO & QUICK PLAY)
+- **Đĩa than phong cách Cyberpunk tương tác sống động:**
+  - Thiết kế đĩa vinyl 3D xoay tròn vô tận với hiệu ứng rãnh đĩa siêu nét, tâm đĩa mạ vàng, cùng vòng hào quang ánh sáng đổi màu theo nhịp điệu Cyberpunk rực rỡ.
+  - Tự động hiển thị và đồng bộ bài hát chơi lần gần nhất (hoặc bài mới nhất khi lần đầu vào game) cùng tên bài hát, nghệ sĩ và huy hiệu *"CHƠI NGAY"*.
+- **Tính năng Chơi Nhanh (Tap to Play Instantly):**
+  - Người chơi chỉ cần nhấp trực tiếp vào đĩa than để bắt đầu ván đấu ngay lập tức (hỗ trợ chuyển hướng chọn chế độ thông minh nếu bài hát đã đạt kỷ lục hoặc đang bật chế độ trợ giúp).
+- **Cuộn mượt mà & Chuyển đổi trạng thái thông minh (Smart Scroll & Seamless Collapse):**
+  - Đĩa than nằm ở vị trí trung tâm, cuộn tự nhiên cùng danh sách bài hát.
+  - Khi cuộn xuống làm đĩa khuất khỏi màn hình, thanh tìm kiếm và bộ lọc bài hát sẽ tự động trượt mở (accordion slide) xuống cực kỳ êm ái.
+  - Khi cuộn ngược trở lại đĩa, thanh tìm kiếm & bộ lọc sẽ tự động thu gọn êm ái, nhường không gian tối đa cho trải nghiệm thị giác.
+
+---
+
+### 📱 2. TỐI ƯU HÓA GIAO DIỆN CHƠI GAME TRÊN MOBILE & TABLET MÀN HÌNH NGANG (APK LANDSCAPE HUD)
+- **Chuẩn hóa tỷ lệ hiển thị chuẩn PC trên màn hình ngang di động:**
+  - Thiết kế lại các thành phần HUD chiến đấu trên thiết bị di động và tablet khi xoay ngang: căn chỉnh độ cao cân đối, mở rộng tầm quan sát đường bay của bóng và nhịp gạch.
+  - Bố trí lại nút "THOÁT / GIỮ VÁN ĐẤU" sang góc phải tinh tế, hạ thấp thanh tiến trình bài hát và bộ đếm combo/điểm số để không che chắn tầm nhìn.
+- **Trải nghiệm Native Immersive Fullscreen trên Android APK:**
+  - Nhận diện môi trường APK tự động và ẩn hoàn toàn các nút toàn màn hình dư thừa (cả màn hình ngang và dọc), vì trò chơi trên APK đã kích hoạt chế độ toàn màn hình tràn viền (`IMMERSIVE_STICKY`) sẵn.
+  - Tối ưu hóa phản hồi cảm ứng đa điểm, loại bỏ triệt để độ trễ.
+
+---
+
+### ⚡ 3. TỐI ƯU HÓA HIỆU SUẤT ĐỒ HỌA THREE.JS & WEBGL TOÀN DIỆN
+- **Tối ưu hóa vòng lặp Render Loop:**
+  - Tắt cơ chế tự động cập nhật ma trận (`matrixAutoUpdate = false`) trên các hiệu ứng hạt, sóng xung kích (shockwaves) và xung lực đường biên (boundary pulses) trong Object Pool.
+  - Hợp nhất các lệnh truy vấn thời gian (`clock.getElapsedTime()`) thành một biến duy nhất mỗi frame, loại bỏ overhead tính toán lặp.
+- **Kích hoạt WebGL Desynchronized Mode:**
+  - Thêm cờ `desynchronized: true` vào canvas context WebGL, bỏ qua hàng đợi hiển thị của trình duyệt để đạt độ phản hồi khung hình trực tiếp cao nhất trên màn hình 120Hz/144Hz+.
+- **Tối ưu hóa DOM Reflow & Text Caching:**
+  - Cache các node HUD FPS và giảm thiểu thao tác đọc/ghi DOM gây tái bố trí layout.
+
+---
+
+### 🔊 4. SỬA LỖI ÂM THANH & ĐỒNG BỘ FOCUS NATIVE
+- **Sửa lỗi âm thanh intro:** Đảm bảo nhạc nền không phát sớm khi đang chạy màn hình intro (logo, audio disclaimer, intro sequence) trên tất cả các nền tảng.
+- **Sửa lỗi dừng nhạc đột ngột:** Hoàn thiện cơ chế tự động khôi phục và tiếp tục phát nhạc khi chuyển tab, thu nhỏ ứng dụng hoặc quay lại game trên PC, Web và Android APK.
+
+---
+
+## 🚀 Bản trước đó: Phiên Bản v1.0.8 Có gì mới?
 
 # 🚀 UPDATE LOG: CHỐNG THOÁT VÁN ĐẤU (ANTI-BACK SHIELD), NHẤN 2 LẦN NÚT BACK ĐỂ THOÁT (DOUBLE-TAP TO EXIT), CẢI TỔ MENU CÀI ĐẶT FPS THEO TẦN SỐ QUÉT & PHÁT HÀNH CHÍNH THỨC v1.0.8 (RELEASE v1.0.8)
 
@@ -611,8 +659,9 @@ const playlistSource = [
 Dự án phát hành dưới điều khoản **MIT License**:
 - Bạn được tự do sử dụng, sao chép, sửa đổi, hợp nhất, xuất bản, phân phối và sử dụng cho cả mục đích cá nhân lẫn thương mại theo các điều khoản của giấy phép MIT.
 
+- Xem chi tiết danh sách tín nhiệm tại [CREDITS.md](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/CREDITS.md).
 - Xem chi tiết điều khoản tại [LICENSE](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/LICENSE) hoặc trang giao diện [license.html](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/license.html).
 
 ---
 
-*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.8*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.9*

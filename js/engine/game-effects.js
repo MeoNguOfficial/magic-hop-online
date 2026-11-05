@@ -341,6 +341,7 @@ window.GameEffectsManager = {
                 waveLine.geometry = this.cachedShockwaveGeo;
             }
 
+            waveLine.matrixAutoUpdate = true;
             waveLine.position.copy(tile.position);
             waveLine.position.y = tile.position.y + surfaceY + 0.032;
             waveLine.rotation.x = -Math.PI / 2;
@@ -375,6 +376,7 @@ window.GameEffectsManager = {
 
             if (isTileInactive || isBehindCam) {
                 sw.mesh.visible = false;
+                sw.mesh.matrixAutoUpdate = false;
                 if (sw.isDiamondBurst) {
                     this.diamondShockwavePool.push(sw.mesh);
                 } else {

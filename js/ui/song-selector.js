@@ -370,6 +370,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
     // Populate dynamic filter options
     populateFilterDropdowns();
+    if (typeof updateFeaturedDisc === 'function') updateFeaturedDisc(typeof selectedSongIndex === 'number' ? selectedSongIndex : 0);
 
     // Áp dụng Virtual Scrolling (Chỉ hiển thị tối đa PLAYLIST_MAX_VISIBLE bài)
     const totalItems = filteredIndices.length;
@@ -694,6 +695,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
 
                         details.classList.remove('hidden');
                         if (expandIcon) expandIcon.classList.add('rotate-180');
+                        if (typeof updateFeaturedDisc === 'function') updateFeaturedDisc(originalIndex);
                         
                         // Check cache to show/enable clear button
                         if (opt.dataset.isCached === 'true' || opt.dataset.isCached === true) {
@@ -1577,4 +1579,180 @@ function promptPlayModeSelection(onSelect) {
             onSelect('endless');
         };
     }
+}
+
+// ==========================================
+// FEATURED VINYL DISC HERO COMPONENT
+// ==========================================
+
+let featuredDiscIndex = 0;
+
+function updateFeaturedDisc(songIndex) {
+    const list = (typeof activePlaylist !== 'undefined' && activePlaylist.length) ? activePlaylist : ((typeof playlist !== 'undefined' && playlist.length) ? playlist : []);
+    if (!list || list.length === 0) return;
+
+    if (typeof songIndex !== 'number' || isNaN(songIndex)) {
+        songIndex = parseInt(localStorage.getItem('selectedSongIndex')) || 0;
+    }
+    if (songIndex < 0) songIndex = 0;
+    if (songIndex >= list.length) songIndex = list.length - 1;
+
+    featuredDiscIndex = songIndex;
+    const song = list[songIndex];
+    if (!song) return;
+
+    const titleEl = document.getElementById('featured-disc-title');
+    const artistEl = document.getElementById('featured-disc-artist');
+    const discBody = document.getElementById('featured-disc-body');
+
+    const songTitle = song.name || song.title || 'Untitled';
+    const songArtist = song.artist || 'Unknown Artist';
+
+    if (titleEl) {
+        titleEl.textContent = songTitle;
+        titleEl.title = songTitle;
+        if (typeof window.applyMarquee === 'function') {
+            window.applyMarquee(titleEl);
+        }
+    }
+    if (artistEl) {
+        artistEl.textContent = songArtist;
+        artistEl.title = songArtist;
+    }
+
+    if (discBody) {
+        discBody.classList.remove('featured-disc-stepping');
+        void discBody.offsetWidth; // Force reflow
+        discBody.classList.add('featured-disc-stepping');
+    }
+
+    // Đồng bộ class active trong danh sách bài hát
+    const options = document.querySelectorAll('.song-option');
+    options.forEach(opt => {
+        const optIdx = parseInt(opt.dataset.index);
+        opt.classList.toggle('active', optIdx === songIndex);
+    });
+}
+window.updateFeaturedDisc = updateFeaturedDisc;
+
+async function playFeaturedSong() {
+    const list = (typeof activePlaylist !== 'undefined' && activePlaylist.length) ? activePlaylist : ((typeof playlist !== 'undefined' && playlist.length) ? playlist : []);
+    if (!list || list.length === 0) return;
+
+    const targetIndex = (featuredDiscIndex >= 0 && featuredDiscIndex < list.length) ? featuredDiscIndex : 0;
+    const song = list[targetIndex];
+    if (!song) return;
+
+    if (typeof playClickSound === 'function') playClickSound();
+    if (typeof playGameStartSound === 'function') playGameStartSound();
+
+    if (typeof playlistRenderStartIndex !== 'undefined') {
+        playlistRenderStartIndex = 0;
+    }
+
+    let isPassed = false;
+    if (typeof checkSongPassedStatus === 'function') {
+        isPassed = await checkSongPassedStatus(song, targetIndex);
+    }
+    const isHelperMode = typeof isAnyHelperModeActive === 'function' ? isAnyHelperModeActive() : false;
+
+    if (isHelperMode || isPassed) {
+        if (typeof promptPlayModeSelection === 'function') {
+            promptPlayModeSelection((mode) => {
+                window.chosenPlayMode = mode;
+                changeSong(targetIndex, true);
+            });
+            return;
+        }
+    }
+
+    window.chosenPlayMode = 'normal';
+    changeSong(targetIndex, true);
+}
+window.playFeaturedSong = playFeaturedSong;
+
+function initFeaturedDiscHero() {
+    const discCard = document.getElementById('featured-disc-card');
+    const discInfo = document.getElementById('featured-disc-info');
+    const searchToggleBtn = document.getElementById('header-search-toggle-btn');
+    const searchFilterSection = document.getElementById('song-search-filter-section');
+    const scrollBox = document.getElementById('song-scroll-container');
+    const discHero = document.getElementById('featured-disc-hero');
+    const searchInput = document.getElementById('song-search');
+
+    if (discCard) {
+        discCard.addEventListener('click', (e) => {
+            e.stopPropagation();
+            playFeaturedSong();
+        });
+        discCard.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                playFeaturedSong();
+            }
+        });
+    }
+
+    if (discInfo) {
+        discInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            playFeaturedSong();
+        });
+    }
+
+    // Nút toggle Search & Filters trên Header
+    if (searchToggleBtn && searchFilterSection) {
+        searchToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (typeof playClickSound === 'function') playClickSound();
+            const isCurrentlyExpanded = searchFilterSection.classList.contains('is-expanded');
+            if (isCurrentlyExpanded) {
+                if (searchInput && searchInput.value.trim().length > 0) {
+                    searchInput.value = '';
+                    if (typeof window.refreshPlaylist === 'function') window.refreshPlaylist('');
+                }
+                searchFilterSection.classList.remove('is-expanded');
+            } else {
+                searchFilterSection.classList.add('is-expanded');
+                setTimeout(() => {
+                    if (searchInput) searchInput.focus();
+                }, 150);
+            }
+        });
+    }
+
+    // Scroll listener: Tự động hiện Search & Filters khi đĩa nhạc cuộn khuất, ẩn khi cuộn lên đĩa
+    if (scrollBox && searchFilterSection) {
+        let isScrollTicking = false;
+        scrollBox.addEventListener('scroll', () => {
+            if (!isScrollTicking) {
+                window.requestAnimationFrame(() => {
+                    const st = scrollBox.scrollTop;
+                    const heroH = discHero ? discHero.offsetHeight : 180;
+                    const hasSearchTerm = searchInput && searchInput.value.trim().length > 0;
+                    const hasActiveFilter = !!(window.selectedArtistFilter || window.selectedGenreFilter || window.selectedCopyrightFilter);
+
+                    if (hasSearchTerm || hasActiveFilter || st >= Math.max(90, heroH * 0.6)) {
+                        searchFilterSection.classList.add('is-expanded');
+                    } else if (st < 30 && !hasSearchTerm && !hasActiveFilter) {
+                        searchFilterSection.classList.remove('is-expanded');
+                    }
+                    isScrollTicking = false;
+                });
+                isScrollTicking = true;
+            }
+        }, { passive: true });
+    }
+
+    // Khởi tạo bài hát hiển thị trên đĩa ngay khi load
+    const savedIdx = parseInt(localStorage.getItem('selectedSongIndex'));
+    const initialIdx = (!isNaN(savedIdx) && savedIdx >= 0) ? savedIdx : (typeof selectedSongIndex === 'number' ? selectedSongIndex : 0);
+    updateFeaturedDisc(initialIdx);
+}
+window.initFeaturedDiscHero = initFeaturedDiscHero;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFeaturedDiscHero);
+} else {
+    initFeaturedDiscHero();
 }

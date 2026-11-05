@@ -3293,7 +3293,8 @@ window.updateAllFloatingScrollbars = updateAllFloatingScrollbars;
 
 // Khởi tạo các thanh cuộn nổi chính
 function initAllFloatingScrollbars() {
-    attachFloatingScrollbar('song-selector', 'song-selector-scrollbar');
+    const songScrollTarget = document.getElementById('song-scroll-container') ? 'song-scroll-container' : 'song-selector';
+    attachFloatingScrollbar(songScrollTarget, 'song-selector-scrollbar');
 }
 
 if (document.readyState === 'loading') {
