@@ -18,7 +18,7 @@ Dự án game âm nhạc 3D nhịp điệu phong cách Cyberpunk mã nguồn m�
 ## ⚡ Nền tảng Đồ họa & Công nghệ Lõi (Engine & Technologies)
 
 - **MeoTN HOP ENGINE v3.7:**
-  - Bộ engine nhịp điệu Three.js tùy biến sâu, tối ưu hóa WebGL với bộ đệm ma trận (`matrixAutoUpdate` pooling), khử giật lag bằng `desynchronized: true`, hỗ trợ tần số quét màn hình siêu cao (60Hz, 90Hz, 120Hz, 144Hz, 165Hz, 240Hz+).
+  - Bộ engine nhịp điệu Three.js tùy biến sâu, tối ưu hóa WebGL với bộ đệm đối tượng tái sử dụng (Zero-GC Pooling), hỗ trợ tần số quét màn hình siêu cao (60Hz, 90Hz, 120Hz, 144Hz, 165Hz, 240Hz+).
 - **Hệ thống Âm thanh Nhịp điệu (Rhythm & Audio Pipeline):**
   - Web Audio API kết hợp AudioWorklet Realtime Thread độ trễ thấp, bộ phân tích tần số âm thanh (Fast Fourier Transform - FFT Visualizer 64 băng tần), cơ chế bù trừ độ trễ đồng bộ nhịp gạch (Latency Calibration).
 

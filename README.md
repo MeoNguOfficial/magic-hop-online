@@ -34,14 +34,13 @@ Chào các bạn, bản cập nhật **v1.0.9** mang đến bước nhảy vọt
 
 ---
 
-### ⚡ 3. TỐI ƯU HÓA HIỆU SUẤT ĐỒ HỌA THREE.JS & WEBGL TOÀN DIỆN
-- **Tối ưu hóa vòng lặp Render Loop:**
-  - Tắt cơ chế tự động cập nhật ma trận (`matrixAutoUpdate = false`) trên các hiệu ứng hạt, sóng xung kích (shockwaves) và xung lực đường biên (boundary pulses) trong Object Pool.
-  - Hợp nhất các lệnh truy vấn thời gian (`clock.getElapsedTime()`) thành một biến duy nhất mỗi frame, loại bỏ overhead tính toán lặp.
-- **Kích hoạt WebGL Desynchronized Mode:**
-  - Thêm cờ `desynchronized: true` vào canvas context WebGL, bỏ qua hàng đợi hiển thị của trình duyệt để đạt độ phản hồi khung hình trực tiếp cao nhất trên màn hình 120Hz/144Hz+.
-- **Tối ưu hóa DOM Reflow & Text Caching:**
-  - Cache các node HUD FPS và giảm thiểu thao tác đọc/ghi DOM gây tái bố trí layout.
+### ⚡ 3. SỬA LỖI ĐỒ HỌA, MÀU SẮC & BÀN PHÍM ẢO TRÊN APK
+- **Sửa lỗi sóng xung kích (Shockwaves):** Khôi phục trạng thái cập nhật ma trận chuẩn xác của Three.js cho toàn bộ hệ thống Object Pool, triệt tiêu lỗi sóng xung kích xuất hiện xa vị trí gạch hoặc biến mất ngẫu nhiên.
+- **Sửa lỗi nhấp nháy màu sắc (Color Glitch):** Khử hoàn toàn hiện tượng nhấp nháy màu trên WebGL và Canvas nền bằng cách đồng bộ chuẩn double-buffering và tách biệt bộ màu bóng động độc lập.
+- **Khắc phục lỗi nhập văn bản trên APK (cả ngang & dọc):**
+  - Tắt cờ `captureInput` của Capacitor để trả lại quyền điều khiển bàn phím ảo cho Android IME.
+  - Cấu hình `windowSoftInputMode="adjustResize"` và bật focusable cho Android WebView giúp mở bàn phím ảo mượt mà khi chạm vào bất kỳ ô nhập văn bản nào.
+  - Tối ưu hóa animation mở/đóng thanh tìm kiếm bài hát theo cuộn trên mọi kích thước màn hình.
 
 ---
 

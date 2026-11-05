@@ -1535,8 +1535,7 @@ async function initThree() {
         antialias: isAntialias,
         powerPreference: activePowerPref,
         alpha: false,
-        stencil: false,
-        desynchronized: true
+        stencil: false
     };
     const context = canvas.getContext('webgl2', glOptions);
 
@@ -2621,7 +2620,6 @@ function animate() {
     }
 
     let delta = clock.getDelta();
-    const elapsedTime = clock.getElapsedTime();
     let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
 
     if (window.AdaptivePerformanceManager) {
@@ -2661,8 +2659,7 @@ function animate() {
                 if (window.FPSGraphManager) {
                     window.FPSGraphManager.record(now, fpsValue, delta);
                 } else {
-                    let fpsTextEl = window._cachedFpsTextEl;
-                    if (!fpsTextEl) { fpsTextEl = document.getElementById('fps-value-text'); window._cachedFpsTextEl = fpsTextEl; }
+                    const fpsTextEl = document.getElementById('fps-value-text');
                     if (fpsTextEl) {
                         if (window.lastDisplayedFps !== fpsValue) {
                             fpsTextEl.textContent = `FPS: ${fpsValue}`;
@@ -2738,7 +2735,7 @@ function animate() {
 
         // --- RENDER VISUALIZER ---
         if (typeof VisualizerManager !== 'undefined') {
-            const nowTime = elapsedTime;
+            const nowTime = clock.getElapsedTime();
             VisualizerManager.update(nowTime, isPlaying, isFailTransition, typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition, currentGraphicsQuality);
         }
 
@@ -2826,6 +2823,7 @@ function animate() {
         // --- CẬP NHẬT MÀU BÓNG (THEO COMBO HOẶC TÙY CHỈNH) ---
         if (ball && ball.material) {
             if (selectedBallColor === 'dynamic') {
+                if (!window._ballTempColor) { window._ballTempColor = new THREE.Color(); window._ballTempEmissive = new THREE.Color(); }
                 let targetBallColor = 0x00ffff; // Cyan mặc định
                 let targetEmissiveColor = 0x003355;
 
@@ -2834,11 +2832,11 @@ function animate() {
                 else if (comboCount >= 6) { targetBallColor = 0xffff00; targetEmissiveColor = 0x555500; } // Vàng
 
                 if (ball.material.color.getHex() !== targetBallColor) {
-                    tempColor.setHex(targetBallColor);
-                    ball.material.color.lerp(tempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
+                    window._ballTempColor.setHex(targetBallColor);
+                    ball.material.color.lerp(window._ballTempColor, 15 * delta); // Hiệu ứng chuyển màu mượt mà (Fade)
                     if (ball.material.emissive) {
-                        tempColor.setHex(targetEmissiveColor);
-                        ball.material.emissive.lerp(tempColor, 15 * delta);
+                        window._ballTempEmissive.setHex(targetEmissiveColor);
+                        ball.material.emissive.lerp(window._ballTempEmissive, 15 * delta);
                     }
                 }
             }
@@ -2846,7 +2844,7 @@ function animate() {
         }
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
-        const time = elapsedTime;
+        const time = clock.getElapsedTime();
 
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
@@ -2896,8 +2894,24 @@ function animate() {
             if (window.DashBlocksManager) {
                 window.DashBlocksManager.syncDynamicColor(currentFrameHex, tempColor, true);
             }
-        } else if (window.DashBlocksManager) {
-            window.DashBlocksManager.syncDynamicColor(0, null, false);
+        } else {
+            if (window.globalTileMatCyan && window.globalTileMatCyan.color.getHex() !== 0x00ffff) {
+                window.globalTileMatCyan.color.setHex(0x00ffff);
+                if (window.globalTileMatCyan.emissive) window.globalTileMatCyan.emissive.setHex(0x002233);
+            }
+            if (window.globalTileMatMagenta && window.globalTileMatMagenta.color.getHex() !== 0xff00ff) {
+                window.globalTileMatMagenta.color.setHex(0xff00ff);
+                if (window.globalTileMatMagenta.emissive) window.globalTileMatMagenta.emissive.setHex(0x220022);
+            }
+            if (window.globalBorderMatCyan && window.globalBorderMatCyan.color.getHex() !== 0x00ffff) {
+                window.globalBorderMatCyan.color.setHex(0x00ffff);
+            }
+            if (window.globalBorderMatMagenta && window.globalBorderMatMagenta.color.getHex() !== 0xff00ff) {
+                window.globalBorderMatMagenta.color.setHex(0xff00ff);
+            }
+            if (window.DashBlocksManager) {
+                window.DashBlocksManager.syncDynamicColor(0, null, false);
+            }
         }
 
         const tilesCount = tiles.length;
@@ -3873,7 +3887,7 @@ function animate() {
             let targetGlowIntensity = 0;
 
             if (typeof ballGlowEnabled !== 'undefined' && ballGlowEnabled && comboCount >= 6 && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
-                const time = elapsedTime;
+                const time = clock.getElapsedTime();
                 let glowColor = comboCount >= 15 ? 0xff00ff : (comboCount >= 8 ? 0xffaa00 : 0xffff00);
                 if (ballGlowMesh.material && ballGlowMesh.material.color && ballGlowMesh.material.color.getHex() !== glowColor) {
                     ballGlowMesh.material.color.setHex(glowColor);

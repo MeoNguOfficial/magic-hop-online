@@ -14,7 +14,7 @@ window.VisualizerManager = {
     init: function (canvasElement, analyserNode) {
         this.canvas = canvasElement || document.getElementById('bg-visualizer');
         if (this.canvas) {
-            this.ctx = this.canvas.getContext('2d', { alpha: true, desynchronized: true });
+            this.ctx = this.canvas.getContext('2d', { alpha: true });
         }
         this.analyser = analyserNode;
         this.cachedBarData = [];

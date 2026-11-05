@@ -1721,6 +1721,13 @@ function initFeaturedDiscHero() {
         });
     }
 
+    // Đảm bảo khi người dùng chạm/focus vào ô tìm kiếm thì section luôn được giữ mở
+    if (searchInput && searchFilterSection) {
+        searchInput.addEventListener('focus', () => {
+            searchFilterSection.classList.add('is-expanded');
+        });
+    }
+
     // Scroll listener: Tự động hiện Search & Filters khi đĩa nhạc cuộn khuất, ẩn khi cuộn lên đĩa
     if (scrollBox && searchFilterSection) {
         let isScrollTicking = false;
@@ -1731,10 +1738,13 @@ function initFeaturedDiscHero() {
                     const heroH = discHero ? discHero.offsetHeight : 180;
                     const hasSearchTerm = searchInput && searchInput.value.trim().length > 0;
                     const hasActiveFilter = !!(window.selectedArtistFilter || window.selectedGenreFilter || window.selectedCopyrightFilter);
+                    const isInputFocused = (document.activeElement === searchInput);
+                    const isLandscape = window.innerWidth > window.innerHeight;
+                    const scrollThreshold = isLandscape ? 40 : Math.min(80, Math.max(45, heroH * 0.45));
 
-                    if (hasSearchTerm || hasActiveFilter || st >= Math.max(90, heroH * 0.6)) {
+                    if (hasSearchTerm || hasActiveFilter || isInputFocused || st >= scrollThreshold) {
                         searchFilterSection.classList.add('is-expanded');
-                    } else if (st < 30 && !hasSearchTerm && !hasActiveFilter) {
+                    } else if (st < 20 && !hasSearchTerm && !hasActiveFilter && !isInputFocused) {
                         searchFilterSection.classList.remove('is-expanded');
                     }
                     isScrollTicking = false;
