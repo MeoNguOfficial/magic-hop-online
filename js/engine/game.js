@@ -1844,7 +1844,7 @@ async function initThree() {
                         menuGainNode.gain.cancelScheduledValues(now);
                         menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
                         menuGainNode.gain.linearRampToValueAtTime(typeof menuVolume !== 'undefined' ? (typeof isMenuMuted !== 'undefined' && isMenuMuted ? 0 : menuVolume) : 0.5, now + 0.5);
-                        const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
+                        const isIntroVisible = typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted;
                         if (!isIntroVisible && typeof menuAudio !== 'undefined' && menuAudio) {
                             const playPromise = menuAudio.play();
                             if (playPromise !== undefined) {
@@ -1853,7 +1853,7 @@ async function initThree() {
                         }
                     } else if (typeof menuAudio !== 'undefined' && menuAudio && (typeof currentPreviewIndex === 'undefined' || currentPreviewIndex === -1)) {
                         menuAudio.volume = typeof menuVolume !== 'undefined' ? (typeof isMenuMuted !== 'undefined' && isMenuMuted ? 0 : menuVolume) : 0.5;
-                        const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
+                        const isIntroVisible = typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted;
                         if (!isIntroVisible) {
                             const playPromise = menuAudio.play();
                             if (playPromise !== undefined) {
@@ -1868,7 +1868,7 @@ async function initThree() {
                         menuGainNode.gain.cancelScheduledValues(now);
                         menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
                         menuGainNode.gain.linearRampToValueAtTime(typeof menuVolume !== 'undefined' ? (typeof isMenuMuted !== 'undefined' && isMenuMuted ? 0 : menuVolume) : 0.5, now + 0.5);
-                        const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
+                        const isIntroVisible = typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted;
                         if (!isIntroVisible && typeof menuAudio !== 'undefined' && menuAudio) {
                             const playPromise = menuAudio.play();
                             if (playPromise !== undefined) {
@@ -5451,6 +5451,9 @@ async function handleIntro() {
     }, 100);
 
     function doStartGameTransition() {
+        // Đánh dấu intro đã hoàn thành, cho phép các cơ chế âm thanh & focus hoạt động bình thường
+        window.introCompleted = true;
+
         // KIỂM TRA OFFLINE MÀ CHƯA CÓ NHẠC
         if (!navigator.onLine && (!audio || !audio.src || audio.src === window.location.href)) {
             if (typeof showCyberModal === 'function') {

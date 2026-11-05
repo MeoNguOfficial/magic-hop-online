@@ -155,22 +155,44 @@
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App) {
             window.Capacitor.Plugins.App.addListener('appStateChange', ({ isActive }) => {
                 if (!isActive) {
-                    // Ứng dụng rơi vào background
-                    if (typeof pauseGame === 'function' && typeof isPlaying !== 'undefined' && isPlaying) {
-                        pauseGame();
-                    }
-                    releaseScreenWakeLock();
-                    if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'running') {
-                        audioCtx.suspend().catch(() => {});
+                    if (typeof window.onAndroidNativeBlur === 'function') {
+                        window.onAndroidNativeBlur();
+                    } else {
+                        if (typeof pauseGame === 'function' && typeof isPlaying !== 'undefined' && isPlaying) {
+                            pauseGame();
+                        }
+                        releaseScreenWakeLock();
+                        if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'running') {
+                            audioCtx.suspend().catch(() => {});
+                        }
                     }
                 } else {
-                    // Ứng dụng quay lại foreground
-                    if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
-                        audioCtx.resume().catch(() => {});
+                    if (typeof window.onAndroidNativeFocus === 'function') {
+                        window.onAndroidNativeFocus();
+                    } else {
+                        if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
+                            audioCtx.resume().catch(() => {});
+                        }
                     }
                 }
             });
         }
+
+        // Bổ sung lắng nghe visibilitychange chuẩn cho toàn bộ môi trường Mobile Web / PWA / WebView
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (typeof window.onAndroidNativeBlur === 'function') {
+                    window.onAndroidNativeBlur();
+                }
+            } else {
+                if (typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted) {
+                    return;
+                }
+                if (typeof window.onAndroidNativeFocus === 'function') {
+                    window.onAndroidNativeFocus();
+                }
+            }
+        });
 
         // Tự động bật chế độ Immersive / ẩn Status Bar trên Android và iOS nếu chạy native
         if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar) {

@@ -88,6 +88,18 @@ const introProgressBar = document.getElementById('intro-progress-bar');
 const loadPercentText = document.getElementById('load-percent');
 const startGameBtn = document.getElementById('start-game-btn');
 const introLoadingContainer = document.getElementById('intro-loading-container');
+
+// Cờ và hàm kiểm tra trạng thái màn hình Intro toàn cục
+window.introCompleted = false;
+window.isIntroActive = function () {
+    if (window.introCompleted === true) return false;
+    const overlay = document.getElementById('intro-overlay') || introOverlay;
+    if (!overlay) return false;
+    if (overlay.classList.contains('hidden') || overlay.style.display === 'none') {
+        return false;
+    }
+    return true;
+};
 const updateDataBtn = document.getElementById('update-data-btn');
 const clearCacheBtn = document.getElementById('clear-cache-btn');
 const clearBeatmapCacheBtn = document.getElementById('clear-beatmap-cache-btn');
@@ -752,8 +764,8 @@ async function changeSong(index, autoStart = false) {
         } else if (!audioCtx && menuAudio) {
             menuAudio.volume = getMenuTargetVolume();
         }
-        const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
-        if (!isIntroVisible && menuAudio && currentPreviewIndex === -1) {
+        const isIntro = (typeof window.isIntroActive === 'function' && window.isIntroActive()) || !window.introCompleted;
+        if (!isIntro && menuAudio && currentPreviewIndex === -1) {
             const playPromise = menuAudio.play();
             if (playPromise !== undefined) {
                 playPromise.catch(e => {
@@ -2165,3 +2177,67 @@ window.onAndroidNativeBackPressed = function () {
         window.handleMenuBackPress();
     }
 };
+
+// ============================================================
+// XỬ LÝ SỰ KIỆN MẤT FOCUS (UNFOCUS / BLUR) VÀ QUAY LẠI (FOCUS)
+// Đảm bảo hoạt động hoàn hảo trên Android APK, Mobile Web & PC
+// ============================================================
+window.onAndroidNativeBlur = function () {
+    console.log('[NativeBridge] onAndroidNativeBlur (Mất focus / chuyển app / tắt màn hình)');
+
+    // 1. Giải phóng WakeLock màn hình
+    if (typeof releaseScreenWakeLock === 'function') {
+        releaseScreenWakeLock();
+    } else if (typeof window.releaseScreenWakeLock === 'function') {
+        window.releaseScreenWakeLock();
+    }
+
+    // Nếu đang trong màn hình Intro, không xử lý gì thêm (không fade out nhạc vì nhạc chưa hề chạy)
+    if (typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted) {
+        return;
+    }
+
+    // 2. Nếu đang trong trận đấu -> Tự động Pause ngay lập tức để bảo vệ ván đấu của người chơi
+    const isPlay = (typeof window.isGamePlayActive === 'function')
+        ? window.isGamePlayActive()
+        : ((typeof isPlaying !== 'undefined' && isPlaying) || (typeof gameStarted !== 'undefined' && gameStarted));
+
+    if (isPlay) {
+        if (typeof pauseGame === 'function') {
+            pauseGame();
+        } else if (typeof window.pauseGame === 'function') {
+            window.pauseGame();
+        }
+    }
+
+    // 3. Reset các cờ chạm / chuột để không bị kẹt input vuốt
+    if (typeof isMouseDown !== 'undefined') isMouseDown = false;
+    if (typeof isTouchActive !== 'undefined') isTouchActive = false;
+
+    // 4. Phát sự kiện blur chuẩn của window để audio-manager tự động thực hiện fade out mượt mà (không dừng đột ngột)
+    try {
+        window.dispatchEvent(new Event('blur'));
+    } catch (e) {}
+};
+
+window.onAndroidNativeFocus = function () {
+    console.log('[NativeBridge] onAndroidNativeFocus (Ứng dụng lấy lại focus / quay lại màn hình)');
+
+    // Nếu đang trong màn hình Intro, tuyệt đối không kích hoạt hay phục hồi nhạc
+    if (typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted) {
+        return;
+    }
+
+    // 1. Phục hồi AudioContext nếu đang bị suspend
+    try {
+        if (typeof audioCtx !== 'undefined' && audioCtx && audioCtx.state === 'suspended') {
+            audioCtx.resume().catch(() => {});
+        }
+    } catch (e) {}
+
+    // 2. Phát sự kiện focus chuẩn của window để audio-manager tự động phục hồi và fade in mượt mà
+    try {
+        window.dispatchEvent(new Event('focus'));
+    } catch (e) {}
+};
+

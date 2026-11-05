@@ -61,8 +61,8 @@ function initAudio() {
             getCachedAudioUrl(bgmUrlToLoad).then(url => {
                 menuAudio.src = url;
                 menuAudio.load();
-                const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
-                if (!isIntroVisible && typeof startScreen !== 'undefined' && startScreen.style.display !== 'none' && currentPreviewIndex === -1) {
+                const isIntro = (typeof window.isIntroActive === 'function' && window.isIntroActive()) || !window.introCompleted;
+                if (!isIntro && typeof startScreen !== 'undefined' && startScreen.style.display !== 'none' && currentPreviewIndex === -1) {
                     const playPromise = menuAudio.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(e => { setTimeout(() => { menuAudio.play().catch(()=>{}); }, 50); });
@@ -821,8 +821,8 @@ document.addEventListener('click', (e) => {
         }
     }
 
-    const isIntroVisible = typeof introOverlay !== 'undefined' && introOverlay && introOverlay.style.display !== 'none';
-    if (!isIntroVisible && typeof startScreen !== 'undefined' && startScreen.style.display !== 'none' && typeof menuAudio !== 'undefined' && menuAudio) {
+    const isIntro = (typeof window.isIntroActive === 'function' && window.isIntroActive()) || !window.introCompleted;
+    if (!isIntro && typeof startScreen !== 'undefined' && startScreen.style.display !== 'none' && typeof menuAudio !== 'undefined' && menuAudio) {
         if (currentPreviewIndex === -1) {
             if (menuAudio.src && menuAudio.src !== window.location.href) {
                 menuAudio.play().then(() => {
@@ -835,6 +835,7 @@ document.addEventListener('click', (e) => {
 
 // --- XỬ LÝ BACKGROUND MUSIC & UNFOCUS MÀN HÌNH CHÍNH ---
 let allowBackgroundMusic = localStorage.getItem('allowBackgroundMusic') === 'true';
+window.allowBackgroundMusic = allowBackgroundMusic;
 let wasMenuAudioPlaying = false;
 let wasPreviewAudioPlaying = false;
 let wasMpPlaying = false;
@@ -850,6 +851,7 @@ const initBgMusicToggle = () => {
         bgMusicToggle.checked = allowBackgroundMusic;
         bgMusicToggle.addEventListener('change', (e) => {
             allowBackgroundMusic = e.target.checked;
+            window.allowBackgroundMusic = allowBackgroundMusic;
             localStorage.setItem('allowBackgroundMusic', allowBackgroundMusic);
         });
     }
@@ -870,6 +872,13 @@ window.addEventListener('blur', () => {
 
     // Chỉ xử lý unfocus khi ở màn hình chính (không phải đang chơi game)
     if (typeof isPlaying !== 'undefined' && !isPlaying) {
+        // Nếu intro vẫn đang hiển thị, tuyệt đối không xử lý để tránh lưu cờ nhạc
+        if (typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted) {
+            wasMenuAudioPlaying = false;
+            wasPreviewAudioPlaying = false;
+            return;
+        }
+
         // Nếu BẬT phát nhạc trong nền (allowBackgroundMusic = true) thì bỏ qua toàn bộ logic này
         if (!allowBackgroundMusic) {
             // Xóa các luồng fade-in nếu có
@@ -999,6 +1008,11 @@ window.addEventListener('blur', () => {
 });
 
 window.addEventListener('focus', () => {
+    // Nếu intro vẫn đang hiển thị, tuyệt đối không khôi phục hay phát nhạc
+    if (typeof window.isIntroActive === 'function' ? window.isIntroActive() : !window.introCompleted) {
+        return;
+    }
+
     if (typeof isPlaying !== 'undefined' && !isPlaying) {
         if (!allowBackgroundMusic) {
             // Hủy bỏ việc đang fade out dở dang nếu người dùng quay lại nhanh
@@ -1044,14 +1058,15 @@ window.addEventListener('focus', () => {
                         const targetVol = typeof isPreviewMuted !== 'undefined' && isPreviewMuted ? 0 : (typeof previewVolume !== 'undefined' ? previewVolume : 0.6);
                         activeGain.gain.linearRampToValueAtTime(targetVol, now + fadeDuration);
                     }
-                } else if (wasMenuAudioPlaying && typeof menuAudio !== 'undefined' && menuAudio) {
+                } else if ((wasMenuAudioPlaying || (window.introCompleted && typeof startScreen !== 'undefined' && startScreen.style.display !== 'none' && (typeof currentPreviewIndex === 'undefined' || currentPreviewIndex === -1))) && typeof menuAudio !== 'undefined' && menuAudio) {
                     const playPromise = menuAudio.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(e => { setTimeout(() => { menuAudio.play().catch(()=>{}); }, 50); });
                     }
                     if (typeof menuGainNode !== 'undefined') {
                         menuGainNode.gain.cancelScheduledValues(now);
-                        menuGainNode.gain.setValueAtTime(menuGainNode.gain.value, now);
+                        const currentVal = (typeof menuGainNode.gain.value === 'number' && !isNaN(menuGainNode.gain.value)) ? Math.max(0, menuGainNode.gain.value) : 0;
+                        menuGainNode.gain.setValueAtTime(currentVal, now);
                         const targetVol = (typeof isMenuMuted !== 'undefined' && isMenuMuted) ? 0 : (typeof menuVolume !== 'undefined' ? menuVolume : 0.5);
                         menuGainNode.gain.linearRampToValueAtTime(targetVol, now + fadeDuration);
                     }
@@ -1090,7 +1105,7 @@ window.addEventListener('focus', () => {
                         if (activeAudio) activeAudio.volume = Math.min(targetVol, startVol + (targetVol - startVol) * ratio);
                         if (currentStep >= steps) clearInterval(blurFadeInterval);
                     }, (fadeDuration * 1000) / steps);
-                } else if (wasMenuAudioPlaying && typeof menuAudio !== 'undefined' && menuAudio) {
+                } else if ((wasMenuAudioPlaying || (window.introCompleted && typeof startScreen !== 'undefined' && startScreen.style.display !== 'none' && (typeof currentPreviewIndex === 'undefined' || currentPreviewIndex === -1))) && typeof menuAudio !== 'undefined' && menuAudio) {
                     const playPromise = menuAudio.play();
                     if (playPromise !== undefined) {
                         playPromise.catch(e => { setTimeout(() => { menuAudio.play().catch(()=>{}); }, 50); });
