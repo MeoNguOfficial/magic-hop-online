@@ -852,6 +852,16 @@ function renderSongList(filterTerm = null, specificIndices = null) {
     if (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex !== -1) {
         updatePreviewUI(currentPreviewIndex, 'playing');
     }
+
+    // Giữ trạng thái hiển thị của ô tìm kiếm & bộ lọc nếu người dùng đã ghim mở hoặc có bộ lọc/từ khóa hoạt động
+    const activeSearchFilterSec = document.getElementById('song-search-filter-section');
+    if (activeSearchFilterSec) {
+        const hasActiveFilter = !!(window.selectedArtistFilter || window.selectedGenreFilter || window.selectedCopyrightFilter);
+        const hasSearchTerm = songSearchInput && songSearchInput.value.trim().length > 0;
+        if (window._searchSectionUserPinned || hasActiveFilter || hasSearchTerm) {
+            activeSearchFilterSec.classList.add('is-expanded');
+        }
+    }
 }
 
 function updateSongWaveBadge(index) {
@@ -1103,6 +1113,21 @@ if (songSearchInput) {
             }
         }, 500);
     });
+
+    // Khi người dùng nhấn Enter trên bàn phím ảo hoặc bàn phím PC -> Thực hiện tìm kiếm ngay lập tức
+    songSearchInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            if (searchTimeoutId) clearTimeout(searchTimeoutId);
+            const term = songSearchInput.value;
+            const selector = document.getElementById('song-selector');
+            if (selector) selector.innerHTML = `<div class="p-4 text-center text-cyan-400 font-orbitron animate-pulse">${typeof t === 'function' ? t('msg_searching') : 'ĐANG TÌM KIẾM...'}</div>`;
+            if (typeof window.refreshPlaylist === 'function') {
+                await window.refreshPlaylist(term);
+            }
+            songSearchInput.blur();
+        }
+    });
 }
 
 if (songSearchClearBtn) {
@@ -1170,18 +1195,29 @@ function initSearchableFilterDropdown(cfg) {
                     if (svg) svg.classList.remove('rotate-180');
                 }
                 d.classList.add('hidden');
+                if (parentWrapper) parentWrapper.style.zIndex = '';
             }
         });
+        const section = document.getElementById('song-search-filter-section');
+        if (section) section.classList.remove('has-open-dropdown');
     }
 
     // Toggle mở/đóng
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        window._searchSectionUserPinned = true;
+        const section = document.getElementById('song-search-filter-section');
+        if (section) section.classList.add('is-expanded');
+
         const isOpen = !dropdown.classList.contains('hidden');
         closeAllDropdowns();
 
         if (!isOpen) {
             dropdown.classList.remove('hidden');
+            const parentWrapper = dropdown.closest('.relative');
+            if (parentWrapper) parentWrapper.style.zIndex = '35';
+            if (section) section.classList.add('has-open-dropdown');
+
             const svg = btn.querySelector('svg');
             if (svg) svg.classList.add('rotate-180');
 
@@ -1220,6 +1256,12 @@ function initSearchableFilterDropdown(cfg) {
                 const svg = btn.querySelector('svg');
                 if (svg) svg.classList.remove('rotate-180');
                 dropdown.classList.add('hidden');
+                const parentWrapper = dropdown.closest('.relative');
+                if (parentWrapper) parentWrapper.style.zIndex = '';
+                const section = document.getElementById('song-search-filter-section');
+                if (section && !document.querySelector('.searchable-filter-dropdown:not(.hidden)')) {
+                    section.classList.remove('has-open-dropdown');
+                }
             }
         }
     });
@@ -1284,6 +1326,16 @@ function initSearchableFilterDropdown(cfg) {
         const svg = btn.querySelector('svg');
         if (svg) svg.classList.remove('rotate-180');
         dropdown.classList.add('hidden');
+        const parentWrapper = dropdown.closest('.relative');
+        if (parentWrapper) parentWrapper.style.zIndex = '';
+
+        const section = document.getElementById('song-search-filter-section');
+        if (section) {
+            section.classList.remove('has-open-dropdown');
+            section.classList.add('is-expanded');
+        }
+        window._searchSectionUserPinned = true;
+
         if (typeof cfg.onSelect === 'function') cfg.onSelect(value);
     }
 
@@ -1425,6 +1477,10 @@ function populateFilterDropdowns(force = false) {
 }
 
 function resetSongFilters() {
+    window._searchSectionUserPinned = true;
+    const searchFilterSec = document.getElementById('song-search-filter-section');
+    if (searchFilterSec) searchFilterSec.classList.add('is-expanded');
+
     // Reset search term input & clear button
     if (songSearchInput) {
         songSearchInput.value = '';
@@ -1707,12 +1763,15 @@ function initFeaturedDiscHero() {
             if (typeof playClickSound === 'function') playClickSound();
             const isCurrentlyExpanded = searchFilterSection.classList.contains('is-expanded');
             if (isCurrentlyExpanded) {
+                window._searchSectionUserPinned = false;
                 if (searchInput && searchInput.value.trim().length > 0) {
                     searchInput.value = '';
                     if (typeof window.refreshPlaylist === 'function') window.refreshPlaylist('');
                 }
                 searchFilterSection.classList.remove('is-expanded');
+                searchFilterSection.classList.remove('has-open-dropdown');
             } else {
+                window._searchSectionUserPinned = true;
                 searchFilterSection.classList.add('is-expanded');
                 setTimeout(() => {
                     if (searchInput) searchInput.focus();
@@ -1721,9 +1780,14 @@ function initFeaturedDiscHero() {
         });
     }
 
-    // Đảm bảo khi người dùng chạm/focus vào ô tìm kiếm thì section luôn được giữ mở
+    // Đảm bảo khi người dùng chạm/focus hoặc gõ vào ô tìm kiếm thì section luôn được ghim mở
     if (searchInput && searchFilterSection) {
         searchInput.addEventListener('focus', () => {
+            window._searchSectionUserPinned = true;
+            searchFilterSection.classList.add('is-expanded');
+        });
+        searchInput.addEventListener('input', () => {
+            window._searchSectionUserPinned = true;
             searchFilterSection.classList.add('is-expanded');
         });
     }
@@ -1738,14 +1802,22 @@ function initFeaturedDiscHero() {
                     const heroH = discHero ? discHero.offsetHeight : 180;
                     const hasSearchTerm = searchInput && searchInput.value.trim().length > 0;
                     const hasActiveFilter = !!(window.selectedArtistFilter || window.selectedGenreFilter || window.selectedCopyrightFilter);
-                    const isInputFocused = (document.activeElement === searchInput);
+                    const isAnyDropdownOpen = !!document.querySelector('.searchable-filter-dropdown:not(.hidden)');
+                    const isAnyInputFocused = (
+                        document.activeElement === searchInput ||
+                        (document.activeElement && (
+                            document.activeElement.id === 'song-filter-artist-search' ||
+                            document.activeElement.id === 'song-filter-genre-search'
+                        ))
+                    );
                     const isLandscape = window.innerWidth > window.innerHeight;
                     const scrollThreshold = isLandscape ? 40 : Math.min(80, Math.max(45, heroH * 0.45));
 
-                    if (hasSearchTerm || hasActiveFilter || isInputFocused || st >= scrollThreshold) {
+                    if (window._searchSectionUserPinned || hasSearchTerm || hasActiveFilter || isAnyInputFocused || isAnyDropdownOpen || st >= scrollThreshold) {
                         searchFilterSection.classList.add('is-expanded');
-                    } else if (st < 20 && !hasSearchTerm && !hasActiveFilter && !isInputFocused) {
+                    } else if (st < 20 && !hasSearchTerm && !hasActiveFilter && !isAnyInputFocused && !isAnyDropdownOpen && !window._searchSectionUserPinned) {
                         searchFilterSection.classList.remove('is-expanded');
+                        searchFilterSection.classList.remove('has-open-dropdown');
                     }
                     isScrollTicking = false;
                 });

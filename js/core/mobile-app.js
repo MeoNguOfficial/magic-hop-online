@@ -236,10 +236,80 @@
         document.addEventListener('click', unlock, { capture: true, once: true });
     }
 
+    // --- 6. KHẮC PHỤC TRIỆT ĐỂ LỖI BÀN PHÍM ẢO / ANDROID WEBVIEW KHÔNG HIỆN CHỮ KHI GÕ ---
+    // Trên một số máy Android (Samsung Keyboard, Gboard, Xiaomi, Oppo, Vivo...), Chromium WebView
+    // tối ưu hóa layer quá mức và không invalidate vùng vẽ của ô input trong suốt phiên IME composition,
+    // dẫn đến hiện tượng gõ chữ nhưng không hiển thị ngay, phải chờ debounce hoặc nhấn Enter mới hiện.
+    function setupAndroidInputRepaintFix() {
+        const textInputTypes = new Set(['text', 'search', 'password', 'email', 'number', 'tel', 'url', '']);
+
+        function isTextInput(el) {
+            if (!el || !el.tagName) return false;
+            const tag = el.tagName.toUpperCase();
+            if (tag === 'TEXTAREA') return true;
+            if (tag === 'INPUT') {
+                const type = (el.type || '').toLowerCase();
+                return textInputTypes.has(type);
+            }
+            return false;
+        }
+
+        // Tự động gán các thuộc tính chống lag buffer từ điển bàn phím ảo
+        function sanitizeInputAttributes(el) {
+            if (!isTextInput(el)) return;
+            if (!el.getAttribute('autocomplete')) el.setAttribute('autocomplete', 'off');
+            if (!el.getAttribute('autocorrect')) el.setAttribute('autocorrect', 'off');
+            if (!el.getAttribute('autocapitalize')) el.setAttribute('autocapitalize', 'none');
+            if (!el.getAttribute('spellcheck')) el.setAttribute('spellcheck', 'false');
+        }
+
+        // Ép GPU Chromium repaint tức thì từng ký tự
+        let isShifted = false;
+        function forceInputRepaint(el) {
+            if (!isTextInput(el)) return;
+
+            // 1. Đồng bộ giá trị vào thuộc tính DOM value
+            try {
+                el.setAttribute('value', el.value);
+            } catch (err) {}
+
+            // 2. Kích hoạt GPU Compositor Invalidate bằng vi biến đổi Z
+            // Tuyệt đối không làm mất focus hay nhảy con trỏ text
+            isShifted = !isShifted;
+            try {
+                el.style.setProperty('transform', isShifted ? 'translateZ(0.001px)' : 'translateZ(0px)', 'important');
+            } catch (err) {}
+        }
+
+        // Gán thuộc tính cho các input sẵn có trong DOM
+        document.querySelectorAll('input, textarea').forEach(sanitizeInputAttributes);
+
+        // Lắng nghe ở tầng capture cao nhất để bắt mọi sự kiện nhập liệu từ bàn phím ảo
+        const eventTypes = ['input', 'compositionstart', 'compositionupdate', 'compositionend', 'keyup', 'change'];
+        eventTypes.forEach(evtName => {
+            document.addEventListener(evtName, (e) => {
+                if (isTextInput(e.target)) {
+                    sanitizeInputAttributes(e.target);
+                    forceInputRepaint(e.target);
+                }
+            }, { capture: true, passive: true });
+        });
+
+        // Bổ sung lắng nghe khi focus để chuẩn bị sẵn sàng layer
+        document.addEventListener('focusin', (e) => {
+            if (isTextInput(e.target)) {
+                sanitizeInputAttributes(e.target);
+                forceInputRepaint(e.target);
+            }
+        }, { capture: true, passive: true });
+    }
+
     // Khởi tạo các thành phần khi tải trang
     function initMobileApp() {
         // Kích hoạt bộ bảo vệ điều hướng toàn cầu cho cả Mobile và Desktop Web
         setupUniversalNavigationGuard();
+        // Kích hoạt bộ fix hiển thị chữ tức thì cho input text
+        setupAndroidInputRepaintFix();
 
         if (isMobileDevice) {
             document.body.classList.add('mobile-device-mode');
