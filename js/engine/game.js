@@ -647,6 +647,7 @@ function clearDashState() {
 
 function startVictoryTransition() {
     if (isVictoryTransition) return;
+    releaseGameplayPointerLock();
     isVictoryTransition = true;
     victoryTimeElapsed = 0;
     victoryCameraDecay = 1.0;
@@ -942,6 +943,14 @@ function canUsePointerLockControl() {
         if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: setting-off');
         return false;
     }
+    if (typeof isVictoryTransition !== 'undefined' && isVictoryTransition) {
+        if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: victory-transition');
+        return false;
+    }
+    if (typeof isFailTransition !== 'undefined' && isFailTransition) {
+        if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: fail-transition');
+        return false;
+    }
     if (typeof isRelativePC !== 'undefined' && isRelativePC) {
         if (window.DEBUG_POINTERLOCK) console.log('[PointerLock] Không khóa: relative-drag-on');
         return false;
@@ -999,10 +1008,13 @@ function requestGameplayPointerLock() {
 }
 
 function releaseGameplayPointerLock() {
-    if (isPointerLockActive()) {
-        pointerLockExitExpected = true;
+    pointerLockExitExpected = true;
+    const currentLockEl = (typeof document !== 'undefined') ? (document.pointerLockElement || document.mozPointerLockElement || document.webkitPointerLockElement) : null;
+    if (currentLockEl || isPointerLockActive()) {
         try {
-            document.exitPointerLock();
+            if (document.exitPointerLock) {
+                document.exitPointerLock();
+            }
         } catch (e) {
             console.warn('[PointerLock] exitPointerLock error:', e);
         }
@@ -1010,7 +1022,7 @@ function releaseGameplayPointerLock() {
 }
 
 function handlePointerLockMove(e) {
-    if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) || isAutoControlMode(false)) {
+    if (!isPlaying || isFailTransition || (typeof isVictoryTransition !== 'undefined' && isVictoryTransition) || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) || isAutoControlMode(false)) {
         return;
     }
     let deltaX = (typeof e.movementX !== 'undefined') ? e.movementX : (e.mozMovementX || e.webkitMovementX || 0);
@@ -1633,7 +1645,7 @@ async function initThree() {
     window.addEventListener('mousedown', (e) => {
         if (isTouchActive) return;
         if (e.button !== 0) return; // Chỉ cho phép chuột trái điều khiển
-        if (isPlaying && canUsePointerLockControl() && !isPointerLockActive()) {
+        if (isPlaying && !(typeof isVictoryTransition !== 'undefined' && isVictoryTransition) && canUsePointerLockControl() && !isPointerLockActive()) {
             requestGameplayPointerLock();
         }
         if (isPointerLockActive()) {
@@ -1735,6 +1747,9 @@ async function initThree() {
             if (window.DEBUG_POINTERLOCK) {
                 console.log('[PointerLock] ĐÃ khóa');
             }
+            if (!isPlaying || (typeof isVictoryTransition !== 'undefined' && isVictoryTransition)) {
+                releaseGameplayPointerLock();
+            }
         } else {
             const wasExpected = pointerLockExitExpected;
             pointerLockExitExpected = false;
@@ -1744,7 +1759,7 @@ async function initThree() {
             if (wasExpected) {
                 return;
             }
-            if (isPlaying && (typeof pointerLockControlEnabled !== 'undefined' && pointerLockControlEnabled)) {
+            if (isPlaying && !(typeof isVictoryTransition !== 'undefined' && isVictoryTransition) && (typeof pointerLockControlEnabled !== 'undefined' && pointerLockControlEnabled)) {
                 pauseGame();
             }
         }
@@ -4067,6 +4082,7 @@ function updateFinalScoreStyle(currentValue, targetValue = currentValue) {
 
 // --- GAME VICTORY ---
 async function gameVictory() {
+    releaseGameplayPointerLock();
     isPlaying = false;
     const maxSpeedReached = gameSpeed;
     isVictoryTransition = false;
@@ -5132,6 +5148,7 @@ async function gameOver() {
 
 // --- RESET SCENE ---
 function resetGameScene() {
+    releaseGameplayPointerLock();
     gameStarted = false;
     isPlaying = false;
     window.isPlaying = false;
