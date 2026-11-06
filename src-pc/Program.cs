@@ -12,9 +12,9 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cyber Beat Hopper")]
 [assembly: AssemblyDescription("Cyber Beat Hopper - 3D Cyberpunk Rhythm Game")]
 [assembly: AssemblyCompany("MeoTN Gaming")]
-[assembly: AssemblyVersion("1.0.8.0")]
-[assembly: AssemblyFileVersion("1.0.8.0")]
-[assembly: AssemblyInformationalVersion("1.0.8")]
+[assembly: AssemblyVersion("1.0.9.0")]
+[assembly: AssemblyFileVersion("1.0.9.0")]
+[assembly: AssemblyInformationalVersion("1.0.9")]
 [assembly: AssemblyCopyright("Copyright © 2026 MeoTN Gaming")]
 
 namespace CyberBeatHopper
@@ -114,8 +114,8 @@ namespace CyberBeatHopper
                     "--app=\"{0}\" --window-size=1280,720 --user-data-dir=\"{1}\" " +
                     "--no-first-run --no-default-browser-check " +
                     "--disable-features=Translate,InterestFeedContentSuggestions " +
-                    "--enable-features=OverlayScrollbar,VaapiVideoDecoder,AudioWorkletRealtimeThread " +
-                    "--disable-frame-rate-limit --ignore-gpu-blocklist --enable-zero-copy --enable-smooth-scrolling --disable-background-timer-throttling --disable-renderer-backgrounding",
+                    "--enable-features=OverlayScrollbar,AudioWorkletRealtimeThread " +
+                    "--enable-gpu-rasterization --enable-smooth-scrolling --disable-background-timer-throttling --disable-renderer-backgrounding",
                     gameUrl, profileDir
                 );
 
@@ -269,6 +269,9 @@ namespace CyberBeatHopper
             TcpClient client = (TcpClient)state;
             try
             {
+                client.NoDelay = true;
+                client.SendBufferSize = 64 * 1024;
+                client.ReceiveBufferSize = 16 * 1024;
                 using (NetworkStream stream = client.GetStream())
                 {
                     stream.ReadTimeout = 4000;
@@ -369,8 +372,7 @@ namespace CyberBeatHopper
                             "Content-Length: {4}\r\n" +
                             "Access-Control-Allow-Origin: *\r\n" +
                             "Accept-Ranges: bytes\r\n" +
-                            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
-                            "Pragma: no-cache\r\n\r\n",
+                            "Cache-Control: " + (ext == ".html" ? "no-cache\r\n\r\n" : "public, max-age=86400\r\n\r\n"),
                             mime, start, end, totalLength, rangeLength
                         );
                         byte[] hBytes = Encoding.UTF8.GetBytes(header);
@@ -398,8 +400,7 @@ namespace CyberBeatHopper
                             "Content-Length: {1}\r\n" +
                             "Access-Control-Allow-Origin: *\r\n" +
                             "Accept-Ranges: bytes\r\n" +
-                            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
-                            "Pragma: no-cache\r\n\r\n",
+                            "Cache-Control: " + (ext == ".html" ? "no-cache\r\n\r\n" : "public, max-age=86400\r\n\r\n"),
                             mime, totalLength
                         );
                         byte[] hBytes = Encoding.UTF8.GetBytes(header);

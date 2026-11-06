@@ -27,7 +27,7 @@ timeout /t 1 /nobreak >nul
 
 if not %EDGE_PATH%=="" (
     echo [Cyber Beat Hopper] Dang mo cua so game app voi Edge WebView2/App Mode...
-    %EDGE_PATH% --app="http://127.0.0.1:4173" --window-size=1280,720 --user-data-dir="%APP_DATA_DIR%" --disable-features=Translate,InterestFeedContentSuggestions --enable-features=OverlayScrollbar,VaapiVideoDecoder
+    %EDGE_PATH% --app="http://127.0.0.1:4173" --window-size=1280,720 --user-data-dir="%APP_DATA_DIR%" --disable-features=Translate,InterestFeedContentSuggestions --enable-features=OverlayScrollbar,AudioWorkletRealtimeThread --enable-gpu-rasterization
 ) else (
     echo [Cyber Beat Hopper] Dang mo bang trinh duyet mac dinh...
     start http://127.0.0.1:4173

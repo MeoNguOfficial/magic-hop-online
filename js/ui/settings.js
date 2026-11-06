@@ -262,6 +262,14 @@ if (maxFps === 361) {
     localStorage.setItem('maxFps', maxFps);
 }
 
+// Khôi phục tự động nếu profile từng bị lưu giá trị bất thường (> 360Hz) từ cờ unthrottled cũ
+if (maxFps > 360) {
+    maxFps = 144;
+    fpsSyncMode = 'vsync';
+    localStorage.setItem('maxFps', maxFps);
+    localStorage.setItem('fpsSyncMode', 'vsync');
+}
+
 window.fpsSyncMode = fpsSyncMode;
 window.maxFps = maxFps;
 
@@ -409,6 +417,7 @@ window.updateFpsSyncUI = updateFpsSyncUI;
  */
 function applyRefreshRateBound(detectedHz) {
     if (!detectedHz || detectedHz < 30) detectedHz = 60;
+    if (detectedHz > 360) detectedHz = 144;
     window.screenRefreshRate = detectedHz;
 
     const modeSelect = document.getElementById('fps-sync-mode-select');
@@ -486,7 +495,7 @@ function detectScreenRefreshRate(callback) {
             const medianDelta = frameTimes[Math.floor(frameTimes.length / 2)];
             const rawHz = 1000 / medianDelta;
 
-            const standardBuckets = [60, 75, 90, 120, 144, 165, 180, 240, 360, 480, 540];
+            const standardBuckets = [60, 75, 90, 120, 144, 165, 180, 240, 360];
             let detected = Math.round(rawHz);
             for (const std of standardBuckets) {
                 if (Math.abs(rawHz - std) <= std * 0.055) {
@@ -495,6 +504,7 @@ function detectScreenRefreshRate(callback) {
                 }
             }
             if (detected < 30) detected = 60;
+            if (detected > 360) detected = 144;
 
             applyRefreshRateBound(detected);
             if (callback) callback(detected);
