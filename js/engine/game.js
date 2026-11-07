@@ -5342,6 +5342,17 @@ function showIntroSlide(slideId, duration = 2000) {
             resolve();
             return;
         }
+
+        // Tái khởi tạo SVG animation để đảm bảo chu kỳ chạy chính xác từ 0.0s
+        const img = slide.querySelector('img');
+        if (img) {
+            const rawSrc = img.getAttribute('src');
+            if (rawSrc) {
+                const clonedImg = img.cloneNode(true);
+                img.parentNode.replaceChild(clonedImg, img);
+            }
+        }
+
         slide.classList.remove('hidden');
         void slide.offsetWidth; // force reflow
         slide.classList.remove('opacity-0');
@@ -5353,7 +5364,7 @@ function showIntroSlide(slideId, duration = 2000) {
             setTimeout(() => {
                 slide.classList.add('hidden');
                 resolve();
-            }, 700); // match transition-opacity duration-700
+            }, 300);
         }, duration);
     });
 }
@@ -5408,8 +5419,8 @@ function showIntroDisclaimer(slideId) {
 
 // --- INTRO & GAME FLOW ---
 async function handleIntro() {
-    // 1. Show logos side by side (Slide 1)
-    await showIntroSlide('intro-slide-logos', 3000);
+    // 1. Show animated brand logo (Slide 1: đợi hoàn thành trọn vẹn animation in -> hold -> animation out xoá ngược)
+    await showIntroSlide('intro-slide-logos', 11150);
 
     // 3. Show disclaimer (Slide 3)
     await showIntroDisclaimer('intro-slide-disclaimer');

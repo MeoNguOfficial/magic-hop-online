@@ -60,8 +60,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <link rel="preload" href="resources/MeoTNGaming.png" as="image" type="image/png">
-    <link rel="preload" href="resources/MeoTNDigital.png" as="image" type="image/png">
+    <link rel="preload" href="resources/meotn-gaming-intro.svg" as="image" type="image/svg+xml">
     <title>Cyber Beat Hopper - MeoTN Gaming</title>
     <!-- Game Meta & Classification (Web, PWA, PC, Android, iOS, macOS) -->
     <meta name="game-platform" content="Web, PWA, PC Windows, Android, iOS, macOS">
@@ -572,16 +571,13 @@
     <!-- Intro Overlay -->
     <div id="intro-overlay" class="absolute inset-0 z-50 bg-[#020108] flex flex-col justify-center items-center px-4">
 
-        <!-- SLIDE 1: Brand Logos (Gaming & Digital side by side) -->
+        <!-- SLIDE 1: Brand Logo (MeoTN Gaming Intro) -->
         <div id="intro-slide-logos"
-            class="hidden flex flex-row justify-center items-center gap-6 sm:gap-12 transition-opacity duration-700 opacity-0 absolute inset-0 bg-[#020108] p-6">
-            <div class="flex flex-row justify-center items-center gap-6 sm:gap-12 w-full max-w-4xl px-4">
-                <img src="resources/MeoTNGaming.png" alt="MeoTN Gaming"
-                    class="w-[45%] max-w-[280px] max-h-[50vh] object-contain aspect-square drop-shadow-[0_0_25px_rgba(239,68,68,0.25)]"
-                    width="280" height="280">
-                <img src="resources/MeoTNDigital.png" alt="MeoTN Digital"
-                    class="w-[45%] max-w-[280px] max-h-[50vh] object-contain aspect-square drop-shadow-[0_0_25px_rgba(34,211,238,0.25)]"
-                    width="280" height="280">
+            class="hidden flex flex-col justify-center items-center transition-opacity duration-700 opacity-0 absolute inset-0 bg-[#020108] p-6 select-none">
+            <div class="flex justify-center items-center w-full max-w-2xl px-4">
+                <img id="intro-logo-img" src="resources/meotn-gaming-intro.svg" alt="MeoTN Gaming"
+                    class="w-[82%] sm:w-[70%] max-w-[540px] max-h-[32vh] object-contain drop-shadow-[0_0_30px_rgba(240,74,58,0.25)] pointer-events-none"
+                    width="920" height="220">
             </div>
         </div>
 
