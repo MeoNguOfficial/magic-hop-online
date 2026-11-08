@@ -80,6 +80,8 @@
   "admin_dashboard_tools": "管理者ダッシュボードとツール",
   "admin_open_ingame": "ゲーム内パネルを開く",
   "btn_cancel": "キャンセル",
+  "btn_skip_online_check": "スキップ (キャッシュ使用)",
+  "msg_no_cache_available": "この曲のキャッシュデータが見つかりません。サーバー接続をお待ちください。",
   "msg_loading": "処理中...",
   "error_title": "エラー",
   "success_title": "成功",

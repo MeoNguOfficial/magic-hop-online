@@ -80,6 +80,8 @@
   "admin_dashboard_tools": "管理仪表板和管理控制台工具",
   "admin_open_ingame": "打开游戏内面板",
   "btn_cancel": "取消",
+  "btn_skip_online_check": "跳过 (使用缓存)",
+  "msg_no_cache_available": "未找到此歌曲的缓存数据。请等待服务器连接！",
   "msg_loading": "正在处理...",
   "error_title": "错误",
   "success_title": "成功",

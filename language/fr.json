@@ -81,6 +81,8 @@
   "admin_dashboard_tools": "Tableau de bord et outils d'administration",
   "admin_open_ingame": "Ouvrir le panneau de jeu",
   "btn_cancel": "ANNULER",
+  "btn_skip_online_check": "IGNORER (UTILISER LE CACHE)",
+  "msg_no_cache_available": "Aucune donnée en cache trouvée pour ce morceau. Veuillez patienter pour la connexion au serveur !",
   "msg_loading": "TRAITEMENT...",
   "error_title": "ERREUR",
   "success_title": "SUCCÈS",

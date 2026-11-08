@@ -905,7 +905,7 @@ function getSongBeatmapKey(song) {
 }
 window.getSongBeatmapKey = getSongBeatmapKey;
 
-async function ensureSongLoaded(index, forceCheck = false) {
+async function ensureSongLoaded(index, forceCheck = false, options = {}) {
     const song = playlist[index];
     if (!song) return song;
 
@@ -971,12 +971,15 @@ async function ensureSongLoaded(index, forceCheck = false) {
         }
     }
 
+    // Nếu người dùng đã yêu cầu bỏ qua kiểm tra online thì không gọi backend
+    if (window.skipOnlineCheckRequested) return song;
+
     // 3. Nếu chưa có trong cache và có song.id từ backend: Gọi API backend Laravel để lấy chi tiết!
     if (song.id && window.ApiService && typeof window.ApiService.getBeatmapDetails === 'function') {
         try {
             song.isLoading = true;
             updateLoadingStatus('msg_checking_map');
-            const res = await window.ApiService.getBeatmapDetails(song.id);
+            const res = await window.ApiService.getBeatmapDetails(song.id, options);
             const data = res.data?.data || res.data;
             if (data) {
                 if (data.beats) {
@@ -1172,16 +1175,18 @@ async function checkMapVersionInBackground(index, isBlocking = false) {
 }
 
 // Thêm hàm kiểm tra cập nhật bài hát với backend (cho dự phòng)
-async function checkSongUpdateWithBackend(index) {
+async function checkSongUpdateWithBackend(index, options = {}) {
     const song = playlist[index];
     if (!song || !song.id) return false;
     
-    // Nếu đang offline thì bỏ qua
-    if (!navigator.onLine) return false;
+    // Nếu đang offline hoặc người dùng đã chọn Bỏ qua kiểm tra online (dùng cache) thì bỏ qua
+    if (!navigator.onLine || window.skipOnlineCheckRequested) return false;
 
     try {
         if (window.ApiService && typeof ApiService.getBeatmapDetails === 'function') {
-            const response = await ApiService.getBeatmapDetails(song.id, { headers: { 'X-Force-Refresh': 'true' }});
+            const reqOptions = { headers: { 'X-Force-Refresh': 'true' }, ...options };
+            const response = await ApiService.getBeatmapDetails(song.id, reqOptions);
+            if (window.skipOnlineCheckRequested) return false;
             const freshData = response.data?.data || response.data;
             if (freshData) {
                 let isOutdated = false;
@@ -1245,6 +1250,10 @@ async function checkSongUpdateWithBackend(index) {
             }
         }
     } catch (e) {
+        if (window.skipOnlineCheckRequested || (e && (e.name === 'AbortError' || e.name === 'CanceledError' || e.code === 'ERR_CANCELED'))) {
+            console.log('[checkSongUpdateWithBackend] Đã bỏ qua kiểm tra online theo yêu cầu người dùng (Skip online check).');
+            return false;
+        }
         console.warn('[checkSongUpdateWithBackend] Lỗi khi kiểm tra cập nhật:', e);
     }
     return false;

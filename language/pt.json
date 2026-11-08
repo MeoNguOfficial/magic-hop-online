@@ -81,6 +81,8 @@
   "admin_dashboard_tools": "Painel de administração e Ferramentas",
   "admin_open_ingame": "Abrir painel do jogo",
   "btn_cancel": "CANCELAR",
+  "btn_skip_online_check": "PULAR (USAR CACHE)",
+  "msg_no_cache_available": "Nenhum dado em cache encontrado para esta música. Aguarde a conexão com o servidor!",
   "msg_loading": "PROCESSANDO...",
   "error_title": "ERRO",
   "success_title": "SUCESSO",

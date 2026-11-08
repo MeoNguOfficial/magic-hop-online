@@ -79,6 +79,8 @@
   "admin_dashboard_tools": "관리 대시보드 및amp; 도구",
   "admin_open_ingame": "게임 내 패널 열기",
   "btn_cancel": "취소",
+  "btn_skip_online_check": "건너뛰기 (캐시 사용)",
+  "msg_no_cache_available": "이 노래의 캐시된 데이터를 찾을 수 없습니다. 서버 연결을 기다려주세요!",
   "msg_loading": "처리 중...",
   "error_title": "오류",
   "success_title": "성공",

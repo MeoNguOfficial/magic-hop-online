@@ -82,6 +82,8 @@
   "admin_dashboard_tools": "Admin Dashboard & Tools",
   "admin_open_ingame": "Open In-game Panel",
   "btn_cancel": "CANCEL",
+  "btn_skip_online_check": "SKIP (USE CACHE)",
+  "msg_no_cache_available": "No cached data found for this song. Please wait for server connection!",
   "msg_loading": "PROCESSING...",
   "error_title": "ERROR",
   "success_title": "SUCCESS",

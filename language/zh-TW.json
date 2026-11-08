@@ -328,6 +328,8 @@
   "account_current_password_incorrect": "The current password is incorrect.",
   "admin_open_ingame": "Open In-game Panel",
   "btn_cancel": "CANCEL",
+  "btn_skip_online_check": "跳過 (使用緩存)",
+  "msg_no_cache_available": "未找到此歌曲的快取數據。請等待伺服器連線！",
   "chat_system_title": "Communication System",
   "chat_connecting": "Connecting data...",
   "chat_input_placeholder": "Type a message...",

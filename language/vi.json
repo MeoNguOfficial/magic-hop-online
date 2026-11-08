@@ -82,6 +82,8 @@
   "admin_dashboard_tools": "Bảng điều khiển & Công cụ Admin",
   "admin_open_ingame": "Mở In-game Panel",
   "btn_cancel": "HỦY",
+  "btn_skip_online_check": "BỎ QUA (DÙNG CACHE)",
+  "msg_no_cache_available": "Không tìm thấy dữ liệu đã lưu (Cache) cho bài hát này. Vui lòng đợi kết nối máy chủ hoàn tất!",
   "msg_loading": "ĐANG XỬ LÝ...",
   "error_title": "LỖI",
   "success_title": "THÀNH CÔNG",

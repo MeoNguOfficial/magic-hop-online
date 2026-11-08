@@ -3065,6 +3065,20 @@
                 <span id="loading-music-status" data-i18n="loading_music">Đang nạp nhạc...</span>
                 <span id="music-load-percent" class="font-bold text-cyan-400 font-orbitron">0%</span>
             </div>
+
+            <div id="loading-actions-container" class="flex flex-row items-center justify-center gap-3 mt-6 w-full flex-wrap">
+                <!-- Cancel Button -->
+                <button id="loading-cancel-btn" style="display: none;"
+                    class="px-5 py-2 bg-red-900/80 hover:bg-red-800 active:scale-95 text-white font-bold text-xs md:text-sm rounded uppercase border border-red-500/50 font-orbitron transition-all shadow-[0_0_10px_rgba(220,38,38,0.3)] select-none cursor-pointer flex items-center justify-center"
+                    data-i18n="btn_cancel">HỦY</button>
+
+                <!-- Skip Online Check Button (Dùng Cache) -->
+                <button id="loading-skip-check-btn" style="display: none;"
+                    class="px-5 py-2 bg-gradient-to-r from-amber-600/90 to-yellow-600/90 hover:from-amber-500 hover:to-yellow-500 active:scale-95 text-white font-bold text-xs md:text-sm rounded uppercase border border-amber-400/80 font-orbitron transition-all shadow-[0_0_15px_rgba(245,158,11,0.5)] cursor-pointer flex items-center justify-center gap-1.5 animate-pulse select-none">
+                    <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l3-8z"/></svg>
+                    <span id="loading-skip-check-text" data-i18n="btn_skip_online_check">BỎ QUA (DÙNG CACHE)</span>
+                </button>
+            </div>
         </div>
     </div>
 

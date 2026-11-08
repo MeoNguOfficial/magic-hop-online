@@ -528,8 +528,10 @@ Object.defineProperty(window, 'isSongLoadingCancelled', {
     configurable: true
 });
 let loadingCancelTimeout = null;
+let loadingSkipCheckTimeout = null;
 let currentChangeSongRequest = 0;
 let tipInterval = null;
+let onlineCheckAbortController = null;
 
 // Cập nhật tiến trình tải nhạc & beatmap trên giao diện
 function updateMusicLoadingProgress(percent) {
@@ -541,6 +543,9 @@ function updateMusicLoadingProgress(percent) {
 
 async function changeSong(index, autoStart = false) {
     const requestId = ++currentChangeSongRequest;
+    let loadingSkipCheckBtn = document.getElementById('loading-skip-check-btn');
+    let loadingCancelBtn = document.getElementById('loading-cancel-btn');
+    let isOnlineCheckPending = false;
 
     // --- HIỆN LOADING NGAY LẬP TỨC KHI NHẤN PLAY ---
     if (autoStart) {
@@ -556,6 +561,14 @@ async function changeSong(index, autoStart = false) {
             window.enteredByAutoFullscreen = false;
         }
         isSongLoadingCancelled = false;
+        window.skipOnlineCheckRequested = false;
+        if (onlineCheckAbortController) {
+            try { onlineCheckAbortController.abort(); } catch (e) {}
+        }
+        onlineCheckAbortController = new AbortController();
+        window.currentOnlineCheckController = onlineCheckAbortController;
+        isOnlineCheckPending = true;
+
         loadingOverlay.style.display = 'flex';
 
         // --- HIỂN THỊ MẸO NGẪU NHIÊN ---
@@ -586,14 +599,116 @@ async function changeSong(index, autoStart = false) {
         showRandomTip(); // Hiển thị ngay một mẹo
         tipInterval = setInterval(showRandomTip, 4000); // Thay đổi mẹo mỗi 4 giây
 
-        let loadingCancelBtn = document.getElementById('loading-cancel-btn');
-        if (!loadingCancelBtn && loadingOverlay) {
+        // --- QUẢN LÝ NÚT CANCEL VÀ NÚT SKIP ONLINE CHECK (2 NÚT NẰM NGANG CÙNG 1 HÀNG) ---
+        let loadingActionsContainer = document.getElementById('loading-actions-container');
+        if (!loadingActionsContainer && loadingOverlay) {
+            loadingActionsContainer = document.createElement('div');
+            loadingActionsContainer.id = 'loading-actions-container';
+            loadingActionsContainer.className = "flex flex-row items-center justify-center gap-3 mt-6 w-full flex-wrap";
+            loadingOverlay.appendChild(loadingActionsContainer);
+        } else if (loadingActionsContainer) {
+            loadingActionsContainer.className = "flex flex-row items-center justify-center gap-3 mt-6 w-full flex-wrap";
+        }
+
+        loadingSkipCheckBtn = document.getElementById('loading-skip-check-btn');
+        if (!loadingSkipCheckBtn && loadingActionsContainer) {
+            loadingSkipCheckBtn = document.createElement('button');
+            loadingSkipCheckBtn.id = 'loading-skip-check-btn';
+            loadingSkipCheckBtn.className = "px-5 py-2 bg-gradient-to-r from-amber-600/90 to-yellow-600/90 hover:from-amber-500 hover:to-yellow-500 active:scale-95 text-white font-bold text-xs md:text-sm rounded uppercase border border-amber-400/80 font-orbitron transition-all shadow-[0_0_15px_rgba(245,158,11,0.5)] cursor-pointer flex items-center justify-center gap-1.5 animate-pulse select-none";
+            loadingSkipCheckBtn.style.display = 'none';
+            loadingSkipCheckBtn.innerHTML = `
+                <svg class="w-4 h-4 fill-current shrink-0" viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l3-8z"/></svg>
+                <span id="loading-skip-check-text">${typeof t === 'function' ? t('btn_skip_online_check') : 'BỎ QUA (DÙNG CACHE)'}</span>
+            `;
+            loadingActionsContainer.appendChild(loadingSkipCheckBtn);
+        }
+
+        if (loadingSkipCheckBtn && !loadingSkipCheckBtn._hasClickListener) {
+            loadingSkipCheckBtn._hasClickListener = true;
+            loadingSkipCheckBtn.addEventListener('click', async () => {
+                console.log('[changeSong] Người dùng bấm Skip online check -> Đang lấy dữ liệu từ cache...');
+                window.skipOnlineCheckRequested = true;
+                const song = (activePlaylist && activePlaylist[index]) || (typeof playlist !== 'undefined' && playlist[index]);
+                if (!song) return;
+
+                // Kiểm tra cache (RAM, getCachedBeatmap, OPFS, IndexedDB)
+                let cachedData = (song.beats && song.beats.length > 4) ? song : null;
+                if (!cachedData && typeof getCachedBeatmap === 'function') {
+                    try { cachedData = await getCachedBeatmap(song); } catch (e) {}
+                }
+                if (!cachedData && typeof getSongBeatmapKey === 'function' && typeof getCachedJson === 'function') {
+                    try {
+                        const bmKey = getSongBeatmapKey(song);
+                        if (bmKey) cachedData = await getCachedJson(bmKey);
+                    } catch (e) {}
+                }
+
+                let validBeats = null;
+                if (cachedData) {
+                    if (Array.isArray(cachedData) && cachedData.length > 4) {
+                        validBeats = cachedData;
+                    } else if (cachedData.beats && Array.isArray(cachedData.beats) && cachedData.beats.length > 4) {
+                        validBeats = cachedData.beats;
+                    }
+                }
+
+                // Nếu hoàn toàn không có dữ liệu cache cho bài hát này
+                if (!validBeats) {
+                    const currentLang = typeof activeLang !== 'undefined' ? activeLang : 'vi';
+                    const rawNoCache = typeof t === 'function' ? t('msg_no_cache_available') : '';
+                    const noCacheMsg = (rawNoCache && rawNoCache !== 'msg_no_cache_available')
+                        ? rawNoCache
+                        : (currentLang === 'vi' 
+                            ? 'Không tìm thấy dữ liệu đã lưu (Cache) cho bài hát này. Vui lòng đợi kết nối máy chủ hoàn tất!' 
+                            : 'No cached data found for this song. Please wait for server connection!');
+                    if (typeof showCyberModal === 'function') {
+                        showCyberModal({
+                            title: typeof t === 'function' ? t('offline_title') : 'OFFLINE',
+                            message: noCacheMsg,
+                            type: 'alert'
+                        });
+                    }
+                    return;
+                }
+
+                // Đã tìm thấy bản cache -> Nạp vào bài hát ngay
+                song.beats = (typeof normalizeBeats === 'function') ? normalizeBeats(validBeats) : validBeats;
+                if (cachedData.bpm && !song.bpm) song.bpm = cachedData.bpm;
+                if (cachedData.speed && !song.speed) song.speed = cachedData.speed;
+                if (cachedData.no_fake_block !== undefined) song.no_fake_block = cachedData.no_fake_block;
+                if (cachedData.url && !song.url) song.url = cachedData.url;
+                song.loaded = true;
+
+                loadingSkipCheckBtn.style.display = 'none';
+                if (typeof updateConnectionStatusIndicator === 'function') {
+                    updateConnectionStatusIndicator('cache');
+                }
+                if (typeof updateLoadingStatus === 'function') {
+                    updateLoadingStatus('msg_entering_map');
+                }
+
+                // Hủy request axios đang chờ ngầm
+                if (onlineCheckAbortController) {
+                    try { onlineCheckAbortController.abort(); } catch (e) {}
+                }
+                // Giải phóng Promise.race
+                if (typeof window.resolveOnlineCheckSkip === 'function') {
+                    window.resolveOnlineCheckSkip(false);
+                }
+            });
+        }
+
+        loadingCancelBtn = document.getElementById('loading-cancel-btn');
+        if (!loadingCancelBtn && loadingActionsContainer) {
             loadingCancelBtn = document.createElement('button');
             loadingCancelBtn.id = 'loading-cancel-btn';
-            loadingCancelBtn.className = "mt-6 px-6 py-2 bg-red-900/80 hover:bg-red-800 text-white font-bold text-sm rounded uppercase border border-red-500/50 font-orbitron transition-all shadow-[0_0_10px_rgba(220,38,38,0.3)]";
+            loadingCancelBtn.className = "px-5 py-2 bg-red-900/80 hover:bg-red-800 active:scale-95 text-white font-bold text-xs md:text-sm rounded uppercase border border-red-500/50 font-orbitron transition-all shadow-[0_0_10px_rgba(220,38,38,0.3)] select-none cursor-pointer flex items-center justify-center";
             loadingCancelBtn.style.display = 'none';
-            loadingOverlay.appendChild(loadingCancelBtn);
+            loadingActionsContainer.appendChild(loadingCancelBtn);
+        }
 
+        if (loadingCancelBtn && !loadingCancelBtn._hasClickListener) {
+            loadingCancelBtn._hasClickListener = true;
             loadingCancelBtn.addEventListener('click', () => {
                 isSongLoadingCancelled = true;
                 loadingOverlay.style.display = 'none';
@@ -602,6 +717,14 @@ async function changeSong(index, autoStart = false) {
                     window.enteredByAutoFullscreen = false;
                 }
                 if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
+                if (loadingSkipCheckTimeout) clearTimeout(loadingSkipCheckTimeout);
+                if (loadingSkipCheckBtn) loadingSkipCheckBtn.style.display = 'none';
+                if (onlineCheckAbortController) {
+                    try { onlineCheckAbortController.abort(); } catch (e) {}
+                }
+                if (typeof window.resolveOnlineCheckSkip === 'function') {
+                    window.resolveOnlineCheckSkip(false);
+                }
                 if (tipInterval) clearInterval(tipInterval);
                 if (audio) {
                     audio.pause();
@@ -625,19 +748,34 @@ async function changeSong(index, autoStart = false) {
                 }
             });
         }
+
+        // Khởi tạo trạng thái nút Hủy & Nút Skip Online Check (cả 2 nút nằm ngang cùng 1 hàng, hiện sau 3 giây)
         if (loadingCancelBtn) {
             loadingCancelBtn.style.display = 'none';
             loadingCancelBtn.innerText = typeof t === 'function' ? t('btn_cancel') : 'CANCEL';
-            if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
-            loadingCancelTimeout = setTimeout(() => {
-                if (loadingOverlay.style.display !== 'none' && !isSongLoadingCancelled) {
-                    loadingCancelBtn.style.display = 'block';
-                }
-            }, 3000); // Sẽ hiện nút Hủy sau 3 giây chờ
         }
-    }
+        if (loadingSkipCheckBtn) {
+            loadingSkipCheckBtn.style.display = 'none';
+            const skipTextEl = document.getElementById('loading-skip-check-text');
+            if (skipTextEl && typeof t === 'function') {
+                skipTextEl.innerText = t('btn_skip_online_check');
+            }
+        }
 
-    if (autoStart) {
+        if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
+        loadingCancelTimeout = setTimeout(() => {
+            if (loadingOverlay.style.display !== 'none' && !isSongLoadingCancelled && requestId === currentChangeSongRequest) {
+                // Hiện nút Hủy
+                if (loadingCancelBtn) {
+                    loadingCancelBtn.style.display = 'flex';
+                }
+                // Hiện nút Bỏ qua kiểm tra online (dùng cache) cùng lúc trên cùng 1 hàng nếu map check đang chạy
+                if (loadingSkipCheckBtn && isOnlineCheckPending) {
+                    loadingSkipCheckBtn.style.display = 'flex';
+                }
+            }
+        }, 3000); // 2 nút hiện cùng 1 hàng sau 3 giây chờ
+
         updateMusicLoadingProgress(0);
         
         // Kiểm tra update ngầm trong lúc đang hiện Loading Overlay
@@ -651,7 +789,26 @@ async function changeSong(index, autoStart = false) {
                 if (musicStatus) musicStatus.innerText = checkingText;
             }
             
-            const changed = await window.checkSongUpdateWithBackend(index);
+            const checkPromise = window.checkSongUpdateWithBackend(index, { signal: onlineCheckAbortController?.signal });
+            const skipPromise = new Promise(resolve => {
+                window.resolveOnlineCheckSkip = resolve;
+            });
+
+            let changed = false;
+            try {
+                changed = await Promise.race([checkPromise, skipPromise]);
+            } catch (err) {
+                console.warn('[changeSong] Lỗi hoặc hủy kiểm tra online:', err);
+            } finally {
+                isOnlineCheckPending = false;
+                if (loadingSkipCheckTimeout) {
+                    clearTimeout(loadingSkipCheckTimeout);
+                    loadingSkipCheckTimeout = null;
+                }
+                if (loadingSkipCheckBtn) {
+                    loadingSkipCheckBtn.style.display = 'none';
+                }
+            }
             
             if (changed && typeof updateLoadingStatus === 'function') {
                 const rawUpdating = typeof t === 'function' ? t('msg_updating_map') : 'Updating map...';
@@ -671,12 +828,16 @@ async function changeSong(index, autoStart = false) {
     }
 
     if (typeof ensureSongLoaded === 'function') {
-        await ensureSongLoaded(index, true);
+        await ensureSongLoaded(index, true, { signal: onlineCheckAbortController?.signal });
     }
 
     // Nếu quá trình nạp map bị lỗi (Timeout/Network) hoặc bị hủy
     if (isSongLoadingCancelled || requestId !== currentChangeSongRequest) {
         if (tipInterval) clearInterval(tipInterval);
+        if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
+        if (loadingSkipCheckTimeout) clearTimeout(loadingSkipCheckTimeout);
+        const skipBtn = document.getElementById('loading-skip-check-btn');
+        if (skipBtn) skipBtn.style.display = 'none';
         if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
             triggerExitFullscreen();
             window.enteredByAutoFullscreen = false;
@@ -873,6 +1034,9 @@ async function changeSong(index, autoStart = false) {
         }
         if (audio.readyState >= 3 && menuAudio.readyState >= 3) {
             if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
+            if (loadingSkipCheckTimeout) clearTimeout(loadingSkipCheckTimeout);
+            const skipBtn = document.getElementById('loading-skip-check-btn');
+            if (skipBtn) skipBtn.style.display = 'none';
             if (tipInterval) clearInterval(tipInterval);
             if (autoStart) {
                 if (audioCtx && menuFilterNode) {
