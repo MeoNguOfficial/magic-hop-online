@@ -296,6 +296,198 @@
             animation: pulse 1.5s infinite;
         }
 
+        /* ============================================================
+           Track Boundaries & Pulse Effects UI (User Design Match)
+           ============================================================ */
+        .bp-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 14px;
+        }
+        .bp-card {
+            --c: #22d3ee;
+            position: relative;
+            background: #1b0d12;
+            border: 1px solid #3a1a22;
+            border-radius: 14px;
+            padding: 14px;
+            cursor: pointer;
+            text-align: left;
+            color: #e9e3e5;
+            font: inherit;
+            outline: none;
+            display: block;
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            transition: border-color .2s, transform .2s, box-shadow .2s;
+            user-select: none;
+        }
+        .bp-card:hover {
+            transform: translateY(-2px);
+            border-color: color-mix(in srgb, var(--c) 50%, #3a1a22);
+        }
+        .bp-card.on {
+            border-color: var(--c);
+            box-shadow: 0 0 0 1px var(--c), 0 8px 28px -10px var(--c);
+        }
+        .bp-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .bp-name {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+            font-family: 'Orbitron', system-ui, sans-serif;
+        }
+        .bp-radio {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid #8d7a80;
+            display: grid;
+            place-items: center;
+            transition: .2s;
+        }
+        .bp-card.on .bp-radio {
+            border-color: var(--c);
+        }
+        .bp-card.on .bp-radio::after {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--c);
+            box-shadow: 0 0 8px var(--c);
+        }
+        .bp-prev {
+            position: relative;
+            height: 110px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #0d0509;
+            border: 1px solid #2a1218;
+        }
+        .bp-tag {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            font: 600 10px/1 ui-monospace, monospace;
+            letter-spacing: .12em;
+            color: var(--c);
+            opacity: .85;
+            z-index: 3;
+        }
+        .bp-ctr {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            border-left: 1px dashed rgba(255, 255, 255, 0.15);
+        }
+        .bp-note {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 18px;
+            height: 32px;
+            margin: -16px 0 0 -9px;
+            border-radius: 9px;
+            border: 1.5px solid rgba(255, 255, 255, 0.28);
+            background: rgba(255, 255, 255, 0.05);
+            z-index: 2;
+        }
+        .bp-ln {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--c);
+            box-shadow: 0 0 10px var(--c);
+        }
+        .bp-ln.l { left: 30%; }
+        .bp-ln.r { right: 30%; }
+        .bp-glow {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 30%;
+            right: 30%;
+            background: linear-gradient(90deg, var(--c), transparent 25%, transparent 75%, var(--c));
+            opacity: 0;
+        }
+        /* variants */
+        .bp-card.off { --c: #f87171; }
+        .bp-card.off .bp-ctr { opacity: .5; }
+        .bp-card.off .bp-tag { opacity: .7; }
+        .bp-card.classic .bp-ln { opacity: .75; }
+        .bp-card.normal .bp-glow { animation: bpFlash 1.4s ease-out infinite; }
+        .bp-card.normal .bp-ln { animation: bpFlashln 1.4s ease-out infinite; }
+        @keyframes bpFlash { 0% { opacity: .35; } 100% { opacity: 0; } }
+        @keyframes bpFlashln { 0% { opacity: 1; } 100% { opacity: .3; } }
+        .bp-card.wave .bp-ln { background: color-mix(in srgb, var(--c) 22%, transparent); box-shadow: none; }
+        .bp-card.wave .bp-ln::after {
+            content: "";
+            position: absolute;
+            left: -1px;
+            right: -1px;
+            top: -44px;
+            height: 44px;
+            background: linear-gradient(180deg, transparent, var(--c) 70%, #fff);
+            filter: drop-shadow(0 0 4px var(--c));
+            opacity: 0;
+            animation: bpWv 1.6s ease-in infinite;
+        }
+        .bp-card.wave .bp-ln.r::after { animation-delay: 0s; }
+        @keyframes bpWv {
+            0% { top: -44px; opacity: 1; }
+            55% { top: 110px; opacity: 1; }
+            56%, 100% { top: 110px; opacity: 0; }
+        }
+        .bp-card.horiz { --c: #f472b6; }
+        .bp-card.horiz .bp-ln { opacity: .8; }
+        .bp-card.horiz .bp-out {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 30%;
+            opacity: 0;
+            animation: bpHz 1.4s ease-out infinite;
+        }
+        .bp-card.horiz .bp-out.l {
+            right: 70%;
+            background: linear-gradient(270deg, var(--c), transparent);
+            transform-origin: right;
+        }
+        .bp-card.horiz .bp-out.r {
+            left: 70%;
+            background: linear-gradient(90deg, var(--c), transparent);
+            transform-origin: left;
+        }
+        @keyframes bpHz {
+            0% { opacity: .6; transform: scaleX(.1); }
+            100% { opacity: 0; transform: scaleX(1); }
+        }
+        .bp-card.rand { --c: #facc15; }
+        .bp-card.rand .bp-q {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            font-size: 34px;
+            font-weight: 700;
+            color: var(--c);
+            text-shadow: 0 0 16px var(--c);
+            animation: bpBob 2s ease-in-out infinite;
+        }
+        @keyframes bpBob {
+            50% { transform: translateY(-5px) rotate(6deg); }
+        }
+
         /* Active song styling override */
         .song-option.active {
             border-color: var(--theme-color, rgba(34, 211, 238, 0.8)) !important;
@@ -1565,6 +1757,113 @@
                                 </label>
                             </div>
                         </div>
+
+                        <!-- Boundary Pulse (Viền Đường Chạy & Hiệu Ứng Nhịp) -->
+                        <div class="mt-6">
+                            <h3
+                                class="text-sm font-bold text-white mb-1 flex items-center gap-2 uppercase tracking-widest font-orbitron">
+                                <i class="fas fa-arrows-alt-h text-cyan-400"></i>
+                                <span>Track Boundaries &amp; Pulse Effects</span>
+                            </h3>
+                            <p class="text-[11px] text-gray-400 mb-4">Tùy chỉnh đường biên track và hiệu ứng nhịp theo beat.</p>
+                            <div class="bp-grid" id="boundary-pulse-group" role="radiogroup">
+
+                                <!-- 0. Off -->
+                                <button type="button" class="bp-card off" role="radio" aria-checked="false" data-pulse-style="off">
+                                    <input type="radio" name="selected-pulse-style" value="off" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Disabled (Off)</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">NO BORDER</span>
+                                    </div>
+                                </button>
+
+                                <!-- 1. Classic -->
+                                <button type="button" class="bp-card classic" role="radio" aria-checked="false" data-pulse-style="classic">
+                                    <input type="radio" name="selected-pulse-style" value="classic" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Classic Boundary</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">STATIC</span>
+                                    </div>
+                                </button>
+
+                                <!-- 2. Normal -->
+                                <button type="button" class="bp-card normal" role="radio" aria-checked="false" data-pulse-style="normal">
+                                    <input type="radio" name="selected-pulse-style" value="normal" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Normal Pulse</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-glow"></div>
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">BEAT FLASH</span>
+                                    </div>
+                                </button>
+
+                                <!-- 3. Wave -->
+                                <button type="button" class="bp-card wave" role="radio" aria-checked="false" data-pulse-style="wave">
+                                    <input type="radio" name="selected-pulse-style" value="wave" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Wave Pulse</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">WAVE</span>
+                                    </div>
+                                </button>
+
+                                <!-- 4. Horizontal -->
+                                <button type="button" class="bp-card horiz" role="radio" aria-checked="false" data-pulse-style="horizontal">
+                                    <input type="radio" name="selected-pulse-style" value="horizontal" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Horizontal Pulse</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-out l"></i>
+                                        <i class="bp-out r"></i>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">LATERAL</span>
+                                    </div>
+                                </button>
+
+                                <!-- 5. Random -->
+                                <button type="button" class="bp-card rand" role="radio" aria-checked="false" data-pulse-style="random">
+                                    <input type="radio" name="selected-pulse-style" value="random" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Random</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-q">?</div>
+                                        <span class="bp-tag">RANDOMIZE</span>
+                                    </div>
+                                </button>
+
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1885,27 +2184,6 @@
                                             sáng 3D phía sau quả bóng (có thể tốn GPU).</span>
                                     </div>
                                     <input type="checkbox" id="toggle-ball-trail" checked
-                                        class="accent-cyan-400 w-4 h-4">
-                                </label>
-                                <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold uppercase text-gray-200"
-                                            data-i18n="boundaries_title">Đường biên (Boundaries)</span>
-                                        <span class="text-[9px] text-gray-500" data-i18n="boundaries_desc">Hiển thị vạch
-                                            kẻ giới hạn 2 bên đường chạy.</span>
-                                    </div>
-                                    <input type="checkbox" id="toggle-show-boundaries" checked
-                                        class="accent-cyan-400 w-4 h-4">
-                                </label>
-                                <label id="label-advanced-boundaries"
-                                    class="flex items-center justify-between text-xs text-gray-300 cursor-pointer pl-2 border-l-2 border-cyan-500/30 transition-all">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold uppercase text-gray-200"
-                                            data-i18n="advanced_boundaries_title">Boundary nâng cao</span>
-                                        <span class="text-[9px] text-gray-500" data-i18n="advanced_boundaries_desc">Tỏa
-                                            ra các hạt bụi phát sáng 3D bay lên dọc 2 bên biên theo màu độ khó.</span>
-                                    </div>
-                                    <input type="checkbox" id="toggle-advanced-boundaries" checked
                                         class="accent-cyan-400 w-4 h-4">
                                 </label>
                                 <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">

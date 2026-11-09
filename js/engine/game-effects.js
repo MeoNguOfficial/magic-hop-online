@@ -28,6 +28,7 @@ window.GameEffectsManager = {
     boundaryPulseDataPool: [],
     pulseGeometry: null,
     pulseMaterialTemplate: null,
+    boundaryFlashOpacity: 0.22,
 
     // --- 3. BỤI LỬA ĐỘ KHÓ (BOUNDARY FLAMES / DUST) ---
     boundaryDustMesh: null,
@@ -527,68 +528,155 @@ window.GameEffectsManager = {
     },
 
     // --- XUNG NHỊP BIÊN (BOUNDARY PULSES) ---
-    spawnBoundaryPulses: function (cameraZ, furthestZ, activeColor = 0x00ffff) {
-        const boundariesOn = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
-        const advancedOn = boundariesOn && (typeof advancedBoundariesEnabled !== 'undefined' && advancedBoundariesEnabled);
-        if (!boundariesOn || !advancedOn) return;
+    spawnBoundaryPulses: function (impactZ, furthestZ, activeColor = 0x00ffff, isVortex = false) {
+        // Chỉ chạy khi bóng chạm vào vortex block
+        if (!isVortex) return;
+        const style = (typeof activePulseStyle !== 'undefined') ? activePulseStyle : 'wave';
+        if (style === 'off' || style === 'classic') return;
 
-        const pulseSpeed = 160;
+        // 2. Pulse thường (normal): Boundary nháy sáng cả viền rồi mờ dần theo nhịp beat
+        if (style === 'normal') {
+            this.boundaryFlashOpacity = 1.0;
+            if (typeof leftBoundaryLine !== 'undefined' && leftBoundaryLine && leftBoundaryLine.material) {
+                leftBoundaryLine.material.opacity = this.boundaryFlashOpacity;
+                leftBoundaryLine.material.color.setHex(activeColor);
+            }
+            if (typeof rightBoundaryLine !== 'undefined' && rightBoundaryLine && rightBoundaryLine.material) {
+                rightBoundaryLine.material.opacity = this.boundaryFlashOpacity;
+                rightBoundaryLine.material.color.setHex(activeColor);
+            }
+            return;
+        }
+
+        const isHorizontal = (style === 'horizontal');
+        const pulseSpeedZ = isHorizontal ? 0 : 200;
+        const speedX = 15.0;
+        const maxDistance = isHorizontal ? 4.5 : 160;
+        const initialOpacity = 1.0;
+
         const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
-        const yPos = surfaceY - 0.02; // Bằng đúng chiều cao của Boundary Line
-        const maxDistance = 140;
+        const yPos = surfaceY + 0.02; // Nhô nhẹ lên mặt đường để không bị z-fighting
+
+        // Vị trí Z:
+        // - horizontal: FULL BOUNDARY (288 units), tâm đặt tại (impactZ - 110) để bao trùm toàn bộ đường chạy từ gần tới xa
+        // - wave: dải sóng nguyên bản (12 units) xuất phát từ điểm rơi (impactZ + 3.0) phóng về phía trước
+        const startZ = isHorizontal ? (impactZ - 110.0) : (impactZ + 3.0);
+
+        // Với Horizontal Pulse (ngang full boundary), kích sáng đường viền track nền đồng bộ màu vortex
+        if (isHorizontal) {
+            this.boundaryFlashOpacity = 0.75;
+            if (typeof leftBoundaryLine !== 'undefined' && leftBoundaryLine && leftBoundaryLine.material) {
+                leftBoundaryLine.material.opacity = this.boundaryFlashOpacity;
+                leftBoundaryLine.material.color.setHex(activeColor);
+            }
+            if (typeof rightBoundaryLine !== 'undefined' && rightBoundaryLine && rightBoundaryLine.material) {
+                rightBoundaryLine.material.opacity = this.boundaryFlashOpacity;
+                rightBoundaryLine.material.color.setHex(activeColor);
+            }
+        }
 
         for (let side = 0; side < 2; side++) {
             const xPos = side === 0 ? -6.75 : 6.75;
             let pMesh;
             if (this.boundaryPulsePool.length > 0) {
                 pMesh = this.boundaryPulsePool.pop();
-                pMesh.position.set(xPos, yPos, cameraZ);
-                pMesh.material.color.setHex(activeColor);
-                pMesh.material.opacity = 0.85;
-                pMesh.visible = true;
             } else if (this.boundaryPulses.length > 0) {
                 // Tái sử dụng xung cũ nhất nếu pool cạn (Tránh scene.add đột ngột)
                 const oldest = this.boundaryPulses.shift();
                 pMesh = oldest.mesh;
-                pMesh.position.set(xPos, yPos, cameraZ);
-                pMesh.material.color.setHex(activeColor);
-                pMesh.material.opacity = 0.85;
-                pMesh.visible = true;
                 this.boundaryPulseDataPool.push(oldest);
             } else {
                 continue;
             }
 
+            pMesh.position.set(xPos, yPos, startZ);
+            if (isHorizontal) {
+                // Horizontal Pulse: FULL BOUNDARY (scale.z = 24.0 ~ 288 units) bung mở rộng sang hai bên
+                pMesh.scale.set(2.0, 2.5, 24.0);
+            } else {
+                // Wave Pulse: Dải sóng nguyên bản ngắn gọn (scale.z = 1.0 ~ 12 units) lướt dọc về trước
+                pMesh.scale.set(1.2, 1.5, 1.0);
+            }
+            pMesh.material.color.setHex(activeColor);
+            pMesh.material.opacity = initialOpacity;
+            pMesh.visible = true;
+
             let pData = this.boundaryPulseDataPool.length > 0 ? this.boundaryPulseDataPool.pop() : {};
             pData.mesh = pMesh;
-            pData.speed = -pulseSpeed;
-            pData.startZ = cameraZ;
+            pData.isHorizontal = isHorizontal;
+            pData.side = side;
+            pData.startX = xPos;
+            pData.startZ = startZ;
+            pData.speedX = side === 0 ? -speedX : speedX;
+            pData.speedZ = -pulseSpeedZ;
             pData.maxDistance = maxDistance;
-            pData.opacity = 0.85;
+            pData.initialOpacity = initialOpacity;
+            pData.opacity = initialOpacity;
 
             this.boundaryPulses.push(pData);
         }
     },
 
     updateBoundaryPulses: function (delta, gameSpeed) {
+        // Cập nhật fade-out mượt mà cho Pulse thường (normal)
+        if (this.boundaryFlashOpacity > 0.22) {
+            this.boundaryFlashOpacity = Math.max(0.22, this.boundaryFlashOpacity - delta * 2.2);
+            if (typeof leftBoundaryLine !== 'undefined' && leftBoundaryLine && leftBoundaryLine.material) {
+                leftBoundaryLine.material.opacity = this.boundaryFlashOpacity;
+            }
+            if (typeof rightBoundaryLine !== 'undefined' && rightBoundaryLine && rightBoundaryLine.material) {
+                rightBoundaryLine.material.opacity = this.boundaryFlashOpacity;
+            }
+        }
+
         for (let i = this.boundaryPulses.length - 1; i >= 0; i--) {
             const pulse = this.boundaryPulses[i];
-            pulse.mesh.position.z += pulse.speed * gameSpeed * delta;
 
-            const distanceTraveled = Math.abs(pulse.mesh.position.z - pulse.startZ);
-            pulse.opacity = 0.85 * (1.0 - (distanceTraveled / pulse.maxDistance));
+            if (pulse.isHorizontal) {
+                // 4. Pulse ngang (horizontal): Dải sáng chạy lan ra ngoài biên mở rộng sang hai bên (<-|   |->)
+                pulse.mesh.position.x += pulse.speedX * delta;
+                const distanceTraveled = Math.abs(pulse.mesh.position.x - pulse.startX);
+                const progress = Math.min(1.0, distanceTraveled / pulse.maxDistance);
+                pulse.opacity = pulse.initialOpacity * (1.0 - progress);
 
-            if (pulse.mesh.material) {
-                pulse.mesh.material.opacity = Math.max(0, pulse.opacity);
-            }
+                // Dải sáng mở rộng bề ngang rõ rệt khi bùng ra ngoài, duy trì full boundary ở trục Z
+                pulse.mesh.scale.x = (2.0 + progress * 2.5);
+                pulse.mesh.scale.z = 24.0;
 
-            if (pulse.opacity <= 0 || distanceTraveled >= pulse.maxDistance) {
-                pulse.mesh.visible = false;
-                this.boundaryPulsePool.push(pulse.mesh);
-                this.boundaryPulseDataPool.push(pulse);
-                const last = this.boundaryPulses.pop();
-                if (i < this.boundaryPulses.length) {
-                    this.boundaryPulses[i] = last;
+                if (pulse.mesh.material) {
+                    pulse.mesh.material.opacity = Math.max(0, pulse.opacity);
+                }
+
+                if (pulse.opacity <= 0 || distanceTraveled >= pulse.maxDistance) {
+                    pulse.mesh.visible = false;
+                    pulse.mesh.scale.set(1, 1, 1);
+                    this.boundaryPulsePool.push(pulse.mesh);
+                    this.boundaryPulseDataPool.push(pulse);
+                    const last = this.boundaryPulses.pop();
+                    if (i < this.boundaryPulses.length) {
+                        this.boundaryPulses[i] = last;
+                    }
+                }
+            } else {
+                // 3. Pulse dòng (wave): Hiệu ứng dòng sóng lan tỏa dọc theo đường chạy
+                pulse.mesh.position.z += pulse.speedZ * gameSpeed * delta;
+                const distanceTraveled = Math.abs(pulse.mesh.position.z - pulse.startZ);
+                const progress = Math.min(1.0, distanceTraveled / pulse.maxDistance);
+                pulse.opacity = pulse.initialOpacity * (1.0 - progress);
+
+                if (pulse.mesh.material) {
+                    pulse.mesh.material.opacity = Math.max(0, pulse.opacity);
+                }
+
+                if (pulse.opacity <= 0 || distanceTraveled >= pulse.maxDistance) {
+                    pulse.mesh.visible = false;
+                    pulse.mesh.scale.set(1, 1, 1);
+                    this.boundaryPulsePool.push(pulse.mesh);
+                    this.boundaryPulseDataPool.push(pulse);
+                    const last = this.boundaryPulses.pop();
+                    if (i < this.boundaryPulses.length) {
+                        this.boundaryPulses[i] = last;
+                    }
                 }
             }
         }
@@ -636,8 +724,9 @@ window.GameEffectsManager = {
     },
 
     updateBoundaryFlames: function (delta, time, camera) {
-        const boundariesOn = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
-        const advancedOn = boundariesOn && (typeof advancedBoundariesEnabled !== 'undefined' && advancedBoundariesEnabled);
+        const style = (typeof activePulseStyle !== 'undefined') ? activePulseStyle : 'wave';
+        const boundariesOn = style !== 'off';
+        const advancedOn = boundariesOn && (style !== 'classic');
 
         if (!boundariesOn || !advancedOn || !this.boundaryDustMesh || !camera) {
             if (this.boundaryDustMesh && this.boundaryDustMesh.visible) this.boundaryDustMesh.visible = false;

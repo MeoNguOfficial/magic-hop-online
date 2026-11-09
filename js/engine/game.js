@@ -452,21 +452,20 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
             ? overrideCombo
             : ((tile && tile.userData && tile.userData.isDashTile) ? 0 : (typeof comboCount !== 'undefined' ? comboCount : 0));
         GameEffectsManager.triggerShockwave(tile, themeColor, customOffsetScale, tileScale, effectiveCombo);
-        const camZ = camera ? camera.position.z : (tile ? tile.position.z + 13.2 : 0);
-        let furthestZ = camZ - 50.0;
-        if (tiles && tiles.length > 0) {
-            furthestZ = tiles[tiles.length - 1].position.z;
-        }
-        let activeColor = 0x00ffff;
-        if (typeof activeDifficulty !== 'undefined') {
-            if (activeDifficulty === 'hard') activeColor = 0xff0055;
-            else if (activeDifficulty === 'asian') activeColor = 0xaa00ff;
-        }
-        // Tối ưu hóa: Giới hạn tần suất xung nhịp biên ở tốc độ cao (tối thiểu 240ms) để chống nghẽn fillrate
-        const nowMs = performance.now();
-        if (nowMs - lastBoundaryPulseSpawnTime >= 240) {
-            lastBoundaryPulseSpawnTime = nowMs;
-            GameEffectsManager.spawnBoundaryPulses(camZ, furthestZ, activeColor);
+        // Pulse effect chỉ chạy khi bóng chạm vào vortex block
+        const isVortex = Boolean(tile && tile.userData && tile.userData.isVortexTile);
+        if (isVortex) {
+            // Điểm rơi thực tế của bóng/gạch để xung nhịp biên hiển thị ngay tầm mắt người chơi
+            const impactZ = (tile && tile.position) ? tile.position.z : ((typeof ball !== 'undefined' && ball) ? ball.position.z : 0);
+            let furthestZ = impactZ - 50.0;
+            if (tiles && tiles.length > 0) {
+                furthestZ = tiles[tiles.length - 1].position.z;
+            }
+            const activeColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined')
+                ? currentFrameHex
+                : ((tile && tile.userData && tile.userData.themeColor) ? tile.userData.themeColor : 0x00ffff);
+            lastBoundaryPulseSpawnTime = performance.now();
+            GameEffectsManager.spawnBoundaryPulses(impactZ, furthestZ, activeColor, true);
         }
     }
 }
@@ -1312,13 +1311,16 @@ function getDifficultyBoundaryColor(time) {
 
 
 function initBoundaries() {
+    if (typeof initPulseStyleForBeatmap === 'function') {
+        initPulseStyleForBeatmap();
+    }
     if (leftBoundaryLine) scene.remove(leftBoundaryLine);
     if (rightBoundaryLine) scene.remove(rightBoundaryLine);
 
     const boundaryMat = new THREE.MeshBasicMaterial({
         color: 0x00ffff,
         transparent: true,
-        opacity: 0.22,
+        opacity: (typeof activePulseStyle !== 'undefined' && activePulseStyle === 'classic') ? 0.35 : 0.22,
         blending: THREE.AdditiveBlending,
         depthWrite: false
     });
@@ -1341,28 +1343,53 @@ function initBoundaries() {
 }
 
 function updateBoundariesVisibility() {
-    const boundariesOn = typeof showBoundariesEnabled !== 'undefined' && showBoundariesEnabled;
-    const advancedOn = boundariesOn && (typeof advancedBoundariesEnabled !== 'undefined' && advancedBoundariesEnabled);
+    const pulseStyle = (typeof activePulseStyle !== 'undefined') ? activePulseStyle : 'wave';
+    const boundariesOn = pulseStyle !== 'off';
+    const advancedOn = boundariesOn && (pulseStyle !== 'classic');
 
-    if (leftBoundaryLine) leftBoundaryLine.visible = boundariesOn;
-    if (rightBoundaryLine) rightBoundaryLine.visible = boundariesOn;
+    if (leftBoundaryLine) {
+        leftBoundaryLine.visible = boundariesOn;
+        if (boundariesOn && leftBoundaryLine.material) {
+            leftBoundaryLine.material.opacity = (pulseStyle === 'classic') ? 0.35 : 0.22;
+        }
+    }
+    if (rightBoundaryLine) {
+        rightBoundaryLine.visible = boundariesOn;
+        if (boundariesOn && rightBoundaryLine.material) {
+            rightBoundaryLine.material.opacity = (pulseStyle === 'classic') ? 0.35 : 0.22;
+        }
+    }
 
     if (!boundariesOn) {
         if (typeof boundaryPulses !== 'undefined' && boundaryPulses.length > 0) {
             for (let i = 0; i < boundaryPulses.length; i++) {
                 const pulse = boundaryPulses[i];
                 if (pulse.mesh) {
-                    scene.remove(pulse.mesh);
+                    pulse.mesh.visible = false;
                     boundaryPulsePool.push(pulse.mesh);
                 }
                 boundaryPulseDataPool.push(pulse);
             }
             boundaryPulses.length = 0;
         }
+        if (typeof GameEffectsManager !== 'undefined' && GameEffectsManager.boundaryPulses && GameEffectsManager.boundaryPulses.length > 0) {
+            for (let i = 0; i < GameEffectsManager.boundaryPulses.length; i++) {
+                const pulse = GameEffectsManager.boundaryPulses[i];
+                if (pulse.mesh) {
+                    pulse.mesh.visible = false;
+                    GameEffectsManager.boundaryPulsePool.push(pulse.mesh);
+                }
+                GameEffectsManager.boundaryPulseDataPool.push(pulse);
+            }
+            GameEffectsManager.boundaryPulses.length = 0;
+        }
     }
 
     if (boundaryDustMesh) {
         boundaryDustMesh.visible = advancedOn;
+    }
+    if (typeof GameEffectsManager !== 'undefined' && GameEffectsManager.boundaryDustMesh) {
+        GameEffectsManager.boundaryDustMesh.visible = advancedOn;
     }
 }
 
@@ -1650,9 +1677,13 @@ async function initThree() {
         tiles[0].userData.centerMesh.visible = true;
         if (tiles[0].userData.centerMesh.material) tiles[0].userData.centerMesh.material.opacity = 1.0;
         tiles[0].userData.centerMeshFade = true;
-        if (tiles[0].userData.isVortexTile && window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
+        if (tiles[0].userData.isVortexTile) {
             const startColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : (tiles[0].userData.themeColor || 0xffaa00);
-            window.GameEffectsManager.triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
+            if (typeof triggerShockwave === 'function') {
+                triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
+            } else if (window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
+                window.GameEffectsManager.triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
+            }
         }
     }
 
@@ -5326,9 +5357,13 @@ function resetGameScene() {
         tiles[0].userData.centerMesh.visible = true;
         if (tiles[0].userData.centerMesh.material) tiles[0].userData.centerMesh.material.opacity = 1.0;
         tiles[0].userData.centerMeshFade = true;
-        if (tiles[0].userData.isVortexTile && window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
+        if (tiles[0].userData.isVortexTile) {
             const startColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : (tiles[0].userData.themeColor || 0xffaa00);
-            window.GameEffectsManager.triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
+            if (typeof triggerShockwave === 'function') {
+                triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
+            } else if (window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
+                window.GameEffectsManager.triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
+            }
         }
     }
 
@@ -5756,6 +5791,9 @@ function setupGameStates() {
     }
     if (window.FPSGraphManager && typeof window.FPSGraphManager.reset === 'function') {
         window.FPSGraphManager.reset();
+    }
+    if (typeof initPulseStyleForBeatmap === 'function') {
+        initPulseStyleForBeatmap();
     }
     jumpElapsedTime = 0;
     isFalling = false;

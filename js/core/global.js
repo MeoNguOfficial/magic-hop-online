@@ -346,6 +346,34 @@ let selectedBackground = localStorage.getItem('selectedBackground') || 'default'
 let selectedBallColor = localStorage.getItem('selectedBallColor') || 'dynamic';
 let selectedBallPattern = localStorage.getItem('selectedBallPattern') || 'solid';
 let selectedEnvironment = localStorage.getItem('selectedEnvironment') || 'void';
+
+// --- BOUNDARY PULSE CUSTOMIZATION STATE ---
+let selectedPulseStyle = localStorage.getItem('selectedPulseStyle') || 'wave';
+let activePulseStyle = selectedPulseStyle === 'random' ? 'wave' : selectedPulseStyle;
+window.selectedPulseStyle = selectedPulseStyle;
+window.activePulseStyle = activePulseStyle;
+
+const PULSE_STYLES_POOL = ['off', 'classic', 'normal', 'wave', 'horizontal'];
+
+function initPulseStyleForBeatmap() {
+    if (selectedPulseStyle === 'random') {
+        const randomIndex = Math.floor(Math.random() * PULSE_STYLES_POOL.length);
+        activePulseStyle = PULSE_STYLES_POOL[randomIndex];
+    } else {
+        activePulseStyle = selectedPulseStyle;
+    }
+    window.activePulseStyle = activePulseStyle;
+    if (typeof showBoundariesEnabled !== 'undefined') {
+        showBoundariesEnabled = (activePulseStyle !== 'off');
+    }
+    if (typeof advancedBoundariesEnabled !== 'undefined') {
+        advancedBoundariesEnabled = (activePulseStyle !== 'off' && activePulseStyle !== 'classic');
+    }
+    if (typeof updateBoundariesVisibility === 'function') {
+        updateBoundariesVisibility();
+    }
+}
+window.initPulseStyleForBeatmap = initPulseStyleForBeatmap;
 let bgMesh = null;
 let blueprintGrid = null;
 let cityInstancedMesh = null;
@@ -965,6 +993,10 @@ async function changeSong(index, autoStart = false) {
             typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0,
             baseBallVelocityZ
         );
+    }
+
+    if (typeof initPulseStyleForBeatmap === 'function') {
+        initPulseStyleForBeatmap();
     }
 
     if (!menuAudio || !audioCtx) initAudio();

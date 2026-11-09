@@ -11,6 +11,8 @@
             const ballColorRadios = document.querySelectorAll('input[name="selected-ball-color"]');
             const ballPatternRadios = document.querySelectorAll('input[name="selected-ball-pattern"]');
             const environmentRadios = document.querySelectorAll('input[name="selected-environment"]');
+            const pulseStyleRadios = document.querySelectorAll('input[name="selected-pulse-style"]');
+            const pulseCards = document.querySelectorAll('.bp-card');
             
             const updateUI = () => {
                 radios.forEach(radio => {
@@ -125,6 +127,17 @@
                         }
                     }
                 });
+
+                pulseCards.forEach(card => {
+                    const style = card.dataset.pulseStyle;
+                    const isSelected = (style === selectedPulseStyle);
+                    card.classList.toggle('on', isSelected);
+                    card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+                    const radio = card.querySelector('input[name="selected-pulse-style"]');
+                    if (radio) {
+                        radio.checked = isSelected;
+                    }
+                });
             };
 
             // Set initial state from global/localStorage
@@ -230,6 +243,48 @@
                 environmentRadios[0].checked = true;
                 selectedEnvironment = environmentRadios[0].value;
                 localStorage.setItem('selectedEnvironment', selectedEnvironment);
+            }
+
+            pulseCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const style = card.dataset.pulseStyle;
+                    if (!style) return;
+                    selectedPulseStyle = style;
+                    window.selectedPulseStyle = selectedPulseStyle;
+                    localStorage.setItem('selectedPulseStyle', selectedPulseStyle);
+                    if (typeof window.initPulseStyleForBeatmap === 'function') {
+                        window.initPulseStyleForBeatmap();
+                    }
+                    updateUI();
+                });
+            });
+
+            let pulseFound = false;
+            pulseStyleRadios.forEach(radio => {
+                if (radio.value === selectedPulseStyle) {
+                    radio.checked = true;
+                    pulseFound = true;
+                }
+
+                radio.addEventListener('change', (e) => {
+                    if (e.target.checked) {
+                        selectedPulseStyle = e.target.value;
+                        window.selectedPulseStyle = selectedPulseStyle;
+                        localStorage.setItem('selectedPulseStyle', selectedPulseStyle);
+                        if (typeof window.initPulseStyleForBeatmap === 'function') {
+                            window.initPulseStyleForBeatmap();
+                        }
+                        updateUI();
+                    }
+                });
+            });
+            if (!pulseFound && (pulseStyleRadios.length > 0 || pulseCards.length > 0)) {
+                selectedPulseStyle = 'wave';
+                window.selectedPulseStyle = selectedPulseStyle;
+                localStorage.setItem('selectedPulseStyle', selectedPulseStyle);
+                if (typeof window.initPulseStyleForBeatmap === 'function') {
+                    window.initPulseStyleForBeatmap();
+                }
             }
 
             // Initialize UI styling
