@@ -704,7 +704,12 @@ async function changeSong(index, autoStart = false) {
             loadingCancelBtn.id = 'loading-cancel-btn';
             loadingCancelBtn.className = "px-5 py-2 bg-red-900/80 hover:bg-red-800 active:scale-95 text-white font-bold text-xs md:text-sm rounded uppercase border border-red-500/50 font-orbitron transition-all shadow-[0_0_10px_rgba(220,38,38,0.3)] select-none cursor-pointer flex items-center justify-center";
             loadingCancelBtn.style.display = 'none';
-            loadingActionsContainer.appendChild(loadingCancelBtn);
+        }
+
+        // Đảm bảo thứ tự 2 nút nằm ngang cùng 1 hàng: CANCEL trước, BỎ QUA (DÙNG CACHE) sau
+        if (loadingActionsContainer) {
+            if (loadingCancelBtn) loadingActionsContainer.appendChild(loadingCancelBtn);
+            if (loadingSkipCheckBtn) loadingActionsContainer.appendChild(loadingSkipCheckBtn);
         }
 
         if (loadingCancelBtn && !loadingCancelBtn._hasClickListener) {
@@ -718,6 +723,7 @@ async function changeSong(index, autoStart = false) {
                 }
                 if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
                 if (loadingSkipCheckTimeout) clearTimeout(loadingSkipCheckTimeout);
+                if (loadingCancelBtn) loadingCancelBtn.style.display = 'none';
                 if (loadingSkipCheckBtn) loadingSkipCheckBtn.style.display = 'none';
                 if (onlineCheckAbortController) {
                     try { onlineCheckAbortController.abort(); } catch (e) {}
@@ -765,12 +771,11 @@ async function changeSong(index, autoStart = false) {
         if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
         loadingCancelTimeout = setTimeout(() => {
             if (loadingOverlay.style.display !== 'none' && !isSongLoadingCancelled && requestId === currentChangeSongRequest) {
-                // Hiện nút Hủy
+                // Hiện cả 2 nút Hủy và Bỏ qua kiểm tra online (dùng cache) cùng lúc trên cùng 1 hàng sau 3 giây chờ
                 if (loadingCancelBtn) {
                     loadingCancelBtn.style.display = 'flex';
                 }
-                // Hiện nút Bỏ qua kiểm tra online (dùng cache) cùng lúc trên cùng 1 hàng nếu map check đang chạy
-                if (loadingSkipCheckBtn && isOnlineCheckPending) {
+                if (loadingSkipCheckBtn) {
                     loadingSkipCheckBtn.style.display = 'flex';
                 }
             }
@@ -805,9 +810,6 @@ async function changeSong(index, autoStart = false) {
                     clearTimeout(loadingSkipCheckTimeout);
                     loadingSkipCheckTimeout = null;
                 }
-                if (loadingSkipCheckBtn) {
-                    loadingSkipCheckBtn.style.display = 'none';
-                }
             }
             
             if (changed && typeof updateLoadingStatus === 'function') {
@@ -836,6 +838,8 @@ async function changeSong(index, autoStart = false) {
         if (tipInterval) clearInterval(tipInterval);
         if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
         if (loadingSkipCheckTimeout) clearTimeout(loadingSkipCheckTimeout);
+        const cancelBtn = document.getElementById('loading-cancel-btn');
+        if (cancelBtn) cancelBtn.style.display = 'none';
         const skipBtn = document.getElementById('loading-skip-check-btn');
         if (skipBtn) skipBtn.style.display = 'none';
         if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
@@ -942,7 +946,8 @@ async function changeSong(index, autoStart = false) {
         activePlaylist[index].beats = changeSongBeats;
     }
     beatmapBeats = changeSongBeats;
-    BEATMAP_TOTAL_TIME = beatmapBeats[beatmapBeats.length - 1] || 10;
+    const lastBeatVal = beatmapBeats[beatmapBeats.length - 1];
+    BEATMAP_TOTAL_TIME = (Array.isArray(lastBeatVal) ? (lastBeatVal.length >= 2 ? lastBeatVal[1] : lastBeatVal[0]) : lastBeatVal) || 10;
 
     // --- ÁP DỤNG SPEED TỪ PLAYLIST (NẾU CÓ) ---
     if (activePlaylist[index].speed != null) {
@@ -1035,6 +1040,8 @@ async function changeSong(index, autoStart = false) {
         if (audio.readyState >= 3 && menuAudio.readyState >= 3) {
             if (loadingCancelTimeout) clearTimeout(loadingCancelTimeout);
             if (loadingSkipCheckTimeout) clearTimeout(loadingSkipCheckTimeout);
+            const cancelBtn = document.getElementById('loading-cancel-btn');
+            if (cancelBtn) cancelBtn.style.display = 'none';
             const skipBtn = document.getElementById('loading-skip-check-btn');
             if (skipBtn) skipBtn.style.display = 'none';
             if (tipInterval) clearInterval(tipInterval);

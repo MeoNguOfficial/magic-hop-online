@@ -1629,6 +1629,9 @@ async function initThree() {
         tiles[0].userData.centerMesh.visible = true;
         if (tiles[0].userData.centerMesh.material) tiles[0].userData.centerMesh.material.opacity = 1.0;
         tiles[0].userData.centerMeshFade = true;
+        if (tiles[0].userData.isVortexTile && window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
+            window.GameEffectsManager.triggerShockwave(tiles[0], 0xffaa00, 1.0, currentTileScale, 0);
+        }
     }
 
     jumpStartRawZ = tiles[0].position.z;
@@ -2986,17 +2989,34 @@ function animate() {
                 }
             }
 
-            if (dynamicColorsEnabled && currentFrameHex !== undefined) {
+            if (dynamicColorsEnabled && currentFrameHex !== undefined && !tile.userData.isVortexTile) {
                 if (tile.userData.themeColor !== currentFrameHex) {
                     tile.userData.themeColor = currentFrameHex;
                 }
             }
 
+            // Hoạt ảnh tự xoay quanh tâm cho Gạch Nhấn Nhịp (Vortex Block [x])
+            if (tile.userData.isVortexTile && tile.userData.centerMesh) {
+                tile.userData.centerMesh.rotation.z += delta * 2.2;
+                tile.userData.centerMesh.updateMatrix();
+            }
+
             if (tile.userData.centerMeshFade && tile.userData.centerMesh && tile.userData.centerMesh.material) {
-                tile.userData.centerMesh.material.opacity -= delta * 2.5; // Mờ dần trong ~0.4s
-                if (tile.userData.centerMesh.material.opacity <= 0) {
-                    tile.userData.centerMesh.material.opacity = 0.0;
-                    tile.userData.centerMeshFade = false;
+                if (tile.userData.isVortexTile) {
+                    if (tile.userData.centerMesh.material.opacity > 0.85) {
+                        tile.userData.centerMesh.material.opacity -= delta * 1.5;
+                        if (tile.userData.centerMesh.material.opacity <= 0.85) {
+                            tile.userData.centerMesh.material.opacity = 0.85;
+                            tile.userData.centerMeshFade = false;
+                        }
+                    }
+                } else {
+                    tile.userData.centerMesh.material.opacity -= delta * 2.5; // Mờ dần trong ~0.4s
+                    if (tile.userData.centerMesh.material.opacity <= 0) {
+                        tile.userData.centerMesh.material.opacity = 0.0;
+                        tile.userData.centerMeshFade = false;
+                        tile.userData.centerMesh.visible = false;
+                    }
                 }
             }
 
@@ -5260,6 +5280,9 @@ function resetGameScene() {
         tiles[0].userData.centerMesh.visible = true;
         if (tiles[0].userData.centerMesh.material) tiles[0].userData.centerMesh.material.opacity = 1.0;
         tiles[0].userData.centerMeshFade = true;
+        if (tiles[0].userData.isVortexTile && window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
+            window.GameEffectsManager.triggerShockwave(tiles[0], 0xffaa00, 1.0, currentTileScale, 0);
+        }
     }
 
     jumpElapsedTime = 0;
@@ -5451,7 +5474,8 @@ async function handleIntro() {
         activePlaylist[selectedSongIndex].beats = bootBeats;
     }
     beatmapBeats = bootBeats;
-    BEATMAP_TOTAL_TIME = beatmapBeats[beatmapBeats.length - 1] || 10;
+    const lastBeatVal = beatmapBeats[beatmapBeats.length - 1];
+    BEATMAP_TOTAL_TIME = (Array.isArray(lastBeatVal) ? (lastBeatVal.length >= 2 ? lastBeatVal[1] : lastBeatVal[0]) : lastBeatVal) || 10;
 
     if (typeof playlistRenderStartIndex !== 'undefined') {
         playlistRenderStartIndex = 0;

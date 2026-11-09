@@ -19,6 +19,10 @@ function normalizeBeats(beats) {
     if (Array.isArray(arr)) {
         return arr.map(item => {
             if (Array.isArray(item)) {
+                if (item.length === 1) {
+                    const single = Number(item[0]);
+                    return (!isNaN(single) && single >= 0) ? [single] : null;
+                }
                 const start = Number(item[0]);
                 const end = Number(item[item.length - 1]);
                 if (!isNaN(start) && !isNaN(end) && end > start && start >= 0) {
@@ -37,6 +41,11 @@ function normalizeBeats(beats) {
     return null;
 }
 window.normalizeBeats = normalizeBeats;
+
+function isVortexBeat(b) {
+    return Array.isArray(b) && b.length === 1 && typeof b[0] === 'number' && !isNaN(b[0]);
+}
+window.isVortexBeat = isVortexBeat;
 
 function getBeatmapIdFromSong(song) {
     if (!song) return null;
@@ -1037,7 +1046,7 @@ async function ensureSongLoaded(index, forceCheck = false, options = {}) {
 
     if (isHttpJson) {
         updateLoadingStatus('msg_map_downloading');
-        return await downloadBeatmap(index);
+        return await downloadBeatmap(index, null, options);
     }
 
     // Mặc định an toàn, không gọi fetch đường dẫn ảo
@@ -1046,9 +1055,11 @@ async function ensureSongLoaded(index, forceCheck = false, options = {}) {
     return song;
 }
 
-async function downloadBeatmap(index, forceEtag = null) {
+async function downloadBeatmap(index, forceEtag = null, options = {}) {
     const song = playlist[index];
     if (!song) return song;
+
+    if (window.skipOnlineCheckRequested) return song;
 
     const beatmapKey = getSongBeatmapKey(song);
     const isHttpJson = typeof song.lazyUrl === 'string' &&
@@ -1063,7 +1074,7 @@ async function downloadBeatmap(index, forceEtag = null) {
         try {
             song.isLoading = true;
             updateLoadingStatus('msg_checking_map');
-            const res = await window.ApiService.getBeatmapDetails(song.id);
+            const res = await window.ApiService.getBeatmapDetails(song.id, options);
             const data = res.data?.data || res.data;
             if (data && data.beats) {
                 const normalized = normalizeBeats(data.beats);

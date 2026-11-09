@@ -2251,6 +2251,12 @@ function getValidBeatsArray(beatsStr) {
     }
     return parsed.map(item => {
         if (Array.isArray(item)) {
+            // 1. Vortex / Beat Accent: Mảng 1 phần tử [x]
+            if (item.length === 1) {
+                const single = Number(item[0]);
+                return (!isNaN(single) && single >= 0) ? [single] : null;
+            }
+            // 2. Dash Block: Mảng >= 2 phần tử [start, end]
             const start = Number(item[0]);
             const end = Number(item[item.length - 1]);
             if (!isNaN(start) && !isNaN(end) && end > start && start >= 0) {

@@ -430,6 +430,46 @@ p.subtitle {
     color: #000 !important;
 }
 
+/* --- VORTEX BEAT TIMELINE STYLES --- */
+.timeline-vortex-marker {
+    background: #ffd700 !important;
+    border: 2px solid #ffaa00 !important;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.8), 0 0 4px #ffffff !important;
+    width: 6px !important;
+    margin-left: -3px !important;
+    z-index: 8 !important;
+    border-radius: 3px !important;
+}
+
+.timeline-vortex-marker::before {
+    background: #ffd700 !important;
+    border-color: #ffaa00 !important;
+    box-shadow: 0 0 10px #ffd700 !important;
+}
+
+.timeline-vortex-marker::after {
+    border-top-color: #ffd700 !important;
+}
+
+.timeline-vortex-marker:hover {
+    background: #ffffff !important;
+    box-shadow: 0 0 16px #ffd700, 0 0 25px rgba(255, 170, 0, 0.9) !important;
+    z-index: 12 !important;
+}
+
+.timeline-vortex-marker.selected-beat {
+    background: #ff6b6b !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 18px #ff6b6b, 0 0 8px #ffffff !important;
+    z-index: 15 !important;
+}
+
+.timeline-vortex-marker.active-beat {
+    background: #ffffff !important;
+    border-color: #ffd700 !important;
+    box-shadow: 0 0 20px #ffffff, 0 0 30px #ffd700 !important;
+}
+
 /* --- TIMELINE DAW TOOLBAR --- */
 .timeline-toolbar {
     display: flex;
@@ -708,6 +748,19 @@ p.subtitle {
     background: #ffaa00;
     color: #000;
     box-shadow: 0 0 12px rgba(255, 170, 0, 0.4);
+}
+
+/* Vortex button */
+.tb-btn.tb-vortex {
+    background: rgba(255, 215, 0, 0.12);
+    border-color: rgba(255, 215, 0, 0.35);
+    color: #ffd700;
+}
+
+.tb-btn.tb-vortex:hover:not(:disabled) {
+    background: #ffd700;
+    color: #000;
+    box-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
 }
 
 /* Delete button */

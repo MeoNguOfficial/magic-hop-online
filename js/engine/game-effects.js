@@ -8,9 +8,11 @@ window.GameEffectsManager = {
     shockwaves: [],
     shockwavePool: [],
     diamondShockwavePool: [],
+    vortexRingPool: [],
     shockwaveDataPool: [],
     cachedShockwaveGeo: null,
     cachedDiamondShockwaveGeo: null,
+    cachedVortexRingGeo: null,
     maxShockwaves: 40,
 
     // --- 2. XUNG NHỊP BIÊN (BOUNDARY PULSES) ---
@@ -81,6 +83,16 @@ window.GameEffectsManager = {
         // Diamond Burst Geometry
         if (!this.cachedDiamondShockwaveGeo && (typeof currentGraphicsQuality === 'undefined' || currentGraphicsQuality !== 'simple')) {
             this.cachedDiamondShockwaveGeo = this.createDiamondShockwaveGeometry();
+        }
+
+        // Vortex Expanding Center Ring Geometry (Sóng tròn lan tỏa từ tâm cho gạch [x])
+        if (!this.cachedVortexRingGeo) {
+            const tWidth = (typeof tileWidth !== 'undefined') ? tileWidth : 4.0;
+            const innerR = tWidth * 0.16;
+            const outerR = tWidth * 0.24;
+            const detailScale = typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0;
+            const segs = Math.max(16, Math.round(36 * detailScale));
+            this.cachedVortexRingGeo = new THREE.RingGeometry(innerR, outerR, segs);
         }
 
         // Boundary Pulse Geometry
@@ -209,10 +221,28 @@ window.GameEffectsManager = {
             }
         }
 
-        while (this.shockwaveDataPool.length < 80) {
+        if (this.cachedVortexRingGeo) {
+            while (this.vortexRingPool.length < 30) {
+                const ringMat = new THREE.MeshBasicMaterial({
+                    color: 0xffd700,
+                    transparent: true,
+                    opacity: 1.0,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.DoubleSide
+                });
+                const ring = new THREE.Mesh(this.cachedVortexRingGeo, ringMat);
+                ring.visible = false;
+                if (this.scene) this.scene.add(ring);
+                this.vortexRingPool.push(ring);
+            }
+        }
+
+        while (this.shockwaveDataPool.length < 90) {
             this.shockwaveDataPool.push({
                 mesh: null,
                 isDiamondBurst: false,
+                isVortexRing: false,
                 targetTile: null,
                 scale: 1.0,
                 startScale: 1.0,
@@ -230,10 +260,11 @@ window.GameEffectsManager = {
         }
     },
 
-    getShockwaveData: function (mesh, isDiamondBurst, targetTile, scale, startScale, opacity, speed, maxScale) {
+    getShockwaveData: function (mesh, isDiamondBurst, targetTile, scale, startScale, opacity, speed, maxScale, isVortexRing = false) {
         let data = this.shockwaveDataPool.length > 0 ? this.shockwaveDataPool.pop() : {};
         data.mesh = mesh;
         data.isDiamondBurst = isDiamondBurst;
+        data.isVortexRing = isVortexRing;
         data.targetTile = targetTile;
         data.scale = scale;
         data.startScale = startScale;
@@ -252,7 +283,9 @@ window.GameEffectsManager = {
         while (this.shockwaves.length >= maxActiveWaves) {
             const oldest = this.shockwaves.shift();
             oldest.mesh.visible = false;
-            if (oldest.isDiamondBurst) {
+            if (oldest.isVortexRing) {
+                this.vortexRingPool.push(oldest.mesh);
+            } else if (oldest.isDiamondBurst) {
                 this.diamondShockwavePool.push(oldest.mesh);
             } else {
                 if (oldest.mesh.geometry !== this.cachedShockwaveGeo) {
@@ -266,7 +299,46 @@ window.GameEffectsManager = {
         const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
 
         const isDashTile = tile && tile.userData && tile.userData.isDashTile;
-        const effectiveCombo = isDashTile ? 0 : comboCount;
+        const isVortexTile = tile && tile.userData && Boolean(tile.userData.isVortexTile);
+        const effectiveCombo = (isDashTile || isVortexTile) ? 0 : comboCount;
+
+        // --- LỚP 1 (GẠCH LỐC XOÁY / MỞ MÀN ROUND): SÓNG TRÒN LAN TỎA RỰC RỠ TỪ TÂM (CENTER RIPPLE) ---
+        if (isVortexTile && this.cachedVortexRingGeo) {
+            let ringMesh;
+            if (this.vortexRingPool.length > 0) {
+                ringMesh = this.vortexRingPool.pop();
+            } else if (this.shockwaves.length > 0) {
+                const idx = this.shockwaves.findIndex(s => s.isVortexRing);
+                if (idx !== -1) {
+                    const oldestRing = this.shockwaves.splice(idx, 1)[0];
+                    ringMesh = oldestRing.mesh;
+                    this.shockwaveDataPool.push(oldestRing);
+                }
+            }
+            if (ringMesh) {
+                ringMesh.visible = true;
+                ringMesh.material.color.setHex(0xffd700);
+                ringMesh.material.opacity = 1.0;
+                ringMesh.position.copy(tile.position);
+                ringMesh.position.y = tile.position.y + surfaceY + 0.035;
+                ringMesh.rotation.x = -Math.PI / 2;
+                ringMesh.rotation.z = 0;
+                ringMesh.scale.set(tileScale, tileScale, 1);
+
+                const baseScale = tileScale;
+                this.shockwaves.push(this.getShockwaveData(
+                    ringMesh,
+                    false,
+                    tile,
+                    baseScale,
+                    baseScale,
+                    1.0,
+                    6.2 * customOffsetScale,
+                    3.8 * customOffsetScale * baseScale,
+                    true
+                ));
+            }
+        }
 
         if (effectiveCombo >= 6 && this.cachedDiamondShockwaveGeo) {
             let waveMesh;
@@ -309,17 +381,18 @@ window.GameEffectsManager = {
             this.spawnComboBurst(tile, waveMesh.material.color, 4);
         } else {
             let waveLine;
+            const waveColor = isVortexTile ? 0xffaa00 : themeColor;
             if (this.shockwavePool.length > 0) {
                 waveLine = this.shockwavePool.pop();
                 waveLine.visible = true;
-                waveLine.material.color.setHex(themeColor);
+                waveLine.material.color.setHex(waveColor);
                 waveLine.material.opacity = 1.0;
             } else if (this.shockwaves.length > 0) {
                 // Tái sử dụng sóng xung kích cũ nhất
                 const oldest = this.shockwaves.shift();
                 waveLine = oldest.mesh;
                 waveLine.visible = true;
-                waveLine.material.color.setHex(themeColor);
+                waveLine.material.color.setHex(waveColor);
                 waveLine.material.opacity = 1.0;
                 this.shockwaveDataPool.push(oldest);
             } else {
@@ -348,8 +421,9 @@ window.GameEffectsManager = {
             waveLine.scale.set(tileScale, tileScale, 1);
 
             const baseScale = tileScale;
+            const vortexScaleMultiplier = isVortexTile ? 1.35 : 1.0;
             const shockwaveSpeed = isDashTile ? 3.6 * customOffsetScale : 4.5 * customOffsetScale;
-            const maxShockwaveScale = isDashTile ? (1.55 * customOffsetScale * baseScale) : (2.4 * customOffsetScale * baseScale);
+            const maxShockwaveScale = isDashTile ? (1.55 * customOffsetScale * baseScale) : (2.4 * customOffsetScale * baseScale * vortexScaleMultiplier);
 
             this.shockwaves.push(this.getShockwaveData(
                 waveLine,
@@ -375,7 +449,9 @@ window.GameEffectsManager = {
 
             if (isTileInactive || isBehindCam) {
                 sw.mesh.visible = false;
-                if (sw.isDiamondBurst) {
+                if (sw.isVortexRing) {
+                    this.vortexRingPool.push(sw.mesh);
+                } else if (sw.isDiamondBurst) {
                     this.diamondShockwavePool.push(sw.mesh);
                 } else {
                     if (sw.mesh.geometry !== this.cachedShockwaveGeo) {
@@ -401,7 +477,7 @@ window.GameEffectsManager = {
 
             if (sw.targetTile && sw.targetTile.parent) {
                 sw.mesh.position.x = sw.targetTile.position.x;
-                sw.mesh.position.y = sw.targetTile.position.y + surfaceY + 0.032;
+                sw.mesh.position.y = sw.targetTile.position.y + surfaceY + (sw.isVortexRing ? 0.035 : 0.032);
                 sw.mesh.position.z = sw.targetTile.position.z;
             }
 
@@ -411,7 +487,9 @@ window.GameEffectsManager = {
 
             if (progress >= 1.0 || fadeFactor <= 0.001) {
                 sw.mesh.visible = false;
-                if (sw.isDiamondBurst) {
+                if (sw.isVortexRing) {
+                    this.vortexRingPool.push(sw.mesh);
+                } else if (sw.isDiamondBurst) {
                     this.diamondShockwavePool.push(sw.mesh);
                 } else {
                     if (sw.mesh.geometry !== this.cachedShockwaveGeo) {
@@ -821,7 +899,9 @@ window.GameEffectsManager = {
         for (let i = 0; i < this.shockwaves.length; i++) {
             const sw = this.shockwaves[i];
             sw.mesh.visible = false;
-            if (sw.isDiamondBurst) {
+            if (sw.isVortexRing) {
+                this.vortexRingPool.push(sw.mesh);
+            } else if (sw.isDiamondBurst) {
                 this.diamondShockwavePool.push(sw.mesh);
             } else {
                 this.shockwavePool.push(sw.mesh);

@@ -141,6 +141,10 @@
                         <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                         <span class="tb-text">Gạch Lướt</span>
                     </button>
+                    <button class="tb-btn tb-vortex" id="vortexToggleBtn" disabled title="Chuyển đổi Gạch Xoáy / Nhấn Nhịp (V)">
+                        <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 12a3 3 0 1 0 3-3 6 6 0 1 0-6 6"/></svg>
+                        <span class="tb-text">Gạch Xoáy</span>
+                    </button>
                     <button class="tb-btn tb-del" id="deleteSelectedBtn" disabled title="Xóa các beat đang chọn (Del / Backspace)">
                         <svg class="tb-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                         <span class="tb-text">Xóa</span>
@@ -181,6 +185,7 @@
         <div class="context-item" id="ctxDelete"><span style="display: flex; align-items: center; gap: 8px;">❌ Xóa</span><span class="shortcut">Del</span></div>
         <div class="context-divider"></div>
         <div class="context-item" id="ctxToggleDash"><span style="display: flex; align-items: center; gap: 8px;">⚡ Gạch Lướt (Dash)</span><span class="shortcut">D</span></div>
+        <div class="context-item" id="ctxToggleVortex"><span style="display: flex; align-items: center; gap: 8px;">🌀 Gạch Xoáy (Vortex)</span><span class="shortcut">V</span></div>
         <div class="context-item" id="ctxGroupAlign"><span style="display: flex; align-items: center; gap: 8px;">📐 Căn nhịp đều</span><span class="shortcut" title="E = Căn đều nhanh · Ctrl+G = Mở bảng cài đặt">E / Ctrl+G</span></div>
         <div class="context-item" id="ctxGroupShift"><span style="display: flex; align-items: center; gap: 8px;">⏳ Dịch chuyển</span><span class="shortcut">Ctrl+G</span></div>
         <div class="context-divider"></div>
@@ -296,6 +301,7 @@
             <li><strong>Model V3:</strong> Áp dụng màng lọc High-pass ẩn, lọc bỏ hoàn toàn Bass/Vocal và chỉ tập trung truy vết âm thanh của Snare, Clap. Dành cho nhạc Trap/Hiphop.</li>
             <li><strong>Model V2 & V1:</strong> Dùng thuật toán Root Mean Square và trích xuất độ sắc của tần số truyền thống. Nếu beat tạo ra dày đặc quá, hãy Tăng độ nhạy phân tích lên.</li>
             <li><strong>Phím tắt D (Gạch Lướt Siêu Tốc):</strong> Chọn 2 mốc nhịp rồi nhấn <strong>D</strong> để gộp thành Gạch Lướt <code>[start, end]</code>. Nếu đang chọn 1 Gạch Lướt, nhấn <strong>D</strong> để tách lại thành 2 mốc nhịp đơn lẻ.</li>
+            <li><strong>Phím tắt V (Gạch Xoáy Nhấn Nhịp):</strong> Chọn 1 hoặc nhiều mốc nhịp rồi nhấn <strong>V</strong> để chuyển đổi thành Gạch Xoáy <code>[x]</code> (Vortex Block) hoặc chuyển ngược lại thành gạch thường.</li>
         </ul>
     </div>
 

@@ -19,6 +19,7 @@ const nextBeatBtn = document.getElementById("nextBeatBtn");
 const prevFrameBtn = document.getElementById("prevFrameBtn");
 const nextFrameBtn = document.getElementById("nextFrameBtn");
 const dashToggleBtn = document.getElementById("dashToggleBtn");
+const vortexToggleBtn = document.getElementById("vortexToggleBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const quickAlignBtn = document.getElementById("quickAlignBtn");
 
@@ -102,18 +103,23 @@ const ctxSelectAll = document.getElementById("ctxSelectAll");
 const ctxClearSelection = document.getElementById("ctxClearSelection");
 const ctxAddBeatHere = document.getElementById("ctxAddBeatHere");
 const ctxToggleDash = document.getElementById("ctxToggleDash");
+const ctxToggleVortex = document.getElementById("ctxToggleVortex");
 
-// --- HELPER FUNCTIONS CHO DASH TILE [start, end] ---
+// --- HELPER FUNCTIONS CHO DASH TILE [start, end] & VORTEX TILE [x] ---
 function getBeatStartTime(b) {
     return Array.isArray(b) ? b[0] : b;
 }
 
 function getBeatEndTime(b) {
-    return Array.isArray(b) ? b[1] : b;
+    return Array.isArray(b) ? (b.length >= 2 ? b[1] : b[0]) : b;
 }
 
 function isDashBeat(b) {
     return Array.isArray(b) && b.length >= 2;
+}
+
+function isVortexBeat(b) {
+    return Array.isArray(b) && b.length === 1 && typeof b[0] === 'number' && !isNaN(b[0]);
 }
 
 function sortBeatsArray(arr) {
@@ -572,6 +578,16 @@ function updateSelectionIndicator() {
         }
     }
 
+    if (vortexToggleBtn) {
+        vortexToggleBtn.disabled = (selectedBeatsIndices.size === 0);
+        if (selectedBeatsIndices.size > 0) {
+            const allVortex = Array.from(selectedBeatsIndices).every(idx => isVortexBeat(beats[idx]));
+            vortexToggleBtn.title = allVortex ? "Chuyển thành Gạch Thường (V)" : "Chuyển thành Gạch Xoáy [x] (V)";
+        } else {
+            vortexToggleBtn.title = "Chọn mốc nhịp để chuyển Gạch Xoáy (V)";
+        }
+    }
+
     const markers = timelineBeats.querySelectorAll(".timeline-beat-marker");
     markers.forEach((marker) => {
         const index = parseInt(marker.dataset.index);
@@ -741,7 +757,7 @@ const MAX_HISTORY = 100;
 
 function cloneBeats(arr) {
     if (!arr) return [];
-    return arr.map(b => Array.isArray(b) ? [b[0], b[1]] : b);
+    return arr.map(b => Array.isArray(b) ? [...b] : b);
 }
 
 function pushHistory() {
@@ -859,14 +875,16 @@ function renderTimelineMarkers() {
             tooltip.textContent = `[${startTime.toFixed(3)}s → ${endTime.toFixed(3)}s]`;
             marker.appendChild(tooltip);
         } else {
-            marker.className = "timeline-beat-marker";
+            const isVortex = isVortexBeat(beat);
+            marker.className = isVortex ? "timeline-beat-marker timeline-vortex-marker" : "timeline-beat-marker";
             marker.style.left = `${startPercent}%`;
             marker.dataset.time = startTime;
             marker.dataset.index = index;
+            if (isVortex) marker.dataset.isVortex = "true";
 
             const tooltip = document.createElement("div");
             tooltip.className = "marker-tooltip";
-            tooltip.textContent = `${startTime.toFixed(3)}s`;
+            tooltip.textContent = isVortex ? `🌀 [${startTime.toFixed(3)}s]` : `${startTime.toFixed(3)}s`;
             marker.appendChild(tooltip);
         }
 
@@ -930,6 +948,20 @@ document.addEventListener("mousemove", (e) => {
                 const min = Math.floor(newS / 60); const sec = Math.floor(newS % 60); const ms = Math.floor((newS % 1) * 1000);
                 timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
             }
+        } else if (isVortexBeat(initialTime)) {
+            let newTime = Math.max(0, Math.min(duration, Number((initialTime[0] + deltaTime).toFixed(3))));
+
+            const marker = timelineBeats.querySelector(`.timeline-beat-marker[data-index="${index}"]`);
+            if (marker) {
+                marker.style.left = `${(newTime / duration) * 100}%`;
+                const tooltip = marker.querySelector(".marker-tooltip");
+                if (tooltip) tooltip.textContent = `🌀 [${newTime.toFixed(3)}s]`;
+            }
+
+            if (parseInt(draggedMarker.dataset.index) === index) {
+                const min = Math.floor(newTime / 60); const sec = Math.floor(newTime % 60); const ms = Math.floor((newTime % 1) * 1000);
+                timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+            }
         } else {
             let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
 
@@ -970,6 +1002,11 @@ document.addEventListener("mouseup", (e) => {
                     const tuple = [newS, newE];
                     beats[index] = tuple;
                     updatedIndicesValue.push(tuple);
+                } else if (isVortexBeat(initialTime)) {
+                    let newTime = Math.max(0, Math.min(duration, Number((initialTime[0] + deltaTime).toFixed(3))));
+                    const tuple = [newTime];
+                    beats[index] = tuple;
+                    updatedIndicesValue.push(tuple);
                 } else {
                     let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
                     beats[index] = newTime;
@@ -983,6 +1020,7 @@ document.addEventListener("mouseup", (e) => {
         updatedIndicesValue.forEach((val) => {
             const newIdx = beats.findIndex(b => {
                 if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+                if (isVortexBeat(val) && isVortexBeat(b)) return b[0] === val[0];
                 return b === val;
             });
             if (newIdx !== -1) selectedBeatsIndices.add(newIdx);
@@ -1006,6 +1044,11 @@ importBtn.onclick = () => {
                     const e = Number(b[1]);
                     if (!isNaN(s) && !isNaN(e) && s >= 0 && e > s) {
                         newBeats.push([Number(s.toFixed(3)), Number(e.toFixed(3))]);
+                    }
+                } else if (Array.isArray(b) && b.length === 1) {
+                    const s = Number(b[0]);
+                    if (!isNaN(s) && s >= 0) {
+                        newBeats.push([Number(s.toFixed(3))]);
                     }
                 } else {
                     const t = Number(b);
@@ -1137,6 +1180,11 @@ btnGroupShift.onclick = () => {
             const tuple = [newS, newE];
             beats[index] = tuple;
             updatedTimes.push(tuple);
+        } else if (isVortexBeat(initialVal)) {
+            let newTime = Math.max(0, Math.min(duration, Number((initialVal[0] + shiftSeconds).toFixed(3))));
+            const tuple = [newTime];
+            beats[index] = tuple;
+            updatedTimes.push(tuple);
         } else {
             let newTime = Math.max(0, Math.min(duration, Number((initialVal + shiftSeconds).toFixed(3))));
             beats[index] = newTime;
@@ -1148,6 +1196,7 @@ btnGroupShift.onclick = () => {
     updatedTimes.forEach((val) => {
         const newIdx = beats.findIndex(b => {
             if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+            if (isVortexBeat(val) && isVortexBeat(b)) return b[0] === val[0];
             return b === val;
         });
         if (newIdx !== -1) selectedBeatsIndices.add(newIdx);
@@ -1166,6 +1215,9 @@ function copySelectedBeats() {
         if (isDashBeat(item)) {
             return [Number((item[0] - baseTime).toFixed(3)), Number((item[1] - baseTime).toFixed(3))];
         }
+        if (isVortexBeat(item)) {
+            return [Number((item[0] - baseTime).toFixed(3))];
+        }
         return Number((item - baseTime).toFixed(3));
     });
 
@@ -1181,6 +1233,9 @@ function pasteBeats(targetTime) {
             const s = Number((targetTime + offset[0]).toFixed(3));
             const e = Number((targetTime + offset[1]).toFixed(3));
             if (s >= 0 && e <= duration) newPastedBeats.push([s, e]);
+        } else if (isVortexBeat(offset)) {
+            const t = Number((targetTime + offset[0]).toFixed(3));
+            if (t >= 0 && t <= duration) newPastedBeats.push([t]);
         } else {
             const t = Number((targetTime + offset).toFixed(3));
             if (t >= 0 && t <= duration) newPastedBeats.push(t);
@@ -1194,6 +1249,7 @@ function pasteBeats(targetTime) {
         newPastedBeats.forEach(val => {
             const idx = beats.findIndex(b => {
                 if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+                if (isVortexBeat(val) && isVortexBeat(b)) return b[0] === val[0];
                 return b === val;
             });
             if (idx !== -1) selectedBeatsIndices.add(idx);
@@ -1483,6 +1539,51 @@ function toggleDashBeat() {
     showNotification("Chọn 2 mốc nhịp để gộp thành Gạch Lướt (nhấn D), hoặc chọn 1 Gạch Lướt để tách lại thành 2 mốc nhịp đơn lẻ.", "Thao tác Gạch Lướt");
 }
 
+function toggleVortexBeat() {
+    if (selectedBeatsIndices.size === 0) {
+        showNotification("Vui lòng chọn ít nhất một mốc nhịp để chuyển đổi sang Gạch Xoáy (nhấn V).", "Gạch Xoáy (Vortex)");
+        return;
+    }
+
+    pushHistory();
+    let vortexCount = 0;
+    let normalCount = 0;
+
+    const sortedIndices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
+    const nonDashIndices = sortedIndices.filter(idx => !isDashBeat(beats[idx]));
+
+    if (nonDashIndices.length === 0) {
+        showNotification("Không thể áp dụng Gạch Xoáy cho Gạch Lướt (Dash Tile).", "Lưu ý");
+        return;
+    }
+
+    const allVortex = nonDashIndices.every(idx => isVortexBeat(beats[idx]));
+
+    nonDashIndices.forEach(idx => {
+        const item = beats[idx];
+        if (allVortex) {
+            beats[idx] = item[0];
+            normalCount++;
+        } else {
+            if (!isVortexBeat(item)) {
+                beats[idx] = [Number(item)];
+                vortexCount++;
+            }
+        }
+    });
+
+    updateBeatList();
+    playTickSound(1100, 0.1);
+
+    if (allVortex) {
+        status.textContent = `🌀 Đã chuyển ${normalCount} Gạch Xoáy về Gạch Thường`;
+    } else {
+        status.textContent = `🌀 Đã chuyển ${vortexCount} mốc nhịp thành Gạch Xoáy [x]`;
+    }
+    status.className = "active";
+    setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+}
+
 // --- CHUỘT PHẢI ---
 timelineContainer.addEventListener("contextmenu", (e) => {
     if (!audio.src) return; e.preventDefault();
@@ -1530,6 +1631,22 @@ function showContextMenu(clientX, clientY, isClickedOnMarker) {
         }
     }
 
+    if (ctxToggleVortex) {
+        if (selectedBeatsIndices.size > 0) {
+            const nonDashIndices = Array.from(selectedBeatsIndices).filter(idx => !isDashBeat(beats[idx]));
+            if (nonDashIndices.length > 0) {
+                ctxToggleVortex.classList.remove("disabled");
+                const allVortex = nonDashIndices.every(idx => isVortexBeat(beats[idx]));
+                const label = ctxToggleVortex.querySelector("span");
+                if (label) label.textContent = allVortex ? "🌀 Chuyển thành Gạch Thường" : "🌀 Gạch Xoáy (Vortex)";
+            } else {
+                ctxToggleVortex.classList.add("disabled");
+            }
+        } else {
+            ctxToggleVortex.classList.add("disabled");
+        }
+    }
+
     if (ctxUndo) {
         if (undoStack.length > 0) ctxUndo.classList.remove("disabled");
         else ctxUndo.classList.add("disabled");
@@ -1558,6 +1675,9 @@ ctxDelete.onclick = (e) => {
 if (ctxToggleDash) {
     ctxToggleDash.onclick = (e) => { e.stopPropagation(); toggleDashBeat(); hideContextMenu(); };
 }
+if (ctxToggleVortex) {
+    ctxToggleVortex.onclick = (e) => { e.stopPropagation(); toggleVortexBeat(); hideContextMenu(); };
+}
 ctxGroupAlign.onclick = (e) => { e.stopPropagation(); quickGroupAlign(); hideContextMenu(); };
 ctxGroupShift.onclick = (e) => { e.stopPropagation(); openGroupActions(); hideContextMenu(); };
 ctxSelectAll.onclick = (e) => { e.stopPropagation(); if (beats.length > 0) { selectedBeatsIndices.clear(); beats.forEach((_, index) => { if (index > 0) selectedBeatsIndices.add(index); }); updateSelectionIndicator(); playTickSound(1000, 0.05); } hideContextMenu(); };
@@ -1583,6 +1703,7 @@ document.addEventListener("keydown", e => {
 
     if (e.code === "Space") { e.preventDefault(); togglePlayPause(); return; }
     if (!e.ctrlKey && key === "d") { e.preventDefault(); toggleDashBeat(); return; }
+    if (!e.ctrlKey && key === "v") { e.preventDefault(); toggleVortexBeat(); return; }
     if (e.ctrlKey && key === "g") { e.preventDefault(); openGroupActions(); return; }
     if (!e.ctrlKey && key === "e") { e.preventDefault(); quickGroupAlign(); return; }
     if (e.code === "ArrowLeft") {
@@ -1635,6 +1756,7 @@ if (nextBeatBtn) nextBeatBtn.onclick = () => jumpNextBeat();
 if (prevFrameBtn) prevFrameBtn.onclick = () => stepFrame(-0.05);
 if (nextFrameBtn) nextFrameBtn.onclick = () => stepFrame(0.05);
 if (dashToggleBtn) dashToggleBtn.onclick = () => toggleDashBeat();
+if (vortexToggleBtn) vortexToggleBtn.onclick = () => toggleVortexBeat();
 if (deleteSelectedBtn) deleteSelectedBtn.onclick = () => deleteSelectedBeats();
 if (quickAlignBtn) quickAlignBtn.onclick = () => quickGroupAlign();
 

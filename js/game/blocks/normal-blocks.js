@@ -126,6 +126,105 @@ function createGlowTexture() {
 }
 window.getSharedGlowTexture = getSharedGlowTexture;
 
+// --- VORTEX SPIRAL TEXTURE & MATERIAL (HỌA TIẾT XOẮN ỐC ARCHIMEDES NEON CHO GẠCH NHẤN NHỊP [x]) ---
+let sharedVortexSpiralTexture = null;
+let sharedVortexCenterMaterial = null;
+
+function getVortexSpiralTexture() {
+    if (!sharedVortexSpiralTexture) {
+        const size = 256;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const cx = size / 2;
+        const cy = size / 2;
+
+        ctx.clearRect(0, 0, size, size);
+
+        // 1. Tỏa sáng nền trung tâm (Soft radial glow)
+        const radGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cx * 0.95);
+        radGlow.addColorStop(0, 'rgba(255, 235, 120, 0.95)');
+        radGlow.addColorStop(0.25, 'rgba(255, 170, 0, 0.45)');
+        radGlow.addColorStop(0.65, 'rgba(255, 120, 0, 0.15)');
+        radGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        ctx.fillStyle = radGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, cx * 0.95, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Vẽ 3 cánh xoắn ốc Archimedes neon phát sáng rực rỡ
+        const numArms = 3;
+        ctx.lineCap = 'round';
+        for (let arm = 0; arm < numArms; arm++) {
+            const startAngle = (arm * Math.PI * 2) / numArms;
+            ctx.save();
+            ctx.shadowColor = '#ffbb00';
+            ctx.shadowBlur = 12;
+
+            ctx.beginPath();
+            const totalSteps = 80;
+            for (let i = 0; i <= totalSteps; i++) {
+                const t = i / totalSteps;
+                const theta = startAngle + t * Math.PI * 2.8;
+                const r = 8 + t * (cx * 0.82);
+                const x = cx + Math.cos(theta) * r;
+                const y = cy + Math.sin(theta) * r;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+
+            const spiralGrad = ctx.createLinearGradient(0, 0, size, size);
+            spiralGrad.addColorStop(0, '#ffffff');
+            spiralGrad.addColorStop(0.4, '#ffe066');
+            spiralGrad.addColorStop(0.8, '#ff9900');
+            spiralGrad.addColorStop(1, 'rgba(255, 100, 0, 0.1)');
+
+            ctx.strokeStyle = spiralGrad;
+            ctx.lineWidth = 6;
+            ctx.stroke();
+
+            // Lớp viền lõi sáng siêu rực
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = '#ffffff';
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 3. Nhân sáng trung tâm (Radiant golden core)
+        const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 22);
+        coreGlow.addColorStop(0, '#ffffff');
+        coreGlow.addColorStop(0.5, '#fff3a8');
+        coreGlow.addColorStop(1, 'rgba(255, 170, 0, 0)');
+        ctx.fillStyle = coreGlow;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 22, 0, Math.PI * 2);
+        ctx.fill();
+
+        sharedVortexSpiralTexture = new THREE.CanvasTexture(canvas);
+        sharedVortexSpiralTexture.wrapS = THREE.ClampToEdgeWrapping;
+        sharedVortexSpiralTexture.wrapT = THREE.ClampToEdgeWrapping;
+        cachedTexturesSet.add(sharedVortexSpiralTexture);
+    }
+    return sharedVortexSpiralTexture;
+}
+
+function getVortexCenterMaterial() {
+    if (!sharedVortexCenterMaterial) {
+        sharedVortexCenterMaterial = new THREE.MeshBasicMaterial({
+            map: getVortexSpiralTexture(),
+            transparent: true,
+            opacity: 0.95,
+            side: THREE.DoubleSide,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending
+        });
+    }
+    return sharedVortexCenterMaterial;
+}
+window.getVortexSpiralTexture = getVortexSpiralTexture;
+window.getVortexCenterMaterial = getVortexCenterMaterial;
+
 function initGlowMaterials() {
     if (!capMaterial) {
         capMaterial = new THREE.MeshBasicMaterial({ visible: false });
@@ -347,6 +446,14 @@ function disposeTile(tile) {
         if (tile.userData.centerMesh && tile.userData.centerMesh.material) {
             tile.userData.centerMesh.material.dispose();
         }
+        if (tile.userData.vortexMat) {
+            tile.userData.vortexMat.dispose();
+            tile.userData.vortexMat = null;
+        }
+        if (tile.userData.normalCenterMat && tile.userData.normalCenterMat !== tile.userData.centerMesh?.material) {
+            tile.userData.normalCenterMat.dispose();
+            tile.userData.normalCenterMat = null;
+        }
         if (tile.userData.glowMesh) {
             const glowMesh = tile.userData.glowMesh;
             if (glowMesh.material) {
@@ -395,6 +502,7 @@ function pushTileToPool(tile) {
             t.userData.isMoving = false;
             t.userData.isExiting = false;
             t.userData.isEntering = false;
+            t.userData.isVortexTile = false;
             t.userData.moveSpeed = 0;
             t.userData.moveTime = 0;
             t.userData.amplitude = 0;
@@ -413,6 +521,22 @@ function pushTileToPool(tile) {
             t.userData.dashEndTime = 0;
             t.userData.startZ = 0;
             t.userData.endZ = 0;
+
+            if (t.userData.centerMesh) {
+                t.userData.centerMesh.scale.set(1, 1, 1);
+                t.userData.centerMesh.rotation.z = 0;
+                t.userData.centerMesh.matrixAutoUpdate = false;
+                t.userData.centerMesh.updateMatrix();
+                if (!t.userData.normalCenterMat) {
+                    t.userData.normalCenterMat = window.globalCenterMat ? window.globalCenterMat.clone() : new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, transparent: true });
+                }
+                if (t.userData.centerMesh.material !== t.userData.normalCenterMat) {
+                    t.userData.centerMesh.material = t.userData.normalCenterMat;
+                }
+                t.userData.centerMesh.material.opacity = 0.0;
+                t.userData.centerMesh.visible = false;
+                t.userData.centerMeshFade = false;
+            }
         }
         t.scale.set(1, 1, 1);
         t.rotation.set(-Math.PI / 2, 0, 0);
@@ -475,6 +599,7 @@ function getTileFromPool(forceNew = false) {
         const u = tile.userData;
         u.isFinalStarTile = false;
         u.isRoundStart = false;
+        u.isVortexTile = false;
         u.isDelayedAppearance = false;
         u.isEntering = false;
         u.isExiting = false;
@@ -589,13 +714,17 @@ function getTileFromPool(forceNew = false) {
             window.globalCenterMat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, transparent: true });
         }
         // centerMesh needs its own cloned material because its opacity is tweened independently on hit
-        const centerMesh = new THREE.Mesh(cachedCenterGeo, window.globalCenterMat.clone());
+        const perTileCenterMat = window.globalCenterMat.clone();
+        perTileCenterMat.opacity = 0.0;
+        const centerMesh = new THREE.Mesh(cachedCenterGeo, perTileCenterMat);
         centerMesh.name = "centerMesh";
         centerMesh.position.z = surfaceZ + 0.015;
         centerMesh.matrixAutoUpdate = false;
         centerMesh.updateMatrix();
+        centerMesh.visible = false;
         tile.add(centerMesh);
         tile.userData.centerMesh = centerMesh;
+        tile.userData.normalCenterMat = perTileCenterMat;
 
         // Tạo glow base (skirt phản chiếu)
         initGlowMaterials();
@@ -655,11 +784,19 @@ function getTileFromPool(forceNew = false) {
         }
         // Reset centerMesh
         if (tile.userData.centerMesh) {
-            tile.userData.centerMesh.visible = true;
             tile.userData.centerMesh.position.set(0, 0, surfaceZ + 0.015);
             tile.userData.centerMesh.scale.set(1, 1, 1);
+            tile.userData.centerMesh.rotation.z = 0;
+            tile.userData.centerMesh.matrixAutoUpdate = false;
             tile.userData.centerMesh.updateMatrix();
-            if (tile.userData.centerMesh.material) tile.userData.centerMesh.material.opacity = 0.0;
+            if (!tile.userData.normalCenterMat) {
+                tile.userData.normalCenterMat = window.globalCenterMat ? window.globalCenterMat.clone() : new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, transparent: true });
+            }
+            if (tile.userData.centerMesh.material !== tile.userData.normalCenterMat) {
+                tile.userData.centerMesh.material = tile.userData.normalCenterMat;
+            }
+            tile.userData.centerMesh.material.opacity = 0.0;
+            tile.userData.centerMesh.visible = false;
             tile.userData.centerMeshFade = false;
         }
         // Reset borderLine opacity
@@ -699,11 +836,15 @@ function getBeatStartTime(item) {
     return Array.isArray(item) ? item[0] : (item || 0);
 }
 function getBeatEndTime(item) {
-    return Array.isArray(item) ? item[1] : (item || 0);
+    return Array.isArray(item) ? (item.length >= 2 ? item[1] : item[0]) : (item || 0);
 }
 function isDashBeat(item) {
     return Array.isArray(item) && item.length >= 2;
 }
+function isVortexBeat(item) {
+    return Array.isArray(item) && item.length === 1 && typeof item[0] === 'number' && !isNaN(item[0]);
+}
+window.isVortexBeat = isVortexBeat;
 
 // --- SINH GẠCH (SPAWN TILE) ---
 function spawnTile(isFirst = false) {
@@ -715,6 +856,9 @@ function spawnTile(isFirst = false) {
     let prevX = 0;
     let isDash = false;
     let dashInfo = null;
+    let currentItem = 0;
+    let currStartTime = 0;
+    let currEndTime = 0;
 
     if (isFirst) {
         tileX = 0;
@@ -725,6 +869,7 @@ function spawnTile(isFirst = false) {
         rapidBurstState.lastBeatIndex = -1;
 
         const firstItem = (beatmapBeats && beatmapBeats.length > 0) ? beatmapBeats[0] : 0;
+        currentItem = firstItem;
         if (window.DashBlocksManager && window.DashBlocksManager.isDashBeat(firstItem)) {
             isDash = true;
             dashInfo = window.DashBlocksManager.getDashTimes(firstItem);
@@ -764,7 +909,7 @@ function spawnTile(isFirst = false) {
         const prevItem = beatmapBeats[Math.max(0, currentBeatIndex - 1)];
         const prevEndTime = getBeatEndTime(prevItem);
 
-        let currentItem = 0;
+        currentItem = 0;
         if (currentBeatIndex === 0) {
             timeDiff = 2.0;
             currentBeatIndex = 1;
@@ -1092,8 +1237,12 @@ function spawnTile(isFirst = false) {
         }
     }
 
+    const isVortex = isVortexBeat(currentItem);
+    const effectiveThemeColor = isVortex ? 0xffaa00 : activeColor;
+
     const ud = tile.userData;
-    ud.themeColor = activeColor;
+    ud.themeColor = effectiveThemeColor;
+    ud.isVortexTile = isVortex;
     ud.time = tileTime;
     ud.centerX = 0;
     ud.isRoundStart = isRoundStartBlock;
@@ -1118,6 +1267,44 @@ function spawnTile(isFirst = false) {
     ud.dashEndTime = isDash ? dashInfo.endTime : currEndTime;
     ud.startZ = isDash ? dashInfo.startZ : tileZ;
     ud.endZ = isDash ? dashInfo.exitZ : tileZ;
+
+    if (isVortex) {
+        if (ud.centerMesh) {
+            if (!ud.vortexMat) {
+                ud.vortexMat = getVortexCenterMaterial().clone();
+            }
+            ud.centerMesh.material = ud.vortexMat;
+            ud.centerMesh.material.opacity = 0.95;
+            ud.centerMesh.scale.set(1.45, 1.45, 1.0);
+            ud.centerMesh.rotation.z = Math.random() * Math.PI * 2;
+            ud.centerMesh.matrixAutoUpdate = true;
+            ud.centerMesh.visible = true;
+        }
+        if (ud.borderLine) {
+            if (!window.globalBorderMatVortex) {
+                window.globalBorderMatVortex = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            }
+            ud.borderLine.material = window.globalBorderMatVortex;
+        }
+    } else {
+        if (ud.centerMesh) {
+            if (!ud.normalCenterMat) {
+                ud.normalCenterMat = window.globalCenterMat ? window.globalCenterMat.clone() : new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, depthWrite: false, transparent: true });
+            }
+            if (ud.centerMesh.material !== ud.normalCenterMat) {
+                ud.centerMesh.material = ud.normalCenterMat;
+            }
+            ud.centerMesh.material.opacity = 0.0;
+            ud.centerMesh.scale.set(1.0, 1.0, 1.0);
+            ud.centerMesh.rotation.z = 0;
+            ud.centerMesh.matrixAutoUpdate = false;
+            ud.centerMesh.updateMatrix();
+            ud.centerMesh.visible = false;
+        }
+        if (ud.borderLine) {
+            ud.borderLine.material = (ud.themeColor === 0xff00ff) ? window.globalBorderMatMagenta : window.globalBorderMatCyan;
+        }
+    }
     // FIX: luôn ghi đè startX/exitX cho mọi tile. Trước đây chỉ tile dash mới có exitX,
     // tile thường lấy từ pool vẫn giữ exitX cũ của dash -> prevX của beat kế tiếp sai,
     // làm vỡ "lệch cố định" theo bảng Hard/Asian.
@@ -1160,10 +1347,10 @@ function spawnTile(isFirst = false) {
             if (glowMat) {
                 if (glowMat.uniforms) {
                     glowMat.uniforms.glowHeight.value = glowHeight;
-                    glowMat.uniforms.color.value.setHex(activeColor);
+                    glowMat.uniforms.color.value.setHex(effectiveThemeColor);
                     glowMat.uniforms.opacityMultiplier.value = 1.0;
                 } else {
-                    if (glowMat.color) glowMat.color.setHex(activeColor);
+                    if (glowMat.color) glowMat.color.setHex(effectiveThemeColor);
                     glowMat.opacity = 0.85;
                 }
             }
