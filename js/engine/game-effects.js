@@ -3,6 +3,13 @@
 // (Shockwaves, Neon Boundary Pulses, Boundary Flames, Ball Trail)
 // ============================================================
 
+// Precomputed Cosine-Squared Fade Table (101 elements) để triệt tiêu tính toán Math.cos() trong updateShockwaves
+const SHOCKWAVE_FADE_LUT = new Float32Array(101);
+for (let _i = 0; _i <= 100; _i++) {
+    const _c = Math.cos((_i / 100) * 1.5707963267948966);
+    SHOCKWAVE_FADE_LUT[_i] = _c * _c;
+}
+
 window.GameEffectsManager = {
     // --- 1. SÓNG XUNG KÍCH (SHOCKWAVES) ---
     shockwaves: [],
@@ -222,7 +229,7 @@ window.GameEffectsManager = {
         }
 
         if (this.cachedVortexRingGeo) {
-            while (this.vortexRingPool.length < 30) {
+            while (this.vortexRingPool.length < 45) {
                 const ringMat = new THREE.MeshBasicMaterial({
                     color: 0xffd700,
                     transparent: true,
@@ -308,16 +315,24 @@ window.GameEffectsManager = {
             if (this.vortexRingPool.length > 0) {
                 ringMesh = this.vortexRingPool.pop();
             } else if (this.shockwaves.length > 0) {
-                const idx = this.shockwaves.findIndex(s => s.isVortexRing);
-                if (idx !== -1) {
-                    const oldestRing = this.shockwaves.splice(idx, 1)[0];
-                    ringMesh = oldestRing.mesh;
-                    this.shockwaveDataPool.push(oldestRing);
+                for (let k = 0; k < this.shockwaves.length; k++) {
+                    if (this.shockwaves[k].isVortexRing) {
+                        const oldestRing = this.shockwaves[k];
+                        const last = this.shockwaves.pop();
+                        if (k < this.shockwaves.length) {
+                            this.shockwaves[k] = last;
+                        }
+                        ringMesh = oldestRing.mesh;
+                        this.shockwaveDataPool.push(oldestRing);
+                        break;
+                    }
                 }
             }
             if (ringMesh) {
+                const isDynamic = typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && themeColor;
+                const ringColor = isDynamic ? themeColor : 0xffd700;
                 ringMesh.visible = true;
-                ringMesh.material.color.setHex(0xffd700);
+                ringMesh.material.color.setHex(ringColor);
                 ringMesh.material.opacity = 1.0;
                 ringMesh.position.copy(tile.position);
                 ringMesh.position.y = tile.position.y + surfaceY + 0.035;
@@ -381,7 +396,8 @@ window.GameEffectsManager = {
             this.spawnComboBurst(tile, waveMesh.material.color, 4);
         } else {
             let waveLine;
-            const waveColor = isVortexTile ? 0xffaa00 : themeColor;
+            const isDynamic = typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && themeColor;
+            const waveColor = isVortexTile ? (isDynamic ? themeColor : 0xffaa00) : themeColor;
             if (this.shockwavePool.length > 0) {
                 waveLine = this.shockwavePool.pop();
                 waveLine.visible = true;
@@ -476,13 +492,16 @@ window.GameEffectsManager = {
             sw.mesh.scale.set(sw.scale, sw.scale, 1);
 
             if (sw.targetTile && sw.targetTile.parent) {
-                sw.mesh.position.x = sw.targetTile.position.x;
-                sw.mesh.position.y = sw.targetTile.position.y + surfaceY + (sw.isVortexRing ? 0.035 : 0.032);
-                sw.mesh.position.z = sw.targetTile.position.z;
+                const tt = sw.targetTile;
+                const ttY = tt.position.y + surfaceY + (sw.isVortexRing ? 0.035 : 0.032);
+                const mPos = sw.mesh.position;
+                if (mPos.x !== tt.position.x || mPos.y !== ttY || mPos.z !== tt.position.z) {
+                    mPos.set(tt.position.x, ttY, tt.position.z);
+                }
             }
 
-            const cosVal = Math.cos(progress * 1.5707963267948966);
-            const fadeFactor = cosVal * cosVal;
+            const lutIdx = (progress * 100) | 0;
+            const fadeFactor = SHOCKWAVE_FADE_LUT[lutIdx > 100 ? 100 : (lutIdx < 0 ? 0 : lutIdx)];
             sw.mesh.material.opacity = fadeFactor;
 
             if (progress >= 1.0 || fadeFactor <= 0.001) {

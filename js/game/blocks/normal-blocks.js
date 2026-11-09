@@ -142,12 +142,12 @@ function getVortexSpiralTexture() {
 
         ctx.clearRect(0, 0, size, size);
 
-        // 1. Tỏa sáng nền trung tâm (Soft radial glow)
+        // 1. Tỏa sáng nền trung tâm (Soft radial glow - vẽ trắng để hỗ trợ dynamic color qua material.color)
         const radGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, cx * 0.95);
-        radGlow.addColorStop(0, 'rgba(255, 235, 120, 0.95)');
-        radGlow.addColorStop(0.25, 'rgba(255, 170, 0, 0.45)');
-        radGlow.addColorStop(0.65, 'rgba(255, 120, 0, 0.15)');
-        radGlow.addColorStop(1, 'rgba(255, 100, 0, 0)');
+        radGlow.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        radGlow.addColorStop(0.25, 'rgba(255, 255, 255, 0.45)');
+        radGlow.addColorStop(0.65, 'rgba(255, 255, 255, 0.15)');
+        radGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = radGlow;
         ctx.beginPath();
         ctx.arc(cx, cy, cx * 0.95, 0, Math.PI * 2);
@@ -159,7 +159,7 @@ function getVortexSpiralTexture() {
         for (let arm = 0; arm < numArms; arm++) {
             const startAngle = (arm * Math.PI * 2) / numArms;
             ctx.save();
-            ctx.shadowColor = '#ffbb00';
+            ctx.shadowColor = '#ffffff';
             ctx.shadowBlur = 12;
 
             ctx.beginPath();
@@ -176,9 +176,9 @@ function getVortexSpiralTexture() {
 
             const spiralGrad = ctx.createLinearGradient(0, 0, size, size);
             spiralGrad.addColorStop(0, '#ffffff');
-            spiralGrad.addColorStop(0.4, '#ffe066');
-            spiralGrad.addColorStop(0.8, '#ff9900');
-            spiralGrad.addColorStop(1, 'rgba(255, 100, 0, 0.1)');
+            spiralGrad.addColorStop(0.4, 'rgba(255, 255, 255, 0.85)');
+            spiralGrad.addColorStop(0.8, 'rgba(255, 255, 255, 0.4)');
+            spiralGrad.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
 
             ctx.strokeStyle = spiralGrad;
             ctx.lineWidth = 6;
@@ -191,11 +191,11 @@ function getVortexSpiralTexture() {
             ctx.restore();
         }
 
-        // 3. Nhân sáng trung tâm (Radiant golden core)
+        // 3. Nhân sáng trung tâm (Radiant white core)
         const coreGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, 22);
         coreGlow.addColorStop(0, '#ffffff');
-        coreGlow.addColorStop(0.5, '#fff3a8');
-        coreGlow.addColorStop(1, 'rgba(255, 170, 0, 0)');
+        coreGlow.addColorStop(0.5, 'rgba(255, 255, 255, 0.7)');
+        coreGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
         ctx.fillStyle = coreGlow;
         ctx.beginPath();
         ctx.arc(cx, cy, 22, 0, Math.PI * 2);
@@ -212,6 +212,7 @@ function getVortexSpiralTexture() {
 function getVortexCenterMaterial() {
     if (!sharedVortexCenterMaterial) {
         sharedVortexCenterMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffaa00,
             map: getVortexSpiralTexture(),
             transparent: true,
             opacity: 0.95,
@@ -697,6 +698,9 @@ function getTileFromPool(forceNew = false) {
         }
         if (!window.globalBorderMatMagenta) {
             window.globalBorderMatMagenta = new THREE.MeshBasicMaterial({ color: 0xff00ff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+        }
+        if (!window.globalBorderMatVortex) {
+            window.globalBorderMatVortex = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
         }
         const borderLine = new THREE.Mesh(cachedBorderGeo, window.globalBorderMatCyan);
         borderLine.name = "borderLine";
@@ -1238,7 +1242,8 @@ function spawnTile(isFirst = false) {
     }
 
     const isVortex = isVortexBeat(currentItem);
-    const effectiveThemeColor = isVortex ? 0xffaa00 : activeColor;
+    const isDynamic = typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined';
+    const effectiveThemeColor = isVortex ? (isDynamic ? currentFrameHex : 0xffaa00) : activeColor;
 
     const ud = tile.userData;
     ud.themeColor = effectiveThemeColor;
@@ -1274,15 +1279,21 @@ function spawnTile(isFirst = false) {
                 ud.vortexMat = getVortexCenterMaterial().clone();
             }
             ud.centerMesh.material = ud.vortexMat;
+            const vortexColor = isDynamic ? currentFrameHex : 0xffaa00;
+            ud.centerMesh.material.color.setHex(vortexColor);
             ud.centerMesh.material.opacity = 0.95;
             ud.centerMesh.scale.set(1.45, 1.45, 1.0);
             ud.centerMesh.rotation.z = Math.random() * Math.PI * 2;
-            ud.centerMesh.matrixAutoUpdate = true;
+            ud.centerMesh.matrixAutoUpdate = false;
+            ud.centerMesh.updateMatrix();
             ud.centerMesh.visible = true;
         }
         if (ud.borderLine) {
             if (!window.globalBorderMatVortex) {
                 window.globalBorderMatVortex = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            }
+            if (isDynamic) {
+                window.globalBorderMatVortex.color.setHex(currentFrameHex);
             }
             ud.borderLine.material = window.globalBorderMatVortex;
         }

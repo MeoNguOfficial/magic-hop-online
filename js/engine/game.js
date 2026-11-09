@@ -1451,10 +1451,20 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
         if (typeof window.cachedBorderGeo !== 'undefined' && window.cachedBorderGeo) {
             if (window.globalBorderMatCyan) warmupGroup.add(new THREE.Mesh(window.cachedBorderGeo, window.globalBorderMatCyan));
             if (window.globalBorderMatMagenta) warmupGroup.add(new THREE.Mesh(window.cachedBorderGeo, window.globalBorderMatMagenta));
+            if (!window.globalBorderMatVortex) {
+                window.globalBorderMatVortex = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false });
+            }
+            warmupGroup.add(new THREE.Mesh(window.cachedBorderGeo, window.globalBorderMatVortex));
         }
 
-        if (typeof window.cachedCenterGeo !== 'undefined' && window.cachedCenterGeo && window.globalCenterMat) {
-            warmupGroup.add(new THREE.Mesh(window.cachedCenterGeo, window.globalCenterMat));
+        if (typeof window.cachedCenterGeo !== 'undefined' && window.cachedCenterGeo) {
+            if (window.globalCenterMat) {
+                warmupGroup.add(new THREE.Mesh(window.cachedCenterGeo, window.globalCenterMat));
+            }
+            if (typeof window.getVortexCenterMaterial === 'function') {
+                const vMat = window.getVortexCenterMaterial();
+                if (vMat) warmupGroup.add(new THREE.Mesh(window.cachedCenterGeo, vMat));
+            }
         }
 
         // Vật liệu Dash Tiles
@@ -1491,6 +1501,17 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
                     side: THREE.DoubleSide
                 });
                 warmupGroup.add(new THREE.Mesh(window.GameEffectsManager.cachedDiamondShockwaveGeo, diaMat));
+            }
+            if (window.GameEffectsManager.cachedVortexRingGeo) {
+                const ringWarmMat = new THREE.MeshBasicMaterial({
+                    color: 0xffd700,
+                    transparent: true,
+                    opacity: 1.0,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.DoubleSide
+                });
+                warmupGroup.add(new THREE.Mesh(window.GameEffectsManager.cachedVortexRingGeo, ringWarmMat));
             }
             if (window.GameEffectsManager.pulseGeometry && window.GameEffectsManager.pulseMaterialTemplate) {
                 warmupGroup.add(new THREE.Mesh(window.GameEffectsManager.pulseGeometry, window.GameEffectsManager.pulseMaterialTemplate));
@@ -1630,7 +1651,8 @@ async function initThree() {
         if (tiles[0].userData.centerMesh.material) tiles[0].userData.centerMesh.material.opacity = 1.0;
         tiles[0].userData.centerMeshFade = true;
         if (tiles[0].userData.isVortexTile && window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
-            window.GameEffectsManager.triggerShockwave(tiles[0], 0xffaa00, 1.0, currentTileScale, 0);
+            const startColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : (tiles[0].userData.themeColor || 0xffaa00);
+            window.GameEffectsManager.triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
         }
     }
 
@@ -2905,6 +2927,9 @@ function animate() {
             if (window.globalBorderMatMagenta && window.globalBorderMatMagenta.color.getHex() !== currentFrameHex) {
                 window.globalBorderMatMagenta.color.setHex(currentFrameHex);
             }
+            if (window.globalBorderMatVortex && window.globalBorderMatVortex.color.getHex() !== currentFrameHex) {
+                window.globalBorderMatVortex.color.setHex(currentFrameHex);
+            }
 
             syncSharedGlow(window.globalTileGlowMatCyan, currentFrameHex);
             syncSharedGlow(window.globalTileGlowMatMagenta, currentFrameHex);
@@ -2926,6 +2951,9 @@ function animate() {
             }
             if (window.globalBorderMatMagenta && window.globalBorderMatMagenta.color.getHex() !== 0xff00ff) {
                 window.globalBorderMatMagenta.color.setHex(0xff00ff);
+            }
+            if (window.globalBorderMatVortex && window.globalBorderMatVortex.color.getHex() !== 0xffaa00) {
+                window.globalBorderMatVortex.color.setHex(0xffaa00);
             }
             if (window.DashBlocksManager) {
                 window.DashBlocksManager.syncDynamicColor(0, null, false);
@@ -2989,40 +3017,58 @@ function animate() {
                 }
             }
 
-            if (dynamicColorsEnabled && currentFrameHex !== undefined && !tile.userData.isVortexTile) {
-                if (tile.userData.themeColor !== currentFrameHex) {
-                    tile.userData.themeColor = currentFrameHex;
+            const uData = tile.userData;
+
+            if (dynamicColorsEnabled && currentFrameHex !== undefined) {
+                if (uData.themeColor !== currentFrameHex) {
+                    uData.themeColor = currentFrameHex;
+                }
+                if (uData.isVortexTile && uData.centerMesh && uData.centerMesh.material) {
+                    if (uData.centerMesh.material.color.getHex() !== currentFrameHex) {
+                        uData.centerMesh.material.color.setHex(currentFrameHex);
+                    }
+                }
+            } else if (uData.isVortexTile) {
+                if (uData.themeColor !== 0xffaa00) {
+                    uData.themeColor = 0xffaa00;
+                }
+                if (uData.centerMesh && uData.centerMesh.material && uData.centerMesh.material.color.getHex() !== 0xffaa00) {
+                    uData.centerMesh.material.color.setHex(0xffaa00);
                 }
             }
 
             // Hoạt ảnh tự xoay quanh tâm cho Gạch Nhấn Nhịp (Vortex Block [x])
-            if (tile.userData.isVortexTile && tile.userData.centerMesh) {
-                tile.userData.centerMesh.rotation.z += delta * 2.2;
-                tile.userData.centerMesh.updateMatrix();
+            // Do centerMesh.matrixAutoUpdate = false, gọi updateMatrix() tại đây giúp cập nhật ma trận đúng 1 lần duy nhất
+            if (uData.isVortexTile && uData.centerMesh) {
+                uData.centerMesh.rotation.z += delta * 2.2;
+                uData.centerMesh.updateMatrix();
             }
 
-            if (tile.userData.centerMeshFade && tile.userData.centerMesh && tile.userData.centerMesh.material) {
-                if (tile.userData.isVortexTile) {
-                    if (tile.userData.centerMesh.material.opacity > 0.85) {
-                        tile.userData.centerMesh.material.opacity -= delta * 1.5;
-                        if (tile.userData.centerMesh.material.opacity <= 0.85) {
-                            tile.userData.centerMesh.material.opacity = 0.85;
-                            tile.userData.centerMeshFade = false;
+            // Fast-path: Chỉ xử lý fade nếu cờ centerMeshFade được bật (tránh chuỗi lookup sâu trên hàng trăm tile mỗi frame)
+            if (uData.centerMeshFade) {
+                const cm = uData.centerMesh;
+                if (cm && cm.material) {
+                    if (uData.isVortexTile) {
+                        if (cm.material.opacity > 0.85) {
+                            cm.material.opacity -= delta * 1.5;
+                            if (cm.material.opacity <= 0.85) {
+                                cm.material.opacity = 0.85;
+                                uData.centerMeshFade = false;
+                            }
                         }
-                    }
-                } else {
-                    tile.userData.centerMesh.material.opacity -= delta * 2.5; // Mờ dần trong ~0.4s
-                    if (tile.userData.centerMesh.material.opacity <= 0) {
-                        tile.userData.centerMesh.material.opacity = 0.0;
-                        tile.userData.centerMeshFade = false;
-                        tile.userData.centerMesh.visible = false;
+                    } else {
+                        cm.material.opacity -= delta * 2.5; // Mờ dần trong ~0.4s
+                        if (cm.material.opacity <= 0) {
+                            cm.material.opacity = 0.0;
+                            uData.centerMeshFade = false;
+                            cm.visible = false;
+                        }
                     }
                 }
             }
 
 
             // Cập nhật block bouncy dựa trên Tiles Hop – Remake (Fast-path: bỏ qua tính toán cho các khối tĩnh đang nghỉ)
-            const uData = tile.userData;
             const isDashActive = uData.isDashTile && isDashing && dashTargetTile === tile;
             const hasBounce = (uData.b !== undefined && uData.b > 0) ||
                 (uData.bounceY !== undefined && uData.bounceY !== 0) ||
@@ -3621,7 +3667,7 @@ function animate() {
                                 shockwaveScale = 1.35;
                             }
 
-                            const tileColor = targetTile.userData.themeColor || 0x00ffff;
+                            const tileColor = (dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : (targetTile.userData.themeColor || 0x00ffff);
                             triggerShockwave(targetTile, tileColor, shockwaveScale, activeScale);
                             dimLandedTile(targetTile);
 
@@ -3806,7 +3852,7 @@ function animate() {
                         ballTargetX = ball.position.x; // Khóa target để không bị lerp giật ngược
                     }
 
-                    const tileColor = targetTile.userData.themeColor || 0x00ffff;
+                    const tileColor = (dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : (targetTile.userData.themeColor || 0x00ffff);
                     triggerShockwave(targetTile, tileColor, shockwaveScale, activeScale);
                     dimLandedTile(targetTile);
 
@@ -5281,7 +5327,8 @@ function resetGameScene() {
         if (tiles[0].userData.centerMesh.material) tiles[0].userData.centerMesh.material.opacity = 1.0;
         tiles[0].userData.centerMeshFade = true;
         if (tiles[0].userData.isVortexTile && window.GameEffectsManager && typeof window.GameEffectsManager.triggerShockwave === 'function') {
-            window.GameEffectsManager.triggerShockwave(tiles[0], 0xffaa00, 1.0, currentTileScale, 0);
+            const startColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : (tiles[0].userData.themeColor || 0xffaa00);
+            window.GameEffectsManager.triggerShockwave(tiles[0], startColor, 1.0, currentTileScale, 0);
         }
     }
 
