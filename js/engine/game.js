@@ -725,22 +725,31 @@ function calculateRescueParabola(currentTargetIndex) {
     }
 
     // Smooth Interpolation: Dùng điểm contact hiện tại làm origin (không teleport cứng)
-    const distanceZ = Math.abs(jumpStartRawZ - nextTileEffectiveZ);
+    const signedDistanceZ = jumpStartRawZ - nextTileEffectiveZ;
+    const standardVelocityZ = baseBallVelocityZ * gameSpeed;
 
-    let standardVelocityZ = baseBallVelocityZ * gameSpeed;
-    let standardFlightTime = distanceZ / Math.abs(standardVelocityZ);
-    let targetFlightTime = standardFlightTime;
+    // Nếu bóng đã rơi vượt qua mốc Z của gạch kế tiếp, bàn giao ngay cho vòng kiểm tra kế tiếp
+    // thay vì lấy Math.abs khiến bóng bay tiếp và lệch nhịp
+    if (signedDistanceZ <= 0.05) {
+        flightTime = 0.0001;
+        ballVelocityZ = -Math.abs(standardVelocityZ);
+        currentGravity = 0;
+        currentBounceVelocityY = 0;
+        return;
+    }
+
+    const distanceZ = signedDistanceZ;
+    const standardFlightTime = distanceZ / Math.abs(standardVelocityZ);
 
     // Lệch Nhịp Cứu Bóng (Beat Synchronization Fix):
     // Yêu cầu: Tốc độ cứu bóng không được nhanh hơn cũng không được chậm hơn -> Giữ nguyên standardFlightTime
-    targetFlightTime = standardFlightTime;
-
-
-    flightTime = targetFlightTime;
+    flightTime = standardFlightTime;
     ballVelocityZ = -distanceZ / flightTime;
 
     const baseHeight = 3.5;
-    const adaptiveHeight = Math.min(5.5, baseHeight + (distanceZ - tileSpacingMin) * 0.1);
+    const rawAdaptiveHeight = Math.min(5.5, baseHeight + (distanceZ - tileSpacingMin) * 0.1);
+    const heightScale = Math.min(1.0, distanceZ / 6.0);
+    const adaptiveHeight = Math.max(0.4, rawAdaptiveHeight * heightScale);
 
     // Giữ nguyên trọng lực chuẩn
     currentGravity = -(8 * adaptiveHeight) / (flightTime * flightTime);
@@ -2764,7 +2773,10 @@ function animate() {
 
     // --- THUẬT TOÁN ĐỒNG BỘ NHẠC (AUDIO SYNC CORRECTION) ---
     // Liên tục kiểm tra tiến độ bài hát và bù trừ khung hình delta để ép game khớp chuẩn xác từng nhịp beat
-    if (isPlaying && !isFalling && !isFailTransition && audio && !audio.paused) {
+    // Tiếp tục đồng bộ thời gian nhạc ngay cả khi đang rơi (trước lúc fail transition)
+    // để tránh drift dồn nén khiến delta tăng vọt làm block tăng tốc nhanh khi bóng chạm Glow Mesh
+    const isInEndingTransition = isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition);
+    if (isPlaying && !isInEndingTransition && audio && !audio.paused) {
         let drift = currentAudioTime - accumulatedSongTime;
 
         // Tốc độ thực tế của nhạc chỉ đạt tối đa 2.6x, ta đồng bộ thời gian theo tốc độ này
@@ -3740,6 +3752,11 @@ function animate() {
                             fallVelocityY = Math.max(-22, currentBounceVelocityY + currentGravity * flightTime);
                             fallVelocityZ = ballVelocityZ;
                             fallVelocityX = (ballTargetX - ball.position.x) * 15;
+                            // Bảo toàn phần thời gian vượt quá flightTime trong khung hình hiện tại để không bị trễ nhịp
+                            const fallOvershoot = Math.max(0, jumpElapsedTime - flightTime);
+                            ball.position.z = jumpStartRawZ + ballVelocityZ * jumpElapsedTime;
+                            ball.position.y = minFloor + fallVelocityY * fallOvershoot + 0.5 * (-65) * fallOvershoot * fallOvershoot;
+                            fallVelocityY += -65 * fallOvershoot;
                         }
                     } else {
                         if (window.chosenPlayMode === 'normal' && currentTileIndex === tiles.length - 1) {
@@ -3876,11 +3893,9 @@ function animate() {
 
                     const driftRatio = diffX / (tileWidth * activeScale / 2);
                     let shockwaveScale = 1.0;
-                    let isEdgeHit = false;
 
                     if (driftRatio > 0.85) {
                         shockwaveScale = 1.35;
-                        isEdgeHit = true;
 
                         // Anti-Stuck / Multi-trigger: Dịch nhẹ bóng vào trong (epsilon)
                         const epsilon = 0.15;
@@ -3914,14 +3929,9 @@ function animate() {
                         }
 
                         jumpElapsedTime = 0;
-                        if (isEdgeHit) {
-                            // Cập nhật Vector vận tốc mới nối tiếp không làm khựng
-                            calculateRescueParabola(currentTileIndex);
-                        } else {
-                            // Hitbox normal
-                            jumpStartRawZ = targetTile.userData.isEntering && (spawnAnimationMode === 'slide' || spawnAnimationMode === 'mix') ? targetTile.userData.targetZ : targetTile.position.z;
-                            calculateNextParabola(currentTileIndex);
-                        }
+                        // Luôn dùng quỹ đạo cứu bóng từ chính vị trí va chạm (P_impact) cho mọi cú chạm Glow Mesh
+                        // để giữ nguyên tốc độ Z chuẩn và đúng thời gian còn lại tới nhịp tiếp theo
+                        calculateRescueParabola(currentTileIndex);
                     }
 
                     // Bỏ hiệu ứng flash emissive trên material dùng chung để tránh lỗi chớp sáng toàn màn hình.
