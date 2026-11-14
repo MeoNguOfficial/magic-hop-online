@@ -4,8 +4,8 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.9';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.9';
+const STATIC_CACHE = 'magic-hop-static-v1.0.10';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.10';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [

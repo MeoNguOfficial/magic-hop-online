@@ -3112,6 +3112,16 @@ window.adjustTabsKerning = function () {
         forceWhitespaceNowrap: true
     });
 
+    // 2. Personalize sub-tabs container
+    adjustContainer('.personalize-tabs-container', '.tab-btn', {
+        minScaleX: 0.72,
+        originalPadding: 8,
+        minPadding: 4,
+        originalGap: 8,
+        minGap: 3,
+        forceWhitespaceNowrap: true
+    });
+
     // 3. Language selection options
     const langContainer = document.getElementById('language-options');
     if (langContainer) {

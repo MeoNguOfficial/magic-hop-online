@@ -1467,23 +1467,40 @@
             </div>
 
             <!-- Personalize Panel -->
-            <div id="panel-personalize" class="hidden flex-1 p-6 flex flex-col overflow-y-auto">
-                <div class="flex flex-col max-w-3xl mx-auto w-full gap-6 select-none relative pb-6">
-                    <!-- Heading and Description -->
-                    <div class="border-b border-cyan-500/20 pb-3">
-                        <h2 class="text-2xl font-black text-cyan-400 font-orbitron tracking-wider uppercase mb-1"
-                            data-i18n="nav_personalize">NỀN & BÓNG</h2>
-                        <p class="text-[9px] sm:text-[10px] text-gray-400 font-bold font-orbitron uppercase tracking-widest leading-relaxed"
-                            data-i18n="personalize_bg_desc">Thay đổi phong cách không gian chơi game của bạn.</p>
+            <div id="panel-personalize" class="hidden flex-1 p-6 bg-black/20 flex flex-col overflow-hidden">
+                <div class="flex-1 flex flex-col overflow-hidden max-w-3xl mx-auto w-full select-none">
+                    <!-- Personalize Tabs header (matching Settings panel) -->
+                    <div
+                        class="shrink-0 flex overflow-x-auto gap-2 mb-4 border-b border-cyan-500/20 pb-3 justify-start personalize-tabs-container select-none cursor-grab active:cursor-grabbing">
+                        <button type="button"
+                            class="tab-btn active shrink-0 whitespace-nowrap text-[10px] font-bold px-2 py-1.5 rounded border border-cyan-500/20 uppercase font-orbitron transition-all"
+                            data-personalize-tab="tab-p-background" data-i18n="personalize_tab_background">Hình nền</button>
+                        <button type="button"
+                            class="tab-btn shrink-0 whitespace-nowrap text-[10px] font-bold px-2 py-1.5 rounded border border-cyan-500/20 uppercase font-orbitron transition-all"
+                            data-personalize-tab="tab-p-ball" data-i18n="personalize_tab_ball">Bóng</button>
+                        <button type="button"
+                            class="tab-btn shrink-0 whitespace-nowrap text-[10px] font-bold px-2 py-1.5 rounded border border-cyan-500/20 uppercase font-orbitron transition-all"
+                            data-personalize-tab="tab-p-environment" data-i18n="personalize_tab_environment">Môi trường</button>
+                        <button type="button"
+                            class="tab-btn shrink-0 whitespace-nowrap text-[10px] font-bold px-2 py-1.5 rounded border border-cyan-500/20 uppercase font-orbitron transition-all"
+                            data-personalize-tab="tab-p-boundaries" data-i18n="personalize_tab_boundaries">Đường biên</button>
+                        <button type="button"
+                            class="tab-btn shrink-0 whitespace-nowrap text-[10px] font-bold px-2 py-1.5 rounded border border-cyan-500/20 uppercase font-orbitron transition-all"
+                            data-personalize-tab="tab-p-particles" data-i18n="personalize_tab_particles">Hạt biên</button>
                     </div>
 
-                    <!-- Background Selection -->
-                    <div>
-                        <h3
-                            class="text-sm font-bold text-white mb-3 flex items-center gap-2 uppercase tracking-widest font-orbitron">
-                            <i class="fas fa-image text-cyan-400"></i>
-                            <span data-i18n="personalize_bg_title">Hình nền trò chơi</span>
-                        </h3>
+                    <!-- TAB CONTENTS -->
+                    <div id="personalize-tab-contents" class="flex-1 overflow-y-auto pb-2 w-full">
+                        <!-- TAB: Background Selection -->
+                        <div id="tab-p-background" class="tab-pane active space-y-4">
+                            <div>
+                                <h3
+                                    class="text-sm font-bold text-white mb-1 flex items-center gap-2 uppercase tracking-widest font-orbitron">
+                                    <i class="fas fa-image text-cyan-400"></i>
+                                    <span data-i18n="personalize_bg_title">Hình nền trò chơi</span>
+                                </h3>
+                                <p class="text-[10px] text-gray-400 mb-3"
+                                    data-i18n="personalize_bg_desc">Thay đổi phong cách không gian chơi game của bạn.</p>
 
                         <!-- Option Cards Grid -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full relative z-10">
@@ -1577,13 +1594,105 @@
                                         của màn chơi.</p>
                                 </div>
                             </label>
-                        </div>
-                    </div>
 
-                    <!-- Ball Customization Section -->
-                    <div class="mt-2 border-t border-cyan-500/20 pt-6">
-                        <!-- Ball Color -->
-                        <div class="mb-6">
+                            <!-- Option: Difficulty Color -->
+                            <label
+                                class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/opt relative overflow-hidden select-none"
+                                data-bg="difficulty">
+                                <input type="radio" name="selected-bg-style" value="difficulty" class="hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-tr from-emerald-500/5 via-cyan-500/5 to-rose-500/5 opacity-0 group-hover/opt:opacity-100 transition-opacity">
+                                </div>
+
+                                <!-- Thumbnail -->
+                                <div
+                                    class="w-full h-24 rounded-xl bg-[#040712] border border-cyan-500/15 relative overflow-hidden flex items-center justify-center">
+                                    <div class="absolute inset-0 flex opacity-70">
+                                        <div class="flex-1 bg-gradient-to-b from-emerald-500/50 via-emerald-500/15 to-transparent"></div>
+                                        <div class="flex-1 bg-gradient-to-b from-cyan-500/50 via-cyan-500/15 to-transparent"></div>
+                                        <div class="flex-1 bg-gradient-to-b from-amber-500/50 via-amber-500/15 to-transparent"></div>
+                                        <div class="flex-1 bg-gradient-to-b from-rose-500/50 via-rose-500/15 to-transparent"></div>
+                                    </div>
+                                    <div class="absolute bottom-2 inset-x-3 flex items-center justify-around gap-1.5 z-10">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981] animate-pulse"></span>
+                                        <span class="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_8px_#00e5ff] animate-pulse" style="animation-delay: 0.3s"></span>
+                                        <span class="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#ff5500] animate-pulse" style="animation-delay: 0.6s"></span>
+                                        <span class="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#ff1838] animate-pulse" style="animation-delay: 0.9s"></span>
+                                    </div>
+                                    <span
+                                        class="text-[9px] text-white/80 uppercase tracking-widest font-orbitron z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">Difficulty
+                                        Hue</span>
+                                </div>
+                                <!-- Info -->
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center justify-between">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/opt:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_bg_difficulty">Màu theo độ khó</span>
+                                        <div
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 leading-normal h-8"
+                                        data-i18n="personalize_bg_difficulty_desc">Tự động đổi tông màu nền theo chế độ Easy, Normal, Hard, Asian.</p>
+                                </div>
+                            </label>
+
+                            <!-- Option: Cyber Tech Circuit Board -->
+                            <label
+                                class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/opt relative overflow-hidden select-none"
+                                data-bg="led_board">
+                                <input type="radio" name="selected-bg-style" value="led_board" class="hidden">
+                                <div
+                                    class="absolute inset-0 bg-gradient-to-tr from-cyan-500/5 to-blue-500/10 opacity-0 group-hover/opt:opacity-100 transition-opacity">
+                                </div>
+
+                                <!-- Thumbnail -->
+                                <div
+                                    class="w-full h-24 rounded-xl bg-[#020714] border border-cyan-500/20 relative overflow-hidden flex items-center justify-center">
+                                    <svg class="absolute inset-0 w-full h-full opacity-85" viewBox="0 0 180 96" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M0 24H36L48 36H84M180 28H142L128 42H98M0 72H44L58 58H94M180 70H136L122 56H98" stroke="#1d6fff" stroke-width="1.6"/>
+                                        <path d="M22 0V18L34 30M156 0V20L144 32M30 96V78L42 66M150 96V76L138 64" stroke="#00e5ff" stroke-width="1.3" stroke-opacity="0.75"/>
+                                        <circle cx="90" cy="48" r="26" stroke="#00e5ff" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4 3"/>
+                                        <rect x="78" y="34" width="24" height="28" rx="3" fill="#041229" stroke="#00e5ff" stroke-width="1.5"/>
+                                        <circle cx="36" cy="24" r="2.5" fill="#00e5ff"/>
+                                        <circle cx="128" cy="42" r="2.5" fill="#25f4d8"/>
+                                        <circle cx="58" cy="58" r="2.5" fill="#00e5ff"/>
+                                        <circle cx="136" cy="70" r="2.5" fill="#25f4d8"/>
+                                    </svg>
+                                    <div class="absolute w-3 h-3 rounded-full bg-cyan-400/70 animate-ping"></div>
+                                    <span
+                                        class="text-[9px] text-cyan-200 uppercase tracking-widest font-orbitron z-10 drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]">Cyber
+                                        Tech</span>
+                                </div>
+                                <!-- Info -->
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex items-center justify-between">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/opt:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_bg_led_board">Công nghệ</span>
+                                        <div
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-gray-400 leading-normal h-8"
+                                        data-i18n="personalize_bg_led_board_desc">Không gian mạch điện tử viễn tưởng & luồng dữ liệu GPU siêu nhẹ.</p>
+                                </div>
+                            </label>
+                        </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB: Ball Customization -->
+                        <div id="tab-p-ball" class="tab-pane hidden space-y-6">
+                            <!-- Ball Color -->
+                            <div>
                             <h3
                                 class="text-sm font-bold text-white mb-3 flex items-center gap-2 uppercase tracking-widest font-orbitron">
                                 <i class="fas fa-palette text-cyan-400"></i>
@@ -1655,201 +1764,599 @@
                         </div>
 
                         <!-- Ball Pattern -->
-                        <div>
+                        <div class="border-t border-cyan-500/20 pt-5">
                             <h3
                                 class="text-sm font-bold text-white mb-3 flex items-center gap-2 uppercase tracking-widest font-orbitron">
                                 <i class="fas fa-shapes text-cyan-400"></i>
                                 <span data-i18n="personalize_ball_pattern">Hoa Văn Bóng</span>
                             </h3>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div id="ball-pattern-grid" class="grid grid-cols-2 md:grid-cols-3 gap-3 w-full relative z-10"
+                                style="color: #22d3ee;">
                                 <!-- Solid -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/pat relative overflow-hidden select-none"
                                     data-ball-pattern="solid">
                                     <input type="radio" name="selected-ball-pattern" value="solid" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
-                                        data-i18n="personalize_pattern_solid">Đặc (Solid)</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                            <defs>
+                                                <radialGradient id="bp-vol-solid" cx="34%" cy="28%" r="68%">
+                                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.48" />
+                                                    <stop offset="38%" stop-color="#ffffff" stop-opacity="0" />
+                                                    <stop offset="100%" stop-color="#000000" stop-opacity="0.65" />
+                                                </radialGradient>
+                                            </defs>
+                                            <circle cx="40" cy="38" r="29" fill="currentColor" fill-opacity="0.14" />
+                                            <ellipse cx="40" cy="69" rx="17" ry="3" fill="currentColor"
+                                                fill-opacity="0.28" />
+                                            <circle cx="40" cy="38" r="23" fill="currentColor" />
+                                            <circle cx="40" cy="38" r="23" fill="url(#bp-vol-solid)" />
+                                            <ellipse cx="32" cy="28" rx="5.5" ry="3.2" transform="rotate(-25 32 28)"
+                                                fill="#ffffff" fill-opacity="0.45" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_pattern_solid">Đặc (Solid)</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Wireframe -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/pat relative overflow-hidden select-none"
                                     data-ball-pattern="wireframe">
                                     <input type="radio" name="selected-ball-pattern" value="wireframe" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
-                                        data-i18n="personalize_pattern_wireframe">Khung (Wire)</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                            <defs>
+                                                <clipPath id="bp-clip-wire">
+                                                    <circle cx="40" cy="38" r="23" />
+                                                </clipPath>
+                                            </defs>
+                                            <ellipse cx="40" cy="69" rx="17" ry="3" fill="currentColor"
+                                                fill-opacity="0.22" />
+                                            <circle cx="40" cy="38" r="23" fill="currentColor" fill-opacity="0.08" />
+                                            <g clip-path="url(#bp-clip-wire)" fill="none" stroke="currentColor"
+                                                stroke-linecap="round">
+                                                <!-- Latitude ellipses -->
+                                                <ellipse cx="40" cy="38" rx="23" ry="7" stroke-width="1.15"
+                                                    stroke-opacity="0.88" />
+                                                <ellipse cx="40" cy="27" rx="20.2" ry="4.8" stroke-width="0.95"
+                                                    stroke-opacity="0.6" />
+                                                <ellipse cx="40" cy="49" rx="20.2" ry="4.8" stroke-width="0.95"
+                                                    stroke-opacity="0.6" />
+                                                <line x1="25" y1="18" x2="55" y2="18" stroke-width="0.8"
+                                                    stroke-opacity="0.45" />
+                                                <line x1="25" y1="58" x2="55" y2="58" stroke-width="0.8"
+                                                    stroke-opacity="0.45" />
+                                                <!-- Longitude ellipses -->
+                                                <ellipse cx="40" cy="38" rx="7" ry="23" stroke-width="1.15"
+                                                    stroke-opacity="0.88" />
+                                                <ellipse cx="40" cy="38" rx="16" ry="23" stroke-width="1"
+                                                    stroke-opacity="0.68" />
+                                                <line x1="40" y1="15" x2="40" y2="61" stroke-width="0.9"
+                                                    stroke-opacity="0.55" />
+                                                <!-- Triangulated mesh diagonals -->
+                                                <line x1="19" y1="28" x2="35" y2="58" stroke-width="0.7"
+                                                    stroke-opacity="0.32" />
+                                                <line x1="24" y1="19" x2="52" y2="57" stroke-width="0.7"
+                                                    stroke-opacity="0.32" />
+                                                <line x1="45" y1="17" x2="61" y2="48" stroke-width="0.7"
+                                                    stroke-opacity="0.32" />
+                                                <line x1="56" y1="19" x2="28" y2="57" stroke-width="0.7"
+                                                    stroke-opacity="0.32" />
+                                            </g>
+                                            <circle cx="40" cy="38" r="23" fill="none" stroke="currentColor"
+                                                stroke-width="1.4" stroke-opacity="0.95" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_pattern_wireframe">Khung (Wire)</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Checkerboard -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/pat relative overflow-hidden select-none"
                                     data-ball-pattern="checkerboard">
                                     <input type="radio" name="selected-ball-pattern" value="checkerboard"
                                         class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
-                                        data-i18n="personalize_pattern_checkerboard">Caro</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                            <defs>
+                                                <clipPath id="bp-clip-check">
+                                                    <circle cx="40" cy="38" r="23" />
+                                                </clipPath>
+                                                <radialGradient id="bp-vol-check" cx="34%" cy="28%" r="68%">
+                                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38" />
+                                                    <stop offset="40%" stop-color="#ffffff" stop-opacity="0" />
+                                                    <stop offset="100%" stop-color="#000000" stop-opacity="0.65" />
+                                                </radialGradient>
+                                            </defs>
+                                            <circle cx="40" cy="38" r="28" fill="currentColor" fill-opacity="0.12" />
+                                            <ellipse cx="40" cy="69" rx="17" ry="3" fill="currentColor"
+                                                fill-opacity="0.25" />
+                                            <circle cx="40" cy="38" r="23" fill="currentColor" />
+                                            <!-- 3D curved checkerboard quads inside sphere -->
+                                            <g clip-path="url(#bp-clip-check)" fill="#0b1120" fill-opacity="0.72">
+                                                <!-- Row 0 (top) -->
+                                                <rect x="16" y="13" width="9" height="8" />
+                                                <rect x="33" y="13" width="7" height="8" />
+                                                <rect x="47" y="13" width="9" height="8" />
+                                                <!-- Row 1 -->
+                                                <rect x="25" y="21" width="8" height="8.5" />
+                                                <rect x="40" y="21" width="7" height="8.5" />
+                                                <rect x="56" y="21" width="9" height="8.5" />
+                                                <!-- Row 2 (equator wider) -->
+                                                <rect x="15" y="29.5" width="9" height="9" />
+                                                <rect x="32.5" y="29.5" width="7.5" height="9" />
+                                                <rect x="47.5" y="29.5" width="8.5" height="9" />
+                                                <!-- Row 3 (equator lower) -->
+                                                <rect x="24" y="38.5" width="8.5" height="9" />
+                                                <rect x="40" y="38.5" width="7.5" height="9" />
+                                                <rect x="56" y="38.5" width="9" height="9" />
+                                                <!-- Row 4 -->
+                                                <rect x="16" y="47.5" width="9" height="8.5" />
+                                                <rect x="33" y="47.5" width="7" height="8.5" />
+                                                <rect x="47" y="47.5" width="9" height="8.5" />
+                                                <!-- Row 5 (bottom) -->
+                                                <rect x="25" y="56" width="8" height="8" />
+                                                <rect x="40" y="56" width="7" height="8" />
+                                            </g>
+                                            <circle cx="40" cy="38" r="23" fill="url(#bp-vol-check)" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_pattern_checkerboard">Caro</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Stripes -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/pat relative overflow-hidden select-none"
                                     data-ball-pattern="stripes">
                                     <input type="radio" name="selected-ball-pattern" value="stripes" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
-                                        data-i18n="personalize_pattern_stripes">Sọc dọc</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                            <defs>
+                                                <clipPath id="bp-clip-stripes">
+                                                    <circle cx="40" cy="38" r="23" />
+                                                </clipPath>
+                                                <radialGradient id="bp-vol-stripes" cx="34%" cy="28%" r="68%">
+                                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38" />
+                                                    <stop offset="40%" stop-color="#ffffff" stop-opacity="0" />
+                                                    <stop offset="100%" stop-color="#000000" stop-opacity="0.65" />
+                                                </radialGradient>
+                                            </defs>
+                                            <circle cx="40" cy="38" r="28" fill="currentColor" fill-opacity="0.12" />
+                                            <ellipse cx="40" cy="69" rx="17" ry="3" fill="currentColor"
+                                                fill-opacity="0.25" />
+                                            <circle cx="40" cy="38" r="23" fill="currentColor" />
+                                            <!-- Curved meridian stripes pole-to-pole -->
+                                            <g clip-path="url(#bp-clip-stripes)" fill="#0b1120" fill-opacity="0.72">
+                                                <!-- Center spindle stripe -->
+                                                <path d="M40,15 Q35,38 40,61 Q45,38 40,15 Z" />
+                                                <!-- Left inner crescent -->
+                                                <path d="M40,15 Q20,38 40,61 Q27,38 40,15 Z" />
+                                                <!-- Left outer crescent -->
+                                                <path d="M40,15 Q12,38 40,61 Q16,38 40,15 Z" />
+                                                <!-- Right inner crescent -->
+                                                <path d="M40,15 Q53,38 40,61 Q60,38 40,15 Z" />
+                                                <!-- Right outer crescent -->
+                                                <path d="M40,15 Q64,38 40,61 Q68,38 40,15 Z" />
+                                            </g>
+                                            <circle cx="40" cy="38" r="23" fill="url(#bp-vol-stripes)" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_pattern_stripes">Sọc dọc</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Dots -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/pat relative overflow-hidden select-none"
                                     data-ball-pattern="dots">
                                     <input type="radio" name="selected-ball-pattern" value="dots" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
-                                        data-i18n="personalize_pattern_dots">Chấm bi</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                            <defs>
+                                                <clipPath id="bp-clip-dots">
+                                                    <circle cx="40" cy="38" r="23" />
+                                                </clipPath>
+                                                <radialGradient id="bp-vol-dots" cx="34%" cy="28%" r="68%">
+                                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38" />
+                                                    <stop offset="40%" stop-color="#ffffff" stop-opacity="0" />
+                                                    <stop offset="100%" stop-color="#000000" stop-opacity="0.65" />
+                                                </radialGradient>
+                                            </defs>
+                                            <circle cx="40" cy="38" r="28" fill="currentColor" fill-opacity="0.12" />
+                                            <ellipse cx="40" cy="69" rx="17" ry="3" fill="currentColor"
+                                                fill-opacity="0.25" />
+                                            <circle cx="40" cy="38" r="23" fill="currentColor" />
+                                            <!-- Foreshortened polka dots on sphere surface -->
+                                            <g clip-path="url(#bp-clip-dots)" fill="#0b1120" fill-opacity="0.72">
+                                                <circle cx="40" cy="38" r="3.6" />
+                                                <ellipse cx="40" cy="24" rx="3.4" ry="2.4" />
+                                                <ellipse cx="40" cy="52" rx="3.4" ry="2.4" />
+                                                <ellipse cx="26" cy="38" rx="2.4" ry="3.4" />
+                                                <ellipse cx="54" cy="38" rx="2.4" ry="3.4" />
+                                                <ellipse cx="30" cy="27" rx="3" ry="2.6" transform="rotate(-35 30 27)" />
+                                                <ellipse cx="50" cy="27" rx="3" ry="2.6" transform="rotate(35 50 27)" />
+                                                <ellipse cx="30" cy="49" rx="3" ry="2.6" transform="rotate(35 30 49)" />
+                                                <ellipse cx="50" cy="49" rx="3" ry="2.6" transform="rotate(-35 50 49)" />
+                                                <ellipse cx="19" cy="29" rx="1.6" ry="2.6" transform="rotate(-20 19 29)" />
+                                                <ellipse cx="61" cy="29" rx="1.6" ry="2.6" transform="rotate(20 61 29)" />
+                                                <ellipse cx="19" cy="47" rx="1.6" ry="2.6" transform="rotate(20 19 47)" />
+                                                <ellipse cx="61" cy="47" rx="1.6" ry="2.6" transform="rotate(-20 61 47)" />
+                                            </g>
+                                            <circle cx="40" cy="38" r="23" fill="url(#bp-vol-dots)" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_pattern_dots">Chấm bi</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Grid -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/pat relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/pat relative overflow-hidden select-none"
                                     data-ball-pattern="grid">
                                     <input type="radio" name="selected-ball-pattern" value="grid" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
-                                        data-i18n="personalize_pattern_grid">Lưới vi mạch</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
+                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                            <defs>
+                                                <clipPath id="bp-clip-grid">
+                                                    <circle cx="40" cy="38" r="23" />
+                                                </clipPath>
+                                                <radialGradient id="bp-vol-grid" cx="34%" cy="28%" r="68%">
+                                                    <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38" />
+                                                    <stop offset="40%" stop-color="#ffffff" stop-opacity="0" />
+                                                    <stop offset="100%" stop-color="#000000" stop-opacity="0.65" />
+                                                </radialGradient>
+                                            </defs>
+                                            <circle cx="40" cy="38" r="28" fill="currentColor" fill-opacity="0.12" />
+                                            <ellipse cx="40" cy="69" rx="17" ry="3" fill="currentColor"
+                                                fill-opacity="0.25" />
+                                            <circle cx="40" cy="38" r="23" fill="currentColor" />
+                                            <!-- Curved 3D grid lines -->
+                                            <g clip-path="url(#bp-clip-grid)" fill="none" stroke="#0b1120"
+                                                stroke-opacity="0.78" stroke-width="1.6">
+                                                <!-- Latitude lines -->
+                                                <path d="M18,24 Q40,20 62,24" />
+                                                <path d="M16,31 Q40,29 64,31" />
+                                                <line x1="15" y1="38" x2="65" y2="38" />
+                                                <path d="M16,45 Q40,47 64,45" />
+                                                <path d="M18,52 Q40,56 62,52" />
+                                                <!-- Meridian lines -->
+                                                <line x1="40" y1="15" x2="40" y2="61" />
+                                                <path d="M40,15 Q26,38 40,61" />
+                                                <path d="M40,15 Q17,38 40,61" />
+                                                <path d="M40,15 Q54,38 40,61" />
+                                                <path d="M40,15 Q63,38 40,61" />
+                                            </g>
+                                            <circle cx="40" cy="38" r="23" fill="url(#bp-vol-grid)" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/pat:text-cyan-400 transition-colors"
+                                            data-i18n="personalize_pattern_grid">Lưới vi mạch</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                             </div>
                         </div>
+                        </div>
 
-                        <!-- Environment -->
-                        <div class="mt-6">
+                        <!-- TAB: Environment -->
+                        <div id="tab-p-environment" class="tab-pane hidden space-y-4">
                             <h3
                                 class="text-sm font-bold text-white mb-3 flex items-center gap-2 uppercase tracking-widest font-orbitron">
                                 <i class="fas fa-globe text-cyan-400"></i>
                                 <span data-i18n="personalize_environment">Môi Trường</span>
                             </h3>
-                            <div class="grid grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full relative z-10">
                                 <!-- Void -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/env relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/env relative overflow-hidden select-none"
                                     data-environment="void">
                                     <input type="radio" name="selected-environment" value="void" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
-                                        data-i18n="env_void">Hư Không</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#02040a] via-black to-black border border-white/10 relative overflow-hidden">
+                                        <svg class="w-full h-full" viewBox="0 0 240 96" preserveAspectRatio="none"
+                                            aria-hidden="true">
+                                            <defs>
+                                                <radialGradient id="env-void-glow" cx="50%" cy="46%" r="48%">
+                                                    <stop offset="0%" stop-color="#22d3ee" stop-opacity="0.18" />
+                                                    <stop offset="100%" stop-color="#000000" stop-opacity="0" />
+                                                </radialGradient>
+                                            </defs>
+                                            <rect width="240" height="96" fill="url(#env-void-glow)" />
+                                            <!-- Subtle empty horizon & central track -->
+                                            <line x1="0" y1="42" x2="240" y2="42" stroke="#22d3ee" stroke-opacity="0.12"
+                                                stroke-width="0.8" />
+                                            <polygon points="108,42 132,42 156,96 84,96" fill="#06b6d4"
+                                                fill-opacity="0.06" />
+                                            <line x1="108" y1="42" x2="84" y2="96" stroke="#22d3ee" stroke-opacity="0.35"
+                                                stroke-width="1" />
+                                            <line x1="132" y1="42" x2="156" y2="96" stroke="#22d3ee" stroke-opacity="0.35"
+                                                stroke-width="1" />
+                                            <!-- Minimal floating void particles -->
+                                            <circle cx="34" cy="24" r="1.1" fill="#67e8f9" fill-opacity="0.65" />
+                                            <circle cx="72" cy="18" r="0.9" fill="#ffffff" fill-opacity="0.45" />
+                                            <circle cx="176" cy="22" r="1.2" fill="#22d3ee" fill-opacity="0.6" />
+                                            <circle cx="208" cy="34" r="0.9" fill="#ffffff" fill-opacity="0.4" />
+                                            <circle cx="48" cy="64" r="1" fill="#22d3ee" fill-opacity="0.45" />
+                                            <circle cx="195" cy="70" r="1.1" fill="#67e8f9" fill-opacity="0.5" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
+                                            data-i18n="env_void">Hư Không</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Blueprint -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/env relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/env relative overflow-hidden select-none"
                                     data-environment="blueprint">
                                     <input type="radio" name="selected-environment" value="blueprint" class="hidden">
-                                    <span
-                                        class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
-                                        data-i18n="env_blueprint">Đường Lưới 3D</span>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#010a16] via-[#021226] to-[#000a14] border border-cyan-500/25 relative overflow-hidden">
+                                        <svg class="w-full h-full" viewBox="0 0 240 96" preserveAspectRatio="none"
+                                            aria-hidden="true">
+                                            <defs>
+                                                <linearGradient id="env-bp-horizon" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stop-color="#0066aa" stop-opacity="0.35" />
+                                                    <stop offset="100%" stop-color="#001122" stop-opacity="0" />
+                                                </linearGradient>
+                                            </defs>
+                                            <rect x="0" y="34" width="240" height="62" fill="url(#env-bp-horizon)" />
+                                            <!-- Horizon line -->
+                                            <line x1="0" y1="34" x2="240" y2="34" stroke="#00aaff" stroke-opacity="0.65"
+                                                stroke-width="1" />
+                                            <!-- Perspective depth rays from vanishing point (120, 34) -->
+                                            <g stroke="#0077cc" stroke-opacity="0.7" stroke-width="0.9">
+                                                <line x1="120" y1="34" x2="-40" y2="96" />
+                                                <line x1="120" y1="34" x2="8" y2="96" />
+                                                <line x1="120" y1="34" x2="48" y2="96" />
+                                                <line x1="120" y1="34" x2="86" y2="96" stroke="#00ccff"
+                                                    stroke-opacity="0.85" />
+                                                <line x1="120" y1="34" x2="154" y2="96" stroke="#00ccff"
+                                                    stroke-opacity="0.85" />
+                                                <line x1="120" y1="34" x2="192" y2="96" />
+                                                <line x1="120" y1="34" x2="232" y2="96" />
+                                                <line x1="120" y1="34" x2="280" y2="96" />
+                                            </g>
+                                            <!-- Receding horizontal grid lines -->
+                                            <g stroke="#0077cc" stroke-opacity="0.6" stroke-width="0.8">
+                                                <line x1="0" y1="39" x2="240" y2="39" />
+                                                <line x1="0" y1="46" x2="240" y2="46" />
+                                                <line x1="0" y1="56" x2="240" y2="56" />
+                                                <line x1="0" y1="69" x2="240" y2="69" />
+                                                <line x1="0" y1="84" x2="240" y2="84" />
+                                            </g>
+                                            <!-- Center track lane highlight -->
+                                            <polygon points="111,34 129,34 154,96 86,96" fill="#00ffff"
+                                                fill-opacity="0.08" />
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <span
+                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
+                                            data-i18n="env_blueprint">Đường Lưới 3D</span>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- City -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/env relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/env relative overflow-hidden select-none"
                                     data-environment="city">
                                     <input type="radio" name="selected-environment" value="city" class="hidden">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
-                                            data-i18n="env_city">Thành Phố</span>
-                                        <span class="text-[10px] text-yellow-500/80 mt-0.5"
-                                            data-i18n="env_perf_warning">(Có thể giảm hiệu suất)</span>
-                                    </div>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#020814] via-[#041428] to-[#010610] border border-cyan-500/25 relative overflow-hidden">
+                                        <svg class="w-full h-full" viewBox="0 0 240 96" preserveAspectRatio="none"
+                                            aria-hidden="true">
+                                            <defs>
+                                                <radialGradient id="env-city-glow" cx="50%" cy="56%" r="55%">
+                                                    <stop offset="0%" stop-color="#00ffff" stop-opacity="0.28" />
+                                                    <stop offset="100%" stop-color="#020a15" stop-opacity="0" />
+                                                </radialGradient>
+                                            </defs>
+                                            <rect width="240" height="96" fill="url(#env-city-glow)" />
+                                            <!-- Perspective ground & center road -->
+                                            <line x1="0" y1="54" x2="240" y2="54" stroke="#00ffff" stroke-opacity="0.3"
+                                                stroke-width="0.8" />
+                                            <polygon points="108,54 132,54 158,96 82,96" fill="#00ffff"
+                                                fill-opacity="0.1" />
+                                            <line x1="108" y1="54" x2="82" y2="96" stroke="#00ffff" stroke-opacity="0.7"
+                                                stroke-width="1" />
+                                            <line x1="132" y1="54" x2="158" y2="96" stroke="#00ffff" stroke-opacity="0.7"
+                                                stroke-width="1" />
+                                            <!-- Left buildings (back to front) -->
+                                            <g fill="#020a15" stroke="#00ffff" stroke-opacity="0.5" stroke-width="0.85">
+                                                <rect x="74" y="34" width="14" height="32" />
+                                                <rect x="52" y="20" width="20" height="54" />
+                                                <rect x="28" y="28" width="21" height="56" />
+                                                <rect x="4" y="10" width="22" height="82" />
+                                            </g>
+                                            <!-- Right buildings (back to front) -->
+                                            <g fill="#020a15" stroke="#00ffff" stroke-opacity="0.5" stroke-width="0.85">
+                                                <rect x="152" y="32" width="14" height="34" />
+                                                <rect x="168" y="18" width="20" height="56" />
+                                                <rect x="191" y="26" width="21" height="58" />
+                                                <rect x="214" y="12" width="22" height="80" />
+                                            </g>
+                                            <!-- Glowing cyber building window stripes -->
+                                            <g stroke="#22d3ee" stroke-opacity="0.65" stroke-width="0.9">
+                                                <line x1="10" y1="22" x2="20" y2="22" />
+                                                <line x1="10" y1="30" x2="20" y2="30" />
+                                                <line x1="10" y1="38" x2="20" y2="38" />
+                                                <line x1="57" y1="30" x2="67" y2="30" />
+                                                <line x1="57" y1="38" x2="67" y2="38" />
+                                                <line x1="173" y1="28" x2="183" y2="28" />
+                                                <line x1="173" y1="36" x2="183" y2="36" />
+                                                <line x1="220" y1="24" x2="230" y2="24" />
+                                                <line x1="220" y1="32" x2="230" y2="32" />
+                                                <line x1="220" y1="40" x2="230" y2="40" />
+                                            </g>
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
+                                                data-i18n="env_city">Thành Phố</span>
+                                            <span class="text-[10px] text-yellow-500/80 mt-0.5"
+                                                data-i18n="env_perf_warning">(Có thể giảm hiệu suất)</span>
+                                        </div>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                                 <!-- Rice Field -->
                                 <label
-                                    class="bg-option-card cursor-pointer p-3 rounded-xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex items-center justify-between group/env relative overflow-hidden select-none"
+                                    class="bg-option-card cursor-pointer p-3 rounded-2xl border border-cyan-500/20 hover:border-cyan-400/50 bg-black/60 transition-all flex flex-col gap-3 group/env relative overflow-hidden select-none"
                                     data-environment="ricefield">
                                     <input type="radio" name="selected-environment" value="ricefield" class="hidden">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
-                                            data-i18n="env_ricefield">Đồng Lúa</span>
-                                        <span class="text-[10px] text-yellow-500/80 mt-0.5"
-                                            data-i18n="env_perf_warning">(Có thể giảm hiệu suất)</span>
-                                    </div>
                                     <div
-                                        class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors">
+                                        class="w-full h-24 rounded-xl bg-gradient-to-b from-[#120b02] via-[#2b1a04] to-[#4a2e00] border border-amber-500/30 relative overflow-hidden">
+                                        <svg class="w-full h-full" viewBox="0 0 240 96" preserveAspectRatio="none"
+                                            aria-hidden="true">
+                                            <defs>
+                                                <radialGradient id="env-rice-glow" cx="50%" cy="44%" r="52%">
+                                                    <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.32" />
+                                                    <stop offset="100%" stop-color="#221100" stop-opacity="0" />
+                                                </radialGradient>
+                                            </defs>
+                                            <rect width="240" height="96" fill="url(#env-rice-glow)" />
+                                            <!-- Golden brown earth banks left & right -->
+                                            <polygon points="0,46 106,46 84,96 0,96" fill="#6b4400" />
+                                            <polygon points="134,46 240,46 240,96 156,96" fill="#6b4400" />
+                                            <!-- Center track path -->
+                                            <polygon points="106,46 134,46 156,96 84,96" fill="#2b1a04"
+                                                fill-opacity="0.85" />
+                                            <line x1="106" y1="46" x2="84" y2="96" stroke="#fbbf24" stroke-opacity="0.55"
+                                                stroke-width="1" />
+                                            <line x1="134" y1="46" x2="156" y2="96" stroke="#fbbf24" stroke-opacity="0.55"
+                                                stroke-width="1" />
+                                            <!-- Golden rice stalks & drooping heads left -->
+                                            <g fill="none" stroke="#ffb700" stroke-linecap="round">
+                                                <path d="M12,92 Q15,74 10,64 M10,64 Q6,66 5,70" stroke-width="1.6" />
+                                                <path d="M24,94 Q28,72 22,60 M22,60 Q18,62 16,67" stroke-width="1.6" />
+                                                <path d="M38,90 Q41,70 35,58 M35,58 Q31,61 30,66" stroke-width="1.5" />
+                                                <path d="M52,86 Q56,68 49,56 M49,56 Q45,59 44,64" stroke-width="1.5" />
+                                                <path d="M66,82 Q70,66 63,56 M63,56 Q59,59 58,63" stroke-width="1.4" />
+                                                <path d="M78,74 Q80,62 75,54" stroke-width="1.2" stroke-opacity="0.8" />
+                                                <path d="M88,62 Q90,54 86,48" stroke-width="1" stroke-opacity="0.65" />
+                                            </g>
+                                            <!-- Golden rice stalks & drooping heads right -->
+                                            <g fill="none" stroke="#ffb700" stroke-linecap="round">
+                                                <path d="M228,92 Q225,74 230,64 M230,64 Q234,66 235,70" stroke-width="1.6" />
+                                                <path d="M216,94 Q212,72 218,60 M218,60 Q222,62 224,67" stroke-width="1.6" />
+                                                <path d="M202,90 Q199,70 205,58 M205,58 Q209,61 210,66" stroke-width="1.5" />
+                                                <path d="M188,86 Q184,68 191,56 M191,56 Q195,59 196,64" stroke-width="1.5" />
+                                                <path d="M174,82 Q170,66 177,56 M177,56 Q181,59 182,63" stroke-width="1.4" />
+                                                <path d="M162,74 Q160,62 165,54" stroke-width="1.2" stroke-opacity="0.8" />
+                                                <path d="M152,62 Q150,54 154,48" stroke-width="1" stroke-opacity="0.65" />
+                                            </g>
+                                        </svg>
+                                    </div>
+                                    <div class="flex items-center justify-between px-1">
+                                        <div class="flex flex-col">
+                                            <span
+                                                class="font-bold text-xs uppercase font-orbitron tracking-wider text-gray-300 group-hover/env:text-cyan-400 transition-colors"
+                                                data-i18n="env_ricefield">Đồng Lúa</span>
+                                            <span class="text-[10px] text-yellow-500/80 mt-0.5"
+                                                data-i18n="env_perf_warning">(Có thể giảm hiệu suất)</span>
+                                        </div>
                                         <div
-                                            class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            class="radio-dot w-4 h-4 rounded-full border border-gray-600 flex items-center justify-center transition-colors shrink-0">
+                                            <div
+                                                class="w-2 h-2 rounded-full bg-cyan-400 scale-0 transition-transform duration-200">
+                                            </div>
                                         </div>
                                     </div>
                                 </label>
                             </div>
                         </div>
 
-                        <!-- Boundary Pulse (Viền Đường Chạy & Hiệu Ứng Nhịp) -->
-                        <div class="mt-6">
+                        <!-- TAB: Boundary Pulse -->
+                        <div id="tab-p-boundaries" class="tab-pane hidden space-y-4">
                             <h3
                                 class="text-sm font-bold text-white mb-1 flex items-center gap-2 uppercase tracking-widest font-orbitron">
                                 <i class="fas fa-arrows-alt-h text-cyan-400"></i>
-                                <span>Track Boundaries &amp; Pulse Effects</span>
+                                <span data-i18n="personalize_boundary_title">Track Boundaries &amp; Pulse Effects</span>
                             </h3>
-                            <p class="text-[11px] text-gray-400 mb-4">Tùy chỉnh đường biên track và hiệu ứng nhịp theo beat.</p>
+                            <p class="text-[11px] text-gray-400 mb-4" data-i18n="personalize_boundary_desc">Tùy chỉnh đường biên track và hiệu ứng nhịp theo beat.</p>
                             <div class="bp-grid" id="boundary-pulse-group" role="radiogroup">
 
                                 <!-- 0. Off -->
                                 <button type="button" class="bp-card off" role="radio" aria-checked="false" data-pulse-style="off">
                                     <input type="radio" name="selected-pulse-style" value="off" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Disabled (Off)</span>
+                                        <span class="bp-name" data-i18n="boundary_pulse_off">Disabled (Off)</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1863,7 +2370,7 @@
                                 <button type="button" class="bp-card classic" role="radio" aria-checked="false" data-pulse-style="classic">
                                     <input type="radio" name="selected-pulse-style" value="classic" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Classic Boundary</span>
+                                        <span class="bp-name" data-i18n="boundary_pulse_classic">Classic Boundary</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1879,7 +2386,7 @@
                                 <button type="button" class="bp-card normal" role="radio" aria-checked="false" data-pulse-style="normal">
                                     <input type="radio" name="selected-pulse-style" value="normal" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Normal Pulse</span>
+                                        <span class="bp-name" data-i18n="boundary_pulse_normal">Normal Pulse</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1896,7 +2403,7 @@
                                 <button type="button" class="bp-card wave" role="radio" aria-checked="false" data-pulse-style="wave">
                                     <input type="radio" name="selected-pulse-style" value="wave" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Wave Pulse</span>
+                                        <span class="bp-name" data-i18n="boundary_pulse_wave">Wave Pulse</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1912,7 +2419,7 @@
                                 <button type="button" class="bp-card horiz" role="radio" aria-checked="false" data-pulse-style="horizontal">
                                     <input type="radio" name="selected-pulse-style" value="horizontal" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Horizontal Pulse</span>
+                                        <span class="bp-name" data-i18n="boundary_pulse_horizontal">Horizontal Pulse</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1930,7 +2437,7 @@
                                 <button type="button" class="bp-card rand" role="radio" aria-checked="false" data-pulse-style="random">
                                     <input type="radio" name="selected-pulse-style" value="random" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Random</span>
+                                        <span class="bp-name" data-i18n="boundary_pulse_random">Random</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1942,21 +2449,21 @@
                             </div>
                         </div>
 
-                        <!-- Boundary Particles (Hạt Bắn Từ Đường Biên) -->
-                        <div class="mt-6" id="boundary-particles-section">
+                        <!-- TAB: Boundary Particles -->
+                        <div id="tab-p-particles" class="tab-pane hidden space-y-4">
                             <h3
                                 class="text-sm font-bold text-white mb-1 flex items-center gap-2 uppercase tracking-widest font-orbitron">
                                 <i class="fas fa-braille text-cyan-400"></i>
-                                <span>Boundary Particles</span>
+                                <span data-i18n="personalize_particles_title">Boundary Particles</span>
                             </h3>
-                            <p class="text-[11px] text-gray-400 mb-4">Tùy chỉnh hiệu ứng hạt bắn ra từ hai bên đường biên theo nhịp beat.</p>
+                            <p class="text-[11px] text-gray-400 mb-4" data-i18n="personalize_particles_desc">Tùy chỉnh hiệu ứng hạt bắn ra từ hai bên đường biên theo nhịp beat.</p>
                             <div class="bp-grid" id="boundary-particle-group" role="radiogroup">
 
                                 <!-- 0. Off -->
                                 <button type="button" class="bp-card off" role="radio" aria-checked="false" data-particle-style="off">
                                     <input type="radio" name="selected-boundary-particle-style" value="off" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Disabled (Off)</span>
+                                        <span class="bp-name" data-i18n="boundary_particle_off">Disabled (Off)</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1970,7 +2477,7 @@
                                 <button type="button" class="bp-card pt-classic" role="radio" aria-checked="false" data-particle-style="classic">
                                     <input type="radio" name="selected-boundary-particle-style" value="classic" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Classic Particles</span>
+                                        <span class="bp-name" data-i18n="boundary_particle_classic">Classic Particles</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -1992,7 +2499,7 @@
                                 <button type="button" class="bp-card pt-normal" role="radio" aria-checked="false" data-particle-style="normal">
                                     <input type="radio" name="selected-boundary-particle-style" value="normal" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Normal Burst</span>
+                                        <span class="bp-name" data-i18n="boundary_particle_normal">Normal Burst</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -2016,7 +2523,7 @@
                                 <button type="button" class="bp-card pt-wave" role="radio" aria-checked="false" data-particle-style="wave">
                                     <input type="radio" name="selected-boundary-particle-style" value="wave" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Wave Shooter</span>
+                                        <span class="bp-name" data-i18n="boundary_particle_wave">Wave Shooter</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -2040,7 +2547,7 @@
                                 <button type="button" class="bp-card pt-horiz" role="radio" aria-checked="false" data-particle-style="horizontal">
                                     <input type="radio" name="selected-boundary-particle-style" value="horizontal" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Horizontal Spray</span>
+                                        <span class="bp-name" data-i18n="boundary_particle_horizontal">Horizontal Spray</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -2064,7 +2571,7 @@
                                 <button type="button" class="bp-card rand" role="radio" aria-checked="false" data-particle-style="random">
                                     <input type="radio" name="selected-boundary-particle-style" value="random" class="hidden">
                                     <div class="bp-head">
-                                        <span class="bp-name">Random</span>
+                                        <span class="bp-name" data-i18n="boundary_particle_random">Random</span>
                                         <span class="bp-radio"></span>
                                     </div>
                                     <div class="bp-prev">
@@ -3492,7 +3999,7 @@
                     </div>
                     <div id="secret-credit-btn"
                         class="shrink-0 text-center text-[10px] text-gray-500 mt-4 pt-4 border-t border-cyan-500/20 tracking-wide uppercase font-orbitron cursor-pointer select-none active:text-gray-400">
-                        MeoTN HOP ENGINE v3.7 (Build v1.0.9)
+                        MeoTN HOP ENGINE v3.7 (Build v1.0.10)
                         <div class="mt-1 text-gray-600"><span class="text-cyan-500/60">MeoTN Gaming</span> | <span
                                 class="text-pink-500/60">Powered by MeoTN Digital</span> | <a href="license.html" onclick="event.preventDefault(); event.stopPropagation(); window.openInGameViewer ? window.openInGameViewer('license.html', 'MIT LICENSE') : window.open('license.html');" class="text-cyan-400/80 hover:text-cyan-300 underline pointer-events-auto cursor-pointer">MIT License</a></div>
                     </div>
@@ -3739,7 +4246,7 @@
                     PC Windows (.exe)
                 </h3>
                 <p id="hero-platform-desc" class="text-xs text-slate-400 font-sans mb-3 leading-relaxed" data-i18n="download_opt_pc_desc">
-                    Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.9 · 48 MB
+                    Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.10 · 48 MB
                 </p>
                 <a id="hero-action-btn" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
                     class="w-full block py-2.5 sm:py-3 bg-cyan-400 hover:bg-cyan-300 active:scale-[0.98] text-slate-950 font-orbitron font-black text-xs sm:text-sm uppercase tracking-widest rounded-xl text-center shadow-[0_0_18px_rgba(6,182,212,0.35)] transition-all cursor-pointer whitespace-nowrap" data-i18n="download_btn_download">
@@ -3779,7 +4286,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-orbitron font-bold text-xs sm:text-sm text-slate-200" data-i18n="download_opt_apk_title">Android (APK)</div>
-                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_apk_desc">v1.0.9 · 32 MB</div>
+                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_apk_desc">v1.0.10 · 32 MB</div>
                         </div>
                     </div>
                     <a id="download-opt-apk" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
@@ -3796,7 +4303,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-orbitron font-bold text-xs sm:text-sm text-slate-200" data-i18n="download_opt_pc_title">PC Windows (.exe)</div>
-                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_pc_desc">Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.9 · 48 MB</div>
+                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_pc_desc">Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.10 · 48 MB</div>
                         </div>
                     </div>
                     <a id="download-opt-pc" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
@@ -4142,7 +4649,7 @@
             // "js/ui/alert.js"
         ];
 
-        const SCRIPT_BUILD_VERSION = '1.0.9';
+        const SCRIPT_BUILD_VERSION = '1.0.10';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');

@@ -68,6 +68,18 @@
                     }
                 });
 
+                const patternGrid = document.getElementById('ball-pattern-grid');
+                if (patternGrid) {
+                    const previewColorMap = {
+                        dynamic: '#22d3ee',
+                        cyan: '#00ffff',
+                        pink: '#ff00ff',
+                        yellow: '#ffff00',
+                        white: '#ffffff'
+                    };
+                    patternGrid.style.color = previewColorMap[selectedBallColor] || '#22d3ee';
+                }
+
                 ballPatternRadios.forEach(radio => {
                     const card = radio.closest('.bg-option-card');
                     if (!card) return;
@@ -297,9 +309,85 @@
             // Initialize UI styling
             updateUI();
 
+            // Initialize sub-tabs navigation (matching Settings panel UX)
+            this.initTabs();
+
             // Trigger translation on load to localize injected markup
             if (typeof applyTranslations === 'function') {
                 applyTranslations();
+            }
+        },
+
+        switchTab(targetId) {
+            const tabBtns = document.querySelectorAll('#panel-personalize .tab-btn[data-personalize-tab]');
+            const tabPanes = document.querySelectorAll('#personalize-tab-contents .tab-pane');
+            const targetBtn = document.querySelector(`#panel-personalize .tab-btn[data-personalize-tab="${targetId}"]`);
+            const targetPane = document.getElementById(targetId);
+            if (!targetPane) return;
+
+            tabBtns.forEach(b => b.classList.remove('active'));
+            if (targetBtn) targetBtn.classList.add('active');
+
+            tabPanes.forEach(pane => {
+                pane.classList.add('hidden');
+                pane.classList.remove('active');
+            });
+            targetPane.classList.remove('hidden');
+            targetPane.classList.add('active');
+
+            const contentsEl = document.getElementById('personalize-tab-contents');
+            if (contentsEl) contentsEl.scrollTop = 0;
+
+            if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+                targetPane.style.opacity = 0;
+                targetPane.style.transform = 'translateX(-10px)';
+                anime({ targets: targetPane, opacity: 1, translateX: 0, duration: 280, easing: 'easeOutQuad' });
+            } else {
+                targetPane.style.opacity = 1;
+                targetPane.style.transform = 'none';
+            }
+
+            if (typeof window.adjustTabsKerning === 'function') {
+                setTimeout(window.adjustTabsKerning, 50);
+            }
+        },
+
+        initTabs() {
+            const tabsContainer = document.querySelector('.personalize-tabs-container');
+            const tabBtns = document.querySelectorAll('#panel-personalize .tab-btn[data-personalize-tab]');
+            tabBtns.forEach(btn => {
+                if (btn._personalizeTabBound) return;
+                btn._personalizeTabBound = true;
+                btn.addEventListener('click', () => {
+                    if (tabsContainer && tabsContainer._wasDragged) return;
+                    const targetId = btn.dataset.personalizeTab;
+                    if (targetId) this.switchTab(targetId);
+                });
+            });
+
+            if (tabsContainer && !tabsContainer._personalizeDragBound) {
+                tabsContainer._personalizeDragBound = true;
+                let isDown = false;
+                let startX = 0;
+                let scrollLeft = 0;
+                tabsContainer.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    tabsContainer._wasDragged = false;
+                    startX = e.pageX - tabsContainer.offsetLeft;
+                    scrollLeft = tabsContainer.scrollLeft;
+                });
+                window.addEventListener('mouseup', () => {
+                    isDown = false;
+                    setTimeout(() => { tabsContainer._wasDragged = false; }, 30);
+                });
+                tabsContainer.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    const x = e.pageX - tabsContainer.offsetLeft;
+                    if (Math.abs(x - startX) > 4) {
+                        tabsContainer._wasDragged = true;
+                    }
+                    tabsContainer.scrollLeft = scrollLeft - (x - startX);
+                });
             }
         }
     };

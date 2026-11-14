@@ -1586,6 +1586,11 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
             if (ballGlowMesh.material) ballGlowMesh.material.opacity = 0;
         }
 
+        if (typeof ensureLedBoardMesh === 'function') {
+            const ledMesh = ensureLedBoardMesh();
+            if (ledMesh) ledMesh.visible = true;
+        }
+
         scene.add(warmupGroup);
 
         // Biên dịch trước toàn bộ shaders trên GPU
@@ -1596,6 +1601,9 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
         renderer.render(scene, camera);
 
         scene.remove(warmupGroup);
+        if (ledBoardMesh) {
+            ledBoardMesh.visible = (typeof selectedBackground !== 'undefined' && selectedBackground === 'led_board');
+        }
         if (window.GameEffectsManager) {
             if (window.GameEffectsManager.boundaryDustMesh) window.GameEffectsManager.boundaryDustMesh.visible = false;
             if (window.GameEffectsManager.boundaryBurstMesh) window.GameEffectsManager.boundaryBurstMesh.visible = false;
@@ -2067,7 +2075,7 @@ async function initThree() {
     }
 
     // --- LOGIC CHUYỂN TAB CÀI ĐẶT ---
-    const settingTabBtns = document.querySelectorAll('.tab-btn');
+    const settingTabBtns = document.querySelectorAll('#panel-settings .tab-btn');
     settingTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.dataset.tab;
@@ -2075,7 +2083,7 @@ async function initThree() {
             settingTabBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
-            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+            document.querySelectorAll('#panel-settings .tab-pane').forEach(pane => pane.classList.add('hidden'));
             const targetPane = document.getElementById(targetId);
             if (targetPane) {
                 targetPane.classList.remove('hidden');
@@ -2185,43 +2193,218 @@ async function initThree() {
 
 
 // --- BACKGROUND STYLES IMPLEMENTATION ---
+function getDifficultyBackgroundHex() {
+    const isAsian = (window.AsianModeManager && window.AsianModeManager.isEnabled) ||
+        (typeof window.getActiveDifficultyMode === 'function' && window.getActiveDifficultyMode() === 'asian');
+    const isHard = (window.HardModeManager && window.HardModeManager.isEnabled) ||
+        (typeof window.getActiveDifficultyMode === 'function' && window.getActiveDifficultyMode() === 'hard');
+    const isEasy = (window.EasyModeManager && window.EasyModeManager.isEnabled) ||
+        (typeof window.getActiveDifficultyMode === 'function' && window.getActiveDifficultyMode() === 'easy');
+
+    if (isAsian) return 0xff1838; // Crimson Red
+    if (isHard) return 0xff5500;  // Flame Orange
+    if (isEasy) return 0x10b981;  // Emerald Green
+    return 0x00e5ff;              // Neon Cyan (Normal)
+}
+
+function computeTintedBgColor(hex, scale, baseGray, outColor) {
+    outColor.setHex(hex).multiplyScalar(scale);
+    outColor.r += baseGray;
+    outColor.g += baseGray;
+    outColor.b += baseGray;
+}
+
+function applyFogAndClearColor(colorObj) {
+    if (scene && scene.fog) {
+        scene.fog.color.copy(colorObj);
+        scene.fog.density = 0.012;
+        const fogHex = scene.fog.color.getHex();
+        if (renderer && _lastSetClearColorHex !== fogHex) {
+            _lastSetClearColorHex = fogHex;
+            renderer.setClearColor(scene.fog.color);
+        }
+    } else if (renderer) {
+        const hex = colorObj.getHex();
+        if (_lastSetClearColorHex !== hex) {
+            _lastSetClearColorHex = hex;
+            renderer.setClearColor(colorObj);
+        }
+    }
+}
+
+function syncLedBoardGridResolution() {
+    if (!ledBoardUniforms) return;
+    const isLow = (typeof performanceModeEnabled !== 'undefined' && performanceModeEnabled) ||
+        (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple');
+    const cols = isLow ? 22.0 : 34.0;
+    const rows = isLow ? 10.0 : 16.0;
+    if (ledBoardUniforms.uGridSize.value.x !== cols || ledBoardUniforms.uGridSize.value.y !== rows) {
+        ledBoardUniforms.uGridSize.value.set(cols, rows);
+    }
+}
+
+function ensureLedBoardMesh() {
+    if (!scene) return null;
+    if (ledBoardMesh) {
+        if (ledBoardMesh.parent !== scene) scene.add(ledBoardMesh);
+        syncLedBoardGridResolution();
+        return ledBoardMesh;
+    }
+
+    ledBoardUniforms = {
+        uTime: { value: 0.0 },
+        uPulse: { value: 0.0 },
+        uGridSize: { value: new THREE.Vector2(34.0, 16.0) },
+        uBgColor: { value: new THREE.Color(0x020714) }
+    };
+    syncLedBoardGridResolution();
+
+    // Single lightweight GPU quad rendered behind all 3D geometry (Zero-GC, 1 draw call)
+    const boardGeo = new THREE.PlaneGeometry(250, 120);
+    const boardMat = new THREE.ShaderMaterial({
+        uniforms: ledBoardUniforms,
+        vertexShader: `
+            varying vec2 vUv;
+            void main() {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+            }
+        `,
+        fragmentShader: `
+            uniform float uTime;
+            uniform float uPulse;
+            uniform vec2 uGridSize;
+            uniform vec3 uBgColor;
+            varying vec2 vUv;
+
+            float hash21(vec2 p) {
+                p = fract(p * vec2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return fract(p.x * p.y);
+            }
+
+            void main() {
+                vec2 gv = vUv * uGridSize;
+                vec2 cellId = floor(gv);
+                vec2 f = fract(gv) - 0.5;
+
+                // Fine sub-grid lines (subtle blueprint/HUD coordinate lattice)
+                vec2 subGrid = abs(fract(gv * 2.0) - 0.5);
+                float microGrid = smoothstep(0.47, 0.5, max(subGrid.x, subGrid.y)) * 0.08;
+
+                // Seamless 45-degree PCB circuit trace Truchet routing per cell
+                float h = hash21(cellId);
+                vec2 pf = f;
+                if (h > 0.5) pf.x = -pf.x;
+
+                float dTrace1 = abs((pf.x + pf.y) - 0.5);
+                float dTrace2 = abs((pf.x + pf.y) + 0.5);
+                float dTrace = min(dTrace1, dTrace2);
+                float traceCore = smoothstep(0.055, 0.015, dTrace);
+                float traceGlow = smoothstep(0.16, 0.02, dTrace) * 0.22;
+
+                // IC microchips & glowing solder vias at select nodes
+                float isChip = step(0.76, h);
+                float chipDist = max(abs(f.x), abs(f.y));
+                float chipBody = smoothstep(0.24, 0.21, chipDist) * isChip;
+                float chipBorder = smoothstep(0.26, 0.23, chipDist) * (1.0 - smoothstep(0.21, 0.18, chipDist)) * isChip;
+                float viaDist = min(length(f - vec2(0.0, 0.5)), length(f - vec2(0.5, 0.0)));
+                float viaNode = smoothstep(0.10, 0.04, viaDist);
+
+                // Racing data signal packets flowing along circuit buses
+                float phase = h * 6.2831;
+                float flowCoord = (pf.x - pf.y) * 0.5 + uTime * (0.45 + 0.35 * step(0.6, h)) + h * 4.0;
+                float packet = pow(max(0.0, sin(flowCoord * 3.14159 + phase)), 8.0) * traceCore;
+
+                // Horizontal high-speed data bus rails & sweeping tech scanline
+                float busMask = smoothstep(0.022, 0.004, abs(fract(vUv.y * 6.0) - 0.5));
+                float busPacket = smoothstep(0.92, 0.995, sin(vUv.x * 18.0 - uTime * 3.8 + floor(vUv.y * 6.0) * 2.1)) * busMask;
+                float scanWave = exp(-abs(fract(uTime * 0.14) - vUv.x) * 14.0) * 0.12;
+
+                // Subtle central HUD holographic tech reticle
+                vec2 centered = (vUv - vec2(0.5, 0.44)) * vec2(1.9, 1.0);
+                float r = length(centered);
+                float hudRing = smoothstep(0.008, 0.001, abs(r - 0.34)) * 0.28
+                              + smoothstep(0.005, 0.001, abs(r - 0.48)) * 0.16;
+
+                vec3 cyanTech = vec3(0.0, 0.88, 1.0);
+                vec3 blueTech = vec3(0.12, 0.42, 0.98);
+                vec3 accentTech = vec3(0.25, 0.98, 0.85);
+
+                vec3 col = uBgColor;
+                col += blueTech * microGrid;
+                col = mix(col, vec3(0.012, 0.045, 0.11), chipBody * 0.85);
+                col += blueTech * (traceCore * 0.28 + traceGlow * 0.45 + chipBorder * 0.45);
+                col += cyanTech * (viaNode * (0.40 + 0.25 * uPulse) + hudRing * (0.65 + 0.35 * uPulse));
+                col += accentTech * (packet * (0.65 + 0.55 * uPulse) + busPacket * 0.75);
+                col += cyanTech * (scanWave * (0.4 + traceCore));
+
+                float edgeFade = smoothstep(0.0, 0.10, vUv.x) * smoothstep(1.0, 0.90, vUv.x)
+                               * smoothstep(0.0, 0.14, vUv.y) * smoothstep(1.0, 0.86, vUv.y);
+
+                gl_FragColor = vec4(mix(uBgColor, col, edgeFade), 1.0);
+            }
+        `,
+        fog: false,
+        depthTest: false,
+        depthWrite: false,
+        transparent: false
+    });
+
+    ledBoardMesh = new THREE.Mesh(boardGeo, boardMat);
+    ledBoardMesh.renderOrder = -100;
+    ledBoardMesh.frustumCulled = false;
+    ledBoardMesh.position.set(0, 28, (camera ? camera.position.z : 10) - 175);
+    ledBoardMesh.updateMatrix();
+    ledBoardMesh.matrixAutoUpdate = false;
+    ledBoardMesh.visible = false;
+    scene.add(ledBoardMesh);
+    return ledBoardMesh;
+}
+
 function updateBackgroundStyle() {
     if (!camera) return;
 
+    if (ledBoardMesh) {
+        ledBoardMesh.visible = (selectedBackground === 'led_board');
+    }
+
     if (selectedBackground === 'default') {
-        // Khôi phục sương mù & màu renderer mặc định
-        if (scene && scene.fog) {
-            scene.fog.color.setHex(0x020108);
-            scene.fog.density = 0.012;
-        }
-        if (renderer && scene && scene.fog) {
-            renderer.setClearColor(scene.fog.color);
-        }
+        targetBgColor.setHex(0x020108);
+        currentBgColor.copy(targetBgColor);
+        applyFogAndClearColor(currentBgColor);
         return;
     }
 
     if (selectedBackground === 'japan') {
-
-        // Áp dụng màu ban đầu
         let activeTile = tiles[currentTileIndex];
         let tileColorHex = 0x00ffff;
         if (activeTile && activeTile.userData && activeTile.userData.themeColor) {
             tileColorHex = activeTile.userData.themeColor;
         }
-
-        const baseGray = 0.015;
-        targetBgColor.setHex(tileColorHex).multiplyScalar(0.035);
-        targetBgColor.r += baseGray;
-        targetBgColor.g += baseGray;
-        targetBgColor.b += baseGray;
+        computeTintedBgColor(tileColorHex, 0.035, 0.015, targetBgColor);
         currentBgColor.copy(targetBgColor);
+        applyFogAndClearColor(currentBgColor);
+        return;
+    }
 
-        if (scene && scene.fog) {
-            scene.fog.color.copy(currentBgColor);
-            scene.fog.density = 0.012;
-        }
-        if (renderer) {
-            renderer.setClearColor(currentBgColor);
+    if (selectedBackground === 'difficulty') {
+        const diffHex = getDifficultyBackgroundHex();
+        computeTintedBgColor(diffHex, 0.09, 0.012, targetBgColor);
+        currentBgColor.copy(targetBgColor);
+        _diffBgSettled = true;
+        applyFogAndClearColor(currentBgColor);
+        return;
+    }
+
+    if (selectedBackground === 'led_board') {
+        targetBgColor.setHex(0x020714);
+        currentBgColor.copy(targetBgColor);
+        applyFogAndClearColor(currentBgColor);
+        const board = ensureLedBoardMesh();
+        if (board) {
+            board.visible = true;
+            board.matrix.elements[14] = camera.position.z - 175;
         }
     }
 }
@@ -2690,6 +2873,11 @@ let _lastSetClearColorHex = -1;
 let _lastRenderRafTime = 0;
 let _smoothedFrameDelta = 0;
 let _smoothedAudioDrift = 0;
+let ledBoardMesh = null;
+let ledBoardUniforms = null;
+let _ledBoardElapsed = 0;
+let _ledBoardPulse = 0;
+let _diffBgSettled = true;
 
 function syncSharedMaterial(mat, currentFrameHex, tempColor) {
     if (!mat) return;
@@ -4121,25 +4309,42 @@ function animate(rafTime) {
             tileColorHex = activeTile.userData.themeColor;
         }
 
-        const baseGray = 0.015;
-        targetBgColor.setHex(tileColorHex).multiplyScalar(0.035);
-        targetBgColor.r += baseGray;
-        targetBgColor.g += baseGray;
-        targetBgColor.b += baseGray;
+        computeTintedBgColor(tileColorHex, 0.035, 0.015, targetBgColor);
 
         const lerpSpeed = 3.0;
         const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
         currentBgColor.lerp(targetBgColor, lerpFactor);
-
-        if (scene && scene.fog) {
-            scene.fog.color.copy(currentBgColor);
+        applyFogAndClearColor(currentBgColor);
+    } else if (selectedBackground === 'difficulty') {
+        const diffHex = getDifficultyBackgroundHex();
+        computeTintedBgColor(diffHex, 0.09, 0.012, targetBgColor);
+        const dr = targetBgColor.r - currentBgColor.r;
+        const dg = targetBgColor.g - currentBgColor.g;
+        const db = targetBgColor.b - currentBgColor.b;
+        if ((dr * dr + dg * dg + db * db) > 1e-6) {
+            const lerpFactor = 1 - Math.exp(-5.0 * delta);
+            currentBgColor.lerp(targetBgColor, lerpFactor);
+            applyFogAndClearColor(currentBgColor);
+        } else if (!_diffBgSettled) {
+            currentBgColor.copy(targetBgColor);
+            applyFogAndClearColor(currentBgColor);
+            _diffBgSettled = true;
         }
-        if (renderer && scene && scene.fog) {
-            const fogHex = scene.fog.color.getHex();
-            if (_lastSetClearColorHex !== fogHex) {
-                _lastSetClearColorHex = fogHex;
-                renderer.setClearColor(scene.fog.color);
+    } else if (selectedBackground === 'led_board') {
+        if (ledBoardMesh && ledBoardMesh.visible && ledBoardUniforms) {
+            _ledBoardElapsed += delta;
+            if (_ledBoardElapsed > 3600.0) _ledBoardElapsed -= 3600.0;
+            ledBoardUniforms.uTime.value = _ledBoardElapsed;
+
+            let targetPulse = 0.15 + 0.12 * Math.sin(_ledBoardElapsed * 2.5);
+            if (isPlaying && window.VisualizerManager && window.VisualizerManager.cachedBarData && window.VisualizerManager.cachedBarData.length > 0) {
+                const bars = window.VisualizerManager.cachedBarData;
+                const mid = bars.length >> 1;
+                targetPulse = (bars[mid] || 0) * 0.65 + (bars[0] || 0) * 0.35;
             }
+            _ledBoardPulse += (targetPulse - _ledBoardPulse) * (1 - Math.exp(-12.0 * delta));
+            ledBoardUniforms.uPulse.value = _ledBoardPulse;
+            ledBoardMesh.matrix.elements[14] = camera.position.z - 175;
         }
     }
 

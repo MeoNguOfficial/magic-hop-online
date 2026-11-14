@@ -1,9 +1,57 @@
-# 🎵 Cyber Beat Hopper (v1.0.9)
+# 🎵 Cyber Beat Hopper (v1.0.10)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.9**, phát triển trên nền tảng *MeoTN HOP ENGINE v3.7*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.10**, phát triển trên nền tảng *MeoTN HOP ENGINE v3.7*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
 
 ---
-## 🚀 Phiên Bản v1.0.9 Có gì mới?
+## 🚀 Phiên Bản v1.0.10 Có gì mới?
+
+# 🚀 UPDATE LOG: TÁI CẤU TRÚC CÁ NHÂN HÓA ĐA TAB KÈM PREVIEW TRỰC QUAN, HỆ THỐNG HẠT ĐƯỜNG BIÊN (BOUNDARY PARTICLES), VORTEX BLOCK, KHỬ KHỰNG FPS CAO & PHÁT HÀNH CHÍNH THỨC v1.0.10 (RELEASE v1.0.10)
+
+Chào các bạn, bản cập nhật **v1.0.10** tập trung hoàn thiện chiều sâu cá nhân hóa, bổ sung hiệu ứng vật lý/đồ họa mới và giải quyết triệt để các lỗi khựng vi mô khi chơi ở FPS cao:
+
+---
+
+### 🎨 1. TÁI CẤU TRÚC MỤC CÁ NHÂN HÓA (PERSONALIZE REMASTER) & PREVIEW TRỰC QUAN
+- **Giao diện sub-tab gọn gàng chuẩn Settings:**
+  - Tổ chức lại toàn bộ mục **Nền & Bóng** thành 5 tab riêng biệt dễ thao tác trên cả PC lẫn Mobile: `Hình nền`, `Bóng`, `Môi trường`, `Đường biên`, `Hạt biên`.
+- **2 Hình nền mới tối ưu hiệu năng:**
+  - **Màu theo độ khó (`difficulty`):** Tự động chuyển đổi bảng màu nền theo chế độ chơi (*Easy*, *Normal*, *Hard*, *Asian*).
+  - **Công nghệ (`led_board`):** Không gian mạch điện tử viễn tưởng *Cyber Tech* & luồng dữ liệu GPU siêu nhẹ.
+  - Bổ sung đầy đủ thumbnail preview trực quan cho toàn bộ hình nền.
+- **Preview 3D cho Môi trường & Hoa văn Bóng:**
+  - Thêm thẻ preview phối cảnh 3D SVG siêu nhẹ cho 4 Môi trường (*Hư Không*, *Đường Lưới 3D*, *Thành Phố*, *Đồng Lúa*).
+  - Thêm preview quả cầu 3D cho 6 Hoa văn bóng (*Đặc*, *Khung*, *Caro*, *Sọc dọc*, *Chấm bi*, *Lưới vi mạch*) và tự động đổi màu preview theo **Màu Bóng** đang chọn.
+- **Sửa lỗi không lưu cài đặt Personalize:**
+  - Đồng bộ hóa `VALID_LOCAL_STORAGE_KEYS`, `personalize.js` và `initThree()`, đảm bảo mọi tùy chọn (hình nền, màu bóng, hoa văn, môi trường, đường biên, hạt biên) được lưu giữ 100% sau khi F5 hoặc khởi động lại ứng dụng.
+
+---
+
+### ✨ 2. HẠT ĐƯỜNG BIÊN (BOUNDARY PARTICLES) & REMASTER ĐƯỜNG BIÊN
+- **Ra mắt mục độc lập Hạt Đường Biên (Boundary Particles):**
+  - Hệ thống hạt phát sáng bắn ra từ hai bên đường biên theo nhịp beat với 6 chế độ tùy chọn (*Off*, *Classic Particles*, *Normal Burst*, *Wave Shooter*, *Horizontal Spray*, *Random*) cùng khung preview mô phỏng riêng biệt.
+- **Remaster Đường Biên (Boundary Pulse):**
+  - Thiết kế lại các thẻ chọn hiệu ứng đường biên (*Off*, *Classic*, *Normal*, *Wave*, *Horizontal*, *Random*) với preview minh họa trực quan.
+
+---
+
+### 🎮 3. GAMEPLAY MỚI, ĐỒNG BỘ NHỊP MESH & KHỬ KHỰNG FPS CAO
+- **Bổ sung Vortex Block & Tinh chỉnh Dash Block:**
+  - Thêm loại gạch **Vortex Block** mới, đồng thời tối ưu hiệu ứng trượt và phản hồi trên **Dash Block**.
+- **Sửa lỗi lệch nhịp khi va chạm Mesh:**
+  - Khắc phục triệt để tình trạng bóng va chạm tại mesh khiến block tăng tốc đột ngột làm nhanh/chậm nhịp; bảo toàn giới hạn trần tốc độ nhạc `3.0` trong khi `gameSpeed` vẫn tăng tiến mượt mà.
+- **Khử khựng giả (High-FPS Micro-Stutter Fix):**
+  - Tinh chỉnh bộ điều phối khung hình và chu kỳ cập nhật để loại bỏ cảm giác giật/khựng nhẹ ngay cả khi máy đang đạt FPS cao.
+- **Nâng cấp UI & Điều khiển:**
+  - Bổ sung nút **Bỏ qua kiểm tra Online (Skip Online Check)** tại màn hình chọn bài hát, làm mới thiết kế **Logo**, tự động tắt **Pointer Lock** khi hoàn thành màn warm-up và sửa lỗi ô nhập văn bản không phản hồi.
+
+---
+
+### 🌐 4. ĐỒNG BỘ ĐA NGÔN NGỮ 100% (10 QUỐC GIA)
+- Bổ sung và chuẩn hóa đầy đủ **658 khóa dịch** trên toàn bộ 10 ngôn ngữ (`vi`, `en`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`), bao phủ hoàn toàn giao diện Cá nhân hóa, Đường biên, Hạt biên, Biểu đồ FPS và Toàn màn hình.
+
+---
+
+## 🚀 Bản trước đó: Phiên Bản v1.0.9 Có gì mới?
 
 # 🚀 UPDATE LOG: HERO ĐĨA THAN VINYL NỔI BẬT (FEATURED VINYL DISC), CẢI TỔ UI LANDSCAPE MOBILE/TABLET (APK), TỐI ƯU HIỆU SUẤT GAME THREE.JS & PHÁT HÀNH CHÍNH THỨC v1.0.9 (RELEASE v1.0.9)
 
@@ -50,378 +98,22 @@ Chào các bạn, bản cập nhật **v1.0.9** mang đến bước nhảy vọt
 
 ---
 
-## 🚀 Bản trước đó: Phiên Bản v1.0.8 Có gì mới?
-
-# 🚀 UPDATE LOG: CHỐNG THOÁT VÁN ĐẤU (ANTI-BACK SHIELD), NHẤN 2 LẦN NÚT BACK ĐỂ THOÁT (DOUBLE-TAP TO EXIT), CẢI TỔ MENU CÀI ĐẶT FPS THEO TẦN SỐ QUÉT & PHÁT HÀNH CHÍNH THỨC v1.0.8 (RELEASE v1.0.8)
-
-Chào các bạn, bản cập nhật **v1.0.8** tiếp tục nâng tầm trải nghiệm của **Cyber Beat Hopper** với các tính năng bảo vệ người chơi toàn diện, tái cấu trúc menu đồ họa thông minh và hoàn thiện cơ chế điều hướng chuẩn game native:
-
----
-
-### 🛡️ 1. CƠ CHẾ BẢO VỆ VÁN ĐẤU TOÀN DIỆN (ANTI-BACK & RELOAD SHIELD)
-- **Chặn hoàn toàn các phím/thao tác điều hướng quay lại vô tình:**
-  - **PC Desktop & Web:** Chặn phím `Alt + <-`, macOS `Cmd + [`, `BrowserBack`, và `Backspace` (ngoài ô nhập liệu).
-  - **Gaming Mouse:** Chặn các nút Back phụ trên chuột chơi game (`Mouse Button 3 & 4`), ngăn chặn việc vô tình ấn trúng gây mất ván đấu.
-  - **Mobile & PWA:** Chặn nút Back phần cứng Android và cử chỉ vuốt từ cạnh viền màn hình (Edge Swipe Back) trên iOS Safari / Android Chrome thông qua cơ chế bẫy `popstate` và `beforeunload` toàn cầu.
-- **Tự động tạm dừng an toàn (Auto-Pause Protection):**
-  - Khi phát hiện người chơi ấn phím quay lại hoặc rời ván đấu bất ngờ, trò chơi tự động tạm dừng (`pauseGame`), hiển thị **Cyber Toast Notification** nổi bật với biểu tượng khiên bảo vệ và thông điệp đa ngôn ngữ: *"Đã chặn quay lại để bảo vệ ván đấu của bạn!"*.
-  - Người chơi không bao giờ bị rơi bóng hay mất kỷ lục điểm số đáng tiếc.
-
----
-
-### 🚪 2. CƠ CHẾ NHẤN 2 LẦN NÚT BACK ĐỂ THOÁT (DOUBLE-TAP BACK TO EXIT)
-- **Bảo vệ người dùng khi ở ngoài trận đấu (Main Menu):**
-  - **Ưu tiên đóng cửa sổ (Modal Dismissal):** Nếu có bất kỳ popup hoặc modal nào đang mở (Cài đặt, Chọn bài hát, Tài khoản, Tải App, Admin Dashboard, In-game Viewer...), lần nhấn nút Back đầu tiên sẽ đóng modal đó lại mà không làm thoát game.
-  - **Nhấn lần 1 tại Menu chính:** Hiển thị thông báo Cyber Toast màu vàng ánh kim *"Nhấn lại lần nữa để thoát"* (`msg_press_back_again_to_exit`), giữ nguyên người chơi trong ứng dụng.
-  - **Nhấn lần 2 trong vòng 2.2 giây:** Ứng dụng xác nhận ý định của người chơi và thực hiện thoát game an toàn (hỗ trợ cả Android Capacitor, PC Standalone Native WebView2 và Web).
-
----
-
-### ⚡ 3. TÁI CẤU TRÚC MENU CÀI ĐẶT FPS THÔNG MINH (SMART FPS SYNC MODE)
-- **Thanh trượt Max FPS động (Dynamic Refresh Rate Slider):**
-  - Phạm vi từ 1 FPS đến **Tần số quét tối đa thực tế của màn hình** (Max Refresh Rate). Người chơi có thể tùy chỉnh giới hạn FPS linh hoạt.
-- **Gom nhóm Kiểu đồng bộ FPS (FPS Sync Mode):**
-  - **Tùy chỉnh (Custom):** Áp dụng giá trị từ thanh trượt Max FPS.
-  - **Tiết kiệm (Eco):** Khóa cứng 60 FPS (tiết kiệm pin & tỏa nhiệt).
-  - **Lite:** Khóa cứng 120 FPS.
-  - **Các mốc tần số quét cố định:** 144, 165, 240, 360 FPS...
-  - **VSync:** Đồng bộ khung hình dọc theo màn hình, tự động vô hiệu hóa thanh trượt FPS.
-- **Hiển thị thông minh & Fallback màn hình:**
-  - Tự động ẩn các mốc FPS cao hơn tần số quét của màn hình hiện tại (ví dụ: màn hình 144Hz sẽ tự ẩn các mốc 165, 240, 360).
-  - Tự động hạ cấu hình FPS về mức tối đa của màn hình mới khi người dùng chuyển sang màn hình tần số quét thấp hơn.
-
----
-
-### 🌐 4. ĐỊNH DANH TRÒ CHƠI ĐA NỀN TẢNG CHUẨN MỰC
-- Khai báo Schema.org `VideoGame` đầy đủ cho 6 nền tảng: Web Browser, Windows PC, Android, iOS, macOS, PWA.
-- Cập nhật bộ ngôn ngữ 10 quốc gia (`vi`, `en`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`).
-- Thiết kế lại toàn diện modal Tải App theo phong cách Cyberpunk hiện đại, phân loại badge thông minh cho từng thiết bị.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.7 Có gì mới?
-
-# 🚀 UPDATE LOG: BẢN PHÁT HÀNH ĐA NỀN TẢNG (PC STANDALONE & ANDROID APK - NO ELECTRON), BẢO TOÀN DỮ LIỆU 100%, IN-GAME PAGE VIEWER & MODAL TẢI APP 5 NỀN TẢNG (RELEASE v1.0.7)
-
-Chào các bạn, bản cập nhật **v1.0.7** là cột mốc đột phá đưa **Cyber Beat Hopper** chính thức trở thành tựa game đa nền tảng độc lập hoàn chỉnh: ra mắt bản Native Desktop cho PC Windows siêu nhẹ và Android APK (nói KHÔNG với Electron), bảo toàn 100% dữ liệu game sau mỗi lần cập nhật, tích hợp In-Game Page Viewer loại bỏ hoàn toàn lỗi Access Denied, thiết kế lại toàn diện hệ thống Tải App 5 nền tảng và bộ kiểm tra cập nhật tự động đa tầng:
-
----
-
-### 🖥️ 1. BẢN ĐÓNG GÓI ĐA NỀN TẢNG NATIVE ĐỘC LẬP - NÓI KHÔNG VỚI ELECTRON (STANDALONE PC & ANDROID APK)
-- **Kiến trúc PC Windows Standalone Siêu Nhẹ (C# Winsock + WebView2 / Chromium):**
-  - Loại bỏ hoàn toàn sự cồng kềnh của Electron (tiết kiệm hàng trăm MB dung lượng RAM và hàng trăm MB kích thước file cài đặt).
-  - Tích hợp máy chủ C# Winsock đa luồng tĩnh (`src-pc/Program.cs`) phục vụ assets cục bộ kết hợp khởi chạy nhân Chromium với cấu hình tối ưu phần cứng cao cấp:
-    `--enable-gpu-rasterization --enable-zero-copy --enable-features=AudioWorkletRealtimeThread --app="..."`
-  - Đảm bảo tốc độ quét khung hình cực cao (144Hz, 165Hz, 240Hz+), độ trễ âm thanh gần như bằng 0 (AudioWorklet Realtime Thread).
-- **Bản Android APK Native (Capacitor):**
-  - Đóng gói toàn diện cho thiết bị di động và máy tính bảng Android.
-  - Tối ưu hóa phản hồi cảm ứng đa điểm độ trễ thấp, hỗ trợ toàn màn hình tràn viền (`viewport-fit=cover`) và tăng tốc WebGL.
-- **Bộ phím tắt & Bảo vệ Native Desktop (`desktop-app.js`):**
-  - Hỗ trợ phím **F11** chuyển đổi toàn màn hình mượt mà.
-  - Vô hiệu hóa chuột phải mặc định trình duyệt (vẫn giữ nguyên menu ngữ cảnh bài hát và các ô nhập liệu).
-  - Khóa các phím tắt gây biến dạng tỷ lệ 3D: Ctrl + `+`/`-`/`0` (zoom), Ctrl+P (in), Ctrl+S (lưu trang).
-  - **Bảo vệ ván đấu đang chơi:** Tự động chặn phím F5 / Ctrl+R khi đang chơi dở bài (`isPlaying`) để bảo vệ điểm số kỷ lục của người chơi.
-
----
-
-### 💾 2. BẢO TOÀN DỮ LIỆU TUYỆT ĐỐI 100% KHI CẬP NHẬT APP (DATA PERSISTENCE ACROSS UPDATES)
-- **Cố định Origin máy chủ PC (Port tĩnh 38281):**
-  - Khắc phục triệt để lỗi người chơi bị mất toàn bộ kỷ lục điểm số, bài hát lưu trong máy và phiên đăng nhập sau mỗi lần mở lại hoặc cập nhật bản PC mới.
-  - Cố định cổng mạng `38281` kết hợp lưu trữ thư mục người dùng riêng biệt tại `%LOCALAPPDATA%\CyberBeatHopper\UserData` (miễn nhiễm với cơ chế tự dọn dẹp Disk Cleanup của Windows).
-- **Bảo vệ dữ liệu Android APK (`hasFragileUserData="true"`):**
-  - Khai báo cờ an toàn trên `AndroidManifest.xml` giúp giữ lại toàn bộ dữ liệu ứng dụng khi nâng cấp.
-  - Tự động sinh mã `versionCode` động theo thời gian thực trong `build.gradle`, đảm bảo cài đè bản cập nhật mới mượt mà không xung đột phiên bản.
-
----
-
-### 🎮 3. IN-GAME PAGE VIEWER - XEM TRANG TRỰC TIẾP TRONG GAME (ZERO ACCESS DENIED)
-- **Trình xem In-Game Page Viewer Cyberpunk (`#page-viewer-modal`):**
-  - Mở trực tiếp các trang phụ ngay bên trong game: **Admin Dashboard (`admin.html`)**, **Beat Editor Pro (`beat_editor.html`)**, **Điều khoản dịch vụ (`terms.html`)**, **Giấy phép bản quyền (`license.html`)**.
-  - **Dùng chung 100% Session & Storage:** Chạy cùng origin với game, token tài khoản Admin tự động kế thừa $\rightarrow$ **triệt tiêu 100% lỗi "ACCESS DENIED"**.
-  - **Bảo mật tối đa:** Không để lộ Session Token ra thanh địa chỉ URL bên ngoài.
-  - **Quay về game tức thì (Zero Reload):** Đóng mở nhẹ nhàng bằng phím `Escape`, nút `✕` hoặc nút *"VỀ GAME"* mà không cần tải lại trang web hay khởi tạo lại engine Three.js, bảo toàn vẹn nguyên tiến trình chơi và âm nhạc.
-  - **Nút "Mở Cửa Sổ Riêng":** Cho phép mở ra tab trình duyệt độc lập khi quản trị viên muốn làm việc trên màn hình phụ.
-
----
-
-### 📲 4. GIAO DIỆN TẢI APP 5 NỀN TẢNG (UNIFIED DOWNLOAD APP MODAL)
-- **Thay thế nút "Tải App (PWA)" cũ trên Web:**
-  - Nâng cấp thành nút chung **"Tải App"** mở modal Cyberpunk sang trọng với 5 tùy chọn nền tảng rõ ràng:
-    1. **Trình duyệt (PWA):** Cài đặt Web App chơi ngoại tuyến tức thì.
-    2. **PC Windows (.exe):** Bản đóng gói Standalone tối ưu Three.js 144Hz+.
-    3. **Android (File APK):** Tải trực tiếp gói cài đặt APK cho điện thoại.
-    4. **iOS (iPhone / iPad):** Nhãn *Coming Soon* (hướng dẫn tạm thời dùng Safari Add to Home Screen).
-    5. **macOS (Apple Silicon & Intel):** Nhãn *Coming Soon* (bản thử nghiệm).
-- **Tự động thích ứng giao diện theo nền tảng:** Khi chạy trên bản đóng gói (PC EXE hoặc Android APK), nút "Tải App" sẽ tự động ẩn đi và mở rộng nút **"Kiểm tra bản cập nhật App"** ra toàn màn hình.
-
----
-
-### 🔄 5. BỘ KIỂM TRA BẢN CẬP NHẬT TỰ ĐỘNG ĐA TẦNG (MULTI-TIER UPDATE CHECKER & version.json)
-- **Cơ chế Semantic Versioning độc lập:**
-  - So sánh phiên bản chuẩn xác (`compareSemVer`) độc lập với Service Worker trên bản PC và APK.
-- **Dự phòng đa tầng (Multi-tier Fallback):**
-  - Tự động lấy thông tin từ GitHub Raw $\rightarrow$ Vercel Web App $\rightarrow$ Local `./version.json`.
-  - Khắc phục lỗi CORS 503 bằng cấu hình `vercel.json` hỗ trợ `Access-Control-Allow-Origin: *`.
-  - Tự động kiểm tra bản cập nhật trong nền 3.5s sau khi khởi động app mà không gây giật lag FPS.
-
----
-
-### 🔐 6. FORM ĐĂNG NHẬP ADMIN TRỰC TIẾP & DÁN TOKEN (FALLBACK TAB NGOÀI)
-- Khi mở `admin.html` trên trình duyệt ngoài độc lập (chưa có token), hệ thống không còn hiện màn hình cụt đường nữa mà tự động hiển thị **Form đăng nhập Admin trực tiếp** (Email/Tài khoản + Mật khẩu) cùng nút **"📋 Dán Token từ Game"**, cho phép đăng nhập và truy cập bảng quản trị tức thì.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.6 Có gì mới?
-
-# 🚀 UPDATE LOG: TÍNH NĂNG MỚI DASH TILE (GẠCH LƯỚT SIÊU TỐC), NÂNG CẤP AUTOPLAY & TRIỆT TIÊU 100% DROP FPS (RELEASE v1.0.6)
-
-Chào các bạn, bản cập nhật **v1.0.6** là bước tiến vượt bậc về cả gameplay lẫn hiệu năng đồ họa: chính thức ra mắt tính năng hoàn toàn mới **Dash Tile (Gạch Lướt Siêu Tốc)**, tinh chỉnh trí thông minh nhân tạo **Autoplay**, và tối ưu hóa cấp sâu WebGL triệt tiêu hoàn toàn hiện tượng drop/khựng FPS khi vào nhịp đầu tiên hoặc chuyển mốc combo:
-
----
-
-### ⚡ 1. TÍNH NĂNG MỚI: DASH TILE - GẠCH LƯỚT SIÊU TỐC (EXTENDED DASH RUNWAY)
-- **Cơ chế lướt dính sàn mượt mà:** Khi bóng tiếp đất lên Dash Tile, quỹ đạo nhảy parabol trục Y được ngắt mượt, bóng bám chặt mặt đường băng (`ball.position.y = minFloor`) và lướt xé gió về phía trước với vệt sáng neon tốc độ cao.
-- **Thao tác tự do (Free Release - Không ép đè ngón tay):** Cơ chế Dash mang tính vật lý đường chạy (Track-driven). Người chơi hoàn toàn có thể thả tay tự do bất cứ lúc nào, bóng vẫn giữ vị trí an toàn trên dải gạch và tiếp tục lướt; người chơi chỉ cần di chuyển trục X để tránh trượt ra 2 bên mép vực.
-- **Cú nảy kết thúc Super Hop:** Đến cuối dải lướt, lò xo giải phóng lực đẩy cực đại đưa bóng bay vút lên trời cao kèm âm thanh kích hoạt rền vang và đáp xuống ô gạch tiếp theo.
-- **Cơ chế tính điểm & Combo kép (Dual-Center Validation):** Hệ thống đánh giá độ chuẩn xác tại cả 2 đầu dải lướt (mốc đón bóng vào và mốc chuẩn bị nảy Super Hop). Nếu giữ bóng trúng tâm cả 2 đầu ($|diffX| < 0.6$), người chơi sẽ được tăng liền **+2 Combo** (`comboCount += 2`) với điểm thưởng tối đa lên tới +20 (an toàn 100% với hệ thống chống gian lận server).
-- **Hỗ trợ Moving Dash & Dash Xiên Chéo (Diagonal Slant):** Hỗ trợ gạch Dash di chuyển lắc ngang và các dải Dash uốn góc chéo theo từng độ khó (Easy/Relax giữ thẳng 100%, Normal/Hard/Asian có các góc xiên thử thách).
-- **Đệm dài an toàn (Padding Cushioning):** Dải gạch tự động mở rộng thêm phần đệm `padLength = tileLength / 2` ở cả điểm đầu và điểm đuôi, triệt tiêu hoàn toàn lỗi rơi hụt "impossible jump".
-
----
-
-### 🤖 2. NÂNG CẤP AUTOPLAY & NATURAL AUTOPLAY THÔNG MINH CHO DASH TILES
-- **Bám runway mềm mại (Smooth Runway Tracking):** Autoplay sử dụng nội suy chuyển động (lerp) bám chính xác vào tâm đường băng Dash Tile theo thời gian thực, khử hoàn toàn hiện tượng giật cục hoặc lệch tâm.
-- **Khử nhiễu rung lắc (Zero Noise Entrance/Exit):** Tự động ngắt `autoNoise` tại lối vào và lối ra của dải Dash trong chế độ Natural Autoplay, giúp bóng đáp trúng hồng tâm và không bị trượt ra ngoài khi vào cua.
-- **Khắc phục lỗi dịch chuyển tức thời (Anti-Teleport Fix):** Sửa triệt để lỗi bóng bị nhảy giật vị trí khi tiếp đất và khi bật Super Hop ở chế độ Autoplay và cả người chơi thủ công.
-- **Đồng bộ gạch di động (Moving Dash Synchronization):** Hỗ trợ tính toán mượt mà tọa độ lối vào và lối ra ngay cả khi gạch Dash đang trượt ngang liên tục.
-
----
-
-### 🚀 3. TRIỆT TIÊU 100% DROP FPS KHI VÀO NHỊP ĐẦU TIÊN & COMBO X6 (GPU SHADER PRE-WARMING)
-- **Tiền biên dịch Shaders trên GPU (`prewarmAllGpuShaders`):** Toàn bộ các hiệu ứng sóng xung kích thường, kim cương burst combo 6, viền neon, tâm gạch, gạch thường, gạch mờ (dimmed tiles) và gạch Dash được nạp và biên dịch sẵn lên GPU ngay từ khi khởi tạo `initThree()`. Loại bỏ hoàn toàn độ trễ 15–40ms do WebGL JIT Shader Compilation gây ra ở nhịp đầu tiên.
-- **Khóa cố định cấu hình ánh sáng (`NUM_POINT_LIGHTS = 1`):** Duy trì `ballGlowLight.visible = true` và `ballGlowMesh.visible = true` vĩnh viễn trong scene graph, điều khiển hoàn toàn qua `intensity` và `opacity`. Three.js không bao giờ phải recompile lại toàn bộ shader khi người chơi chạm mốc Combo 6.
-- **Pre-cache Geometry Dash cho bài hát (`prewarmSongDashGeometries`):** Khởi tạo và lưu cache sẵn hình học 3D cho toàn bộ các khối Dash của bài hát trước khi trận đấu bắt đầu. Thời gian lấy geometry trong vòng lặp game loop giảm từ 20ms xuống còn **0.001ms** (Zero CPU Extrusion during gameplay).
-- **Khắc phục Dash Tile trượt từ Z = -40:** Gạch Dash được sinh ngay tại vị trí thực tế trên beatmap, loại bỏ hiệu ứng trôi giật popping khi gạch xuất hiện.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.5 Có gì mới?
-
-# 🚀 UPDATE LOG: HỖ TRỢ TOÀN DIỆN KÍCH CỠ CHỮ UI & HUD, TỐC ĐỘ BOUNCY BLOCK & FIX ZOOM GAME OVER (RELEASE v1.0.5)
-
-Chào các bạn, bản cập nhật **v1.0.5** mang đến khả năng tùy chỉnh hiển thị font chữ toàn diện, cải tiến nhịp độ vật lý gạch nảy và khắc phục lỗi chuyển cảnh màn hình kết thúc trận đấu:
-
----
-
-### 🔤 1. HỖ TRỢ TOÀN DIỆN KÍCH CỠ CHỮ HIỂN THỊ (FULL DISPLAY FONT SIZE SUPPORT)
-- **Tùy biến 4 mức font chữ mượt mà:** Hỗ trợ đầy đủ 4 mức kích thước: **Nhỏ (Small)**, **Vừa (Medium - Mặc định)**, **Lớn (Large)** và **Rất lớn (Very Large)**.
-- **Tối ưu hóa Bảng Cài đặt (Settings UI):**
-  - Đồng bộ kích thước chữ cho thanh tìm kiếm cài đặt (`#settings-search-input`) và toàn bộ danh sách kết quả tìm kiếm (`#settings-search-results`).
-  - Co giãn tỷ lệ font cho các nút tùy chọn chất lượng đồ họa (`#graphics-quality-options`) đảm bảo luôn vừa vặn, không bị vỡ bố cục 5 cột.
-  - Tự động co giãn hộp thông tin nhận diện GPU (`#gpu-info-box`), tên card đồ họa và các ghi chú hướng dẫn.
-  - Bổ sung đầy đủ các bộ chọn còn thiếu cho chế độ Rất lớn (`theme-font-xlarge`), giúp toàn bộ mô tả, nhãn phụ đề, ô nhập liệu và nút bấm co giãn chính xác.
-- **Mở rộng đồng bộ các Panel Menu:** Cập nhật áp dụng cỡ chữ linh hoạt cho toàn bộ các màn hình chức năng: Giao diện chính (Home), Tùy biến (Personalize), Trình phát nhạc (Music Player), Tài khoản (Account).
-- **Hỗ trợ HUD trong trận đấu (Top-Left HUD):**
-  - Chỉ số tốc độ bài hát (`#speed`) và toàn bộ cụm theo dõi hiệu năng (`#fps-hud`: text FPS, frame time ms, biểu đồ canvas) tự động co giãn theo cỡ chữ đã chọn.
-  - Tuyệt đối giữ nguyên kích thước chuẩn của các thành phần giao diện trung tâm (`#center-hud`: Điểm số, Combo, Perfect streak, Autoplay indicator) để đảm bảo trải nghiệm chơi game tối ưu nhất.
-
----
-
-### 🔄 2. SỬA LỖI PHÓNG TO KHI QUAY VỀ MENU TỪ GAME OVER (GAME OVER ZOOM FIX)
-- **Khắc phục lỗi tỷ lệ hiển thị:** Sửa triệt để hiện tượng góc nhìn camera và giao diện bị phóng to/scale đột ngột khi nhấn nút quay về Menu chính từ màn hình Game Over / Hoàn thành bài hát.
-- **Trải nghiệm chuyển cảnh mượt mà:** Khôi phục góc nhìn chuẩn và trạng thái canvas ổn định, liền mạch khi điều hướng giữa các màn hình.
-
----
-
-### ⚡ 3. TĂNG TỐC ĐỘ HỒI NẢY GẠCH NHÚN (BOUNCY BLOCKS SPEED & DYNAMICS)
-- **Tăng tốc độ đàn hồi (`baseDecay = 9.0`):** Nâng cao tốc độ hồi phục vị trí của khối gạch nảy sau khi bóng tiếp xúc, giúp hiệu ứng nảy nhanh hơn, dứt khoát hơn và ăn khớp hoàn hảo với nhịp điệu dồn dập ở các bài hát có tốc độ cao.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.4 Có gì mới?
-
-# 🚀 UPDATE LOG: TỐI ƯU HIỆU NĂNG THÍCH ỨNG, FPS GRAPH CYBERPUNK, VẬT LÝ BOUNCE & BẢO VỆ ĐA TẦNG (RELEASE v1.0.4)
-
-Chào các bạn, bản cập nhật **v1.0.4** tập trung cải thiện tí hiệu suất, tối ưu lại mã nguồn và tinh chỉnh trải nghiệm gameplay:
-
----
-
-### ⚡ 1. BỘ ĐIỀU PHỐI HIỆU NĂNG THÍCH ỨNG & BIỂU ĐỒ FPS THỜI GIAN THỰC (ADAPTIVE PERFORMANCE & FPS GRAPH)
-- **Tự động điều tiết thích ứng (`adaptive-performance.js`):** Hệ thống thông minh tự động đo đạc rolling FPS trong thời gian thực. Khi máy yếu hoặc phát hiện drop FPS, hệ thống sẽ tự động hạ tải GPU/CPU (giảm Pixel Ratio, tắt sao nền, giới hạn sóng xung kích shockwaves, culling tầm nhìn khối gạch) nhằm duy trì ổn định 60 FPS mượt mà.
-- **Bảo vệ băng thông Fillrate ở tốc độ cao:** Tự động khóa Pixel Ratio về 1.0 khi `gameSpeed >= 1.35` trên các màn hình có mật độ điểm ảnh cao (High-DPI / Windows Scaling > 100% / Retina), triệt tiêu hoàn toàn hiện tượng tụt khung hình sâu ở các khúc nhạc dồn dập.
-- **HUD & Biểu đồ FPS Cyberpunk Neon (`fps-graph.js`):** Tích hợp công cụ theo dõi FPS và Frametime trực quan, vẽ biểu đồ dạng sóng canvas 60 frame theo thời gian thực với công nghệ zero-allocation (tái sử dụng gradient, không sinh rác GC). Cho phép click vào HUD để bật/tắt nhanh biểu đồ.
-- **Tùy chọn đồ họa chuyên sâu & Nhận diện GPU:** Mở rộng các mức đồ họa `Simple`, `HD`, `FHD`, `QHD`, `UHD`. Thêm tùy chọn ưu tiên GPU rời (`preferDiscreteGpu`) và tự động nhận diện phần cứng đồ họa (NVIDIA, AMD Radeon, Intel Arc, Apple Silicon...).
-
----
-
-### 🎯 2. ĐỘ LÚN GẠCH & TÙY CHỌN TỐC ĐỘ NẢY ĐỘNG (DYNAMIC BOUNCE DYNAMICS)
-- **Tùy chọn Dynamic Bounce Speed (`dynamicBounceSpeedEnabled`):** Thêm tính năng cho phép tốc độ hồi/đàn hồi của khối gạch nảy (Bouncy Block) biến thiên linh hoạt tỉ lệ thuận theo tốc độ game (`gameSpeed`), hoặc giữ tốc độ suy giảm cố định theo ý muốn người chơi.
-- **Tăng độ lún Bouncy Block:** Gia tăng độ lún sâu của khối gạch từ 0.38 lên 0.52 world units, áp dụng công thức xung lực Half-sine wave (-sin(b * π) * amplitude) đem lại cảm giác nảy cực kỳ đã tay và chân thực theo nhịp điệu.
-- **Tối ưu hóa culling gạch (Z-Culling):** Thuật toán duyệt gạch ngắt sớm toàn bộ các khối nằm ngoài khoảng nhìn camera, giảm đáng kể chi phí duyệt cây Three.js.
-
----
-
-### 🏗️ 3. TÁI CẤU TRÚC MÔ-ĐUN HÓA & BIÊN DỊCH CỤC BỘ (MODULAR ARCHITECTURE & LOCAL MIGRATION)
-- **Kiến trúc thư mục JavaScript chuẩn hóa:** Tách biệt và tổ chức toàn diện mã nguồn thành các module chuyên biệt:
-  - `js/audio/`: Quản lý AudioContext, Beatmap Worker, Music Player, Playlist và Visualizer.
-  - `js/core/`: Quản lý vòng đời ứng dụng (`app-main.js`), cấu hình (`config.js`), biến toàn cục và đa ngôn ngữ (`i18n.js`).
-  - `js/engine/`: Engine 3D cốt lõi, camera, hiệu ứng Three.js, FPS graph và adaptive performance.
-  - `js/game/`: Phân tách rõ ràng các cơ chế bổ trợ (Autoplay, Bot Assist), quản lý khối gạch (Normal, Moving, Fake blocks) và chế độ chơi (Easy, Hard, Asian).
-  - `js/libs/`: Lưu trữ các thư viện cục bộ độc lập (`three.module.js`, `anime.min.js`, `disable-devtool.min.js`).
-  - `js/services/`: Dịch vụ gọi API backend, kiểm tra bản quyền, quản lý bộ nhớ đệm và lưu trữ.
-  - `js/ui/`: Các thành phần giao diện người dùng (Cài đặt, tài khoản, chat, cảnh báo, tùy biến cá nhân).
-- **Loại bỏ hoàn toàn CDN bên ngoài:**
-  - Chuyển sang sử dụng **Tailwind CSS precompiled cục bộ** (`css/tailwind.min.css`) xây dựng thông qua `@tailwindcss/cli`, tối ưu hóa kích thước và loại bỏ độ trễ tải mạng.
-  - Chuyển Three.js và AnimeJS từ CDN sang ES Module cục bộ, đảm bảo tính ổn định và khả năng hoạt động offline 100%.
-
----
-
-### 💾 4. LƯU TRỮ THẾ HỆ MỚI VỚI OPFS & QUẢN LÝ BỘ NHỚ TOÀN DIỆN (STORAGE MANAGER & OPFS)
-- **Tích hợp OPFS (Origin Private File System):** Hỗ trợ lưu trữ các file nhạc MP3/OGG và dữ liệu Beatmap JSON trực tiếp vào hệ thống tệp riêng tư tốc độ cao của trình duyệt, phá vỡ rào cản giới hạn bộ nhớ của IndexedDB truyền thống.
-- **Nâng cấp IndexedDB v3 (`MagicHopDB`):** Hỗ trợ đầy đủ các Object Store: `audio_cache`, `json_cache`, `playlist_cache`, `highScores`, `api_cache`.
-- **Trung tâm StorageManager & Dọn dẹp LRU:** Bổ sung giao diện trực quan trong Cài đặt hiển thị dung lượng sử dụng theo thời gian thực (OPFS, Cache, IndexedDB, LocalStorage). Thuật toán LRU tự động bảo vệ các tệp SFX và nhạc menu gốc khi dọn dẹp bài hát cũ.
-
----
-
-### 🛡️ 5. BẢO MỆT ĐA TẦNG & CHỐNG CAN THIỆP (MEOTN EASY ANTICHEAT)
-- **Bảo vệ Anti-Dev Engine đa tầng siêu nhẹ:**
-  - **Tầng 1 (Size Mismatch):** Phát hiện việc mở DevTools dạng docked (gắn liền cửa sổ) trên mọi trình duyệt.
-  - **Tầng 2 (Debugger Timing Loop):** Sử dụng hàm kiểm tra thời gian thực thi debugger được biên dịch sẵn, triệt tiêu 100% rác bộ nhớ GC.
-  - **Tầng 3 (Element Trap):** Bẫy getter trên thuộc tính ID phát hiện khi tab Elements hoặc Console được kiểm tra.
-  - **Tầng 4 (Event-driven Keys):** Chặn các tổ hợp phím tắt kiểm tra mã (F12, Ctrl+Shift+I/J/C, Ctrl+U, Cmd+Option+I/J/C) với 0% chi phí CPU.
-  - **Tầng 5 (Target Scoping MutationObserver):** Tối ưu hóa bộ giám sát DOM chỉ theo dõi các thẻ script và container cấp 1 của `head`/`body`, lập tức triệt tiêu các công cụ chèn ngoài (Eruda, vConsole, Chii...) mà không gây ảnh hưởng đến hiệu năng render.
-- **Trang Cảnh Báo Cyberpunk Glitch (`warning.html`):** Tự động điều hướng và đồng bộ kiểm tra trạng thái đóng công cụ để đưa người chơi trở lại game an toàn. Tự động lọc thông báo khi người dùng là Admin.
-
----
-
-### 🌐 6. MỞ RỘNG ĐA NGÔN NGỮ (10 QUỐC GIA - i18n)
-- Mở rộng hệ thống bản địa hóa hỗ trợ **10 ngôn ngữ**: Tiếng Việt (vi), Tiếng Anh (en), Tiếng Pháp (fr), Tiếng Trung Giản thể (zh-CN), Tiếng Trung Phồn thể (zh-TW), Tiếng Hàn (ko), Tiếng Nhật (ja), Tiếng Tây Ban Nha (es), Tiếng Bồ Đào Nha (pt), Tiếng Nga (ru).
-- Lưu trữ ngôn ngữ bảo mật với mã hóa chống can thiệp.
-
----
-
-### 🎨 7. NÂNG CẤP GIAO DIỆN & TIỆN ÍCH (UI/UX & QoL)
-- Thiết kế lại thanh Cài đặt nhanh (Quick Settings) tinh gọn, đẹp mắt hơn.
-- Hoán đổi vị trí nút "Chơi ngay" (Play Now) và "Bảng xếp hạng" (Leaderboard) thuận tiện thao tác một tay.
-- Hoàn thiện và tích hợp công cụ chỉnh sửa Beatmap (`beat_editor.html`).
-- Tối ưu bộ nhớ đệm Service Worker lên phiên bản `v1.0.0.46` đảm bảo tài nguyên luôn được cập nhật mới nhất.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.3 Có gì mới?
-
-# 🚀 UPDATE LOG: CẬP NHẬT KHU VỰC API & SỬA LỖI MỞ KHÓA CHẾ ĐỘ CHƠI (RELEASE v1.0.3)
-
-Chào các bạn, bản cập nhật **v1.0.3** tập trung vào việc thay đổi khu vực kết nối API máy chủ và khắc phục triệt để logic mở khóa chế độ chơi.
-
----
-
-### 🌐 1. ĐỔI KHU VỰC API (API REGION UPDATE)
-- **Cập nhật Khu vực API:** Thay đổi endpoint và hệ thống máy chủ backend API, nâng cao tốc độ phản hồi và độ ổn định khi đồng bộ dữ liệu điểm số, tài khoản và bảng xếp hạng.
-
----
-
-### 🎯 2. SỬA LỖI MỞ KHÓA CHẾ ĐỘ CHƠI (PLAY MODE UNLOCK FIX)
-- **Căn chỉnh logic mở khóa:** Khắc phục lỗi khi chọn Easy mode, Hard mode, Asian mode mà chưa vượt qua (Passed) Normal mode của bài hát vẫn chọn được Chế độ Vô tận (Endless Mode) dù không bật các chế độ hỗ trợ (Autoplay, Relax, Bot Assist).
-- **Yêu cầu Passed Normal Mode:** Giờ đây ngay cả khi bật Easy, Hard hay Asian mode, bài hát bắt buộc phải Passed ở Normal mode (hoặc bật chế độ hỗ trợ) mới được phép mở khóa chế độ Vô tận.
-
----
-
-### ⚡ 3. TỐI ƯU PWA & SERVICE WORKER (v1.0.0.3)
-- **Nâng cấp Cache Version:** Cập nhật Service Worker lên phiên bản `v1.0.0.3`, tự động làm tươi bộ nhớ đệm và đồng bộ mã nguồn mới nhất trên thiết bị.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.2 Có gì mới?
-
-# 🚀 UPDATE LOG: TỐI ƯU ĐƯỜNG BIÊN & CẬP NHẬT GIẤY PHÉP BẢN QUYỀN
-
-Chào các bạn, bản cập nhật **v1.0.2** mang tới những tối ưu hóa mạnh mẽ về mặt hiệu năng hiển thị và thay đổi quan trọng về giấy phép sử dụng của dự án.
-
----
-
-### ⚡ 1. TỐI ƯU HÓA ĐƯỜNG BIÊN & ĐỒNG BỘ GAME SPEED (TRACK BOUNDARY POOLING)
-- **Hỗ trợ Object Pooling:** Tích hợp cơ chế tái sử dụng mesh cho hiệu ứng xung ánh sáng chạy dọc biên (neon boundary pulses), loại bỏ hoàn toàn việc cấp phát/giải phóng bộ nhớ liên tục nhằm triệt tiêu hiện tượng giật lag (GC frame drop) khi chơi các bản nhạc tiết tấu nhanh.
-- **Tốc độ đồng bộ Game Speed:** Vận tốc di chuyển của các pulse chạy dọc biên được nhân đồng bộ trực tiếp với hệ số tốc độ game (`gameSpeed`), đảm bảo hiệu ứng ánh sáng phản hồi đúng nhịp độ dồn dập khi màn chơi tăng tốc.
-- **Giới hạn đường chạy thông minh:** Thay vì chỉ đi tới 1 block kế tiếp, quãng đường chạy tối đa của các pulse được căn chỉnh theo khoảng cách tới block xa nhất hiện có trên màn hình. Trong các phần nhạc nhanh, nhiều pulse sẽ được sinh ra liên tiếp tạo thành hiệu ứng sóng ánh sáng đồng bộ cực kỳ bắt mắt dọc theo đường đua.
-
----
-
-### 📜 2. CẬP NHẬT GIẤY PHÉP BẢN QUYỀN MỚI (MEOTN OPEN SOURCE LICENSE)
-- **Giấy phép sử dụng mới:** Chuyển đổi giấy phép từ MIT sang **MEOTN OPEN SOURCE LICENSE**, cho phép sử dụng tự do đối với mục đích cá nhân, học tập và phi thương mại, đồng thời hạn chế và yêu cầu cấp phép đối với mọi mục đích thương mại.
-- **Trang Giấy phép Cyberpunk (`license.html`):** Thiết kế mới hoàn toàn một trang hiển thị giấy phép chi tiết với phong cách neon đẹp mắt, hỗ trợ chuyển đổi hai ngôn ngữ (Anh/Việt) trực quan qua các tab tương tác.
-- **Liên kết trong Credits:** Bảng tín nhiệm (Credits) trong game đã được cập nhật đường dẫn trực tiếp, cho phép người dùng click vào dòng chữ giấy phép để mở trang điều khoản bản quyền trên tab mới.
-
----
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.1 Có gì mới?
-
-# 🚀 UPDATE LOG: THÊM NHẠC MỚI & TIẾN BƯỚC ĐẾN ONLINE
-
-Chào các bạn, bản cập nhật lần này đánh dấu một bước chuyển mình quan trọng của dự án. Không chỉ mang đến những giai điệu bùng nổ hơn để khuấy động trải nghiệm chơi đơn, chúng tôi còn đặt những viên gạch đầu tiên cho hệ thống **Chơi Online (Multiplayer)** — tính năng được mong đợi nhất!
-
----
-
-### 🎵 1. ĐA DẠNG HÓA VỚI NHẠC MỚI
-Để tăng tính kích thích cũng như đa dạng, tôi đã update thêm nhạc mới.
-
----
-
-### 🌐 2. TIẾN BƯỚC ĐẾN ONLINE (THE MULTIPLAYER ROADMAP)
-Chúng tôi đang chính thức chuyển dịch từ một tựa game thuần Offline sang hỗ trợ Co-op/Versus qua mạng internet. Trong bản cập nhật này, phần cốt lõi "xương sườn" của hệ thống Online hiện mới chỉ thử nghiệm ở beatmap.
-
-> ⚠️ **Lưu ý quan trọng:** Tính năng Online hiện tại đang được mở khóa ở dạng **Alpha Test giới hạn** dành cho các nhà phát triển và một số Tester được chọn. Phiên bản Public Beta cho toàn bộ người chơi dự kiến sẽ ra mắt trong vòng vài tuần tới.
-
----
-
-### 🐛 3. CÁC SỬA LỖI & TỐI ƯU KHÁC (BUG FIXES)
-* Tối ưu hóa dung lượng bộ nhớ đệm (Cache) khi tải tài nguyên âm thanh, giảm **20%** lượng RAM tiêu thụ.
-
----
-
-🔥 **HÃY SẴN SÀNG!** Cảm ơn sự đồng hành và những đóng góp quý giá của các bạn. Hãy bật max volume, tận hưởng những giai điệu mới và chuẩn bị tinh thần để chiến đấu cùng bạn bè nhé!
-
-## 🚀 Bản trước đó: Phiên Bản v1.0.0 (First Release)
-
-### 🎮 Gameplay & Cơ Chế Cốt Lõi
-- **Nâng Cấp Thuật Toán Block:** Block di chuyển giờ đây thông minh hơn, giới hạn vùng hẹp lại và tự động căn chỉnh theo nhịp điệu. Bổ sung hệ thống Cooldown (thời gian nghỉ) để triệt tiêu hoàn toàn lỗi "impossible jump".
-- **Tối Ưu Đường Chạy:** Thu hẹp không gian Track Boundaries (còn 3 khối) để cân bằng độ khó ở tốc độ cao, đồng thời đưa **Fake Block (Khối giả)** trở thành một tính năng cơ bản của game.
-- **Hệ Thống Bot Assist (Hỗ trợ vào tâm):** Tự động điều chỉnh bóng vào tâm nếu khoảng cách lệch dưới 50%. *(Lưu ý: Chế độ này sẽ không ghi nhận Highscore).*
-- **Thử Thách Mới - Invert Controls:** Extension cực "hại não" dành cho dân Hardcore — vuốt trái bóng sẽ sang phải và ngược lại.
-- **Giao Diện Warm-up Mới:** Xuất hiện các nhãn 3D màu hồng nổi bật đánh dấu tiến độ (20%, 40%, 60%, 80%) ngay trên bề mặt block trong giai đoạn khởi động.
-
-### 🎬 Đồ Họa & Hiệu Ứng Điện Ảnh
-- **Trải Nghiệm Cinematic Mượt Mà:** - **Intro:** Nhạc nền nổi lên, logo mờ dần, camera bay sát vào không gian menu chính.
-  - **Outro / Fail:** Tính năng "Hold to Exit" hoặc khi Cập nhật/Reset Data sẽ kích hoạt hiệu ứng rơi bóng, nhạc lowpass chậm dần, camera zoom out và chuyển cảnh cực ấn tượng.
-- **Bóng & Đuôi Động (Dynamic Visuals):** Quả bóng và hiệu ứng đuôi 3D (các khối đa diện nhọn) sẽ tự động chuyển màu mượt mà (Vàng, Cam, Tím) dựa trên chuỗi Combo PERFECT của người chơi.
-- **Sửa Lỗi Hiển Thị:** Khắc phục triệt để lỗi Center Mesh bị áp màu sai trong chế độ Endless.
-
-### 🎵 Âm Thanh & Hệ Thống Beatmap
-- **Tải Beatmap Thông Minh:** Trải nghiệm "One-Click Play". Hệ thống tự động đối chiếu ETag với Server để tải ngầm hoặc cập nhật Map. Đi kèm cảnh báo Timeout 60s để chống treo game khi mạng yếu.
-- **Nâng Cấp Audio UI:** Bổ sung âm thanh Click (phong cách Minecraft) và hiệu ứng Whoosh khi chuyển Tab menu.
-- **Tùy Chỉnh Âm Thanh Độc Lập:** Tách biệt hoàn toàn thanh trượt điều chỉnh cho **Âm lượng Round Start** và **Âm lượng SFX**.
-- **Cảnh Báo Bài Hát (Warning Alert):** Hiển thị cảnh báo độ khó/nguy cơ giật lag ngay tại màn hình "Tap To Play" đối với các bài hát đặc thù.
-
-### ⚙️ Trải Nghiệm Ứng Dụng (PWA) & Tối Ưu
-- **Cài Đặt App Đa Nền Tảng:** Game giờ đây là một PWA thực thụ. Nút "Tải App" tích hợp sẵn cho cả Android/PC (kích hoạt Prompt) và hướng dẫn riêng biệt cho iOS.
-- **Cập Nhật Ngầm Thông Minh:** Service Worker tự động phát hiện bản mới. Người chơi có thể dùng tùy chọn "Tự động cập nhật App" hoặc check thủ công trong Cài đặt (đồng bộ hiệu ứng Cinematic khi update).
-- **Tối Ưu & Dọn Dẹp:** Logic PWA được tách riêng để mã nguồn sạch sẽ, khắc phục toàn bộ lỗi xung đột biến (`SyntaxError`) và lỗi DOM khi khởi động. Giao diện Settings cũng được đồng bộ hóa in hoa, nhất quán và chuyên nghiệp.
-
----
-
-- **🧱 Nâng Cấp Thuật Toán Block Di Chuyển (Smarter Moving Blocks):**
-  - Giới hạn vùng di chuyển hẹp hơn và căn chỉnh thông minh dựa theo tốc độ nhịp, khắc phục hoàn toàn tình trạng "impossible jump" (bước nhảy bất khả thi).
-  - Bổ sung hệ thống Cooldown (thời gian nghỉ) xen kẽ giữa các chuỗi gạch di chuyển giúp người chơi có thời gian phản xạ tốt hơn.
-- **🔀 Thu Hẹp Đường Chạy & Khối Giả (Fake Blocks Update):**
-  - Giới hạn không gian hai bên mép đường chạy (Track Boundaries) hẹp lại (còn 3 khối thay vì 4), giúp giảm tải độ khó trong chế độ tốc độ cao.
-  - Khối giả (Fake Block) giờ đây chính thức trở thành tính năng gốc của game thay vì chỉ là một Extension.
-- **🎮 Tiện Ích Đảo Ngược Điều Khiển (Invert Controls Extension):**
-  - Thêm Extension cực "hại não": Vuốt sang trái bóng sẽ chạy sang phải. Một thử thách thú vị dành cho các người chơi Hardcore.
-- **🔊 Nâng Cấp Hiệu Ứng Âm Thanh & Chuyển Cảnh:**
-  - Thêm hiệu ứng âm thanh (SFX) riêng biệt và phong cách hơn khi chọn bài hát (Nút Play).
-  - Tính năng "Hold to Exit" (Giữ để thoát) giờ đây sẽ kích hoạt mượt mà hiệu ứng rơi bóng (Fail Transition) cùng tiếng nhạc chậm dần trước khi về Menu.
-- **🐛 Sửa lỗi (Bug Fixes):**
-  - Sửa lỗi tâm màu trắng (Center Mesh) bị áp dụng màu động (Dynamic Colors) nhầm khi chơi ở chế độ Endless.
+## 📜 Tóm tắt các phiên bản trước (v1.0.0 – v1.0.8)
+
+<details>
+<summary>Xem tóm tắt thay đổi từ v1.0.0 đến v1.0.8</summary>
+
+- **v1.0.8:** Anti-Back & Reload Shield bảo vệ ván đấu, nhấn 2 lần nút Back để thoát, tái cấu trúc menu FPS Sync Mode theo tần số quét màn hình và khai báo đa nền tảng 10 ngôn ngữ.
+- **v1.0.7:** Ra mắt bản đóng gói Native PC Standalone (C# Winsock + WebView2/Chromium, không Electron) và Android APK, bảo toàn dữ liệu 100% khi cập nhật, In-Game Page Viewer, modal Tải App 5 nền tảng & bộ kiểm tra cập nhật đa tầng.
+- **v1.0.6:** Ra mắt **Dash Tile** (Gạch lướt siêu tốc), nâng cấp AI Autoplay/Natural Autoplay cho Dash và tiền biên dịch GPU Shader (`prewarmAllGpuShaders`) triệt tiêu drop FPS.
+- **v1.0.5:** Hỗ trợ 4 mức cỡ chữ UI & HUD (`Small`–`Very Large`), sửa lỗi zoom khi quay về menu từ Game Over và tăng tốc hồi nảy Bouncy Block.
+- **v1.0.4:** Bộ điều phối hiệu năng thích ứng (`adaptive-performance.js`), biểu đồ FPS Cyberpunk real-time, mô-đun hóa mã nguồn & migration 100% nội bộ (Tailwind CLI cục bộ, không CDN), lưu trữ OPFS + IndexedDB v3, Anti-DevTools đa tầng và mở rộng 10 ngôn ngữ.
+- **v1.0.3:** Cập nhật khu vực Backend API, chuẩn hóa điều kiện mở khóa Endless Mode (yêu cầu Passed Normal Mode) và nâng cấp cache PWA.
+- **v1.0.2:** Tối ưu Object Pooling cho Neon Boundary Pulses đồng bộ theo `gameSpeed` và ra mắt trang giấy phép `license.html`.
+- **v1.0.1:** Bổ sung nhạc mới, đặt nền móng Online Alpha Test và tối ưu 20% RAM tải audio.
+- **v1.0.0:** Phiên bản đầu tiên với thuật toán Moving/Fake Block, Bot Assist, Invert Controls, hiệu ứng Intro/Outro điện ảnh, tải Beatmap ETag thông minh và nền tảng PWA.
+
+</details>
 
 ---
 
@@ -663,4 +355,4 @@ Dự án phát hành dưới điều khoản **MIT License**:
 
 ---
 
-*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.9*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.10*
