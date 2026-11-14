@@ -488,6 +488,83 @@
             50% { transform: translateY(-5px) rotate(6deg); }
         }
 
+        /* Boundary Particles Preview Variants */
+        .bp-sparks {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+        .bp-spark {
+            position: absolute;
+            width: 6px;
+            height: 2px;
+            border-radius: 2px;
+            background: var(--c);
+            box-shadow: 0 0 6px var(--c), 0 0 10px #fff;
+            opacity: 0;
+        }
+        .bp-card.pt-classic { --c: #38bdf8; }
+        .bp-card.pt-classic .bp-ln { opacity: .45; }
+        .bp-card.pt-classic .bp-spark {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            animation: ptFloat 2s ease-in-out infinite;
+        }
+        .bp-card.pt-classic .bp-spark.l1 { left: 27%; top: 72%; animation-delay: 0s; }
+        .bp-card.pt-classic .bp-spark.l2 { left: 26%; top: 38%; animation-delay: .65s; }
+        .bp-card.pt-classic .bp-spark.r1 { right: 27%; top: 68%; animation-delay: .3s; }
+        .bp-card.pt-classic .bp-spark.r2 { right: 26%; top: 32%; animation-delay: 1.0s; }
+        @keyframes ptFloat {
+            0% { opacity: 0; transform: translate(0, 8px) scale(.5); }
+            45% { opacity: .9; }
+            100% { opacity: 0; transform: translate(0, -18px) scale(.3); }
+        }
+
+        .bp-card.pt-normal { --c: #22d3ee; }
+        .bp-card.pt-normal .bp-ln { opacity: .45; }
+        .bp-card.pt-normal .bp-spark.l1 { left: 30%; top: 24%; animation: ptShootL 1.3s ease-out infinite; }
+        .bp-card.pt-normal .bp-spark.l2 { left: 30%; top: 52%; animation: ptShootL 1.3s ease-out infinite .05s; }
+        .bp-card.pt-normal .bp-spark.l3 { left: 30%; top: 78%; animation: ptShootL 1.3s ease-out infinite .1s; }
+        .bp-card.pt-normal .bp-spark.r1 { right: 30%; top: 24%; animation: ptShootR 1.3s ease-out infinite; }
+        .bp-card.pt-normal .bp-spark.r2 { right: 30%; top: 52%; animation: ptShootR 1.3s ease-out infinite .05s; }
+        .bp-card.pt-normal .bp-spark.r3 { right: 30%; top: 78%; animation: ptShootR 1.3s ease-out infinite .1s; }
+        @keyframes ptShootL {
+            0% { opacity: 1; transform: translate(0, 0) rotate(22deg) scaleX(1); }
+            100% { opacity: 0; transform: translate(-26px, -12px) rotate(22deg) scaleX(1.6); }
+        }
+        @keyframes ptShootR {
+            0% { opacity: 1; transform: translate(0, 0) rotate(-22deg) scaleX(1); }
+            100% { opacity: 0; transform: translate(26px, -12px) rotate(-22deg) scaleX(1.6); }
+        }
+
+        .bp-card.pt-wave { --c: #a855f7; }
+        .bp-card.pt-wave .bp-ln { opacity: .4; }
+        .bp-card.pt-wave .bp-spark.l1 { left: 30%; top: 20%; animation: ptShootL 1.5s ease-out infinite 0s; }
+        .bp-card.pt-wave .bp-spark.l2 { left: 30%; top: 50%; animation: ptShootL 1.5s ease-out infinite .28s; }
+        .bp-card.pt-wave .bp-spark.l3 { left: 30%; top: 80%; animation: ptShootL 1.5s ease-out infinite .56s; }
+        .bp-card.pt-wave .bp-spark.r1 { right: 30%; top: 20%; animation: ptShootR 1.5s ease-out infinite 0s; }
+        .bp-card.pt-wave .bp-spark.r2 { right: 30%; top: 50%; animation: ptShootR 1.5s ease-out infinite .28s; }
+        .bp-card.pt-wave .bp-spark.r3 { right: 30%; top: 80%; animation: ptShootR 1.5s ease-out infinite .56s; }
+
+        .bp-card.pt-horiz { --c: #f472b6; }
+        .bp-card.pt-horiz .bp-ln { opacity: .5; }
+        .bp-card.pt-horiz .bp-spark { width: 10px; height: 2px; }
+        .bp-card.pt-horiz .bp-spark.l1 { left: 30%; top: 28%; animation: ptLatL 1.2s cubic-bezier(.15,.85,.35,1) infinite; }
+        .bp-card.pt-horiz .bp-spark.l2 { left: 30%; top: 54%; animation: ptLatL 1.2s cubic-bezier(.15,.85,.35,1) infinite .08s; }
+        .bp-card.pt-horiz .bp-spark.l3 { left: 30%; top: 76%; animation: ptLatL 1.2s cubic-bezier(.15,.85,.35,1) infinite .15s; }
+        .bp-card.pt-horiz .bp-spark.r1 { right: 30%; top: 28%; animation: ptLatR 1.2s cubic-bezier(.15,.85,.35,1) infinite; }
+        .bp-card.pt-horiz .bp-spark.r2 { right: 30%; top: 54%; animation: ptLatR 1.2s cubic-bezier(.15,.85,.35,1) infinite .08s; }
+        .bp-card.pt-horiz .bp-spark.r3 { right: 30%; top: 76%; animation: ptLatR 1.2s cubic-bezier(.15,.85,.35,1) infinite .15s; }
+        @keyframes ptLatL {
+            0% { opacity: 1; transform: translateX(0) scaleX(.7); }
+            100% { opacity: 0; transform: translateX(-34px) scaleX(1.7); }
+        }
+        @keyframes ptLatR {
+            0% { opacity: 1; transform: translateX(0) scaleX(.7); }
+            100% { opacity: 0; transform: translateX(34px) scaleX(1.7); }
+        }
+
         /* Active song styling override */
         .song-option.active {
             border-color: var(--theme-color, rgba(34, 211, 238, 0.8)) !important;
@@ -1852,6 +1929,140 @@
                                 <!-- 5. Random -->
                                 <button type="button" class="bp-card rand" role="radio" aria-checked="false" data-pulse-style="random">
                                     <input type="radio" name="selected-pulse-style" value="random" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Random</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-q">?</div>
+                                        <span class="bp-tag">RANDOMIZE</span>
+                                    </div>
+                                </button>
+
+                            </div>
+                        </div>
+
+                        <!-- Boundary Particles (Hạt Bắn Từ Đường Biên) -->
+                        <div class="mt-6" id="boundary-particles-section">
+                            <h3
+                                class="text-sm font-bold text-white mb-1 flex items-center gap-2 uppercase tracking-widest font-orbitron">
+                                <i class="fas fa-braille text-cyan-400"></i>
+                                <span>Boundary Particles</span>
+                            </h3>
+                            <p class="text-[11px] text-gray-400 mb-4">Tùy chỉnh hiệu ứng hạt bắn ra từ hai bên đường biên theo nhịp beat.</p>
+                            <div class="bp-grid" id="boundary-particle-group" role="radiogroup">
+
+                                <!-- 0. Off -->
+                                <button type="button" class="bp-card off" role="radio" aria-checked="false" data-particle-style="off">
+                                    <input type="radio" name="selected-boundary-particle-style" value="off" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Disabled (Off)</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">NO PARTICLES</span>
+                                    </div>
+                                </button>
+
+                                <!-- 1. Classic -->
+                                <button type="button" class="bp-card pt-classic" role="radio" aria-checked="false" data-particle-style="classic">
+                                    <input type="radio" name="selected-boundary-particle-style" value="classic" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Classic Particles</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-sparks">
+                                            <span class="bp-spark l1"></span>
+                                            <span class="bp-spark l2"></span>
+                                            <span class="bp-spark r1"></span>
+                                            <span class="bp-spark r2"></span>
+                                        </div>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">AMBIENT DRIFT</span>
+                                    </div>
+                                </button>
+
+                                <!-- 2. Normal Burst -->
+                                <button type="button" class="bp-card pt-normal" role="radio" aria-checked="false" data-particle-style="normal">
+                                    <input type="radio" name="selected-boundary-particle-style" value="normal" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Normal Burst</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-sparks">
+                                            <span class="bp-spark l1"></span>
+                                            <span class="bp-spark l2"></span>
+                                            <span class="bp-spark l3"></span>
+                                            <span class="bp-spark r1"></span>
+                                            <span class="bp-spark r2"></span>
+                                            <span class="bp-spark r3"></span>
+                                        </div>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">BEAT BURST</span>
+                                    </div>
+                                </button>
+
+                                <!-- 3. Wave Shooter -->
+                                <button type="button" class="bp-card pt-wave" role="radio" aria-checked="false" data-particle-style="wave">
+                                    <input type="radio" name="selected-boundary-particle-style" value="wave" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Wave Shooter</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-sparks">
+                                            <span class="bp-spark l1"></span>
+                                            <span class="bp-spark l2"></span>
+                                            <span class="bp-spark l3"></span>
+                                            <span class="bp-spark r1"></span>
+                                            <span class="bp-spark r2"></span>
+                                            <span class="bp-spark r3"></span>
+                                        </div>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">WAVE SPRAY</span>
+                                    </div>
+                                </button>
+
+                                <!-- 4. Horizontal Spray -->
+                                <button type="button" class="bp-card pt-horiz" role="radio" aria-checked="false" data-particle-style="horizontal">
+                                    <input type="radio" name="selected-boundary-particle-style" value="horizontal" class="hidden">
+                                    <div class="bp-head">
+                                        <span class="bp-name">Horizontal Spray</span>
+                                        <span class="bp-radio"></span>
+                                    </div>
+                                    <div class="bp-prev">
+                                        <div class="bp-ctr"></div>
+                                        <i class="bp-ln l"></i>
+                                        <i class="bp-ln r"></i>
+                                        <div class="bp-sparks">
+                                            <span class="bp-spark l1"></span>
+                                            <span class="bp-spark l2"></span>
+                                            <span class="bp-spark l3"></span>
+                                            <span class="bp-spark r1"></span>
+                                            <span class="bp-spark r2"></span>
+                                            <span class="bp-spark r3"></span>
+                                        </div>
+                                        <div class="bp-note"></div>
+                                        <span class="bp-tag">LATERAL SPRAY</span>
+                                    </div>
+                                </button>
+
+                                <!-- 5. Random -->
+                                <button type="button" class="bp-card rand" role="radio" aria-checked="false" data-particle-style="random">
+                                    <input type="radio" name="selected-boundary-particle-style" value="random" class="hidden">
                                     <div class="bp-head">
                                         <span class="bp-name">Random</span>
                                         <span class="bp-radio"></span>

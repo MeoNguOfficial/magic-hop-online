@@ -30,10 +30,17 @@ window.GameEffectsManager = {
     pulseMaterialTemplate: null,
     boundaryFlashOpacity: 0.22,
 
-    // --- 3. BỤI LỬA ĐỘ KHÓ (BOUNDARY FLAMES / DUST) ---
+    // --- 3. BỤI LỬA & HẠT BẮN BIÊN (BOUNDARY PARTICLES) ---
     boundaryDustMesh: null,
     boundaryDustData: [],
-    MAX_BOUNDARY_DUST: (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 0 : 120,
+    MAX_BOUNDARY_DUST: 60,
+    boundaryBurstMesh: null,
+    boundaryBurstPool: [],
+    boundaryBurstWavePool: [],
+    boundaryBurstCursor: 0,
+    MAX_BOUNDARY_BURSTS: 160,
+    cachedBoundarySparkTexture: null,
+    boundaryBurstTempColor: null,
 
     // --- 4. ĐUÔI BÓNG (BALL TRAIL INSTANCED MESH) ---
     ballTrailInstancedMesh: null,
@@ -733,53 +740,407 @@ window.GameEffectsManager = {
         }
     },
 
-    // --- BỤI LỬA ĐỘ KHÓ (BOUNDARY FLAMES) ---
+    // --- BỤI LỬA & HẠT BẮN BIÊN (BOUNDARY PARTICLES) ---
+    createBoundarySparkTexture: function () {
+        if (this.cachedBoundarySparkTexture) return this.cachedBoundarySparkTexture;
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 64;
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, 32, 64);
+
+        const grad = ctx.createRadialGradient(16, 30, 1, 16, 32, 26);
+        grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+        grad.addColorStop(0.28, 'rgba(255, 255, 255, 0.85)');
+        grad.addColorStop(0.65, 'rgba(255, 255, 255, 0.25)');
+        grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 32, 64);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        tex.needsUpdate = true;
+        this.cachedBoundarySparkTexture = tex;
+        return tex;
+    },
+
     initBoundaryFlames: function () {
-        if (this.boundaryDustMesh) return;
-
         const isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        this.MAX_BOUNDARY_DUST = isMobile ? 30 : 60;
-        this.boundaryDustData = [];
+        const isSimple = (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple');
 
-        const geo = new THREE.PlaneGeometry(0.35, 0.35);
-        const mat = new THREE.MeshBasicMaterial({
-            color: 0x00ffff,
-            transparent: true,
-            opacity: 0.85,
-            blending: THREE.AdditiveBlending,
-            depthWrite: false,
-            side: THREE.DoubleSide
-        });
+        if (!this.boundaryDustMesh) {
+            this.MAX_BOUNDARY_DUST = isSimple ? 24 : (isMobile ? 36 : 60);
+            this.boundaryDustData = [];
 
-        this.boundaryDustMesh = new THREE.InstancedMesh(geo, mat, this.MAX_BOUNDARY_DUST);
-        this.boundaryDustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-        this.boundaryDustMesh.frustumCulled = false;
-        this.boundaryDustMesh.visible = false;
-        if (this.scene) this.scene.add(this.boundaryDustMesh);
-
-        for (let i = 0; i < this.MAX_BOUNDARY_DUST; i++) {
-            this.boundaryDustData.push({
-                side: Math.random() < 0.5 ? -1 : 1,
-                relZ: -Math.random() * 140.0,
-                offsetX: (Math.random() - 0.5) * 0.4,
-                phase: Math.random(),
-                speed: 0.25 + Math.random() * 0.45,
-                maxHeight: 1.0 + Math.random() * 1.5,
-                baseScale: 0.4 + Math.random() * 0.6,
-                swaySpeed: 1.5 + Math.random() * 2.0,
-                swayOffset: Math.random() * Math.PI * 2,
-                swayAmp: 0.08 + Math.random() * 0.12,
-                twinkleSpeed: 3.0 + Math.random() * 4.0
+            const geo = new THREE.PlaneGeometry(0.35, 0.35);
+            const mat = new THREE.MeshBasicMaterial({
+                map: this.createBoundarySparkTexture(),
+                color: 0x00ffff,
+                transparent: true,
+                opacity: 0.85,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide
             });
+
+            this.boundaryDustMesh = new THREE.InstancedMesh(geo, mat, this.MAX_BOUNDARY_DUST);
+            this.boundaryDustMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            this.boundaryDustMesh.frustumCulled = false;
+            this.boundaryDustMesh.visible = false;
+            if (this.scene) this.scene.add(this.boundaryDustMesh);
+
+            for (let i = 0; i < this.MAX_BOUNDARY_DUST; i++) {
+                this.boundaryDustData.push({
+                    side: Math.random() < 0.5 ? -1 : 1,
+                    relZ: -Math.random() * 140.0,
+                    offsetX: (Math.random() - 0.5) * 0.4,
+                    driftX: (Math.random() * 0.45 + 0.15),
+                    phase: Math.random(),
+                    speed: 0.28 + Math.random() * 0.45,
+                    maxHeight: 1.1 + Math.random() * 1.5,
+                    baseScale: 0.45 + Math.random() * 0.65,
+                    swaySpeed: 1.5 + Math.random() * 2.0,
+                    swayOffset: Math.random() * Math.PI * 2,
+                    swayAmp: 0.08 + Math.random() * 0.12,
+                    twinkleSpeed: 3.0 + Math.random() * 4.0
+                });
+            }
+        }
+
+        if (!this.boundaryBurstMesh) {
+            this.MAX_BOUNDARY_BURSTS = isSimple ? 48 : (isMobile ? 72 : 160);
+            this.boundaryBurstPool = [];
+            this.boundaryBurstWavePool = [];
+            this.boundaryBurstCursor = 0;
+            if (!this.boundaryBurstTempColor) {
+                this.boundaryBurstTempColor = new THREE.Color(0x00ffff);
+            }
+
+            const burstGeo = new THREE.PlaneGeometry(0.22, 0.78);
+            const burstMat = new THREE.MeshBasicMaterial({
+                map: this.createBoundarySparkTexture(),
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.95,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            this.boundaryBurstMesh = new THREE.InstancedMesh(burstGeo, burstMat, this.MAX_BOUNDARY_BURSTS);
+            this.boundaryBurstMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            this.boundaryBurstMesh.frustumCulled = false;
+            this.boundaryBurstMesh.visible = false;
+
+            const zeroMat = this.sprayDummyMatrix || new THREE.Matrix4();
+            zeroMat.makeScale(0, 0, 0);
+            const whiteColor = this.boundaryBurstTempColor;
+            whiteColor.setHex(0xffffff);
+
+            for (let i = 0; i < this.MAX_BOUNDARY_BURSTS; i++) {
+                this.boundaryBurstMesh.setMatrixAt(i, zeroMat);
+                this.boundaryBurstMesh.setColorAt(i, whiteColor);
+                this.boundaryBurstPool.push({
+                    active: false,
+                    x: 0, y: 0, z: 0,
+                    vx: 0, vy: 0, vz: 0,
+                    life: 0, maxLife: 0.45,
+                    baseScale: 1.0,
+                    stretch: 1.0,
+                    gravity: 10.0,
+                    drag: 1.5
+                });
+            }
+            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+            if (this.boundaryBurstMesh.instanceColor) {
+                this.boundaryBurstMesh.instanceColor.needsUpdate = true;
+            }
+            if (this.scene) this.scene.add(this.boundaryBurstMesh);
+
+            for (let i = 0; i < 8; i++) {
+                this.boundaryBurstWavePool.push({
+                    active: false,
+                    side: -1,
+                    x: -6.75,
+                    z: 0,
+                    startZ: 0,
+                    speedZ: -200,
+                    maxDistance: 160,
+                    spawnAccum: 0,
+                    colorHex: 0x00ffff
+                });
+            }
+        }
+    },
+
+    syncBoundaryParticleVisibility: function () {
+        const pStyle = (typeof activeBoundaryParticleStyle !== 'undefined') ? activeBoundaryParticleStyle : 'wave';
+        if (this.boundaryDustMesh) {
+            this.boundaryDustMesh.visible = (pStyle === 'classic');
+        }
+        if (pStyle === 'off' || pStyle === 'classic') {
+            this.resetBoundaryBurstParticles();
+        }
+    },
+
+    resetBoundaryBurstParticles: function () {
+        if (this.boundaryBurstWavePool) {
+            for (let i = 0; i < this.boundaryBurstWavePool.length; i++) {
+                this.boundaryBurstWavePool[i].active = false;
+            }
+        }
+        if (this.boundaryBurstMesh && this.boundaryBurstPool) {
+            const zeroMat = this.sprayDummyMatrix || new THREE.Matrix4();
+            zeroMat.makeScale(0, 0, 0);
+            for (let i = 0; i < this.boundaryBurstPool.length; i++) {
+                this.boundaryBurstPool[i].active = false;
+                this.boundaryBurstMesh.setMatrixAt(i, zeroMat);
+            }
+            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+            this.boundaryBurstMesh.visible = false;
+        }
+    },
+
+    emitSingleBoundarySpark: function (x, y, z, vx, vy, vz, maxLife, baseScale, stretch, gravity, drag, colorHex) {
+        const pool = this.boundaryBurstPool;
+        const maxCount = this.MAX_BOUNDARY_BURSTS;
+        if (!pool || !this.boundaryBurstMesh || maxCount <= 0) return;
+
+        // Ưu tiên tìm slot rảnh trước quanh con trỏ vòng (Zero-GC)
+        let slotIdx = this.boundaryBurstCursor;
+        for (let step = 0; step < maxCount; step++) {
+            const probe = (this.boundaryBurstCursor + step) % maxCount;
+            if (!pool[probe].active) {
+                slotIdx = probe;
+                break;
+            }
+        }
+        this.boundaryBurstCursor = (slotIdx + 1) % maxCount;
+
+        const p = pool[slotIdx];
+        p.active = true;
+        p.x = x;
+        p.y = y;
+        p.z = z;
+        p.vx = vx;
+        p.vy = vy;
+        p.vz = vz;
+        p.life = maxLife;
+        p.maxLife = maxLife;
+        p.baseScale = baseScale;
+        p.stretch = stretch;
+        p.gravity = gravity;
+        p.drag = drag;
+
+        if (this.boundaryBurstMesh.setColorAt) {
+            if (!this.boundaryBurstTempColor) this.boundaryBurstTempColor = new THREE.Color();
+            this.boundaryBurstTempColor.setHex(colorHex);
+            this.boundaryBurstMesh.setColorAt(slotIdx, this.boundaryBurstTempColor);
+            if (this.boundaryBurstMesh.instanceColor) {
+                this.boundaryBurstMesh.instanceColor.needsUpdate = true;
+            }
+        }
+    },
+
+    spawnBoundaryParticles: function (impactZ, furthestZ, activeColor = 0x00ffff, isVortex = false) {
+        if (!isVortex || !this.boundaryBurstMesh) return;
+        const pStyle = (typeof activeBoundaryParticleStyle !== 'undefined') ? activeBoundaryParticleStyle : 'wave';
+        if (pStyle === 'off' || pStyle === 'classic') return;
+
+        const isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : false;
+        const isSimple = (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple');
+        const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
+        const yPos = surfaceY + 0.06;
+
+        this.boundaryBurstMesh.visible = true;
+
+        if (pStyle === 'normal') {
+            // Normal Particles: Bắn tỏa đều dọc theo toàn bộ hai bên biên phía trước
+            const countPerSide = isSimple ? 10 : (isMobile ? 15 : 24);
+            const spanZ = 140.0;
+            for (let sideIdx = 0; sideIdx < 2; sideIdx++) {
+                const side = sideIdx === 0 ? -1 : 1;
+                const xBase = side * 6.75;
+                for (let k = 0; k < countPerSide; k++) {
+                    const zPos = (impactZ + 4.0) - Math.random() * spanZ;
+                    const vx = side * (5.5 + Math.random() * 8.5);
+                    const vy = 3.5 + Math.random() * 6.5;
+                    const vz = (Math.random() - 0.5) * 10.0;
+                    const maxLife = 0.42 + Math.random() * 0.24;
+                    const baseScale = 0.85 + Math.random() * 0.65;
+                    this.emitSingleBoundarySpark(xBase, yPos, zPos, vx, vy, vz, maxLife, baseScale, 1.15, 11.0, 1.6, activeColor);
+                }
+            }
+            return;
+        }
+
+        if (pStyle === 'horizontal') {
+            // Horizontal Particles: Bắn ngang mạnh ra hai phía trái/phải (<-| |->) dọc track
+            const countPerSide = isSimple ? 11 : (isMobile ? 16 : 26);
+            const spanZ = 150.0;
+            for (let sideIdx = 0; sideIdx < 2; sideIdx++) {
+                const side = sideIdx === 0 ? -1 : 1;
+                const xBase = side * 6.75;
+                for (let k = 0; k < countPerSide; k++) {
+                    const zPos = (impactZ + 4.0) - Math.random() * spanZ;
+                    const vx = side * (16.0 + Math.random() * 14.0);
+                    const vy = 0.3 + Math.random() * 1.5;
+                    const vz = (Math.random() - 0.5) * 4.5;
+                    const maxLife = 0.34 + Math.random() * 0.18;
+                    const baseScale = 0.9 + Math.random() * 0.6;
+                    this.emitSingleBoundarySpark(xBase, yPos, zPos, vx, vy, vz, maxLife, baseScale, 1.75, 2.0, 2.1, activeColor);
+                }
+            }
+            return;
+        }
+
+        // Wave Particles (wave): Dải sóng chạy dọc về trước và liên tục phun tia hạt tỏa ra hai bên
+        const startZ = impactZ + 3.0;
+        for (let sideIdx = 0; sideIdx < 2; sideIdx++) {
+            const side = sideIdx === 0 ? -1 : 1;
+            const xBase = side * 6.75;
+
+            // Bắn mở màn ngay tại điểm xuất phát sóng
+            const initBurst = isSimple ? 3 : 5;
+            for (let k = 0; k < initBurst; k++) {
+                const vx = side * (7.0 + Math.random() * 8.0);
+                const vy = 4.0 + Math.random() * 6.0;
+                const vz = -12.0 + (Math.random() - 0.5) * 10.0;
+                this.emitSingleBoundarySpark(xBase, yPos, startZ, vx, vy, vz, 0.45 + Math.random() * 0.2, 1.0 + Math.random() * 0.5, 1.3, 12.0, 1.7, activeColor);
+            }
+
+            // Cấp 1 wave shooter từ pool cố định (tái sử dụng slot cũ nhất nếu pool đầy)
+            let waveSlot = null;
+            for (let w = 0; w < this.boundaryBurstWavePool.length; w++) {
+                if (!this.boundaryBurstWavePool[w].active) {
+                    waveSlot = this.boundaryBurstWavePool[w];
+                    break;
+                }
+            }
+            if (!waveSlot && this.boundaryBurstWavePool.length > 0) {
+                waveSlot = this.boundaryBurstWavePool[0];
+            }
+            if (waveSlot) {
+                waveSlot.active = true;
+                waveSlot.side = side;
+                waveSlot.x = xBase;
+                waveSlot.z = startZ;
+                waveSlot.startZ = startZ;
+                waveSlot.speedZ = -200;
+                waveSlot.maxDistance = 160;
+                waveSlot.spawnAccum = 0;
+                waveSlot.colorHex = activeColor;
+            }
+        }
+    },
+
+    updateBoundaryParticles: function (delta, gameSpeed, camera) {
+        if (!this.boundaryBurstMesh) return;
+        const pStyle = (typeof activeBoundaryParticleStyle !== 'undefined') ? activeBoundaryParticleStyle : 'wave';
+        if (pStyle === 'off' || pStyle === 'classic') {
+            if (this.boundaryBurstMesh.visible) {
+                this.resetBoundaryBurstParticles();
+            }
+            return;
+        }
+
+        const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
+        const yPos = surfaceY + 0.06;
+        const speedMult = typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0;
+        const isSimple = (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple');
+        const emitSpacing = isSimple ? 8.5 : 5.2;
+
+        // 1. Cập nhật các đầu sóng bắn hạt (Wave Shooter)
+        let hasActiveWave = false;
+        for (let w = 0; w < this.boundaryBurstWavePool.length; w++) {
+            const wave = this.boundaryBurstWavePool[w];
+            if (!wave.active) continue;
+
+            const prevZ = wave.z;
+            wave.z += wave.speedZ * speedMult * delta;
+            const stepDist = Math.abs(wave.z - prevZ);
+            wave.spawnAccum += stepDist;
+
+            while (wave.spawnAccum >= emitSpacing) {
+                wave.spawnAccum -= emitSpacing;
+                const emitZ = wave.z + wave.spawnAccum;
+                const vx = wave.side * (7.5 + Math.random() * 9.0);
+                const vy = 3.8 + Math.random() * 6.5;
+                const vz = -16.0 + (Math.random() - 0.5) * 14.0;
+                this.emitSingleBoundarySpark(
+                    wave.x, yPos, emitZ,
+                    vx, vy, vz,
+                    0.42 + Math.random() * 0.22,
+                    0.9 + Math.random() * 0.55,
+                    1.3,
+                    12.5,
+                    1.7,
+                    wave.colorHex
+                );
+            }
+
+            if (Math.abs(wave.z - wave.startZ) >= wave.maxDistance) {
+                wave.active = false;
+            } else {
+                hasActiveWave = true;
+            }
+        }
+
+        // 2. Cập nhật vị trí và ma trận toàn bộ tia hạt bắn ra
+        let hasActiveSpark = false;
+        const maxCount = this.MAX_BOUNDARY_BURSTS;
+        const pool = this.boundaryBurstPool;
+        const zeroMat = this.sprayDummyMatrix;
+
+        for (let i = 0; i < maxCount; i++) {
+            const p = pool[i];
+            if (!p.active) continue;
+
+            p.life -= delta;
+            if (p.life <= 0) {
+                p.active = false;
+                zeroMat.makeScale(0, 0, 0);
+                this.boundaryBurstMesh.setMatrixAt(i, zeroMat);
+                continue;
+            }
+
+            hasActiveSpark = true;
+            const damp = Math.max(0.0, 1.0 - p.drag * delta);
+            p.vx *= damp;
+            p.vz *= damp;
+            p.vy -= p.gravity * delta;
+
+            p.x += p.vx * delta;
+            p.y += p.vy * delta;
+            p.z += p.vz * delta;
+
+            const progress = Math.max(0.0, p.life / p.maxLife);
+            const curScale = progress * p.baseScale;
+
+            this.sprayDirVector.set(p.vx, p.vy, p.vz);
+            if (this.sprayDirVector.lengthSq() > 0.0001) {
+                this.sprayDirVector.normalize();
+                this.sprayDummyQuaternion.setFromUnitVectors(this.sprayUpVector, this.sprayDirVector);
+            } else {
+                this.sprayDummyQuaternion.identity();
+            }
+            this.sprayDummyPosition.set(p.x, p.y, p.z);
+            this.sprayDummyScale.set(curScale, curScale * p.stretch, curScale);
+            this.sprayDummyMatrix.compose(this.sprayDummyPosition, this.sprayDummyQuaternion, this.sprayDummyScale);
+            this.boundaryBurstMesh.setMatrixAt(i, this.sprayDummyMatrix);
+        }
+
+        if (hasActiveSpark || hasActiveWave) {
+            this.boundaryBurstMesh.visible = true;
+            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+        } else if (this.boundaryBurstMesh.visible) {
+            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+            this.boundaryBurstMesh.visible = false;
         }
     },
 
     updateBoundaryFlames: function (delta, time, camera) {
-        const style = (typeof activePulseStyle !== 'undefined') ? activePulseStyle : 'wave';
-        const boundariesOn = style !== 'off';
-        const advancedOn = boundariesOn && (style !== 'classic');
-
-        if (!boundariesOn || !advancedOn || !this.boundaryDustMesh || !camera) {
+        const pStyle = (typeof activeBoundaryParticleStyle !== 'undefined') ? activeBoundaryParticleStyle : 'wave';
+        if (pStyle !== 'classic' || !this.boundaryDustMesh || !camera) {
             if (this.boundaryDustMesh && this.boundaryDustMesh.visible) this.boundaryDustMesh.visible = false;
             return;
         }
@@ -805,7 +1166,7 @@ window.GameEffectsManager = {
             worldZ = camZ + wrappedRelZ;
 
             const baseX = d.side === -1 ? -6.75 : 6.75;
-            const posX = baseX + d.offsetX;
+            const posX = baseX + d.offsetX + d.side * (d.phase * (d.driftX || 0.3));
             const posY = surface + (d.phase * d.maxHeight);
 
             const lifeFade = Math.sin(d.phase * Math.PI);
@@ -1378,6 +1739,23 @@ window.GameEffectsManager = {
                 }
             }
         }
+        // 5. Boundary Burst Particles & Wave Shooters
+        if (this.boundaryBurstPool) {
+            for (let i = 0; i < this.boundaryBurstPool.length; i++) {
+                if (this.boundaryBurstPool[i] && this.boundaryBurstPool[i].active) {
+                    this.boundaryBurstPool[i].z += offsetZ;
+                }
+            }
+        }
+        if (this.boundaryBurstWavePool) {
+            for (let i = 0; i < this.boundaryBurstWavePool.length; i++) {
+                const wave = this.boundaryBurstWavePool[i];
+                if (wave && wave.active) {
+                    wave.z += offsetZ;
+                    wave.startZ += offsetZ;
+                }
+            }
+        }
     },
 
     reset: function () {
@@ -1411,5 +1789,7 @@ window.GameEffectsManager = {
 
         this.initBallTrail();
         this.stopDashGlide();
+        this.resetBoundaryBurstParticles();
+        this.syncBoundaryParticleVisibility();
     }
 };

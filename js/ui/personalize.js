@@ -12,7 +12,9 @@
             const ballPatternRadios = document.querySelectorAll('input[name="selected-ball-pattern"]');
             const environmentRadios = document.querySelectorAll('input[name="selected-environment"]');
             const pulseStyleRadios = document.querySelectorAll('input[name="selected-pulse-style"]');
-            const pulseCards = document.querySelectorAll('.bp-card');
+            const pulseCards = document.querySelectorAll('.bp-card[data-pulse-style]');
+            const boundaryParticleStyleRadios = document.querySelectorAll('input[name="selected-boundary-particle-style"]');
+            const boundaryParticleCards = document.querySelectorAll('.bp-card[data-particle-style]');
 
             const updateUI = () => {
                 radios.forEach(radio => {
@@ -138,154 +140,159 @@
                         radio.checked = isSelected;
                     }
                 });
+
+                boundaryParticleCards.forEach(card => {
+                    const style = card.dataset.particleStyle;
+                    const isSelected = (style === selectedBoundaryParticleStyle);
+                    card.classList.toggle('on', isSelected);
+                    card.setAttribute('aria-checked', isSelected ? 'true' : 'false');
+                    const radio = card.querySelector('input[name="selected-boundary-particle-style"]');
+                    if (radio) {
+                        radio.checked = isSelected;
+                    }
+                });
             };
 
-            // Set initial state from global/localStorage
-            let bgFound = false;
-            radios.forEach(radio => {
-                if (radio.value === selectedBackground) {
-                    radio.checked = true;
-                    bgFound = true;
-                }
+            const syncSettingFromStorage = (storageKey, fallbackValue) => {
+                const stored = localStorage.getItem(storageKey);
+                return (stored !== null && stored !== '') ? stored : fallbackValue;
+            };
 
-                radio.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        selectedBackground = e.target.value;
-                        localStorage.setItem('selectedBackground', selectedBackground);
-                        updateUI();
+            selectedBackground = syncSettingFromStorage('selectedBackground', typeof selectedBackground !== 'undefined' ? selectedBackground : 'default');
+            selectedBallColor = syncSettingFromStorage('selectedBallColor', typeof selectedBallColor !== 'undefined' ? selectedBallColor : 'dynamic');
+            selectedBallPattern = syncSettingFromStorage('selectedBallPattern', typeof selectedBallPattern !== 'undefined' ? selectedBallPattern : 'solid');
+            selectedEnvironment = syncSettingFromStorage('selectedEnvironment', typeof selectedEnvironment !== 'undefined' ? selectedEnvironment : 'void');
+            selectedPulseStyle = syncSettingFromStorage('selectedPulseStyle', typeof selectedPulseStyle !== 'undefined' ? selectedPulseStyle : 'wave');
+            selectedBoundaryParticleStyle = syncSettingFromStorage('selectedBoundaryParticleStyle', typeof selectedBoundaryParticleStyle !== 'undefined' ? selectedBoundaryParticleStyle : 'wave');
 
-                        // Notify Three.js to update the visual background
-                        if (typeof window.updateBackgroundStyle === 'function') {
-                            window.updateBackgroundStyle();
-                        }
+            window.selectedBackground = selectedBackground;
+            window.selectedBallColor = selectedBallColor;
+            window.selectedBallPattern = selectedBallPattern;
+            window.selectedEnvironment = selectedEnvironment;
+            window.selectedPulseStyle = selectedPulseStyle;
+            window.selectedBoundaryParticleStyle = selectedBoundaryParticleStyle;
+
+            const bindRadioGroup = (radioList, currentValue, storageKey, setGlobal, onApply) => {
+                let found = false;
+                radioList.forEach(radio => {
+                    if (radio.value === currentValue) {
+                        radio.checked = true;
+                        found = true;
+                    }
+                    if (!radio._personalizeBound) {
+                        radio._personalizeBound = true;
+                        radio.addEventListener('change', (e) => {
+                            if (e.target.checked) {
+                                setGlobal(e.target.value);
+                                localStorage.setItem(storageKey, e.target.value);
+                                updateUI();
+                                if (onApply) onApply();
+                            }
+                        });
                     }
                 });
-            });
-            if (!bgFound && radios.length > 0) {
-                radios[0].checked = true;
-                selectedBackground = radios[0].value;
-                localStorage.setItem('selectedBackground', selectedBackground);
-            }
-
-            let ballColorFound = false;
-            ballColorRadios.forEach(radio => {
-                if (radio.value === selectedBallColor) {
-                    radio.checked = true;
-                    ballColorFound = true;
+                if (!found && radioList.length > 0) {
+                    const fallback = radioList[0].value;
+                    radioList[0].checked = true;
+                    setGlobal(fallback);
+                    localStorage.setItem(storageKey, fallback);
                 }
+            };
 
-                radio.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        selectedBallColor = e.target.value;
-                        localStorage.setItem('selectedBallColor', selectedBallColor);
-                        updateUI();
+            bindRadioGroup(
+                radios,
+                selectedBackground,
+                'selectedBackground',
+                (val) => { selectedBackground = val; window.selectedBackground = val; },
+                () => { if (typeof window.updateBackgroundStyle === 'function') window.updateBackgroundStyle(); }
+            );
 
-                        // Notify Three.js to update the ball color instantly
-                        if (typeof window.updateBallCustomization === 'function') {
-                            window.updateBallCustomization();
-                        }
+            bindRadioGroup(
+                ballColorRadios,
+                selectedBallColor,
+                'selectedBallColor',
+                (val) => { selectedBallColor = val; window.selectedBallColor = val; },
+                () => { if (typeof window.updateBallCustomization === 'function') window.updateBallCustomization(); }
+            );
+
+            bindRadioGroup(
+                ballPatternRadios,
+                selectedBallPattern,
+                'selectedBallPattern',
+                (val) => { selectedBallPattern = val; window.selectedBallPattern = val; },
+                () => { if (typeof window.updateBallCustomization === 'function') window.updateBallCustomization(); }
+            );
+
+            bindRadioGroup(
+                environmentRadios,
+                selectedEnvironment,
+                'selectedEnvironment',
+                (val) => { selectedEnvironment = val; window.selectedEnvironment = val; },
+                () => { if (typeof window.updateEnvironment === 'function') window.updateEnvironment(); }
+            );
+
+            const bindStyleGroup = (cards, radioList, datasetKey, currentValue, storageKey, setGlobal, onApply, fallbackDefault) => {
+                cards.forEach(card => {
+                    if (!card._personalizeBound) {
+                        card._personalizeBound = true;
+                        card.addEventListener('click', () => {
+                            const style = card.dataset[datasetKey];
+                            if (!style) return;
+                            setGlobal(style);
+                            localStorage.setItem(storageKey, style);
+                            if (onApply) onApply();
+                            updateUI();
+                        });
                     }
                 });
-            });
-            if (!ballColorFound && ballColorRadios.length > 0) {
-                ballColorRadios[0].checked = true;
-                selectedBallColor = ballColorRadios[0].value;
-                localStorage.setItem('selectedBallColor', selectedBallColor);
-            }
 
-            let ballPatternFound = false;
-            ballPatternRadios.forEach(radio => {
-                if (radio.value === selectedBallPattern) {
-                    radio.checked = true;
-                    ballPatternFound = true;
-                }
-
-                radio.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        selectedBallPattern = e.target.value;
-                        localStorage.setItem('selectedBallPattern', selectedBallPattern);
-                        updateUI();
-
-                        // Notify Three.js to update the ball pattern instantly
-                        if (typeof window.updateBallCustomization === 'function') {
-                            window.updateBallCustomization();
-                        }
+                let found = false;
+                radioList.forEach(radio => {
+                    if (radio.value === currentValue) {
+                        radio.checked = true;
+                        found = true;
+                    }
+                    if (!radio._personalizeBound) {
+                        radio._personalizeBound = true;
+                        radio.addEventListener('change', (e) => {
+                            if (e.target.checked) {
+                                setGlobal(e.target.value);
+                                localStorage.setItem(storageKey, e.target.value);
+                                if (onApply) onApply();
+                                updateUI();
+                            }
+                        });
                     }
                 });
-            });
-            if (!ballPatternFound && ballPatternRadios.length > 0) {
-                ballPatternRadios[0].checked = true;
-                selectedBallPattern = ballPatternRadios[0].value;
-                localStorage.setItem('selectedBallPattern', selectedBallPattern);
-            }
 
-            let envFound = false;
-            environmentRadios.forEach(radio => {
-                if (radio.value === selectedEnvironment) {
-                    radio.checked = true;
-                    envFound = true;
+                if (!found && (radioList.length > 0 || cards.length > 0)) {
+                    setGlobal(fallbackDefault);
+                    localStorage.setItem(storageKey, fallbackDefault);
+                    if (onApply) onApply();
                 }
+            };
 
-                radio.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        selectedEnvironment = e.target.value;
-                        localStorage.setItem('selectedEnvironment', selectedEnvironment);
-                        updateUI();
+            bindStyleGroup(
+                pulseCards,
+                pulseStyleRadios,
+                'pulseStyle',
+                selectedPulseStyle,
+                'selectedPulseStyle',
+                (val) => { selectedPulseStyle = val; window.selectedPulseStyle = val; },
+                () => { if (typeof window.initPulseStyleForBeatmap === 'function') window.initPulseStyleForBeatmap(); },
+                'wave'
+            );
 
-                        // Notify Three.js to update the environment
-                        if (typeof window.updateEnvironment === 'function') {
-                            window.updateEnvironment();
-                        }
-                    }
-                });
-            });
-            if (!envFound && environmentRadios.length > 0) {
-                environmentRadios[0].checked = true;
-                selectedEnvironment = environmentRadios[0].value;
-                localStorage.setItem('selectedEnvironment', selectedEnvironment);
-            }
-
-            pulseCards.forEach(card => {
-                card.addEventListener('click', () => {
-                    const style = card.dataset.pulseStyle;
-                    if (!style) return;
-                    selectedPulseStyle = style;
-                    window.selectedPulseStyle = selectedPulseStyle;
-                    localStorage.setItem('selectedPulseStyle', selectedPulseStyle);
-                    if (typeof window.initPulseStyleForBeatmap === 'function') {
-                        window.initPulseStyleForBeatmap();
-                    }
-                    updateUI();
-                });
-            });
-
-            let pulseFound = false;
-            pulseStyleRadios.forEach(radio => {
-                if (radio.value === selectedPulseStyle) {
-                    radio.checked = true;
-                    pulseFound = true;
-                }
-
-                radio.addEventListener('change', (e) => {
-                    if (e.target.checked) {
-                        selectedPulseStyle = e.target.value;
-                        window.selectedPulseStyle = selectedPulseStyle;
-                        localStorage.setItem('selectedPulseStyle', selectedPulseStyle);
-                        if (typeof window.initPulseStyleForBeatmap === 'function') {
-                            window.initPulseStyleForBeatmap();
-                        }
-                        updateUI();
-                    }
-                });
-            });
-            if (!pulseFound && (pulseStyleRadios.length > 0 || pulseCards.length > 0)) {
-                selectedPulseStyle = 'wave';
-                window.selectedPulseStyle = selectedPulseStyle;
-                localStorage.setItem('selectedPulseStyle', selectedPulseStyle);
-                if (typeof window.initPulseStyleForBeatmap === 'function') {
-                    window.initPulseStyleForBeatmap();
-                }
-            }
+            bindStyleGroup(
+                boundaryParticleCards,
+                boundaryParticleStyleRadios,
+                'particleStyle',
+                selectedBoundaryParticleStyle,
+                'selectedBoundaryParticleStyle',
+                (val) => { selectedBoundaryParticleStyle = val; window.selectedBoundaryParticleStyle = val; },
+                () => { if (typeof window.initBoundaryParticleStyleForBeatmap === 'function') window.initBoundaryParticleStyleForBeatmap(); },
+                'wave'
+            );
 
             // Initialize UI styling
             updateUI();

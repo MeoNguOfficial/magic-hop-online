@@ -374,6 +374,28 @@ function initPulseStyleForBeatmap() {
     }
 }
 window.initPulseStyleForBeatmap = initPulseStyleForBeatmap;
+
+// --- BOUNDARY PARTICLES CUSTOMIZATION STATE ---
+let selectedBoundaryParticleStyle = localStorage.getItem('selectedBoundaryParticleStyle') || 'wave';
+let activeBoundaryParticleStyle = selectedBoundaryParticleStyle === 'random' ? 'wave' : selectedBoundaryParticleStyle;
+window.selectedBoundaryParticleStyle = selectedBoundaryParticleStyle;
+window.activeBoundaryParticleStyle = activeBoundaryParticleStyle;
+
+const BOUNDARY_PARTICLE_STYLES_POOL = ['off', 'classic', 'normal', 'wave', 'horizontal'];
+
+function initBoundaryParticleStyleForBeatmap() {
+    if (selectedBoundaryParticleStyle === 'random') {
+        const randomIndex = Math.floor(Math.random() * BOUNDARY_PARTICLE_STYLES_POOL.length);
+        activeBoundaryParticleStyle = BOUNDARY_PARTICLE_STYLES_POOL[randomIndex];
+    } else {
+        activeBoundaryParticleStyle = selectedBoundaryParticleStyle;
+    }
+    window.activeBoundaryParticleStyle = activeBoundaryParticleStyle;
+    if (typeof GameEffectsManager !== 'undefined' && typeof GameEffectsManager.syncBoundaryParticleVisibility === 'function') {
+        GameEffectsManager.syncBoundaryParticleVisibility();
+    }
+}
+window.initBoundaryParticleStyleForBeatmap = initBoundaryParticleStyleForBeatmap;
 let bgMesh = null;
 let blueprintGrid = null;
 let cityInstancedMesh = null;
@@ -997,6 +1019,9 @@ async function changeSong(index, autoStart = false) {
 
     if (typeof initPulseStyleForBeatmap === 'function') {
         initPulseStyleForBeatmap();
+    }
+    if (typeof initBoundaryParticleStyleForBeatmap === 'function') {
+        initBoundaryParticleStyleForBeatmap();
     }
 
     if (!menuAudio || !audioCtx) initAudio();

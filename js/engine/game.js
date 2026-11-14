@@ -466,6 +466,9 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
                 : ((tile && tile.userData && tile.userData.themeColor) ? tile.userData.themeColor : 0x00ffff);
             lastBoundaryPulseSpawnTime = performance.now();
             GameEffectsManager.spawnBoundaryPulses(impactZ, furthestZ, activeColor, true);
+            if (typeof GameEffectsManager.spawnBoundaryParticles === 'function') {
+                GameEffectsManager.spawnBoundaryParticles(impactZ, furthestZ, activeColor, true);
+            }
         }
     }
 }
@@ -1326,6 +1329,9 @@ function initBoundaries() {
     if (typeof initPulseStyleForBeatmap === 'function') {
         initPulseStyleForBeatmap();
     }
+    if (typeof initBoundaryParticleStyleForBeatmap === 'function') {
+        initBoundaryParticleStyleForBeatmap();
+    }
     if (leftBoundaryLine) scene.remove(leftBoundaryLine);
     if (rightBoundaryLine) scene.remove(rightBoundaryLine);
 
@@ -1398,10 +1404,11 @@ function updateBoundariesVisibility() {
     }
 
     if (boundaryDustMesh) {
-        boundaryDustMesh.visible = advancedOn;
+        const pStyle = (typeof activeBoundaryParticleStyle !== 'undefined') ? activeBoundaryParticleStyle : 'wave';
+        boundaryDustMesh.visible = (pStyle === 'classic');
     }
-    if (typeof GameEffectsManager !== 'undefined' && GameEffectsManager.boundaryDustMesh) {
-        GameEffectsManager.boundaryDustMesh.visible = advancedOn;
+    if (typeof GameEffectsManager !== 'undefined' && typeof GameEffectsManager.syncBoundaryParticleVisibility === 'function') {
+        GameEffectsManager.syncBoundaryParticleVisibility();
     }
 }
 
@@ -1558,6 +1565,9 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
             if (window.GameEffectsManager.boundaryDustMesh) {
                 window.GameEffectsManager.boundaryDustMesh.visible = true;
             }
+            if (window.GameEffectsManager.boundaryBurstMesh) {
+                window.GameEffectsManager.boundaryBurstMesh.visible = true;
+            }
             if (window.GameEffectsManager.dashGlideWakeMesh) {
                 window.GameEffectsManager.dashGlideWakeMesh.visible = true;
             }
@@ -1588,6 +1598,10 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
         scene.remove(warmupGroup);
         if (window.GameEffectsManager) {
             if (window.GameEffectsManager.boundaryDustMesh) window.GameEffectsManager.boundaryDustMesh.visible = false;
+            if (window.GameEffectsManager.boundaryBurstMesh) window.GameEffectsManager.boundaryBurstMesh.visible = false;
+            if (typeof window.GameEffectsManager.syncBoundaryParticleVisibility === 'function') {
+                window.GameEffectsManager.syncBoundaryParticleVisibility();
+            }
             if (window.GameEffectsManager.dashGlideWakeMesh) window.GameEffectsManager.dashGlideWakeMesh.visible = false;
             if (window.GameEffectsManager.dashSprayMesh) window.GameEffectsManager.dashSprayMesh.visible = false;
         }
@@ -1709,6 +1723,9 @@ async function initThree() {
 
     jumpStartRawZ = tiles[0].position.z;
     calculateNextParabola(0);
+    if (typeof window.updateBackgroundStyle === 'function') {
+        window.updateBackgroundStyle();
+    }
 
     // Tiền biên dịch toàn bộ Shader trên GPU tránh drop FPS khi vào nhịp
     if (typeof prewarmAllGpuShaders === 'function') {
@@ -3388,6 +3405,9 @@ function animate(rafTime) {
             GameEffectsManager.updateShockwaves(delta, camZ);
             GameEffectsManager.updateBoundaryPulses(delta, gameSpeed);
             GameEffectsManager.updateBoundaryFlames(delta, time, camera);
+            if (typeof GameEffectsManager.updateBoundaryParticles === 'function') {
+                GameEffectsManager.updateBoundaryParticles(delta, gameSpeed, camera);
+            }
             GameEffectsManager.updateBallTrail(delta, nowTime, isPlaying, isFalling, ball);
             GameEffectsManager.updateDashGlide(delta, isPlaying && !isFalling && isDashing, ball, dashTargetTile);
         }
@@ -5843,6 +5863,9 @@ function setupGameStates() {
     }
     if (typeof initPulseStyleForBeatmap === 'function') {
         initPulseStyleForBeatmap();
+    }
+    if (typeof initBoundaryParticleStyleForBeatmap === 'function') {
+        initBoundaryParticleStyleForBeatmap();
     }
     jumpElapsedTime = 0;
     isFalling = false;
