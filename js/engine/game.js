@@ -2670,6 +2670,9 @@ const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini
 window.IS_MOBILE = IS_MOBILE;
 
 let _lastSetClearColorHex = -1;
+let _lastRenderRafTime = 0;
+let _smoothedFrameDelta = 0;
+let _smoothedAudioDrift = 0;
 
 function syncSharedMaterial(mat, currentFrameHex, tempColor) {
     if (!mat) return;
@@ -2691,10 +2694,11 @@ function syncSharedGlow(glowMat, currentFrameHex) {
 }
 
 
-function animate() {
+function animate(rafTime) {
     requestAnimationFrame(animate);
 
     const now = performance.now();
+    const frameTimestamp = (typeof rafTime === 'number' && rafTime > 0) ? rafTime : now;
     const limitValue = (typeof window.getEffectiveMaxFps === 'function')
         ? window.getEffectiveMaxFps()
         : (typeof window.maxFps !== 'undefined' ? window.maxFps : 0);
@@ -2702,15 +2706,33 @@ function animate() {
     if (limitValue > 0) {
         const frameDuration = 1000 / limitValue;
         const elapsed = now - lastFrameTime;
-        if (elapsed < frameDuration - 1.2) {
+        // Dùng dung sai thích ứng theo tần số quét để tránh rớt nhịp VSync khi rAF dao động ±1ms
+        const jitterTolerance = Math.min(1.5, frameDuration * 0.18);
+        if (elapsed < frameDuration - jitterTolerance) {
             return;
         }
-        lastFrameTime = now - (elapsed % frameDuration);
+        lastFrameTime = now - Math.min(frameDuration * 0.5, elapsed % frameDuration);
     } else {
         lastFrameTime = now;
     }
 
-    let delta = clock.getDelta();
+    const clockDelta = clock.getDelta();
+    let rawDelta = (_lastRenderRafTime > 0 && frameTimestamp > _lastRenderRafTime)
+        ? (frameTimestamp - _lastRenderRafTime) * 0.001
+        : clockDelta;
+    _lastRenderRafTime = frameTimestamp;
+
+    // Bảo vệ khi chuyển tab / pause và làm mượt micro-jitter giữa các callback rAF trên nền VSync
+    if (rawDelta <= 0 || rawDelta > 0.1) {
+        rawDelta = Math.min(0.1, Math.max(0.0005, clockDelta));
+        _smoothedFrameDelta = rawDelta;
+    } else if (_smoothedFrameDelta > 0 && rawDelta >= _smoothedFrameDelta * 0.55 && rawDelta <= _smoothedFrameDelta * 1.8) {
+        _smoothedFrameDelta += (rawDelta - _smoothedFrameDelta) * 0.25;
+    } else {
+        _smoothedFrameDelta = rawDelta;
+    }
+
+    let delta = _smoothedFrameDelta;
     let currentAudioTime = (audio && !audio.paused) ? (audio.currentTime || 0) : 0;
 
     if (window.AdaptivePerformanceManager) {
@@ -2748,7 +2770,7 @@ function animate() {
                 fpsLastTime = now;
 
                 if (window.FPSGraphManager) {
-                    window.FPSGraphManager.record(now, fpsValue, delta);
+                    window.FPSGraphManager.record(now, fpsValue, rawDelta);
                 } else {
                     const fpsTextEl = document.getElementById('fps-value-text');
                     if (fpsTextEl) {
@@ -2777,20 +2799,31 @@ function animate() {
     // để tránh drift dồn nén khiến delta tăng vọt làm block tăng tốc nhanh khi bóng chạm Glow Mesh
     const isInEndingTransition = isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition);
     if (isPlaying && !isInEndingTransition && audio && !audio.paused) {
-        let drift = currentAudioTime - accumulatedSongTime;
+        let rawDrift = currentAudioTime - accumulatedSongTime;
 
-        // Tốc độ thực tế của nhạc chỉ đạt tối đa 2.6x, ta đồng bộ thời gian theo tốc độ này
-        // để không vô tình làm giảm biến delta khi gameSpeed > 2.6
+        // Tốc độ thực tế của nhạc chỉ đạt tối đa 3.0x, ta đồng bộ thời gian theo tốc độ này
         let currentAudioSpeed = Math.min(3.0, gameSpeed);
 
-        if (Math.abs(drift) > 0.03 && Math.abs(drift) < 1.0) {
-            let correction = (drift * 0.1) / currentAudioSpeed;
-            delta += correction;
-            delta = Math.max(0.001, Math.min(delta, 0.1));
-        } else if (Math.abs(drift) >= 1.0) {
+        if (Math.abs(rawDrift) >= 0.5) {
             accumulatedSongTime = currentAudioTime;
+            _smoothedAudioDrift = 0;
+        } else {
+            // Lọc nhiễu bậc thang từ audio.currentTime (vốn cập nhật theo từng cụm 20-40ms)
+            _smoothedAudioDrift += (rawDrift - _smoothedAudioDrift) * 0.1;
+
+            const deadzone = 0.025;
+            if (Math.abs(_smoothedAudioDrift) > deadzone) {
+                const excessDrift = _smoothedAudioDrift - Math.sign(_smoothedAudioDrift) * deadzone;
+                const rawCorrection = (excessDrift * 0.08) / currentAudioSpeed;
+                // Giới hạn vi chỉnh tối đa ±4% mỗi frame để triệt tiêu hoàn toàn hiện tượng khựng / giật nhịp ở FPS cao
+                const maxStepAdj = delta * 0.04;
+                const clampedCorrection = Math.max(-maxStepAdj, Math.min(maxStepAdj, rawCorrection));
+                delta += clampedCorrection;
+            }
         }
         accumulatedSongTime += delta * currentAudioSpeed;
+    } else {
+        _smoothedAudioDrift = 0;
     }
 
     if (delta > 0.1) delta = 0.1;
