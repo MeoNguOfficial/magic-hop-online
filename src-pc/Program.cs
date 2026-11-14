@@ -12,9 +12,9 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cyber Beat Hopper")]
 [assembly: AssemblyDescription("Cyber Beat Hopper - 3D Cyberpunk Rhythm Game")]
 [assembly: AssemblyCompany("MeoTN Gaming")]
-[assembly: AssemblyVersion("1.0.9.0")]
-[assembly: AssemblyFileVersion("1.0.9.0")]
-[assembly: AssemblyInformationalVersion("1.0.9")]
+[assembly: AssemblyVersion("1.0.10.0")]
+[assembly: AssemblyFileVersion("1.0.10.0")]
+[assembly: AssemblyInformationalVersion("1.0.10")]
 [assembly: AssemblyCopyright("Copyright © 2026 MeoTN Gaming")]
 
 namespace CyberBeatHopper
