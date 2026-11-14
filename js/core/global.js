@@ -186,10 +186,13 @@ window.toggleFullscreen = toggleFullscreen;
 
 function checkIsAndroidAPK() {
     try {
+        if (typeof window.getAppRuntimeType === 'function') {
+            return window.getAppRuntimeType() === 'apk';
+        }
         if (window.isAndroidAPK || (document.documentElement && document.documentElement.classList.contains('android-apk-mode'))) {
             return true;
         }
-        if (typeof window.AndroidNativeApp !== 'undefined') {
+        if (typeof window.AndroidNativeApp !== 'undefined' && window.AndroidNativeApp === true) {
             return true;
         }
         if (typeof window.Capacitor !== 'undefined') {
@@ -203,7 +206,7 @@ function checkIsAndroidAPK() {
         if (window.location.protocol === 'capacitor:') {
             return true;
         }
-        if (window.location.origin === 'https://localhost' && /Android/i.test(navigator.userAgent)) {
+        if (window.location.origin === 'https://localhost' && !window.location.port && /Android/i.test(navigator.userAgent)) {
             return true;
         }
     } catch (e) {}

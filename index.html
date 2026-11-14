@@ -16,37 +16,97 @@
             document.documentElement.setAttribute('data-scrollbar-mode', (rawSm === 'hidden') ? 'hidden' : 'auto');
         } catch (e) { }
 
-        // Nhận diện sớm môi trường App (Native PC EXE, Android APK, Standalone PWA) để ẩn banner tải app ngay lập tức
-        try {
-            var isEarlyApp = !!(
-                (window.chrome && window.chrome.webview) ||
-                window.__TAURI__ ||
-                window.__DESKTOP_APP__ ||
-                (window.location.search && window.location.search.indexOf('app=standalone') !== -1) ||
-                (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-                window.navigator.standalone === true ||
-                window.location.port === '38281' ||
-                window.location.port === '9091' ||
-                window.location.protocol === 'capacitor:' ||
-                window.location.origin === 'https://localhost' ||
-                (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
-                (typeof window.Capacitor !== 'undefined')
-            );
-            if (isEarlyApp) {
-                document.documentElement.classList.add('in-app-mode');
-                try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('app_mode', 'standalone'); } catch (e) {}
+        // Nhận diện chuẩn xác & thống nhất bản App hiện tại: 'apk' | 'pc' | 'pwa' | 'web'
+        (function () {
+            function getAppRuntimeType() {
+                try {
+                    var ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+                    var loc = (typeof window !== 'undefined' && window.location) ? window.location : {};
+                    var protocol = loc.protocol || '';
+                    var origin = loc.origin || '';
+                    var hostname = loc.hostname || '';
+                    var port = loc.port || '';
+                    var search = loc.search || '';
+
+                    // 1. Android APK (ưu tiên kiểm tra trước để không bao giờ bị nhầm sang PC/PWA)
+                    var hasCapNative = !!(
+                        window.Capacitor && (
+                            (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+                            (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android')
+                        )
+                    );
+                    var isApk = !!(
+                        window.AndroidNativeApp === true ||
+                        hasCapNative ||
+                        protocol === 'capacitor:' ||
+                        (origin === 'https://localhost' && !port && /Android/i.test(ua))
+                    );
+                    if (isApk) return 'apk';
+
+                    // 2. PC Windows Standalone EXE (WebView2 / Tauri / local HTTP loopback cổng 38281..38290 hoặc ?app=standalone)
+                    var portNum = parseInt(port, 10);
+                    var isPcLoopback = (hostname === '127.0.0.1' && (
+                        (search && search.indexOf('app=standalone') !== -1) ||
+                        (!isNaN(portNum) && portNum >= 38281 && portNum <= 38290) ||
+                        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pc_standalone_app') === 'true')
+                    ));
+                    var isPc = !!(
+                        window.__TAURI__ ||
+                        window.__TAURI_INTERNALS__ ||
+                        window.__DESKTOP_APP__ ||
+                        (window.chrome && window.chrome.webview) ||
+                        protocol === 'tauri:' ||
+                        protocol === 'asset:' ||
+                        (search && search.indexOf('app=standalone') !== -1) ||
+                        isPcLoopback
+                    );
+                    if (isPc) return 'pc';
+
+                    // 3. PWA Standalone (đang thực sự mở trong cửa sổ App PWA, KHÔNG tính tab trình duyệt thường)
+                    var isStandaloneDisplay = !!(
+                        (window.matchMedia && (
+                            window.matchMedia('(display-mode: standalone)').matches ||
+                            window.matchMedia('(display-mode: window-controls-overlay)').matches
+                        )) ||
+                        window.navigator.standalone === true ||
+                        (typeof document !== 'undefined' && document.referrer && document.referrer.indexOf('android-app://') !== -1)
+                    );
+                    if (isStandaloneDisplay) return 'pwa';
+                } catch (e) { }
+                return 'web';
             }
-            var isEarlyAndroidAPK = !!(
-                window.AndroidNativeApp ||
-                window.location.protocol === 'capacitor:' ||
-                (window.location.origin === 'https://localhost' && /Android/i.test(navigator.userAgent)) ||
-                (typeof window.Capacitor !== 'undefined' && /Android/i.test(navigator.userAgent))
-            );
-            if (isEarlyAndroidAPK) {
-                document.documentElement.classList.add('android-apk-mode');
-                window.isAndroidAPK = true;
-            }
-        } catch (e) { }
+
+            window.getAppRuntimeType = getAppRuntimeType;
+            var runtime = getAppRuntimeType();
+            window.APP_RUNTIME_TYPE = runtime;
+            window.isAndroidAPK = (runtime === 'apk');
+            window.isDesktopApp = (runtime === 'pc');
+            window.isNativeMobileApp = (runtime === 'apk');
+            window.isPWAApp = (runtime === 'pwa');
+
+            try {
+                if (typeof sessionStorage !== 'undefined') {
+                    // Dọn key app_mode cũ từng gây nhận diện nhầm giữa PC/APK/PWA
+                    sessionStorage.removeItem('app_mode');
+                    if (runtime === 'pc') {
+                        sessionStorage.setItem('pc_standalone_app', 'true');
+                    } else {
+                        sessionStorage.removeItem('pc_standalone_app');
+                    }
+                }
+            } catch (e) { }
+
+            try {
+                var rootEl = document.documentElement;
+                rootEl.classList.remove('in-app-mode', 'android-apk-mode', 'desktop-app-mode', 'pwa-app-mode');
+                if (runtime !== 'web') {
+                    rootEl.classList.add('in-app-mode');
+                }
+                if (runtime === 'apk') rootEl.classList.add('android-apk-mode');
+                else if (runtime === 'pc') rootEl.classList.add('desktop-app-mode');
+                else if (runtime === 'pwa') rootEl.classList.add('pwa-app-mode');
+            } catch (e) { }
+        })();
     </script>
 
     <!-- ANTI DEVTOOLS & CONSOLE GATEWAY (ADMIN ONLY) -->
@@ -3474,8 +3534,12 @@
                                     <label
                                         class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
                                         <div class="flex flex-col">
-                                            <span class="font-bold uppercase text-gray-200"
-                                                data-i18n="sw_auto_update_title">Tự động cập nhật App</span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold uppercase text-gray-200"
+                                                    data-i18n="sw_auto_update_title">Tự động cập nhật App</span>
+                                                <span id="detected-platform-badge"
+                                                    class="px-1.5 py-0.5 rounded text-[9px] font-orbitron font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/30 tracking-wider">Web</span>
+                                            </div>
                                             <span class="text-[9px] text-gray-500" data-i18n="sw_auto_update_desc">Tự
                                                 động thông báo khi có phiên bản mới.</span>
                                         </div>

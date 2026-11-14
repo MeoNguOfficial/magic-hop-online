@@ -182,21 +182,25 @@
     let nativeInterval = null;
     let trapElement = null;
 
-    // Phát hiện môi trường Desktop App độc lập (Tauri, WebView2, Edge App Mode)
-    const isDesktopApp = !!(
-        window.__TAURI__ ||
-        window.__TAURI_INTERNALS__ ||
-        (window.chrome && window.chrome.webview) ||
-        window.__DESKTOP_APP__ ||
-        window.location.protocol === 'tauri:' ||
-        window.location.protocol === 'asset:' ||
-        window.matchMedia('(display-mode: standalone)').matches
-    );
+    // Phát hiện môi trường Desktop App độc lập (chỉ PC EXE/Tauri/WebView2 — KHÔNG gộp PWA/APK)
+    const runtimeType = (typeof window.getAppRuntimeType === 'function')
+        ? window.getAppRuntimeType()
+        : ((
+            window.__TAURI__ ||
+            window.__TAURI_INTERNALS__ ||
+            (window.chrome && window.chrome.webview) ||
+            window.__DESKTOP_APP__ ||
+            window.location.protocol === 'tauri:' ||
+            window.location.protocol === 'asset:' ||
+            window.location.search.indexOf('app=standalone') !== -1
+        ) ? 'pc' : 'web');
+    const isDesktopApp = (runtimeType === 'pc');
+    const isStandaloneAppWindow = isDesktopApp || (runtimeType === 'pwa') || !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
     window.isDesktopApp = isDesktopApp;
 
     // Tầng 1: Window Size Difference (Phát hiện DevTools dạng Docked trên mọi trình duyệt)
     function checkSizeMismatch() {
-        if (isAllowedBypass() || isDesktopApp) return false;
+        if (isAllowedBypass() || isStandaloneAppWindow) return false;
         const thresholdWidth = 160;
         const thresholdHeight = 200;
         const wDiff = window.outerWidth - window.innerWidth;

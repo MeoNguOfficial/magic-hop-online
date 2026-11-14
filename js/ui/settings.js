@@ -243,7 +243,8 @@ if (typeof document !== 'undefined' && document.documentElement) {
 }
 let tileDetailScale = localStorage.getItem('tileDetailScale') !== null ? parseFloat(localStorage.getItem('tileDetailScale')) : 1.0;
 // Screen Refresh Rate & FPS Synchronization Mode Management
-window.screenRefreshRate = window.screenRefreshRate || 144;
+const savedDetectedHz = parseInt(localStorage.getItem('detectedRefreshRate'), 10);
+window.screenRefreshRate = (!isNaN(savedDetectedHz) && savedDetectedHz >= 50 && savedDetectedHz <= 360) ? savedDetectedHz : 60;
 let fpsSyncMode = localStorage.getItem('fpsSyncMode') || 'vsync';
 let maxFps = localStorage.getItem('maxFps') !== null ? parseInt(localStorage.getItem('maxFps')) : 144;
 
@@ -419,9 +420,10 @@ window.updateFpsSyncUI = updateFpsSyncUI;
  * Áp dụng giới hạn tần số quét màn hình vào menu và kích hoạt Fallback Logic
  */
 function applyRefreshRateBound(detectedHz) {
-    if (!detectedHz || detectedHz < 30) detectedHz = 60;
-    if (detectedHz > 360) detectedHz = 144;
+    if (!detectedHz || detectedHz < 50) detectedHz = 60;
+    if (detectedHz > 360) detectedHz = 360;
     window.screenRefreshRate = detectedHz;
+    try { localStorage.setItem('detectedRefreshRate', String(detectedHz)); } catch (e) {}
 
     const modeSelect = document.getElementById('fps-sync-mode-select');
     const rateMap = {
@@ -469,68 +471,137 @@ window.applyRefreshRateBound = applyRefreshRateBound;
 
 /**
  * Tự động đo tần số quét tối đa của màn hình hiện tại (Display Refresh Rate)
+ * - Bỏ qua lúc tab bị ẩn (tránh nhận nhầm nhịp tiết kiệm 1Hz-30Hz)
+ * - Bỏ qua 4 frame khởi động và dùng cụm 15%–40% nhanh ổn định để chống sai số do stutter khởi tạo hoặc frame rớt
  */
 let isMeasuringRefreshRate = false;
+let pendingRefreshVisibilityHook = false;
 function detectScreenRefreshRate(callback) {
+    if (typeof requestAnimationFrame === 'undefined') {
+        if (callback) callback(window.screenRefreshRate || 60);
+        return;
+    }
+    if (typeof document !== 'undefined' && document.hidden) {
+        if (!pendingRefreshVisibilityHook) {
+            pendingRefreshVisibilityHook = true;
+            document.addEventListener('visibilitychange', function onVisibleMeasure() {
+                if (!document.hidden) {
+                    pendingRefreshVisibilityHook = false;
+                    document.removeEventListener('visibilitychange', onVisibleMeasure);
+                    detectScreenRefreshRate(callback);
+                }
+            });
+        }
+        return;
+    }
     if (isMeasuringRefreshRate) return;
     isMeasuringRefreshRate = true;
 
-    let frameTimes = [];
-    let count = 0;
+    const frameTimes = [];
+    let totalTicks = 0;
+    const warmupTicks = 4;
+    const targetValidSamples = 48;
+    const maxTicks = 96;
     let lastTime = performance.now();
 
     function sample(now) {
+        if (typeof document !== 'undefined' && document.hidden) {
+            isMeasuringRefreshRate = false;
+            detectScreenRefreshRate(callback);
+            return;
+        }
+
         const delta = now - lastTime;
         lastTime = now;
-        if (delta > 1.2 && delta < 100) {
+        totalTicks++;
+
+        // Chỉ ghi nhận sau khi qua warmup và nằm trong dải VSync hợp lệ (22Hz .. 666Hz)
+        if (totalTicks > warmupTicks && delta >= 1.5 && delta <= 45) {
             frameTimes.push(delta);
         }
-        count++;
-        if (count < 35) {
+
+        if (frameTimes.length < targetValidSamples && totalTicks < maxTicks) {
             requestAnimationFrame(sample);
-        } else {
-            isMeasuringRefreshRate = false;
-            if (frameTimes.length < 10) {
-                if (callback) callback(window.screenRefreshRate || 60);
-                return;
-            }
-            frameTimes.sort((a, b) => a - b);
-            const medianDelta = frameTimes[Math.floor(frameTimes.length / 2)];
-            const rawHz = 1000 / medianDelta;
-
-            const standardBuckets = [60, 75, 90, 120, 144, 165, 180, 240, 360];
-            let detected = Math.round(rawHz);
-            for (const std of standardBuckets) {
-                if (Math.abs(rawHz - std) <= std * 0.055) {
-                    detected = std;
-                    break;
-                }
-            }
-            if (detected < 30) detected = 60;
-            if (detected > 360) detected = 144;
-
-            applyRefreshRateBound(detected);
-            if (callback) callback(detected);
+            return;
         }
+
+        isMeasuringRefreshRate = false;
+        if (frameTimes.length < 18) {
+            updateFpsSyncUI();
+            if (callback) callback(window.screenRefreshRate || 60);
+            return;
+        }
+
+        frameTimes.sort((a, b) => a - b);
+
+        // Lấy dải phân vị 15%..40%: loại nhiễu rAF bắn kép (<15%) và loại các frame bị giật trễ (>40%)
+        const startIdx = Math.floor(frameTimes.length * 0.15);
+        const endIdx = Math.max(startIdx + 1, Math.floor(frameTimes.length * 0.40));
+        let sum = 0;
+        let count = 0;
+        for (let i = startIdx; i < endIdx; i++) {
+            sum += frameTimes[i];
+            count++;
+        }
+        const stableDelta = count > 0 ? (sum / count) : frameTimes[Math.floor(frameTimes.length / 2)];
+        const rawHz = 1000 / stableDelta;
+
+        const standardBuckets = [60, 75, 90, 100, 120, 144, 165, 180, 200, 240, 280, 300, 360];
+        let detected = Math.round(rawHz);
+        for (const std of standardBuckets) {
+            if (Math.abs(rawHz - std) <= Math.max(3, std * 0.045)) {
+                detected = std;
+                break;
+            }
+        }
+        if (detected < 55) detected = 60;
+        if (detected > 360) detected = 360;
+
+        applyRefreshRateBound(detected);
+        if (callback) callback(detected);
     }
-    requestAnimationFrame(sample);
+
+    requestAnimationFrame((t0) => {
+        lastTime = t0;
+        requestAnimationFrame(sample);
+    });
 }
 window.detectScreenRefreshRate = detectScreenRefreshRate;
 
-// Lắng nghe thay đổi kích thước cửa sổ hoặc kéo sang màn hình khác
+// Lắng nghe thay đổi kích thước cửa sổ, chuyển màn hình, hoặc quay lại tab
 let resizeRefreshTimeout = null;
 window.addEventListener('resize', () => {
     if (resizeRefreshTimeout) clearTimeout(resizeRefreshTimeout);
     resizeRefreshTimeout = setTimeout(() => {
         detectScreenRefreshRate();
-    }, 300);
+    }, 350);
 });
 
-// Đo tần số quét ngay khi khởi động
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            setTimeout(() => detectScreenRefreshRate(), 250);
+        }
+    });
+}
+
+if (typeof window.screen !== 'undefined' && typeof window.screen.addEventListener === 'function') {
+    window.screen.addEventListener('change', () => {
+        setTimeout(() => detectScreenRefreshRate(), 200);
+    });
+}
+
+// Đo tần số quét sau khi trang tải xong (tránh bị nhiễu lag khi khởi tạo GPU/Audio lúc boot)
+function scheduleStartupRefreshRateDetection() {
+    setTimeout(() => detectScreenRefreshRate(), 350);
+    setTimeout(() => detectScreenRefreshRate(), 1800);
+}
 if (typeof requestAnimationFrame !== 'undefined') {
-    setTimeout(() => {
-        detectScreenRefreshRate();
-    }, 80);
+    if (typeof document !== 'undefined' && document.readyState === 'complete') {
+        scheduleStartupRefreshRateDetection();
+    } else {
+        window.addEventListener('load', scheduleStartupRefreshRateDetection, { once: true });
+    }
 }
 
 /**
@@ -2079,6 +2150,23 @@ document.addEventListener('DOMContentLoaded', () => {
     if (graphicsTabBtn) {
         graphicsTabBtn.addEventListener('click', () => {
             updateGpuDetectionUI();
+        });
+    }
+    const gameTabBtn = document.querySelector('.tab-btn[data-tab="tab-game"]');
+    if (gameTabBtn) {
+        gameTabBtn.addEventListener('click', () => {
+            detectScreenRefreshRate();
+            if (typeof applyPlatformUIAdjustments === 'function') applyPlatformUIAdjustments();
+        });
+    }
+    const hzBadgeEl = document.getElementById('detected-hz-badge');
+    if (hzBadgeEl) {
+        hzBadgeEl.title = 'Click to re-detect display refresh rate';
+        hzBadgeEl.classList.add('cursor-pointer');
+        hzBadgeEl.addEventListener('click', (e) => {
+            e.preventDefault();
+            hzBadgeEl.textContent = '...';
+            detectScreenRefreshRate();
         });
     }
     if (toggleShockwaves) toggleShockwaves.addEventListener('change', applySettings);

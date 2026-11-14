@@ -10,21 +10,24 @@
         ? window.IS_MOBILE
         : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
-    const isNativeMobileApp = !!(
-        window.Capacitor ||
-        (window.__TAURI__ && (navigator.userAgent.includes('Android') || /iPhone|iPad|iPod/i.test(navigator.userAgent))) ||
-        window.matchMedia('(display-mode: standalone)').matches
-    );
+    const runtimeType = (typeof window.getAppRuntimeType === 'function')
+        ? window.getAppRuntimeType()
+        : 'web';
 
-    const isAndroidAPK = !!(
-        window.AndroidNativeApp ||
+    const isAndroidAPK = (runtimeType === 'apk') || !!(
+        window.AndroidNativeApp === true ||
         (window.Capacitor && (
             (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
             (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android')
         )) ||
         window.location.protocol === 'capacitor:' ||
-        (window.location.origin === 'https://localhost' && /Android/i.test(navigator.userAgent))
+        (window.location.origin === 'https://localhost' && !window.location.port && /Android/i.test(navigator.userAgent))
     );
+
+    const isNativeMobileApp = isAndroidAPK || !!(
+        (window.__TAURI__ && isMobileDevice)
+    );
+
     if (isAndroidAPK) {
         document.documentElement.classList.add('android-apk-mode');
         window.isAndroidAPK = true;

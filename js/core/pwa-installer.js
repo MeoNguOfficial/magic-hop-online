@@ -18,25 +18,8 @@ let _hasPromptedUpdateThisLoad = false;
  * Phát hiện xem ứng dụng có đang chạy dưới dạng App đóng gói (PC Standalone hoặc Android Native APK) hay không.
  */
 function isPackagedNativeApp() {
-    const isPC = !!(
-        (typeof window.isDesktopApp !== 'undefined' && window.isDesktopApp) ||
-        window.location.search.includes('app=standalone') ||
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
-        window.location.port === '38281' ||
-        window.location.port === '9091' ||
-        window.__TAURI__ ||
-        (window.chrome && window.chrome.webview) ||
-        window.__DESKTOP_APP__
-    );
-
-    const isAndroid = !!(
-        (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
-        (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android') ||
-        window.location.origin === 'https://localhost' ||
-        window.location.protocol === 'capacitor:'
-    );
-
-    return isPC || isAndroid;
+    const info = getRuntimePlatformInfo();
+    return info.isPackaged;
 }
 
 window.isPackagedNativeApp = isPackagedNativeApp;
@@ -44,17 +27,21 @@ window.isPackagedNativeApp = isPackagedNativeApp;
 /**
  * Tự động điều chỉnh giao diện Cài đặt dựa trên nền tảng:
  * - Nếu là App đóng gói (PC / APK): Ẩn hoàn toàn nút "Tải App" (PWA), mở rộng nút "Kiểm tra cập nhật".
- * - Nếu là Web thông thường: Hiện cả 2 nút "Kiểm tra cập nhật" và "Tải App".
+ * - Nếu là Web / PWA: Hiện cả 2 nút "Kiểm tra cập nhật" và "Tải App".
  */
 function applyPlatformUIAdjustments() {
-    const isPackaged = isPackagedNativeApp();
-    const isPWA = isPWAInstalled();
-    const isInApp = isPackaged || isPWA || (typeof window.isDesktopApp !== 'undefined' && window.isDesktopApp) || (typeof window.isNativeMobileApp !== 'undefined' && window.isNativeMobileApp);
+    const info = getRuntimePlatformInfo();
+    const isPackaged = info.isPackaged;
+    const isInApp = !info.isWeb;
 
     const installAppBtn = document.getElementById('install-app-btn');
     const updateContainer = document.getElementById('app-update-actions-container');
-    const checkAppUpdateBtn = document.getElementById('check-app-update-btn');
     const notice = document.getElementById('mobile-optimize-notice');
+    const platformBadge = document.getElementById('detected-platform-badge');
+
+    if (platformBadge) {
+        platformBadge.textContent = info.name;
+    }
 
     // Ẩn hoàn toàn thông báo "Tải app ngay để đạt hiệu suất tốt nhất" khi đang ở trong App
     if (notice) {
@@ -64,10 +51,17 @@ function applyPlatformUIAdjustments() {
             notice.style.display = '';
         }
     }
-    if (isInApp) {
-        document.documentElement.classList.add('in-app-mode');
-        document.body.classList.add('in-app-mode');
-    }
+
+    const root = document.documentElement;
+    const body = document.body;
+    [root, body].forEach((el) => {
+        if (!el) return;
+        el.classList.remove('in-app-mode', 'android-apk-mode', 'desktop-app-mode', 'pwa-app-mode');
+        if (isInApp) el.classList.add('in-app-mode');
+        if (info.isAndroid) el.classList.add('android-apk-mode');
+        else if (info.isPC) el.classList.add('desktop-app-mode');
+        else if (info.isPWA) el.classList.add('pwa-app-mode');
+    });
 
     if (isPackaged) {
         if (installAppBtn) {
@@ -91,18 +85,10 @@ window.applyPlatformUIAdjustments = applyPlatformUIAdjustments;
 
 /**
  * Kiểm tra xem ứng dụng có đang thực sự chạy trong cửa sổ PWA độc lập (standalone) hay không.
- * (Khác với isPWAInstalled — dùng để phân biệt tab trình duyệt thường với app PWA).
+ * (Khác với isPWAInstalled — KHÔNG dựa vào getInstalledRelatedApps hay localStorage trên tab trình duyệt thường).
  */
 function isPWAStandalone() {
-    return !!(
-        (window.matchMedia && (
-            window.matchMedia('(display-mode: standalone)').matches ||
-            window.matchMedia('(display-mode: window-controls-overlay)').matches
-        )) ||
-        window.navigator.standalone === true ||
-        (document.referrer && document.referrer.includes('android-app://')) ||
-        (typeof window !== 'undefined' && window._isPWAInstalledNative)
-    );
+    return getRuntimePlatformInfo().isPWA;
 }
 window.isPWAStandalone = isPWAStandalone;
 
@@ -400,36 +386,77 @@ window.showPWAInstallGuide = showPWAInstallGuide;
  */
 /**
  * Trả về thông tin nền tảng hiện tại: pc | apk | pwa | web
+ * Thứ tự ưu tiên chuẩn xác: Android APK -> PC Standalone -> PWA Standalone -> Web Browser
  */
 function getRuntimePlatformInfo() {
-    const isPC = !!(
-        (typeof window.isDesktopApp !== 'undefined' && window.isDesktopApp) ||
-        window.location.search.includes('app=standalone') ||
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
-        window.location.port === '38281' ||
-        window.location.port === '9091' ||
-        window.__TAURI__ ||
-        (window.chrome && window.chrome.webview) ||
-        window.__DESKTOP_APP__
-    );
-    const isAndroid = !!(
-        (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
-        (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android') ||
-        window.location.origin === 'https://localhost' ||
-        window.location.protocol === 'capacitor:'
-    );
+    let runtime = '';
+    if (typeof window !== 'undefined' && typeof window.getAppRuntimeType === 'function') {
+        runtime = window.getAppRuntimeType();
+    } else {
+        const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+        const loc = (typeof window !== 'undefined' && window.location) ? window.location : {};
+        const protocol = loc.protocol || '';
+        const origin = loc.origin || '';
+        const hostname = loc.hostname || '';
+        const port = loc.port || '';
+        const search = loc.search || '';
+        const portNum = parseInt(port, 10);
 
-    if (isPC) {
-        return { key: 'pc', name: 'PC Windows', isPC: true, isAndroid: false, isPackaged: true, isPWA: false, isWeb: false };
+        const hasCapNative = !!(
+            typeof window !== 'undefined' && window.Capacitor && (
+                (typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+                (typeof window.Capacitor.getPlatform === 'function' && window.Capacitor.getPlatform() === 'android')
+            )
+        );
+        const isApk = !!(
+            (typeof window !== 'undefined' && window.AndroidNativeApp === true) ||
+            hasCapNative ||
+            protocol === 'capacitor:' ||
+            (origin === 'https://localhost' && !port && /Android/i.test(ua))
+        );
+
+        const isPcLoopback = (hostname === '127.0.0.1' && (
+            (search && search.includes('app=standalone')) ||
+            (!isNaN(portNum) && portNum >= 38281 && portNum <= 38290) ||
+            (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pc_standalone_app') === 'true')
+        ));
+        const isPc = !isApk && !!(
+            (typeof window !== 'undefined' && (
+                window.__TAURI__ ||
+                window.__TAURI_INTERNALS__ ||
+                window.__DESKTOP_APP__ ||
+                (window.chrome && window.chrome.webview)
+            )) ||
+            protocol === 'tauri:' ||
+            protocol === 'asset:' ||
+            (search && search.includes('app=standalone')) ||
+            isPcLoopback
+        );
+
+        const isPwaStandaloneWin = !isApk && !isPc && !!(
+            (typeof window !== 'undefined' && window.matchMedia && (
+                window.matchMedia('(display-mode: standalone)').matches ||
+                window.matchMedia('(display-mode: window-controls-overlay)').matches
+            )) ||
+            (typeof window !== 'undefined' && window.navigator && window.navigator.standalone === true) ||
+            (typeof document !== 'undefined' && document.referrer && document.referrer.includes('android-app://'))
+        );
+
+        runtime = isApk ? 'apk' : (isPc ? 'pc' : (isPwaStandaloneWin ? 'pwa' : 'web'));
     }
-    if (isAndroid) {
+
+    if (runtime === 'apk') {
         return { key: 'apk', name: 'Android APK', isPC: false, isAndroid: true, isPackaged: true, isPWA: false, isWeb: false };
     }
-    if (isPWAStandalone()) {
+    if (runtime === 'pc') {
+        return { key: 'pc', name: 'PC Windows', isPC: true, isAndroid: false, isPackaged: true, isPWA: false, isWeb: false };
+    }
+    if (runtime === 'pwa') {
         return { key: 'pwa', name: 'PWA', isPC: false, isAndroid: false, isPackaged: false, isPWA: true, isWeb: false };
     }
     return { key: 'web', name: 'Web', isPC: false, isAndroid: false, isPackaged: false, isPWA: false, isWeb: true };
 }
+window.getRuntimePlatformInfo = getRuntimePlatformInfo;
 
 function trPwa(key, fallback) {
     if (typeof t === 'function') {

@@ -5,24 +5,38 @@
 // ============================================================
 
 (function () {
-    const isDesktop = !!(
-        window.__TAURI__ ||
-        window.__TAURI_INTERNALS__ ||
-        (window.chrome && window.chrome.webview) ||
-        window.__DESKTOP_APP__ ||
-        window.location.protocol === 'tauri:' ||
-        window.location.protocol === 'asset:' ||
-        window.location.search.indexOf('app=standalone') !== -1 ||
-        window.location.port === '38281' ||
-        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
-        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        (window.matchMedia && window.matchMedia('(display-mode: window-controls-overlay)').matches)
+    const runtimeType = (typeof window.getAppRuntimeType === 'function')
+        ? window.getAppRuntimeType()
+        : 'web';
+    const portNum = parseInt(window.location.port, 10);
+    const isPCStandalone = (runtimeType === 'pc') || !!(
+        !window.isAndroidAPK && (
+            window.__TAURI__ ||
+            window.__TAURI_INTERNALS__ ||
+            (window.chrome && window.chrome.webview) ||
+            window.__DESKTOP_APP__ ||
+            window.location.protocol === 'tauri:' ||
+            window.location.protocol === 'asset:' ||
+            window.location.search.indexOf('app=standalone') !== -1 ||
+            (window.location.hostname === '127.0.0.1' && !isNaN(portNum) && portNum >= 38281 && portNum <= 38290) ||
+            (window.location.hostname === '127.0.0.1' && typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pc_standalone_app') === 'true')
+        )
     );
 
-    window.isDesktopApp = isDesktop;
+    // window.isDesktopApp CHỈ true khi thực sự chạy bản PC Standalone (.exe/Tauri), KHÔNG bật cho PWA hay Android APK
+    window.isDesktopApp = isPCStandalone;
+
+    const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isDesktopPwaWindow = !isPCStandalone && !isMobileUA && (
+        runtimeType === 'pwa' ||
+        (window.matchMedia && (
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.matchMedia('(display-mode: window-controls-overlay)').matches
+        ))
+    );
 
     const DesktopAppManager = {
-        isApp: isDesktop,
+        isApp: isPCStandalone,
 
         toggleFullscreen: function () {
             if (typeof window.toggleFullscreen === 'function') {
@@ -174,26 +188,33 @@
 
     // 4. Khởi tạo thuộc tính và meta hỗ trợ app khi DOM sẵn sàng
     function initAppMode() {
-        if (window.isDesktopApp) {
+        if (window.isDesktopApp || isDesktopPwaWindow) {
             if (document.body) {
-                document.body.classList.add('desktop-app-mode');
                 document.body.classList.add('in-app-mode');
+                document.body.classList.add(window.isDesktopApp ? 'desktop-app-mode' : 'pwa-app-mode');
             }
             if (document.documentElement) {
                 document.documentElement.classList.add('in-app-mode');
-                document.documentElement.classList.add('desktop-app-mode');
+                document.documentElement.classList.add(window.isDesktopApp ? 'desktop-app-mode' : 'pwa-app-mode');
             }
             const notice = document.getElementById('mobile-optimize-notice');
             if (notice) notice.style.setProperty('display', 'none', 'important');
-            console.log("%c[DesktopApp] Chế độ Native Game App đã được kích hoạt (NO Electron - Native WebView2/Tauri)", "color: #00ffff; font-weight: bold;");
+            if (window.isDesktopApp) {
+                console.log("%c[DesktopApp] Chế độ Native Game App đã được kích hoạt (NO Electron - Native WebView2/Tauri)", "color: #00ffff; font-weight: bold;");
+            }
         }
 
         // Heartbeat giữ kết nối máy chủ cục bộ độc lập (CHỈ chạy khi khởi chạy từ CyberBeatHopper.exe standalone)
-        const isStandaloneApp = (new URLSearchParams(window.location.search).get('app') === 'standalone') ||
-                                (sessionStorage.getItem('app_mode') === 'standalone');
+        const isStandalonePcServer = window.isDesktopApp && (
+            (new URLSearchParams(window.location.search).get('app') === 'standalone') ||
+            (window.location.hostname === '127.0.0.1' && (
+                (!isNaN(portNum) && portNum >= 38281 && portNum <= 38290) ||
+                sessionStorage.getItem('pc_standalone_app') === 'true'
+            ))
+        );
 
-        if (isStandaloneApp) {
-            sessionStorage.setItem('app_mode', 'standalone');
+        if (isStandalonePcServer) {
+            sessionStorage.setItem('pc_standalone_app', 'true');
             let failedAttempts = 0;
             const heartbeatInterval = setInterval(function () {
                 fetch('/heartbeat', { cache: 'no-store' })
