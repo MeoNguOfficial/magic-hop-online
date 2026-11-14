@@ -6,21 +6,21 @@
     const PersonalizeManager = {
         init() {
             console.log("Personalize Manager initialized.");
-            
+
             const radios = document.querySelectorAll('input[name="selected-bg-style"]');
             const ballColorRadios = document.querySelectorAll('input[name="selected-ball-color"]');
             const ballPatternRadios = document.querySelectorAll('input[name="selected-ball-pattern"]');
             const environmentRadios = document.querySelectorAll('input[name="selected-environment"]');
             const pulseStyleRadios = document.querySelectorAll('input[name="selected-pulse-style"]');
             const pulseCards = document.querySelectorAll('.bp-card');
-            
+
             const updateUI = () => {
                 radios.forEach(radio => {
                     const card = radio.closest('.bg-option-card');
                     if (!card) return;
                     const dot = card.querySelector('.radio-dot div');
                     const border = card.querySelector('.radio-dot');
-                    
+
                     if (radio.checked) {
                         card.classList.add('border-cyan-400', 'shadow-[0_0_15px_rgba(6,182,212,0.15)]', 'bg-cyan-950/20');
                         card.classList.remove('border-cyan-500/20');
@@ -71,7 +71,7 @@
                     if (!card) return;
                     const dot = card.querySelector('.radio-dot div');
                     const border = card.querySelector('.radio-dot');
-                    
+
                     if (radio.checked) {
                         card.classList.add('border-cyan-400', 'shadow-[0_0_15px_rgba(6,182,212,0.15)]', 'bg-cyan-950/20');
                         card.classList.remove('border-cyan-500/20');
@@ -102,7 +102,7 @@
                     if (!card) return;
                     const dot = card.querySelector('.radio-dot div');
                     const border = card.querySelector('.radio-dot');
-                    
+
                     if (radio.checked) {
                         card.classList.add('border-cyan-400', 'shadow-[0_0_15px_rgba(6,182,212,0.15)]', 'bg-cyan-950/20');
                         card.classList.remove('border-cyan-500/20');
@@ -147,13 +147,13 @@
                     radio.checked = true;
                     bgFound = true;
                 }
-                
+
                 radio.addEventListener('change', (e) => {
                     if (e.target.checked) {
                         selectedBackground = e.target.value;
                         localStorage.setItem('selectedBackground', selectedBackground);
                         updateUI();
-                        
+
                         // Notify Three.js to update the visual background
                         if (typeof window.updateBackgroundStyle === 'function') {
                             window.updateBackgroundStyle();

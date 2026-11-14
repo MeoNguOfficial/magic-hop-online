@@ -48,6 +48,19 @@ window.GameEffectsManager = {
     trailDummyMatrix: null,
     tempColor: null,
 
+    // --- 5. HIỆU ỨNG LƯỚT DASH (DASH GLIDE & SPRAY EFFECT) ---
+    dashGlideWakeMesh: null,
+    dashSprayMesh: null,
+    dashSprayPool: [],
+    MAX_DASH_SPRAYS: (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 24 : 60,
+    cachedDashGlideTexture: null,
+    sprayUpVector: null,
+    sprayDirVector: null,
+    sprayDummyQuaternion: null,
+    sprayDummyPosition: null,
+    sprayDummyScale: null,
+    sprayDummyMatrix: null,
+
     init: function (scene) {
         if (!scene) return;
         this.scene = scene;
@@ -58,9 +71,17 @@ window.GameEffectsManager = {
         this.trailDummyScale = new THREE.Vector3();
         this.trailDummyMatrix = new THREE.Matrix4();
 
+        this.sprayUpVector = new THREE.Vector3(0, 1, 0);
+        this.sprayDirVector = new THREE.Vector3();
+        this.sprayDummyQuaternion = new THREE.Quaternion();
+        this.sprayDummyPosition = new THREE.Vector3();
+        this.sprayDummyScale = new THREE.Vector3();
+        this.sprayDummyMatrix = new THREE.Matrix4();
+
         this.initGeometries();
         this.initBoundaryFlames();
         this.initBallTrail();
+        this.initDashGlide();
         this.prewarmShockwaves();
     },
 
@@ -251,6 +272,8 @@ window.GameEffectsManager = {
                 mesh: null,
                 isDiamondBurst: false,
                 isVortexRing: false,
+                isDashFullWave: false,
+                dashAspectRatio: 1.0,
                 targetTile: null,
                 scale: 1.0,
                 startScale: 1.0,
@@ -268,11 +291,13 @@ window.GameEffectsManager = {
         }
     },
 
-    getShockwaveData: function (mesh, isDiamondBurst, targetTile, scale, startScale, opacity, speed, maxScale, isVortexRing = false) {
+    getShockwaveData: function (mesh, isDiamondBurst, targetTile, scale, startScale, opacity, speed, maxScale, isVortexRing = false, isDashFullWave = false, dashAspectRatio = 1.0) {
         let data = this.shockwaveDataPool.length > 0 ? this.shockwaveDataPool.pop() : {};
         data.mesh = mesh;
         data.isDiamondBurst = isDiamondBurst;
         data.isVortexRing = isVortexRing;
+        data.isDashFullWave = isDashFullWave;
+        data.dashAspectRatio = dashAspectRatio;
         data.targetTile = targetTile;
         data.scale = scale;
         data.startScale = startScale;
@@ -285,6 +310,13 @@ window.GameEffectsManager = {
     triggerShockwave: function (tile, themeColor, customOffsetScale = 1.0, tileScale = 1.0, comboCount = 0) {
         if (typeof shockwavesEnabled !== 'undefined' && !shockwavesEnabled) return;
         if (!tile || !this.scene) return;
+
+        const isDashTile = Boolean(tile && tile.userData && tile.userData.isDashTile);
+        // Shockwave của gạch Dash chỉ kích hoạt đúng 1 lần duy nhất cho mỗi gạch
+        if (isDashTile) {
+            if (tile.userData.dashShockwaveTriggered) return;
+            tile.userData.dashShockwaveTriggered = true;
+        }
 
         // Giới hạn số lượng sóng xung kích đồng thời tối đa (tối ưu hóa fillrate khi nhịp dồn dập ở tốc độ cao)
         const maxActiveWaves = Math.min(this.maxShockwaves || 8, 8);
@@ -299,6 +331,7 @@ window.GameEffectsManager = {
                 if (oldest.mesh.geometry !== this.cachedShockwaveGeo) {
                     oldest.mesh.geometry = this.cachedShockwaveGeo;
                 }
+                oldest.mesh.rotation.z = 0;
                 this.shockwavePool.push(oldest.mesh);
             }
             this.shockwaveDataPool.push(oldest);
@@ -306,7 +339,6 @@ window.GameEffectsManager = {
 
         const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
 
-        const isDashTile = tile && tile.userData && tile.userData.isDashTile;
         const isVortexTile = tile && tile.userData && Boolean(tile.userData.isVortexTile);
         const effectiveCombo = (isDashTile || isVortexTile) ? 0 : comboCount;
 
@@ -416,17 +448,18 @@ window.GameEffectsManager = {
                 return;
             }
 
-            // Gán Geometry theo đúng hình dáng thực của dải gạch Dash
-            if (isDashTile && window.DashBlocksManager && typeof window.DashBlocksManager.getShockwaveGeometry === 'function') {
-                const dashGeo = window.DashBlocksManager.getShockwaveGeometry(
-                    tile.userData.dashLength || 4.0,
-                    (typeof tileWidth !== 'undefined' ? tileWidth : 4.0),
-                    (typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd'),
-                    (typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0)
-                );
-                if (dashGeo) {
-                    waveLine.geometry = dashGeo;
-                }
+            if (isDashTile) {
+                const dashBorderGeo = (tile.userData.borderLine && tile.userData.borderLine.geometry)
+                    ? tile.userData.borderLine.geometry
+                    : (window.DashBlocksManager && typeof window.DashBlocksManager.getShockwaveGeometry === 'function'
+                        ? window.DashBlocksManager.getShockwaveGeometry(
+                            tile.userData.dashLength || 4.0,
+                            (typeof tileWidth !== 'undefined' ? tileWidth : 4.0),
+                            (typeof currentGraphicsQuality !== 'undefined' ? currentGraphicsQuality : 'fhd'),
+                            (typeof tileDetailScale !== 'undefined' ? tileDetailScale : 1.0)
+                        )
+                        : null);
+                waveLine.geometry = dashBorderGeo || this.cachedShockwaveGeo;
             } else if (waveLine.geometry !== this.cachedShockwaveGeo) {
                 waveLine.geometry = this.cachedShockwaveGeo;
             }
@@ -434,13 +467,20 @@ window.GameEffectsManager = {
             waveLine.position.copy(tile.position);
             waveLine.position.y = tile.position.y + surfaceY + 0.032;
             waveLine.rotation.x = -Math.PI / 2;
-            waveLine.rotation.z = (isDashTile && tile.userData && tile.userData.angleZ) ? tile.userData.angleZ : 0;
+            waveLine.rotation.z = isDashTile ? tile.rotation.z : 0;
             waveLine.scale.set(tileScale, tileScale, 1);
 
             const baseScale = tileScale;
             const vortexScaleMultiplier = isVortexTile ? 1.35 : 1.0;
-            const shockwaveSpeed = isDashTile ? 3.6 * customOffsetScale : 4.5 * customOffsetScale;
-            const maxShockwaveScale = isDashTile ? (1.55 * customOffsetScale * baseScale) : (2.4 * customOffsetScale * baseScale * vortexScaleMultiplier);
+            const tWidth = (typeof tileWidth !== 'undefined' && tileWidth) ? tileWidth : 4.3;
+            const dLen = (tile.userData && tile.userData.dashLength) ? tile.userData.dashLength : tWidth;
+            const dashAspectRatio = isDashTile ? Math.min(1.0, tWidth / Math.max(0.01, dLen)) : 1.0;
+            const dashExpandDelta = 0.35 * Math.min(1.2, customOffsetScale);
+
+            const shockwaveSpeed = isDashTile ? (1.15 * customOffsetScale * baseScale) : (4.5 * customOffsetScale);
+            const maxShockwaveScale = isDashTile
+                ? (baseScale * (1.0 + dashExpandDelta))
+                : (2.4 * customOffsetScale * baseScale * vortexScaleMultiplier);
 
             this.shockwaves.push(this.getShockwaveData(
                 waveLine,
@@ -450,7 +490,10 @@ window.GameEffectsManager = {
                 baseScale,
                 1.0,
                 shockwaveSpeed,
-                maxShockwaveScale
+                maxShockwaveScale,
+                false,
+                isDashTile,
+                dashAspectRatio
             ));
         }
     },
@@ -490,7 +533,12 @@ window.GameEffectsManager = {
 
             const currentSpeed = sw.speed * speedScale * (1.0 - progress * 0.45);
             sw.scale += currentSpeed * delta;
-            sw.mesh.scale.set(sw.scale, sw.scale, 1);
+            if (sw.isDashFullWave) {
+                const scaleY = startScale + (sw.scale - startScale) * (sw.dashAspectRatio || 1.0);
+                sw.mesh.scale.set(sw.scale, scaleY, 1);
+            } else {
+                sw.mesh.scale.set(sw.scale, sw.scale, 1);
+            }
 
             if (sw.targetTile && sw.targetTile.parent) {
                 const tt = sw.targetTile;
@@ -498,6 +546,9 @@ window.GameEffectsManager = {
                 const mPos = sw.mesh.position;
                 if (mPos.x !== tt.position.x || mPos.y !== ttY || mPos.z !== tt.position.z) {
                     mPos.set(tt.position.x, ttY, tt.position.z);
+                }
+                if (sw.isDashFullWave && sw.mesh.rotation.z !== tt.rotation.z) {
+                    sw.mesh.rotation.z = tt.rotation.z;
                 }
             }
 
@@ -977,6 +1028,320 @@ window.GameEffectsManager = {
         }
     },
 
+    // --- 5. HIỆU ỨNG LƯỚT DASH & TIA BẮN TOÉ 2 BÊN (DASH GLIDE & SPRAY EFFECT) ---
+    createDashGlideTexture: function () {
+        if (this.cachedDashGlideTexture) return this.cachedDashGlideTexture;
+
+        const width = 256;
+        const height = 512;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        ctx.clearRect(0, 0, width, height);
+
+        const cx = width / 2; // 128
+        const cy = 48; // Tâm điểm tiếp đất của bóng gần mép trước
+
+        // 1. Thân vệt lướt phát sáng chuyển sắc mềm mại trải dài ra sau
+        const bodyGrad = ctx.createLinearGradient(0, cy, 0, height);
+        bodyGrad.addColorStop(0.0, 'rgba(0, 240, 255, 0.80)');
+        bodyGrad.addColorStop(0.18, 'rgba(0, 220, 255, 0.60)');
+        bodyGrad.addColorStop(0.45, 'rgba(0, 185, 255, 0.32)');
+        bodyGrad.addColorStop(0.75, 'rgba(0, 140, 255, 0.12)');
+        bodyGrad.addColorStop(1.0, 'rgba(0, 100, 255, 0.0)');
+
+        ctx.save();
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        ctx.moveTo(cx - 76, cy);
+        ctx.bezierCurveTo(cx - 96, cy + 120, cx - 82, cy + 280, cx - 42, height);
+        ctx.lineTo(cx + 42, height);
+        ctx.bezierCurveTo(cx + 82, cy + 280, cx + 96, cy + 120, cx + 76, cy);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+
+        // 2. Các vệt khói / vệt gió uốn lượn mềm mại đặc trưng như ảnh mẫu (Signature curved wake lines)
+        ctx.save();
+        ctx.lineCap = 'round';
+
+        const drawWisp = (startX, startY, cp1x, cp1y, cp2x, cp2y, endX, endY, strokeColor, shadowColor, lineWidth) => {
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
+            ctx.shadowColor = shadowColor;
+            ctx.shadowBlur = 8;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = lineWidth;
+            ctx.stroke();
+        };
+
+        // Vệt lượn ngoài bên trái (Outer Left Wisp)
+        const wispGradL1 = ctx.createLinearGradient(0, cy, 0, cy + 320);
+        wispGradL1.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
+        wispGradL1.addColorStop(0.28, 'rgba(190, 248, 255, 0.85)');
+        wispGradL1.addColorStop(0.68, 'rgba(0, 215, 255, 0.35)');
+        wispGradL1.addColorStop(1.0, 'rgba(0, 150, 255, 0.0)');
+        drawWisp(cx - 20, cy + 15, cx - 88, cy + 85, cx - 76, cy + 200, cx - 36, cy + 310, wispGradL1, 'rgba(0, 240, 255, 0.9)', 3.6);
+
+        // Vệt lượn trong bên trái (Inner Left Wisp - xoắn mềm sát chân bóng như ảnh)
+        const wispGradL2 = ctx.createLinearGradient(0, cy, 0, cy + 240);
+        wispGradL2.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+        wispGradL2.addColorStop(0.38, 'rgba(210, 252, 255, 0.9)');
+        wispGradL2.addColorStop(0.78, 'rgba(0, 235, 255, 0.45)');
+        wispGradL2.addColorStop(1.0, 'rgba(0, 180, 255, 0.0)');
+        drawWisp(cx - 10, cy + 10, cx - 46, cy + 65, cx - 36, cy + 145, cx - 18, cy + 230, wispGradL2, 'rgba(0, 255, 255, 1.0)', 2.6);
+
+        // Vệt lượn ngoài bên phải (Outer Right Wisp)
+        const wispGradR1 = ctx.createLinearGradient(0, cy, 0, cy + 320);
+        wispGradR1.addColorStop(0.0, 'rgba(255, 255, 255, 0.95)');
+        wispGradR1.addColorStop(0.28, 'rgba(190, 248, 255, 0.85)');
+        wispGradR1.addColorStop(0.68, 'rgba(0, 215, 255, 0.35)');
+        wispGradR1.addColorStop(1.0, 'rgba(0, 150, 255, 0.0)');
+        drawWisp(cx + 20, cy + 15, cx + 88, cy + 85, cx + 76, cy + 200, cx + 36, cy + 310, wispGradR1, 'rgba(0, 240, 255, 0.9)', 3.6);
+
+        // Vệt lượn trong bên phải (Inner Right Wisp)
+        const wispGradR2 = ctx.createLinearGradient(0, cy, 0, cy + 240);
+        wispGradR2.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+        wispGradR2.addColorStop(0.38, 'rgba(210, 252, 255, 0.9)');
+        wispGradR2.addColorStop(0.78, 'rgba(0, 235, 255, 0.45)');
+        wispGradR2.addColorStop(1.0, 'rgba(0, 180, 255, 0.0)');
+        drawWisp(cx + 10, cy + 10, cx + 46, cy + 65, cx + 36, cy + 145, cx + 18, cy + 230, wispGradR2, 'rgba(0, 255, 255, 1.0)', 2.6);
+
+        // Các tia sợi mảnh ở trục giữa (Center flowing filament wisps)
+        const wispGradC1 = ctx.createLinearGradient(0, cy, 0, cy + 190);
+        wispGradC1.addColorStop(0.0, 'rgba(255, 255, 255, 0.85)');
+        wispGradC1.addColorStop(0.5, 'rgba(170, 242, 255, 0.55)');
+        wispGradC1.addColorStop(1.0, 'rgba(0, 200, 255, 0.0)');
+        drawWisp(cx - 3, cy + 20, cx - 14, cy + 70, cx + 8, cy + 120, cx - 2, cy + 185, wispGradC1, 'rgba(0, 230, 255, 0.75)', 1.8);
+
+        const wispGradC2 = ctx.createLinearGradient(0, cy, 0, cy + 200);
+        wispGradC2.addColorStop(0.0, 'rgba(255, 255, 255, 0.85)');
+        wispGradC2.addColorStop(0.5, 'rgba(170, 242, 255, 0.55)');
+        wispGradC2.addColorStop(1.0, 'rgba(0, 200, 255, 0.0)');
+        drawWisp(cx + 4, cy + 25, cx + 16, cy + 75, cx - 8, cy + 130, cx + 3, cy + 195, wispGradC2, 'rgba(0, 230, 255, 0.75)', 1.8);
+
+        ctx.restore();
+
+        // 3. Vầng sáng rực rỡ trắng - cyan trực tiếp tại chân bóng tiếp đất (Hot Radiant Core)
+        const coreGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 70);
+        coreGrad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+        coreGrad.addColorStop(0.24, 'rgba(230, 252, 255, 0.95)');
+        coreGrad.addColorStop(0.50, 'rgba(0, 245, 255, 0.75)');
+        coreGrad.addColorStop(0.75, 'rgba(0, 200, 255, 0.35)');
+        coreGrad.addColorStop(1.0, 'rgba(0, 160, 255, 0.0)');
+
+        ctx.save();
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 70, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        this.cachedDashGlideTexture = new THREE.CanvasTexture(canvas);
+        this.cachedDashGlideTexture.generateMipmaps = true;
+        this.cachedDashGlideTexture.minFilter = THREE.LinearMipmapLinearFilter;
+        return this.cachedDashGlideTexture;
+    },
+
+    initDashGlide: function () {
+        if (!this.scene) return;
+
+        // 1. Dải lướt bề mặt (Ground Glide Wake Mesh)
+        if (!this.dashGlideWakeMesh) {
+            const wakeGeo = new THREE.PlaneGeometry(3.4, 7.5);
+            // Dịch tâm hình học để gốc tọa độ trùng khớp chính xác tại điểm tiếp xúc chân bóng
+            wakeGeo.translate(0, -3.0, 0);
+
+            const wakeMat = new THREE.MeshBasicMaterial({
+                map: this.createDashGlideTexture(),
+                transparent: true,
+                opacity: 0.0,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+            this.dashGlideWakeMesh = new THREE.Mesh(wakeGeo, wakeMat);
+            this.dashGlideWakeMesh.visible = false;
+            this.dashGlideWakeMesh.frustumCulled = false;
+            this.scene.add(this.dashGlideWakeMesh);
+        }
+
+        // 2. Tia nước / tia sáng bắn toé sang 2 bên sườn (Side Spray Sparks Instanced Mesh)
+        if (!this.dashSprayMesh) {
+            const sprayGeo = new THREE.PlaneGeometry(0.08, 0.45);
+            const sprayMat = new THREE.MeshBasicMaterial({
+                color: 0x00ffff,
+                transparent: true,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            });
+
+            this.MAX_DASH_SPRAYS = (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 24 : 60;
+            this.dashSprayMesh = new THREE.InstancedMesh(sprayGeo, sprayMat, this.MAX_DASH_SPRAYS);
+            this.dashSprayMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            this.dashSprayMesh.frustumCulled = false;
+            this.dashSprayMesh.visible = false;
+            this.scene.add(this.dashSprayMesh);
+
+            this.dashSprayPool = [];
+            for (let i = 0; i < this.MAX_DASH_SPRAYS; i++) {
+                this.dashSprayPool.push({
+                    x: 0, y: 0, z: 0,
+                    vx: 0, vy: 0, vz: 0,
+                    life: 0, maxLife: 0.2,
+                    baseScale: 1.0,
+                    active: false
+                });
+            }
+        }
+    },
+
+    updateDashGlide: function (delta, isDashingActive, ball, dashTargetTile) {
+        if (!this.dashGlideWakeMesh || !this.dashSprayMesh) return;
+
+        const surfaceY = (typeof window.surfaceY !== 'undefined' ? window.surfaceY : 0.2);
+
+        if (isDashingActive && ball && dashTargetTile) {
+            const uData = dashTargetTile.userData || {};
+            const angleZ = uData.angleZ || 0;
+            const currentBounceY = (uData.bounceY !== undefined) ? uData.bounceY : 0;
+            const yPos = dashTargetTile.position.y + surfaceY + currentBounceY + 0.024;
+
+            // Đồng bộ màu chủ đạo động (Dynamic Colors) hoặc màu vàng/cyan gạch
+            const activeColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined')
+                ? currentFrameHex
+                : (uData.themeColor || 0x00ffff);
+
+            // 1. Cập nhật Dải Lướt Bề Mặt (Ground Glide Wake)
+            this.dashGlideWakeMesh.visible = true;
+            this.dashGlideWakeMesh.position.set(ball.position.x, yPos, ball.position.z);
+            this.dashGlideWakeMesh.rotation.set(-Math.PI / 2, 0, angleZ);
+            if (this.dashGlideWakeMesh.material.opacity < 0.95) {
+                this.dashGlideWakeMesh.material.opacity = Math.min(0.95, this.dashGlideWakeMesh.material.opacity + delta * 15.0);
+            }
+            if (this.dashGlideWakeMesh.material.color.getHex() !== activeColor) {
+                this.dashGlideWakeMesh.material.color.setHex(activeColor);
+            }
+
+            // 2. Phun các tia toé sáng 2 bên sườn (Spawn Side Spray Sparks)
+            this.dashSprayMesh.visible = true;
+            if (this.dashSprayMesh.material.color.getHex() !== activeColor) {
+                this.dashSprayMesh.material.color.setHex(activeColor);
+            }
+
+            const spawnCount = (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 1 : 2;
+            const cosA = Math.cos(angleZ);
+            const sinA = Math.sin(angleZ);
+
+            for (let side = -1; side <= 1; side += 2) {
+                for (let s = 0; s < spawnCount; s++) {
+                    let p = null;
+                    for (let k = 0; k < this.dashSprayPool.length; k++) {
+                        if (!this.dashSprayPool[k].active) {
+                            p = this.dashSprayPool[k];
+                            break;
+                        }
+                    }
+                    if (!p) break;
+
+                    p.active = true;
+                    p.maxLife = 0.16 + Math.random() * 0.10;
+                    p.life = p.maxLife;
+                    p.baseScale = 0.75 + Math.random() * 0.45;
+
+                    const localOffX = side * (0.36 + Math.random() * 0.14);
+                    const localOffZ = 0.04 + Math.random() * 0.12;
+
+                    p.x = ball.position.x + localOffX * cosA - localOffZ * sinA;
+                    p.y = yPos + 0.02 + Math.random() * 0.05;
+                    p.z = ball.position.z + localOffX * sinA + localOffZ * cosA;
+
+                    // Bắn chéo ra 2 bên sườn về phía sau (góc ~35° - 45° so với đường chạy)
+                    const localVx = side * (3.2 + Math.random() * 3.8);
+                    const localVz = (5.5 + Math.random() * 6.5);
+                    p.vx = localVx * cosA - localVz * sinA;
+                    p.vy = 0.4 + Math.random() * 1.5;
+                    p.vz = localVx * sinA + localVz * cosA;
+                }
+            }
+        } else {
+            // Mờ dần dải lướt khi rời gạch Dash
+            if (this.dashGlideWakeMesh && this.dashGlideWakeMesh.visible) {
+                this.dashGlideWakeMesh.material.opacity -= delta * 7.0;
+                if (this.dashGlideWakeMesh.material.opacity <= 0.001) {
+                    this.dashGlideWakeMesh.visible = false;
+                    this.dashGlideWakeMesh.material.opacity = 0;
+                }
+            }
+        }
+
+        // Cập nhật tọa độ và ma trận các tia toé sáng đang bay
+        if (this.dashSprayMesh) {
+            let hasActive = false;
+            for (let i = 0; i < this.dashSprayPool.length; i++) {
+                const p = this.dashSprayPool[i];
+
+                if (!p.active) {
+                    this.sprayDummyMatrix.makeScale(0, 0, 0);
+                    this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                    continue;
+                }
+
+                p.life -= delta;
+                if (p.life <= 0) {
+                    p.active = false;
+                    this.sprayDummyMatrix.makeScale(0, 0, 0);
+                    this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                    continue;
+                }
+
+                hasActive = true;
+                p.x += p.vx * delta;
+                p.y += p.vy * delta;
+                p.z += p.vz * delta;
+                p.vy -= 7.5 * delta; // Trọng lực nhẹ
+
+                const progress = p.life / p.maxLife;
+                const curScale = progress * p.baseScale;
+
+                // Xoay tia sáng dọc theo vector vận tốc bay (Zero GC)
+                this.sprayDirVector.set(p.vx, p.vy, p.vz).normalize();
+                this.sprayDummyQuaternion.setFromUnitVectors(this.sprayUpVector, this.sprayDirVector);
+                this.sprayDummyPosition.set(p.x, p.y, p.z);
+                this.sprayDummyScale.set(curScale, curScale, curScale);
+                this.sprayDummyMatrix.compose(this.sprayDummyPosition, this.sprayDummyQuaternion, this.sprayDummyScale);
+                this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+            }
+
+            this.dashSprayMesh.instanceMatrix.needsUpdate = true;
+            if (!hasActive && !isDashingActive) {
+                this.dashSprayMesh.visible = false;
+            }
+        }
+    },
+
+    stopDashGlide: function () {
+        if (this.dashGlideWakeMesh) {
+            this.dashGlideWakeMesh.visible = false;
+            this.dashGlideWakeMesh.material.opacity = 0;
+        }
+        if (this.dashSprayMesh) {
+            this.dashSprayMesh.visible = false;
+            if (this.dashSprayPool) {
+                for (let i = 0; i < this.dashSprayPool.length; i++) {
+                    this.dashSprayPool[i].active = false;
+                    this.sprayDummyMatrix.makeScale(0, 0, 0);
+                    this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                }
+                this.dashSprayMesh.instanceMatrix.needsUpdate = true;
+            }
+        }
+    },
+
     shiftZ: function (offsetZ) {
         if (!offsetZ) return;
         
@@ -1001,6 +1366,18 @@ window.GameEffectsManager = {
                 this.ballTrailSegments[i].z += offsetZ;
             }
         }
+
+        // 4. Dash Glide Wake & Sparks
+        if (this.dashGlideWakeMesh && this.dashGlideWakeMesh.position) {
+            this.dashGlideWakeMesh.position.z += offsetZ;
+        }
+        if (this.dashSprayPool) {
+            for (let i = 0; i < this.dashSprayPool.length; i++) {
+                if (this.dashSprayPool[i] && this.dashSprayPool[i].active) {
+                    this.dashSprayPool[i].z += offsetZ;
+                }
+            }
+        }
     },
 
     reset: function () {
@@ -1012,6 +1389,10 @@ window.GameEffectsManager = {
             } else if (sw.isDiamondBurst) {
                 this.diamondShockwavePool.push(sw.mesh);
             } else {
+                if (sw.mesh.geometry !== this.cachedShockwaveGeo) {
+                    sw.mesh.geometry = this.cachedShockwaveGeo;
+                }
+                sw.mesh.rotation.z = 0;
                 this.shockwavePool.push(sw.mesh);
             }
             this.shockwaveDataPool.push(sw);
@@ -1029,5 +1410,6 @@ window.GameEffectsManager = {
         this.boundaryPulses.length = 0;
 
         this.initBallTrail();
+        this.stopDashGlide();
     }
 };

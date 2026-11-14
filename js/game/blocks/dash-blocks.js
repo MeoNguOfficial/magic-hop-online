@@ -361,6 +361,7 @@ window.DashBlocksManager = {
         // Gán UserData chuẩn xác
         const ud = tile.userData;
         ud.isDashTile = true;
+        ud.dashShockwaveTriggered = false;
         ud.themeColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined') ? currentFrameHex : 0xffaa00;
         ud.dashLength = dashLength;
         ud.physicalLength = physicalLength;
@@ -422,6 +423,7 @@ window.DashBlocksManager = {
         tile.scale.set(1, 1, 1);
         tile.rotation.set(-Math.PI / 2, 0, 0);
         tile.userData.isDashTile = false;
+        tile.userData.dashShockwaveTriggered = false;
         tile.userData.isDimmed = false;
         tile.userData.dashLength = 0;
         tile.userData.physicalLength = 0;

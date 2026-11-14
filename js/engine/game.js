@@ -642,6 +642,9 @@ function clearDashState() {
     window.dashTargetTile = null;
     window.dashStartTime = 0;
     window.dashEndTime = 0;
+    if (typeof GameEffectsManager !== 'undefined' && typeof GameEffectsManager.stopDashGlide === 'function') {
+        GameEffectsManager.stopDashGlide();
+    }
 }
 
 function startVictoryTransition() {
@@ -1546,6 +1549,12 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
             if (window.GameEffectsManager.boundaryDustMesh) {
                 window.GameEffectsManager.boundaryDustMesh.visible = true;
             }
+            if (window.GameEffectsManager.dashGlideWakeMesh) {
+                window.GameEffectsManager.dashGlideWakeMesh.visible = true;
+            }
+            if (window.GameEffectsManager.dashSprayMesh) {
+                window.GameEffectsManager.dashSprayMesh.visible = true;
+            }
         }
 
         // Đảm bảo ballGlowLight và ballGlowMesh luôn active để Three.js tạo sẵn pipeline NUM_POINT_LIGHTS = 1
@@ -1568,8 +1577,10 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
         renderer.render(scene, camera);
 
         scene.remove(warmupGroup);
-        if (window.GameEffectsManager && window.GameEffectsManager.boundaryDustMesh) {
-            window.GameEffectsManager.boundaryDustMesh.visible = false;
+        if (window.GameEffectsManager) {
+            if (window.GameEffectsManager.boundaryDustMesh) window.GameEffectsManager.boundaryDustMesh.visible = false;
+            if (window.GameEffectsManager.dashGlideWakeMesh) window.GameEffectsManager.dashGlideWakeMesh.visible = false;
+            if (window.GameEffectsManager.dashSprayMesh) window.GameEffectsManager.dashSprayMesh.visible = false;
         }
         console.log('[GPU Prewarm] Toàn bộ Shaders và Vật liệu đã được biên dịch sẵn trên GPU.');
     } catch (err) {
@@ -3324,7 +3335,7 @@ function animate() {
             if (spawned === false) break;
         }
 
-        // --- CẬP NHẬT HIỆU ỨNG (SHOCKWAVES, BOUNDARY PULSES, FLAMES, TRAIL) ---
+        // --- CẬP NHẬT HIỆU ỨNG (SHOCKWAVES, BOUNDARY PULSES, FLAMES, TRAIL, DASH GLIDE) ---
         if (typeof GameEffectsManager !== 'undefined') {
             const camZ = typeof camera !== 'undefined' ? camera.position.z : (ball ? ball.position.z + 10 : 0);
             const time = clock.getElapsedTime();
@@ -3333,6 +3344,7 @@ function animate() {
             GameEffectsManager.updateBoundaryPulses(delta, gameSpeed);
             GameEffectsManager.updateBoundaryFlames(delta, time, camera);
             GameEffectsManager.updateBallTrail(delta, nowTime, isPlaying, isFalling, ball);
+            GameEffectsManager.updateDashGlide(delta, isPlaying && !isFalling && isDashing, ball, dashTargetTile);
         }
 
         // --- CẬP NHẬT BỤI KHÔNG GIAN (SPACE DUST) ---
@@ -3502,15 +3514,6 @@ function animate() {
                             dashTargetTile.userData.springVelocityY = 14.0; // Bật lò xo nảy trả lại vị trí khi bóng rời gạch
                         }
 
-                        // Kích hoạt Shockwave tiếp đất khi bật lên khỏi gạch Dash
-                        if (typeof triggerShockwave === 'function') {
-                            const shockwaveScale = 1.15;
-                            const tileColor = (dynamicColorsEnabled && typeof currentFrameHex !== 'undefined')
-                                ? currentFrameHex
-                                : (dashTargetTile.userData.themeColor || 0xffaa00);
-                            triggerShockwave(dashTargetTile, tileColor, shockwaveScale, activeScale, 0);
-                        }
-
                         // Dash tile đã được làm mờ ngay khi chạm điểm đầu (entrance)
                         const finishedDashTile = dashTargetTile;
                         clearDashState();
@@ -3591,13 +3594,16 @@ function animate() {
                                     targetTile.userData.springVelocityY = 0;
                                 }
 
-                                // Standard Shockwave (chặn diamond burst combo >= 6)
-                                const driftRatio = diffX / (tileWidth * activeScale / 2);
-                                let shockwaveScale = driftRatio > 0.85 ? 1.35 : 1.0;
-                                const tileColor = (dynamicColorsEnabled && typeof currentFrameHex !== 'undefined')
-                                    ? currentFrameHex
-                                    : (targetTile.userData.themeColor || 0xffaa00);
-                                triggerShockwave(targetTile, tileColor, shockwaveScale, activeScale, 0);
+                                // Shockwave full viền gạch Dash (chỉ hiện 1 lần khi tiếp đất, phần lan ra hẹp hơn thường)
+                                if (typeof triggerShockwave === 'function') {
+                                    const driftRatio = diffX / (tileWidth * activeScale / 2);
+                                    const shockwaveScale = driftRatio > 0.85 ? 1.15 : 1.0;
+                                    const tileColor = (dynamicColorsEnabled && typeof currentFrameHex !== 'undefined')
+                                        ? currentFrameHex
+                                        : (targetTile.userData.themeColor || 0xffaa00);
+                                    triggerShockwave(targetTile, tileColor, shockwaveScale, activeScale, 0);
+                                }
+
                                 dimLandedTile(targetTile); // Làm mờ Dash Tile ngay khi bóng chạm điểm đầu (entrance)
 
                                 if (typeof landingAudio !== 'undefined' && landingAudio) {
@@ -5865,6 +5871,12 @@ function setupGameStates() {
         dashStartCenterHit = true;
         ball.position.set(0, minFloor, 0);
         jumpStartRawZ = 0;
+        if (typeof triggerShockwave === 'function') {
+            const introDashColor = (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled && typeof currentFrameHex !== 'undefined')
+                ? currentFrameHex
+                : (tiles[0].userData.themeColor || 0xffaa00);
+            triggerShockwave(tiles[0], introDashColor, 1.0, currentTileScale, 0);
+        }
     } else {
         jumpStartRawZ = tiles[0] ? tiles[0].position.z : 0;
         calculateNextParabola(0);
