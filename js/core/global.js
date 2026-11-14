@@ -1191,7 +1191,7 @@ async function changeSong(index, autoStart = false) {
 }
 
 // --- CYBERPUNK CUSTOM MODAL ---
-function showCyberModal({ title, message, type = 'alert', confirmText, cancelText, doubleConfirm = false, onConfirm = null, onCancel = null }) {
+function showCyberModal({ title, message, type = 'alert', confirmText, cancelText, doubleConfirm = false, onConfirm = null, onCancel = null, extraButtons = [] }) {
     if (cyberModalTitle) cyberModalTitle.innerText = title || t('data_mng_title') || "THÔNG BÁO";
     if (cyberModalMessage) cyberModalMessage.innerHTML = message || "";
     if (cyberModalActions) cyberModalActions.innerHTML = '';
@@ -1217,6 +1217,20 @@ function showCyberModal({ title, message, type = 'alert', confirmText, cancelTex
             if (onCancel) onCancel();
         };
         cyberModalActions.appendChild(cancelBtn);
+    }
+
+    if (Array.isArray(extraButtons) && extraButtons.length > 0 && cyberModalActions) {
+        extraButtons.forEach((btnCfg) => {
+            if (!btnCfg || !btnCfg.text) return;
+            const extraBtn = document.createElement('button');
+            extraBtn.className = btnCfg.className || "flex-1 min-w-[110px] py-2 px-3 text-xs font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-400/60 hover:bg-cyan-500/30 rounded uppercase font-orbitron transition-all";
+            extraBtn.innerText = btnCfg.text;
+            extraBtn.onclick = () => {
+                if (btnCfg.closeOnClick !== false) closeDialog();
+                if (typeof btnCfg.onClick === 'function') btnCfg.onClick();
+            };
+            cyberModalActions.appendChild(extraBtn);
+        });
     }
 
     if (cyberModalActions) {

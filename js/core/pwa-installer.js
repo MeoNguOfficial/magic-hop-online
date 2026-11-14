@@ -2,10 +2,17 @@
 //  pwa-installer.js — Quản lý Cài đặt Ứng dụng & Kiểm tra Cập nhật (PWA / PC / APK)
 // ============================================================
 
-window.APP_VERSION = '1.0.8';
+window.APP_VERSION = (typeof window !== 'undefined' && window.SCRIPT_BUILD_VERSION) ? window.SCRIPT_BUILD_VERSION : '1.0.10';
+
+function getCurrentAppVersion() {
+    return (typeof window !== 'undefined' && (window.SCRIPT_BUILD_VERSION || window.APP_VERSION)) || '1.0.10';
+}
+window.getCurrentAppVersion = getCurrentAppVersion;
 
 let swRegistration = null;
 let isManualUpdateCheck = false;
+let _allowSwReload = false;
+let _hasPromptedUpdateThisLoad = false;
 
 /**
  * Phát hiện xem ứng dụng có đang chạy dưới dạng App đóng gói (PC Standalone hoặc Android Native APK) hay không.
@@ -83,16 +90,30 @@ function applyPlatformUIAdjustments() {
 window.applyPlatformUIAdjustments = applyPlatformUIAdjustments;
 
 /**
+ * Kiểm tra xem ứng dụng có đang thực sự chạy trong cửa sổ PWA độc lập (standalone) hay không.
+ * (Khác với isPWAInstalled — dùng để phân biệt tab trình duyệt thường với app PWA).
+ */
+function isPWAStandalone() {
+    return !!(
+        (window.matchMedia && (
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.matchMedia('(display-mode: window-controls-overlay)').matches
+        )) ||
+        window.navigator.standalone === true ||
+        (document.referrer && document.referrer.includes('android-app://')) ||
+        (typeof window !== 'undefined' && window._isPWAInstalledNative)
+    );
+}
+window.isPWAStandalone = isPWAStandalone;
+
+/**
  * Kiểm tra xem PWA đã được cài đặt trên thiết bị hay chưa.
  */
 function isPWAInstalled() {
     return !!(
-        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        window.navigator.standalone === true ||
-        (document.referrer && document.referrer.includes('android-app://')) ||
+        isPWAStandalone() ||
         (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('pwa_installed') === 'true') ||
-        (typeof localStorage !== 'undefined' && localStorage.getItem('pwa_installed') === 'true') ||
-        (typeof window !== 'undefined' && window._isPWAInstalledNative)
+        (typeof localStorage !== 'undefined' && localStorage.getItem('pwa_installed') === 'true')
     );
 }
 
@@ -133,9 +154,9 @@ function updateHeroPlatformCard() {
 
     const downloadText = (typeof t === 'function' ? t('download_btn_download') : null) || 'TẢI VỀ';
     const pcTitle = (typeof t === 'function' ? t('download_opt_pc_title') : null) || 'PC Windows (.exe)';
-    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.8 · 48 MB';
+    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.10 · 48 MB';
     const apkTitle = (typeof t === 'function' ? t('download_opt_apk_title') : null) || 'Android (APK)';
-    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.0.8 · 32 MB';
+    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.0.10 · 32 MB';
 
     if (dev === 'android') {
         if (heroTitle) {
@@ -283,10 +304,11 @@ window.closeDownloadAppModal = closeDownloadAppModal;
  * 3. File local ./version.json (khi test trên localhost/127.0.0.1)
  */
 async function fetchRemoteVersionData() {
+    const isPackaged = isPackagedNativeApp();
     const isLocalOrigin = typeof window !== 'undefined' && window.location && (window.location.origin.includes('127.0.0.1') || window.location.origin.includes('localhost'));
     const candidateUrls = [
-        // Ưu tiên nạp từ local nếu đang dev/test cục bộ để không gặp lỗi CORS hay 503 từ server ngoài
-        isLocalOrigin ? './version.json?t=' + Date.now() : null,
+        // Chỉ đọc ./version.json cục bộ khi đang chạy web/dev server (không dùng cho App đóng gói PC/APK vì sẽ đọc nhầm bản đóng gói bên trong)
+        (!isPackaged && isLocalOrigin) ? './version.json?t=' + Date.now() : null,
         'https://raw.githubusercontent.com/MeoNguOfficial/magic-hop-online/main/version.json?t=' + Date.now(),
         ((typeof WEB_APP_URL !== 'undefined' && WEB_APP_URL) ? WEB_APP_URL : 'https://magic-hop.vercel.app').replace(/\/+$/, '') + '/version.json?t=' + Date.now()
     ].filter(Boolean);
@@ -376,26 +398,234 @@ window.showPWAInstallGuide = showPWAInstallGuide;
 /**
  * Đăng ký Service Worker và kiểm tra cập nhật (DÀNH CHO WEB / PWA)
  */
+/**
+ * Trả về thông tin nền tảng hiện tại: pc | apk | pwa | web
+ */
+function getRuntimePlatformInfo() {
+    const isPC = !!(
+        (typeof window.isDesktopApp !== 'undefined' && window.isDesktopApp) ||
+        window.location.search.includes('app=standalone') ||
+        (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('app_mode') === 'standalone') ||
+        window.location.port === '38281' ||
+        window.location.port === '9091' ||
+        window.__TAURI__ ||
+        (window.chrome && window.chrome.webview) ||
+        window.__DESKTOP_APP__
+    );
+    const isAndroid = !!(
+        (window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform()) ||
+        (window.Capacitor && window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android') ||
+        window.location.origin === 'https://localhost' ||
+        window.location.protocol === 'capacitor:'
+    );
+
+    if (isPC) {
+        return { key: 'pc', name: 'PC Windows', isPC: true, isAndroid: false, isPackaged: true, isPWA: false, isWeb: false };
+    }
+    if (isAndroid) {
+        return { key: 'apk', name: 'Android APK', isPC: false, isAndroid: true, isPackaged: true, isPWA: false, isWeb: false };
+    }
+    if (isPWAStandalone()) {
+        return { key: 'pwa', name: 'PWA', isPC: false, isAndroid: false, isPackaged: false, isPWA: true, isWeb: false };
+    }
+    return { key: 'web', name: 'Web', isPC: false, isAndroid: false, isPackaged: false, isPWA: false, isWeb: true };
+}
+
+function trPwa(key, fallback) {
+    if (typeof t === 'function') {
+        const val = t(key);
+        if (val && val !== key) return val;
+    }
+    return fallback;
+}
+
+/**
+ * Thực thi cập nhật trực tiếp trên Web / PWA:
+ * Xóa cache tĩnh & động (giữ lại cache âm thanh), kích hoạt Service Worker chờ (nếu có) và tải lại trang.
+ */
+async function performWebUpdate(worker = null) {
+    if (isPackagedNativeApp()) return;
+    _allowSwReload = true;
+
+    try {
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(
+                keys
+                    .filter(k => !k.startsWith('magic-hop-audio'))
+                    .map(k => caches.delete(k))
+            );
+        }
+
+        let targetWorker = worker || (swRegistration && swRegistration.waiting);
+        if (!targetWorker && 'serviceWorker' in navigator) {
+            const reg = swRegistration || await navigator.serviceWorker.getRegistration().catch(() => null);
+            if (reg) {
+                await reg.update().catch(() => {});
+                targetWorker = reg.waiting;
+                if (!targetWorker && reg.installing) {
+                    await new Promise(resolve => {
+                        const inst = reg.installing;
+                        const timer = setTimeout(resolve, 2500);
+                        inst.addEventListener('statechange', () => {
+                            if (inst.state === 'installed' || inst.state === 'redundant') {
+                                clearTimeout(timer);
+                                resolve();
+                            }
+                        });
+                    });
+                    targetWorker = reg.waiting;
+                }
+                if (!targetWorker) {
+                    await reg.unregister().catch(() => {});
+                }
+            }
+        }
+
+        if (targetWorker) {
+            const reloadFallback = setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    clearTimeout(reloadFallback);
+                }, { once: true });
+            }
+            targetWorker.postMessage('skipWaiting');
+            return;
+        }
+    } catch (err) {
+        console.warn('[WebUpdate] Lỗi dọn cache khi cập nhật Web:', err);
+    }
+
+    window.location.reload();
+}
+window.performWebUpdate = performWebUpdate;
+
+function runWebUpdateWithScene(worker = null) {
+    if (typeof playEndSceneAndReload === 'function') {
+        playEndSceneAndReload(() => {
+            performWebUpdate(worker);
+        });
+    } else {
+        performWebUpdate(worker);
+    }
+}
+
+/**
+ * Hiển thị hộp thoại thông báo có bản cập nhật mới.
+ * - PC / APK (Packaged): chỉ hiện LATER + DOWNLOAD UPDATE
+ * - Web / PWA: hiện LATER + WEB UPDATE + DOWNLOAD UPDATE
+ */
+function showAppUpdateModal({ remoteVersion = '', changelogText = '', downloadUrl = '', worker = null, isManual = false }) {
+    if (!isManual && _hasPromptedUpdateThisLoad) return;
+    _hasPromptedUpdateThisLoad = true;
+
+    const platform = getRuntimePlatformInfo();
+    const currentVersion = getCurrentAppVersion();
+    const lang = typeof activeLang !== 'undefined' ? activeLang : 'vi';
+
+    const title = trPwa(
+        'title_new_update',
+        lang === 'vi' ? '🎉 CÓ BẢN CẬP NHẬT MỚI!' : '🎉 NEW UPDATE AVAILABLE!'
+    );
+
+    let message;
+    if (remoteVersion) {
+        const defaultChangelog = lang === 'vi'
+            ? 'Tối ưu hóa hiệu năng, cải tiến giao diện và sửa lỗi.'
+            : 'Performance optimizations, UI improvements, and bug fixes.';
+        const notes = changelogText || defaultChangelog;
+        message = lang === 'vi'
+            ? `Đã có phiên bản ${remoteVersion} dành cho ${platform.name} (Bản hiện tại: ${currentVersion}).\n\nNội dung mới:\n• ${notes}\n\nBạn có muốn tải bản cập nhật ngay bây giờ?`
+            : `Version ${remoteVersion} is available for ${platform.name} (Current: ${currentVersion}).\n\nWhat's new:\n• ${notes}\n\nWould you like to download the update now?`;
+    } else {
+        message = trPwa(
+            'msg_new_update',
+            lang === 'vi'
+                ? 'Đã có bản cập nhật mới! Bạn có muốn tải lại trang để áp dụng ngay không?'
+                : 'A new version is available! Would you like to reload to apply it now?'
+        );
+    }
+
+    const fallbackUrl = 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest';
+    const targetUrl = downloadUrl || fallbackUrl;
+
+    const extraButtons = [];
+    // Nút WEB UPDATE chỉ hiển thị trên bản Web / PWA (không hiển thị trên PC / APK đóng gói)
+    if (!platform.isPackaged) {
+        extraButtons.push({
+            text: trPwa('btn_web_update', lang === 'vi' ? 'CẬP NHẬT WEB' : 'WEB UPDATE'),
+            className: 'flex-1 min-w-[110px] py-2 px-3 text-xs font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-400/70 hover:bg-cyan-500/30 rounded uppercase font-orbitron transition-all',
+            onClick: () => runWebUpdateWithScene(worker || (swRegistration && swRegistration.waiting) || null)
+        });
+    }
+
+    if (typeof showCyberModal === 'function') {
+        showCyberModal({
+            title,
+            message,
+            type: 'confirm',
+            confirmText: trPwa('btn_download_update', lang === 'vi' ? 'TẢI CẬP NHẬT' : 'DOWNLOAD UPDATE'),
+            cancelText: trPwa('btn_later', lang === 'vi' ? 'ĐỂ SAU' : 'LATER'),
+            extraButtons,
+            onConfirm: () => {
+                if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
+                    window.Capacitor.Plugins.Browser.open({ url: targetUrl });
+                } else {
+                    window.open(targetUrl, '_blank');
+                }
+            }
+        });
+    }
+}
+
+/**
+ * Đăng ký Service Worker và kiểm tra cập nhật thông minh theo nền tảng:
+ * - PC / APK đóng gói: Bỏ qua SW (gỡ SW cũ nếu còn sót), chỉ kiểm tra bản phát hành từ xa.
+ * - Web trình duyệt: Luôn chạy bản mới nhất trên web, KHÔNG tự bật popup làm phiền.
+ * - PWA Standalone: Tự kiểm tra cập nhật mới (qua SW + version.json từ xa).
+ */
 function initPWAUpdateDetection() {
     applyPlatformUIAdjustments();
+    const platform = getRuntimePlatformInfo();
 
-    // Nếu là App đóng gói (PC Standalone hoặc Android APK), bỏ qua đăng ký Service Worker
-    if (isPackagedNativeApp()) {
+    // 1. App đóng gói (PC Standalone hoặc Android APK): Không dùng Service Worker
+    if (platform.isPackaged) {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations()
+                .then(regs => regs.forEach(r => r.unregister()))
+                .catch(() => {});
+        }
         console.log('[App] PWA Service Worker skipped for packaged app. Using native update checker.');
         initNativeAppAutoUpdate();
         return;
     }
 
-    if (!('serviceWorker' in navigator)) return;
+    if (!('serviceWorker' in navigator)) {
+        if (platform.isPWA) initNativeAppAutoUpdate();
+        return;
+    }
 
     navigator.serviceWorker.register('./sw.js').then(reg => {
         swRegistration = reg;
+
+        // Bản trình duyệt web luôn là bản mới nhất: chỉ dùng SW để cache tài nguyên mượt mà,
+        // không tự động popup cập nhật hay tự reload giữa chừng trừ khi người dùng bấm WEB UPDATE.
+        if (!platform.isPWA) {
+            return;
+        }
+
+        const autoUpdate = JSON.parse(localStorage.getItem('swAutoUpdateEnabled')) !== false;
+        if (!autoUpdate) return;
+
         if (reg.waiting) {
-            promptUserToUpdate(reg.waiting);
+            promptUserToUpdate(reg.waiting, false);
         }
 
         reg.addEventListener('updatefound', () => {
             const newWorker = reg.installing;
+            if (!newWorker) return;
             newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                     promptUserToUpdate(newWorker, isManualUpdateCheck);
@@ -406,16 +636,21 @@ function initPWAUpdateDetection() {
         console.warn('[PWA] Service Worker registration failed:', err);
     });
 
+    // Kiểm tra thêm version.json cho PWA Standalone (phòng trường hợp SW chưa cập nhật kịp)
+    if (platform.isPWA) {
+        initNativeAppAutoUpdate();
+    }
+
     let refreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return;
+        if (refreshing || !_allowSwReload) return;
         refreshing = true;
         window.location.reload();
     });
 }
 
 /**
- * Tự động kiểm tra bản cập nhật mới trong nền khi khởi động app (dành cho PC / APK)
+ * Tự động kiểm tra bản cập nhật mới trong nền khi khởi động app (PC / APK / PWA)
  */
 function initNativeAppAutoUpdate() {
     const autoUpdate = JSON.parse(localStorage.getItem('swAutoUpdateEnabled')) !== false;
@@ -428,156 +663,214 @@ function initNativeAppAutoUpdate() {
 }
 
 /**
- * Kiểm tra cập nhật App cho Bản Đóng Gói (PC Standalone & Android APK)
+ * Kiểm tra cập nhật qua version.json từ xa (dùng cho PC Standalone, Android APK, PWA và check thủ công)
  */
 async function checkNativeAppUpdate(isManual = true) {
-    const isPC = !!(
-        (typeof window.isDesktopApp !== 'undefined' && window.isDesktopApp) ||
-        window.location.search.includes('app=standalone') ||
-        window.location.port === '38281'
-    );
-    const platformName = isPC ? 'PC Windows' : 'Android APK';
-    const currentVersion = window.APP_VERSION || '1.0.7';
+    const platform = getRuntimePlatformInfo();
+    const currentVersion = getCurrentAppVersion();
     const lang = typeof activeLang !== 'undefined' ? activeLang : 'vi';
 
-    if (isManual) {
-        if (typeof showCyberModal === 'function') {
-            showCyberModal({
-                title: typeof t === 'function' ? t('install_app_title') : 'CẬP NHẬT ỨNG DỤNG',
-                message: lang === 'vi' ? 'Đang kết nối máy chủ kiểm tra bản cập nhật...' : 'Connecting to server to check for updates...',
-                type: 'alert'
-            });
-        }
+    if (isManual && typeof showCyberModal === 'function') {
+        showCyberModal({
+            title: trPwa('install_app_title', lang === 'vi' ? 'CẬP NHẬT ỨNG DỤNG' : 'APP UPDATE'),
+            message: trPwa(
+                'msg_checking_update',
+                lang === 'vi' ? 'Đang kết nối máy chủ kiểm tra bản cập nhật...' : 'Connecting to server to check for updates...'
+            ),
+            type: 'alert'
+        });
     }
 
     try {
         const data = await fetchRemoteVersionData();
-
-        const remoteVersion = data.version || '1.0.7';
+        const remoteVersion = data.version || currentVersion;
         const isNewer = compareSemVer(remoteVersion, currentVersion) > 0;
+        const waitingWorker = (!platform.isPackaged && swRegistration && swRegistration.waiting) ? swRegistration.waiting : null;
 
         if (isNewer) {
-            const changelogText = (data.changelog && (data.changelog[lang] || data.changelog.vi || data.changelog.en)) || 'Tối ưu hóa hiệu năng, cải tiến giao diện và sửa lỗi.';
-            const downloadUrl = isPC 
+            const changelogText = (data.changelog && (data.changelog[lang] || data.changelog.vi || data.changelog.en)) || '';
+            const downloadUrl = platform.isPC
                 ? (data.downloads?.pc || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest')
-                : (data.downloads?.apk || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest');
+                : (platform.isAndroid
+                    ? (data.downloads?.apk || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest')
+                    : (data.downloads?.pc || data.downloads?.apk || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest'));
 
-            showCyberModal({
-                title: lang === 'vi' ? '🎉 CÓ BẢN CẬP NHẬT MỚI!' : '🎉 NEW UPDATE AVAILABLE!',
-                message: lang === 'vi'
-                    ? `Đã có phiên bản ${remoteVersion} dành cho ${platformName} (Bản hiện tại: ${currentVersion}).\n\nNội dung mới:\n• ${changelogText}\n\nBạn có muốn tải bản cập nhật ngay bây giờ?`
-                    : `Version ${remoteVersion} is available for ${platformName} (Current: ${currentVersion}).\n\nWhat's new:\n• ${changelogText}\n\nWould you like to download the update now?`,
-                type: 'confirm',
-                confirmText: lang === 'vi' ? 'TẢI CẬP NHẬT' : 'DOWNLOAD UPDATE',
-                cancelText: lang === 'vi' ? 'ĐỂ SAU' : 'LATER',
-                onConfirm: () => {
-                    if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser) {
-                        window.Capacitor.Plugins.Browser.open({ url: downloadUrl });
-                    } else {
-                        window.open(downloadUrl, '_blank');
-                    }
-                }
+            showAppUpdateModal({
+                remoteVersion,
+                changelogText,
+                downloadUrl,
+                worker: waitingWorker,
+                isManual
             });
-        } else {
-            if (isManual) {
+            return;
+        }
+
+        // Nếu đang ở bản mới nhất trên Web/PWA nhưng còn SW waiting tồn đọng -> kích hoạt âm thầm (không reload ngang) để lần sau không báo nữa
+        if (waitingWorker && !_allowSwReload) {
+            try { waitingWorker.postMessage('skipWaiting'); } catch (e) {}
+        }
+
+        if (isManual && typeof showCyberModal === 'function') {
+            if (platform.isWeb) {
+                const webMsg = trPwa(
+                    'msg_web_always_latest',
+                    lang === 'vi'
+                        ? `Phiên bản Web trên trình duyệt luôn là bản mới nhất (v${currentVersion}).`
+                        : `Browser Web always runs the latest live version (v${currentVersion}).`
+                ).replace('{version}', currentVersion);
+
                 showCyberModal({
-                    title: typeof t === 'function' ? t('install_app_title') : 'CẬP NHẬT ỨNG DỤNG',
-                    message: lang === 'vi'
-                        ? `Ứng dụng ${platformName} của bạn đang ở phiên bản mới nhất (v${currentVersion}).`
-                        : `Your ${platformName} app is already up to date (v${currentVersion}).`,
+                    title: trPwa('install_app_title', lang === 'vi' ? 'CẬP NHẬT ỨNG DỤNG' : 'APP UPDATE'),
+                    message: webMsg,
+                    type: 'alert',
+                    extraButtons: [{
+                        text: trPwa('btn_web_update', lang === 'vi' ? 'CẬP NHẬT WEB' : 'WEB UPDATE'),
+                        className: 'flex-1 min-w-[110px] py-2 px-3 text-xs font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-400/70 hover:bg-cyan-500/30 rounded uppercase font-orbitron transition-all',
+                        onClick: () => runWebUpdateWithScene(waitingWorker)
+                    }]
+                });
+            } else {
+                const upToDateMsg = trPwa(
+                    'msg_app_up_to_date',
+                    lang === 'vi'
+                        ? `Ứng dụng ${platform.name} của bạn đang ở phiên bản mới nhất (v${currentVersion}).`
+                        : `Your ${platform.name} app is already up to date (v${currentVersion}).`
+                ).replace('{platform}', platform.name).replace('{version}', currentVersion);
+
+                showCyberModal({
+                    title: trPwa('install_app_title', lang === 'vi' ? 'CẬP NHẬT ỨNG DỤNG' : 'APP UPDATE'),
+                    message: upToDateMsg,
                     type: 'alert'
                 });
             }
         }
     } catch (err) {
-        if (isManual) {
-            showCyberModal({
-                title: typeof t === 'function' ? t('install_app_title') : 'CẬP NHẬT ỨNG DỤNG',
-                message: lang === 'vi'
-                    ? 'Không thể kết nối máy chủ cập nhật. Vui lòng kiểm tra lại kết nối mạng.'
-                    : 'Failed to connect to update server. Please check your internet connection.',
-                type: 'alert'
-            });
+        if (isManual && typeof showCyberModal === 'function') {
+            if (platform.isWeb) {
+                const webMsg = trPwa(
+                    'msg_web_always_latest',
+                    lang === 'vi'
+                        ? `Phiên bản Web trên trình duyệt luôn là bản mới nhất (v${currentVersion}).`
+                        : `Browser Web always runs the latest live version (v${currentVersion}).`
+                ).replace('{version}', currentVersion);
+
+                showCyberModal({
+                    title: trPwa('install_app_title', lang === 'vi' ? 'CẬP NHẬT ỨNG DỤNG' : 'APP UPDATE'),
+                    message: webMsg,
+                    type: 'alert',
+                    extraButtons: [{
+                        text: trPwa('btn_web_update', lang === 'vi' ? 'CẬP NHẬT WEB' : 'WEB UPDATE'),
+                        className: 'flex-1 min-w-[110px] py-2 px-3 text-xs font-bold text-cyan-300 bg-cyan-500/15 border border-cyan-400/70 hover:bg-cyan-500/30 rounded uppercase font-orbitron transition-all',
+                        onClick: () => runWebUpdateWithScene(null)
+                    }]
+                });
+            } else {
+                showCyberModal({
+                    title: trPwa('install_app_title', lang === 'vi' ? 'CẬP NHẬT ỨNG DỤNG' : 'APP UPDATE'),
+                    message: trPwa(
+                        'msg_update_connect_error',
+                        lang === 'vi'
+                            ? 'Không thể kết nối máy chủ cập nhật. Vui lòng kiểm tra lại kết nối mạng.'
+                            : 'Failed to connect to update server. Please check your internet connection.'
+                    ),
+                    type: 'alert'
+                });
+            }
         }
     }
 }
 window.checkNativeAppUpdate = checkNativeAppUpdate;
 
 /**
- * Kiểm tra cập nhật App thủ công (Phân luồng thông minh giữa Native App và Web/PWA)
+ * Kiểm tra cập nhật App thủ công (Phân luồng thông minh giữa Native App, PWA Standalone và Web Trình duyệt)
  */
 async function manualCheckForUpdate() {
-    // 1. Nếu là App đóng gói (PC / APK): Chạy trình kiểm tra bản cập nhật Native
-    if (isPackagedNativeApp()) {
-        checkNativeAppUpdate(true);
-        return;
-    }
-
-    // 2. Nếu là Web / PWA: Kiểm tra qua Service Worker
-    const lang = typeof activeLang !== 'undefined' ? activeLang : 'vi';
-
-    if (!('serviceWorker' in navigator)) {
-        checkNativeAppUpdate(true);
-        return;
-    }
-
-    const currentReg = await navigator.serviceWorker.getRegistration().catch(() => null);
-
-    if (!currentReg) {
-        checkNativeAppUpdate(true);
-        return;
-    }
-
+    const platform = getRuntimePlatformInfo();
     isManualUpdateCheck = true;
 
-    if (currentReg.waiting) {
-        promptUserToUpdate(currentReg.waiting, true);
-        return;
+    // 1. App đóng gói (PC / APK): kiểm tra trực tiếp version.json từ xa
+    if (platform.isPackaged) {
+        return await checkNativeAppUpdate(true);
     }
 
-    if (typeof showCyberModal === 'function') {
-        showCyberModal({
-            title: typeof t === 'function' ? t('install_app_title') : 'CẬP NHẬT ỨNG DỤNG',
-            message: lang === 'vi' ? "Đang kiểm tra cập nhật..." : "Checking for updates...",
-            type: 'alert'
-        });
-    }
-
-    currentReg.update().then(updatedReg => {
-        if (!updatedReg.waiting && !updatedReg.installing) {
-            showCyberModal({
-                title: typeof t === 'function' ? t('install_app_title') : 'CẬP NHẬT ỨNG DỤNG',
-                message: lang === 'vi' ? `Ứng dụng của bạn đã ở phiên bản mới nhất (v${window.APP_VERSION}).` : `Your app is already up to date (v${window.APP_VERSION}).`,
-                type: 'alert'
-            });
+    // 2. Web trình duyệt thông thường: luôn bản mới nhất (kiểm tra đồng bộ tab hiện tại với bản live)
+    if (platform.isWeb) {
+        if ('serviceWorker' in navigator) {
+            const reg = await navigator.serviceWorker.getRegistration().catch(() => null);
+            if (reg) {
+                swRegistration = reg;
+                await reg.update().catch(() => {});
+            }
         }
-    }).catch(() => {
-        checkNativeAppUpdate(true);
-    });
+        return await checkNativeAppUpdate(true);
+    }
+
+    // 3. PWA Standalone: vừa update Service Worker vừa kiểm tra version.json từ xa
+    if ('serviceWorker' in navigator) {
+        const currentReg = await navigator.serviceWorker.getRegistration().catch(() => null);
+        if (currentReg) {
+            swRegistration = currentReg;
+            if (currentReg.waiting) {
+                await promptUserToUpdate(currentReg.waiting, true);
+                return;
+            }
+            await currentReg.update().catch(() => {});
+            if (currentReg.waiting) {
+                await promptUserToUpdate(currentReg.waiting, true);
+                return;
+            }
+        }
+    }
+
+    return await checkNativeAppUpdate(true);
 }
 window.manualCheckForUpdate = manualCheckForUpdate;
 
-function promptUserToUpdate(worker, isManual = false) {
+/**
+ * Xử lý thông báo cập nhật từ Service Worker trên PWA (có đối chiếu version.json để không báo lặp bản cũ)
+ */
+async function promptUserToUpdate(worker, isManual = false) {
+    const platform = getRuntimePlatformInfo();
+    if (platform.isPackaged) return;
+
+    // Trình duyệt web luôn là bản mới nhất, không tự popup thông báo SW nền
+    if (platform.isWeb && !isManual) return;
+
     const autoUpdate = JSON.parse(localStorage.getItem('swAutoUpdateEnabled')) !== false;
     if (!isManual && !autoUpdate) return;
 
-    if (typeof showCyberModal === 'function') {
-        showCyberModal({
-            title: typeof t === 'function' ? t('install_app_title') : 'CẬP NHẬT ỨNG DỤNG',
-            message: typeof t === 'function' ? t('msg_new_update') : 'Đã có bản cập nhật mới! Bạn có muốn cập nhật ngay bây giờ?',
-            type: 'confirm',
-            confirmText: typeof t === 'function' ? t('btn_update_now') : 'CẬP NHẬT NGAY',
-            onConfirm: () => {
-                if (typeof playEndSceneAndReload === 'function') {
-                    playEndSceneAndReload(() => {
-                        worker.postMessage('skipWaiting');
-                    });
-                } else {
-                    worker.postMessage('skipWaiting');
-                }
-            }
-        });
+    const currentVersion = getCurrentAppVersion();
+    const lang = typeof activeLang !== 'undefined' ? activeLang : 'vi';
+
+    try {
+        const data = await fetchRemoteVersionData();
+        const remoteVersion = data.version || currentVersion;
+        if (compareSemVer(remoteVersion, currentVersion) > 0) {
+            const changelogText = (data.changelog && (data.changelog[lang] || data.changelog.vi || data.changelog.en)) || '';
+            const downloadUrl = data.downloads?.pc || data.downloads?.apk || 'https://github.com/MeoNguOfficial/magic-hop-online/releases/latest';
+            showAppUpdateModal({
+                remoteVersion,
+                changelogText,
+                downloadUrl,
+                worker,
+                isManual
+            });
+            return;
+        }
+
+        // Nếu đã ở đúng phiên bản mới nhất trên remote mà vẫn có worker cũ đang waiting: âm thầm đẩy lên active (không reload)
+        if (!isManual) {
+            try { worker.postMessage('skipWaiting'); } catch (e) {}
+            return;
+        }
+    } catch (err) {
+        // Khi ngoại tuyến mà PWA có worker đang chờ -> vẫn cho phép người dùng chọn Web Update
     }
+
+    showAppUpdateModal({
+        worker,
+        isManual
+    });
 }
 
 // Khởi tạo các sự kiện modal tải ứng dụng

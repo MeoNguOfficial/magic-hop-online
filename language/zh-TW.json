@@ -656,5 +656,13 @@
   "boundary_particle_normal": "普通爆發",
   "boundary_particle_wave": "波浪噴射",
   "boundary_particle_horizontal": "橫向散射",
-  "boundary_particle_random": "隨機 (Random)"
+  "boundary_particle_random": "隨機 (Random)",
+  "title_new_update": "🎉 發現新版本！",
+  "btn_web_update": "網頁更新",
+  "btn_download_update": "下載更新",
+  "btn_later": "稍後",
+  "msg_checking_update": "正在連線伺服器檢查更新...",
+  "msg_web_always_latest": "瀏覽器網頁版始終執行最新線上版本 (v{version})。",
+  "msg_app_up_to_date": "您的 {platform} 應用程式已是最新版本 (v{version})。",
+  "msg_update_connect_error": "無法連線更新伺服器，請檢查您的網路連線。"
 }

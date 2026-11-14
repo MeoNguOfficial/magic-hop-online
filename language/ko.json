@@ -656,5 +656,13 @@
   "boundary_particle_normal": "노멀 버스트",
   "boundary_particle_wave": "웨이브 슈터",
   "boundary_particle_horizontal": "수평 스프레이",
-  "boundary_particle_random": "무작위 (Random)"
+  "boundary_particle_random": "무작위 (Random)",
+  "title_new_update": "🎉 새 업데이트가 있습니다!",
+  "btn_web_update": "웹 업데이트",
+  "btn_download_update": "업데이트 다운로드",
+  "btn_later": "나중에",
+  "msg_checking_update": "업데이트를 확인하기 위해 서버에 연결 중입니다...",
+  "msg_web_always_latest": "브라우저 웹 버전은 항상 최신 실시간 버전을 사용합니다 (v{version}).",
+  "msg_app_up_to_date": "{platform} 앱이 이미 최신 버전입니다 (v{version}).",
+  "msg_update_connect_error": "업데이트 서버에 연결하지 못했습니다. 인터넷 연결을 확인하세요."
 }

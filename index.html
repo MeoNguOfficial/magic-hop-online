@@ -4356,7 +4356,7 @@
                 class="text-xl font-black text-cyan-400 font-orbitron uppercase mb-3 neon-glow-cyan tracking-widest">
                 THÔNG BÁO</h3>
             <p id="cyber-modal-message" class="text-sm text-gray-300 mb-6 font-orbitron"></p>
-            <div id="cyber-modal-actions" class="flex gap-3 justify-center"></div>
+            <div id="cyber-modal-actions" class="flex flex-wrap gap-2.5 justify-center"></div>
         </div>
     </div>
 
@@ -4649,7 +4649,7 @@
             // "js/ui/alert.js"
         ];
 
-        const SCRIPT_BUILD_VERSION = '1.0.10';
+        const SCRIPT_BUILD_VERSION = window.SCRIPT_BUILD_VERSION = '1.0.10';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');

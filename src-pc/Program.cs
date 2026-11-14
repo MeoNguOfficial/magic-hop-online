@@ -372,7 +372,7 @@ namespace CyberBeatHopper
                             "Content-Length: {4}\r\n" +
                             "Access-Control-Allow-Origin: *\r\n" +
                             "Accept-Ranges: bytes\r\n" +
-                            "Cache-Control: " + (ext == ".html" ? "no-cache\r\n\r\n" : "public, max-age=86400\r\n\r\n"),
+                            "Cache-Control: " + ((ext == ".html" || ext == ".js" || ext == ".css" || ext == ".json") ? "no-store, no-cache, must-revalidate\r\n\r\n" : "public, max-age=86400\r\n\r\n"),
                             mime, start, end, totalLength, rangeLength
                         );
                         byte[] hBytes = Encoding.UTF8.GetBytes(header);
@@ -400,7 +400,7 @@ namespace CyberBeatHopper
                             "Content-Length: {1}\r\n" +
                             "Access-Control-Allow-Origin: *\r\n" +
                             "Accept-Ranges: bytes\r\n" +
-                            "Cache-Control: " + (ext == ".html" ? "no-cache\r\n\r\n" : "public, max-age=86400\r\n\r\n"),
+                            "Cache-Control: " + ((ext == ".html" || ext == ".js" || ext == ".css" || ext == ".json") ? "no-store, no-cache, must-revalidate\r\n\r\n" : "public, max-age=86400\r\n\r\n"),
                             mime, totalLength
                         );
                         byte[] hBytes = Encoding.UTF8.GetBytes(header);

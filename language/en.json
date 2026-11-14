@@ -656,5 +656,13 @@
   "boundary_particle_normal": "Normal Burst",
   "boundary_particle_wave": "Wave Shooter",
   "boundary_particle_horizontal": "Horizontal Spray",
-  "boundary_particle_random": "Random"
+  "boundary_particle_random": "Random",
+  "title_new_update": "🎉 NEW UPDATE AVAILABLE!",
+  "btn_web_update": "WEB UPDATE",
+  "btn_download_update": "DOWNLOAD UPDATE",
+  "btn_later": "LATER",
+  "msg_checking_update": "Connecting to server to check for updates...",
+  "msg_web_always_latest": "Browser Web always runs the latest live version (v{version}).",
+  "msg_app_up_to_date": "Your {platform} app is already up to date (v{version}).",
+  "msg_update_connect_error": "Failed to connect to update server. Please check your internet connection."
 }

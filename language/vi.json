@@ -656,5 +656,13 @@
   "boundary_particle_normal": "Bắn theo nhịp (Normal Burst)",
   "boundary_particle_wave": "Sóng bắn hạt (Wave Shooter)",
   "boundary_particle_horizontal": "Phun ngang (Horizontal Spray)",
-  "boundary_particle_random": "Ngẫu nhiên (Random)"
+  "boundary_particle_random": "Ngẫu nhiên (Random)",
+  "title_new_update": "🎉 CÓ BẢN CẬP NHẬT MỚI!",
+  "btn_web_update": "CẬP NHẬT WEB",
+  "btn_download_update": "TẢI CẬP NHẬT",
+  "btn_later": "ĐỂ SAU",
+  "msg_checking_update": "Đang kết nối máy chủ kiểm tra bản cập nhật...",
+  "msg_web_always_latest": "Phiên bản Web trên trình duyệt luôn là bản mới nhất (v{version}).",
+  "msg_app_up_to_date": "Ứng dụng {platform} của bạn đang ở phiên bản mới nhất (v{version}).",
+  "msg_update_connect_error": "Không thể kết nối máy chủ cập nhật. Vui lòng kiểm tra lại kết nối mạng."
 }

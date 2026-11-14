@@ -95,7 +95,6 @@ const CORE_ASSETS = [
 
 // Thay đoạn cache.addAll(...) hoặc cache.add(...) trong sự kiện install:
 self.addEventListener('install', event => {
-    self.skipWaiting();
     event.waitUntil(
         caches.open(STATIC_CACHE).then(async cache => {
             console.log('[ServiceWorker] Pre-load assets...');
@@ -103,9 +102,9 @@ self.addEventListener('install', event => {
             return Promise.allSettled(
                 CORE_ASSETS.map(async url => {
                     try {
-                        // Nếu là link CDN bên ngoài, dùng mode no-cors
+                        // Nếu là link CDN bên ngoài, dùng mode no-cors; file nội bộ ép bỏ qua HTTP cache để không đóng băng bản cũ
                         const isExternal = url.startsWith('http') && !url.includes(location.hostname);
-                        const request = isExternal ? new Request(url, { mode: 'no-cors' }) : url;
+                        const request = isExternal ? new Request(url, { mode: 'no-cors' }) : new Request(url, { cache: 'reload' });
                         
                         const response = await fetch(request);
                         await cache.put(url, response);
@@ -140,6 +139,12 @@ self.addEventListener('fetch', event => {
 
     // Bỏ qua file âm thanh
     if (url.pathname.match(/\.(mp3|m4a|wav|ogg)$/i)) return;
+
+    // Không bao giờ cache version.json để tránh thông báo sai phiên bản sau khi đã cập nhật
+    if (url.pathname.endsWith('/version.json')) {
+        event.respondWith(fetch(event.request, { cache: 'no-store' }));
+        return;
+    }
 
     event.respondWith(
         fetch(event.request)

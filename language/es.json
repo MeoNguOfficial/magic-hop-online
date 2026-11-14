@@ -656,5 +656,13 @@
   "boundary_particle_normal": "Ráfaga Normal",
   "boundary_particle_wave": "Disparo en Onda",
   "boundary_particle_horizontal": "Rociado Horizontal",
-  "boundary_particle_random": "Aleatorio (Random)"
+  "boundary_particle_random": "Aleatorio (Random)",
+  "title_new_update": "🎉 ¡NUEVA ACTUALIZACIÓN DISPONIBLE!",
+  "btn_web_update": "ACTUALIZAR WEB",
+  "btn_download_update": "DESCARGAR ACTUALIZACIÓN",
+  "btn_later": "MÁS TARDE",
+  "msg_checking_update": "Conectando al servidor para buscar actualizaciones...",
+  "msg_web_always_latest": "La versión web del navegador siempre usa la última versión en vivo (v{version}).",
+  "msg_app_up_to_date": "Tu aplicación de {platform} ya está actualizada (v{version}).",
+  "msg_update_connect_error": "No se pudo conectar con el servidor de actualizaciones. Verifica tu conexión a internet."
 }

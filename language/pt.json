@@ -656,5 +656,13 @@
   "boundary_particle_normal": "Explosão Normal",
   "boundary_particle_wave": "Disparo em Onda",
   "boundary_particle_horizontal": "Jato Horizontal",
-  "boundary_particle_random": "Aleatório (Random)"
+  "boundary_particle_random": "Aleatório (Random)",
+  "title_new_update": "🎉 NOVA ATUALIZAÇÃO DISPONÍVEL!",
+  "btn_web_update": "ATUALIZAR WEB",
+  "btn_download_update": "BAIXAR ATUALIZAÇÃO",
+  "btn_later": "DEPOIS",
+  "msg_checking_update": "Conectando ao servidor para verificar atualizações...",
+  "msg_web_always_latest": "A versão Web no navegador sempre executa a versão mais recente (v{version}).",
+  "msg_app_up_to_date": "Seu aplicativo {platform} já está atualizado (v{version}).",
+  "msg_update_connect_error": "Falha ao conectar ao servidor de atualização. Verifique sua conexão com a internet."
 }

@@ -656,5 +656,13 @@
   "boundary_particle_normal": "普通爆发",
   "boundary_particle_wave": "波浪喷射",
   "boundary_particle_horizontal": "横向散射",
-  "boundary_particle_random": "随机 (Random)"
+  "boundary_particle_random": "随机 (Random)",
+  "title_new_update": "🎉 发现新版本！",
+  "btn_web_update": "网页更新",
+  "btn_download_update": "下载更新",
+  "btn_later": "稍后",
+  "msg_checking_update": "正在连接服务器检查更新...",
+  "msg_web_always_latest": "浏览器网页版始终运行最新在线版本 (v{version})。",
+  "msg_app_up_to_date": "您的 {platform} 应用已是最新版本 (v{version})。",
+  "msg_update_connect_error": "无法连接更新服务器，请检查您的网络连接。"
 }

@@ -656,5 +656,13 @@
   "boundary_particle_normal": "Обычный залп",
   "boundary_particle_wave": "Волновой выстрел",
   "boundary_particle_horizontal": "Горизонтальный веер",
-  "boundary_particle_random": "Случайно (Random)"
+  "boundary_particle_random": "Случайно (Random)",
+  "title_new_update": "🎉 ДОСТУПНО ОБНОВЛЕНИЕ!",
+  "btn_web_update": "ОБНОВИТЬ WEB",
+  "btn_download_update": "СКАЧАТЬ ОБНОВЛЕНИЕ",
+  "btn_later": "ПОЗЖЕ",
+  "msg_checking_update": "Подключение к серверу для проверки обновлений...",
+  "msg_web_always_latest": "Браузерная веб-версия всегда использует самую актуальную сборку (v{version}).",
+  "msg_app_up_to_date": "Ваше приложение {platform} уже обновлено до последней версии (v{version}).",
+  "msg_update_connect_error": "Не удалось подключиться к серверу обновлений. Проверьте подключение к интернету."
 }

@@ -656,5 +656,13 @@
   "boundary_particle_normal": "ノーマルバースト",
   "boundary_particle_wave": "ウェーブシューター",
   "boundary_particle_horizontal": "水平スプレー",
-  "boundary_particle_random": "ランダム (Random)"
+  "boundary_particle_random": "ランダム (Random)",
+  "title_new_update": "🎉 新しいアップデートがあります！",
+  "btn_web_update": "Webアップデート",
+  "btn_download_update": "アップデートをダウンロード",
+  "btn_later": "後で",
+  "msg_checking_update": "アップデートを確認するためサーバーに接続しています...",
+  "msg_web_always_latest": "ブラウザ版Webは常に最新のライブバージョンです (v{version})。",
+  "msg_app_up_to_date": "{platform} アプリはすでに最新バージョンです (v{version})。",
+  "msg_update_connect_error": "アップデートサーバーに接続できませんでした。インターネット接続をご確認ください。"
 }

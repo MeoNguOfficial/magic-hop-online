@@ -656,5 +656,13 @@
   "boundary_particle_normal": "Salve Normale",
   "boundary_particle_wave": "Tir en Vague",
   "boundary_particle_horizontal": "Jet Horizontal",
-  "boundary_particle_random": "Aléatoire (Random)"
+  "boundary_particle_random": "Aléatoire (Random)",
+  "title_new_update": "🎉 NOUVELLE MISE À JOUR DISPONIBLE !",
+  "btn_web_update": "MISE À JOUR WEB",
+  "btn_download_update": "TÉLÉCHARGER LA MISE À JOUR",
+  "btn_later": "PLUS TARD",
+  "msg_checking_update": "Connexion au serveur pour vérifier les mises à jour...",
+  "msg_web_always_latest": "La version Web sur navigateur exécute toujours la dernière version en ligne (v{version}).",
+  "msg_app_up_to_date": "Votre application {platform} est déjà à jour (v{version}).",
+  "msg_update_connect_error": "Impossible de se connecter au serveur de mise à jour. Vérifiez votre connexion Internet."
 }
