@@ -38,14 +38,16 @@ if %errorlevel% neq 0 (
 )
 cd ..
 
-:: 5. Sao chep APK ra thu muc dist-apk
+:: 5. Sao chep APK ra thu muc dist-apk (gan kem version)
+for /f "delims=" %%v in ('node -p "require('./package.json').version"') do set "APP_VER=%%v"
+set "APK_OUT=dist-apk\CyberBeatHopper-v%APP_VER%.apk"
 if not exist "dist-apk" mkdir "dist-apk"
-copy /y "android\app\build\outputs\apk\debug\app-debug.apk" "dist-apk\CyberBeatHopper.apk" >nul
+copy /y "android\app\build\outputs\apk\debug\app-debug.apk" "%APK_OUT%" >nul
 
 echo.
 echo ========================================================
 echo  BUILD APK THANH CONG!
-echo  Duong dan file: dist-apk\CyberBeatHopper.apk
+echo  Duong dan file: %APK_OUT%
 echo ========================================================
 echo.
 echo Ban co the keo tha file nay vao LDPlayer 14 de test ngay!
