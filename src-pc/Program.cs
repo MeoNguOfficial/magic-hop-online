@@ -12,9 +12,9 @@ using System.Windows.Forms;
 [assembly: AssemblyProduct("Cyber Beat Hopper")]
 [assembly: AssemblyDescription("Cyber Beat Hopper - 3D Cyberpunk Rhythm Game")]
 [assembly: AssemblyCompany("MeoTN Gaming")]
-[assembly: AssemblyVersion("1.0.10.0")]
-[assembly: AssemblyFileVersion("1.0.10.0")]
-[assembly: AssemblyInformationalVersion("1.0.10")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyInformationalVersion("1.1.0")]
 [assembly: AssemblyCopyright("Copyright © 2026 MeoTN Gaming")]
 
 namespace CyberBeatHopper
@@ -110,8 +110,10 @@ namespace CyberBeatHopper
             {
                 // Permanent, dedicated game profile directory (safe from Windows Disk Cleanup)
                 string profileDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CyberBeatHopper", "UserData");
+                ClearStaleHttpCache(profileDir);
                 string launchArgs = string.Format(
                     "--app=\"{0}\" --window-size=1280,720 --user-data-dir=\"{1}\" " +
+                    "--disk-cache-size=1 --media-cache-size=1 " +
                     "--no-first-run --no-default-browser-check " +
                     "--disable-features=Translate,InterestFeedContentSuggestions " +
                     "--enable-features=OverlayScrollbar,AudioWorkletRealtimeThread " +
@@ -159,6 +161,32 @@ namespace CyberBeatHopper
             try
             {
                 if (tcpListener != null) tcpListener.Stop();
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// Xóa sạch HTTP Disk Cache / Code Cache cũ của Edge WebView2 (giữ nguyên LocalStorage, IndexedDB và dữ liệu người chơi)
+        /// </summary>
+        private static void ClearStaleHttpCache(string profileDir)
+        {
+            try
+            {
+                string[] cacheDirs = new string[]
+                {
+                    Path.Combine(profileDir, "Default", "Cache"),
+                    Path.Combine(profileDir, "Default", "Code Cache"),
+                    Path.Combine(profileDir, "Default", "GPUCache"),
+                    Path.Combine(profileDir, "ShaderCache")
+                };
+                foreach (string dir in cacheDirs)
+                {
+                    try
+                    {
+                        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+                    }
+                    catch { }
+                }
             }
             catch { }
         }

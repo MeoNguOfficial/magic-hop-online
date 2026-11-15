@@ -46,11 +46,12 @@ window.VisualizerManager = {
         } else if (this.isMobile && currentGraphicsQuality === 'low') {
             visThrottle = 0.033;
         } else {
-            // Tự động thích ứng tần số quét màn hình cao (90Hz, 120Hz, 144Hz, 240Hz)
-            const effectiveHz = (typeof window.getEffectiveTargetFps === 'function')
+            // Đồng bộ mượt với tốc độ FFT audio (~60-90Hz tối đa) tránh vẽ thừa ở màn 144-360Hz
+            const rawEffectiveHz = (typeof window.getEffectiveTargetFps === 'function')
                 ? window.getEffectiveTargetFps()
                 : (typeof window.screenRefreshRate === 'number' ? window.screenRefreshRate : 60);
-            visThrottle = effectiveHz > 60 ? (1 / (effectiveHz * 1.05)) : 0.016;
+            const cappedHz = Math.min(90, Math.max(30, rawEffectiveHz));
+            visThrottle = cappedHz > 60 ? (1 / (cappedHz * 1.05)) : 0.016;
         }
 
         if (nowTime - this.lastVisTime < visThrottle) return;

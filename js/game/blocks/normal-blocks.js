@@ -414,6 +414,32 @@ function createStarLabel() {
     return sprite.clone();
 }
 
+let _roundLabelsPrewarmScheduled = false;
+function prewarmLabelSprites(maxRound = 12) {
+    if (typeof THREE === 'undefined' || typeof document === 'undefined') return;
+    createStarLabel();
+    const percents = [20, 40, 60, 80];
+    for (let i = 0; i < percents.length; i++) {
+        createPercentLabel(percents[i]);
+    }
+    const hasRoundTranslation = typeof t === 'function' && typeof dict !== 'undefined' && typeof activeLang !== 'undefined' && dict[activeLang] && dict[activeLang].round;
+    if (hasRoundTranslation) {
+        for (let r = 1; r <= maxRound; r++) {
+            createRoundLabel(r);
+        }
+    } else if (!_roundLabelsPrewarmScheduled && typeof translationsPromise !== 'undefined' && translationsPromise && typeof translationsPromise.then === 'function') {
+        _roundLabelsPrewarmScheduled = true;
+        translationsPromise.then(() => {
+            if (typeof dict !== 'undefined' && typeof activeLang !== 'undefined' && dict[activeLang] && dict[activeLang].round) {
+                for (let r = 1; r <= maxRound; r++) {
+                    createRoundLabel(r);
+                }
+            }
+        }).catch(() => {});
+    }
+}
+window.prewarmLabelSprites = prewarmLabelSprites;
+
 // --- THỰC HIỆN GIẢI PHÓNG BỘ NHỚ CHO GẠCH BỊ HUỶ (ĐỂ TRÁNH LEAK GPU/RAM) ---
 function disposeTile(tile) {
     if (!tile) return;
@@ -579,6 +605,7 @@ function prewarmTilePool(count = 100) {
             window.FakeBlocksManager.prewarmFragmentPool();
         }
     }
+    prewarmLabelSprites(12);
 }
 window.prewarmTilePool = prewarmTilePool;
 
@@ -729,6 +756,7 @@ function getTileFromPool(forceNew = false) {
         tile.add(centerMesh);
         tile.userData.centerMesh = centerMesh;
         tile.userData.normalCenterMat = perTileCenterMat;
+        tile.userData.vortexMat = getVortexCenterMaterial().clone();
 
         // Tạo glow base (skirt phản chiếu)
         initGlowMaterials();
@@ -813,7 +841,7 @@ function getTileFromPool(forceNew = false) {
     }
 
     // Reset glow opacity
-    const poolGlowMesh = tile.getObjectByName('glowMesh');
+    const poolGlowMesh = (tile.userData && tile.userData.glowMesh) ? tile.userData.glowMesh : (tile.userData.glowMesh = tile.getObjectByName('glowMesh'));
     if (poolGlowMesh) {
         const poolGlowMat = Array.isArray(poolGlowMesh.material) ? poolGlowMesh.material[1] : poolGlowMesh.material;
         if (poolGlowMat) {

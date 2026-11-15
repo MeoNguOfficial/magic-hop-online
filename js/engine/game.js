@@ -1101,6 +1101,14 @@ function updatePixelRatio() {
         targetRatio = 1.5;
     }
 
+    // Bảo vệ fillrate GPU khi MSAA bật (tránh nhân mẫu MSAA lên độ phân giải >1.25x-2x DPI)
+    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.getRecommendedPixelRatioCap === 'function') {
+        const msaaCap = window.AntiAliasingManager.getRecommendedPixelRatioCap();
+        if (msaaCap !== null && targetRatio > msaaCap) {
+            targetRatio = msaaCap;
+        }
+    }
+
     // Bảo vệ GPU yếu / laptop có Windows scaling: Không render vượt quá độ phân giải thiết lập (Full HD = tối đa 1920px bề ngang)
     const winW = Math.max(1, window.innerWidth);
     if (currentGraphicsQuality === 'fhd' || currentGraphicsQuality === 'hd' || currentGraphicsQuality === 'simple') {
@@ -1110,6 +1118,9 @@ function updatePixelRatio() {
         }
     }
     renderer.setPixelRatio(targetRatio);
+    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.applySettings === 'function') {
+        window.AntiAliasingManager.applySettings(renderer, typeof antialiasingMode !== 'undefined' ? antialiasingMode : undefined);
+    }
 }
 
 let starFieldUniforms = {
@@ -1597,8 +1608,15 @@ function prewarmAllGpuShaders(renderer, scene, camera) {
         if (typeof renderer.compile === 'function') {
             renderer.compile(scene, camera);
         }
+        if (window.AntiAliasingManager && typeof window.AntiAliasingManager.prewarm === 'function') {
+            window.AntiAliasingManager.prewarm(renderer);
+        }
         // Render 1 frame nhẹ ngoài màn hình để GPU driver tải xong pipeline state và VBO
-        renderer.render(scene, camera);
+        if (window.AntiAliasingManager && typeof window.AntiAliasingManager.render === 'function') {
+            window.AntiAliasingManager.render(renderer, scene, camera);
+        } else {
+            renderer.render(scene, camera);
+        }
 
         scene.remove(warmupGroup);
         if (ledBoardMesh) {
@@ -1631,7 +1649,9 @@ async function initThree() {
 
     const activePowerPref = (typeof preferDiscreteGpu !== 'undefined' ? preferDiscreteGpu : (localStorage.getItem('preferDiscreteGpu') !== 'false')) ? "high-performance" : "default";
 
-    const isAntialias = typeof antialiasingEnabled !== 'undefined' ? antialiasingEnabled : false;
+    const isAntialias = window.AntiAliasingManager && typeof window.AntiAliasingManager.shouldUseNativeContextAntialias === 'function'
+        ? window.AntiAliasingManager.shouldUseNativeContextAntialias(typeof antialiasingMode !== 'undefined' ? antialiasingMode : undefined)
+        : (typeof antialiasingEnabled !== 'undefined' ? antialiasingEnabled : false);
     const canvas = document.createElement('canvas');
     const glOptions = {
         antialias: isAntialias,
@@ -1650,6 +1670,13 @@ async function initThree() {
         stencil: false
     });
     renderer.shadowMap.enabled = false;
+
+    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.applySettings === 'function') {
+        window.AntiAliasingManager.applySettings(renderer, typeof antialiasingMode !== 'undefined' ? antialiasingMode : undefined);
+    }
+    if (typeof window.updateAntiAliasingStatusUI === 'function') {
+        window.updateAntiAliasingStatusUI();
+    }
 
     console.log("%c[Renderer] Using WebGL 2 context (" + activePowerPref + ")", "color: #00ffff; font-weight: bold;");
 
@@ -1893,49 +1920,85 @@ async function initThree() {
     autoplayBackBtn.addEventListener('touchend', () => isHoldingBtn = false);
 
     // --- LOGIC CHUYỂN TAB CHÍNH (HOME / SETTINGS) ---
-    const mainNavBtns = document.querySelectorAll('.nav-btn');
+    const mainNavContainer = document.querySelector('.main-nav-tabs-container');
+    const mainNavBtns = Array.from(document.querySelectorAll('.nav-btn'));
     const panelHome = document.getElementById('panel-home');
     const panelSettings = document.getElementById('panel-settings');
     const panelMusic = document.getElementById('panel-music');
     const panelPersonalize = document.getElementById('panel-personalize');
     const panelAccount = document.getElementById('panel-account');
 
+    const navPanelMap = {
+        'nav-home': panelHome,
+        'nav-personalize': panelPersonalize,
+        'nav-music': panelMusic,
+        'nav-account': panelAccount,
+        'nav-settings': panelSettings
+    };
+    const allMainPanes = Object.values(navPanelMap).filter(Boolean);
+
+    if (window.UIAnimator && typeof window.UIAnimator.syncAllTabIndicators === 'function') {
+        setTimeout(() => window.UIAnimator.syncAllTabIndicators(true), 0);
+    }
+
     mainNavBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            mainNavBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
+            const targetPane = navPanelMap[btn.id] || null;
 
             if (typeof window.updateMainMenuTheme === 'function') {
                 window.updateMainMenuTheme();
             }
 
-            const panels = [
-                { id: 'nav-home', el: panelHome },
-                { id: 'nav-personalize', el: panelPersonalize },
-                { id: 'nav-music', el: panelMusic },
-                { id: 'nav-account', el: panelAccount },
-                { id: 'nav-settings', el: panelSettings }
-            ];
-
-            panels.forEach(p => {
-                if (!p.el) return;
-                if (btn.id === p.id) {
-                    p.el.classList.remove('hidden');
-                    if (btn.id === 'nav-settings' && typeof window.applyPlatformUIAdjustments === 'function') {
-                        window.applyPlatformUIAdjustments();
+            if (window.UIAnimator && typeof window.UIAnimator.switchDirectionalTab === 'function' && targetPane) {
+                window.UIAnimator.switchDirectionalTab({
+                    tabsContainer: mainNavContainer,
+                    buttons: mainNavBtns,
+                    targetBtn: btn,
+                    panes: allMainPanes,
+                    targetPane,
+                    variant: 'main',
+                    slideOffset: 24,
+                    exitOffset: 20,
+                    exitDuration: 95,
+                    duration: 210,
+                    staggerStep: 18,
+                    maxAnimated: 14,
+                    onBeforeShow: () => {
+                        if (btn.id === 'nav-settings' && typeof window.applyPlatformUIAdjustments === 'function') {
+                            window.applyPlatformUIAdjustments();
+                        }
+                    },
+                    getStaggerSelector: (el) => {
+                        if (el.id === 'panel-settings') return '.tab-pane:not(.hidden) > *';
+                        if (el.id === 'panel-personalize') return '#personalize-tab-contents .tab-pane:not(.hidden) label';
+                        if (el.id === 'panel-account') return '#subtab-content-account:not(.hidden) > *, #subtab-content-manage:not(.hidden) > *';
+                        return null;
+                    },
+                    onAfterShow: () => {
+                        if ((btn.id === 'nav-personalize' || btn.id === 'nav-settings') && typeof window.UIAnimator.syncAllTabIndicators === 'function') {
+                            window.UIAnimator.syncAllTabIndicators(true);
+                        }
+                        if (typeof window.adjustTabsKerning === 'function') {
+                            window.adjustTabsKerning();
+                        }
                     }
-                    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-                        p.el.style.opacity = 0;
-                        p.el.style.transform = 'translateY(10px)';
-                        anime({ targets: p.el, opacity: 1, translateY: 0, duration: 300, easing: 'easeOutQuad' });
+                });
+            } else {
+                mainNavBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                allMainPanes.forEach(pane => {
+                    if (pane === targetPane) {
+                        if (btn.id === 'nav-settings' && typeof window.applyPlatformUIAdjustments === 'function') {
+                            window.applyPlatformUIAdjustments();
+                        }
+                        pane.classList.remove('hidden');
+                        pane.style.opacity = 1;
+                        pane.style.transform = 'none';
                     } else {
-                        p.el.style.opacity = 1;
-                        p.el.style.transform = 'none';
+                        pane.classList.add('hidden');
                     }
-                } else {
-                    p.el.classList.add('hidden');
-                }
-            });
+                });
+            }
 
             if (typeof window.adjustTabsKerning === 'function') {
                 setTimeout(window.adjustTabsKerning, 50);
@@ -2005,28 +2068,40 @@ async function initThree() {
             e.stopPropagation();
             const willShow = dropdownMenu.classList.contains('hidden');
             if (willShow) {
-                dropdownMenu.classList.remove('hidden');
-                if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-                    anime.remove(dropdownMenu);
-                    anime({
-                        targets: dropdownMenu,
-                        opacity: [0, 1],
-                        translateY: [-10, 0],
-                        duration: 200,
-                        easing: 'easeOutQuad'
-                    });
+                if (window.UIAnimator && typeof window.UIAnimator.openDropdown === 'function') {
+                    window.UIAnimator.openDropdown(dropdownMenu, { y: -10, duration: 190 });
                 } else {
-                    dropdownMenu.style.opacity = 1;
-                    dropdownMenu.style.transform = 'none';
+                    dropdownMenu.classList.remove('hidden');
+                    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+                        anime.remove(dropdownMenu);
+                        anime({
+                            targets: dropdownMenu,
+                            opacity: [0, 1],
+                            translateY: [-10, 0],
+                            duration: 200,
+                            easing: 'easeOutQuad'
+                        });
+                    } else {
+                        dropdownMenu.style.opacity = 1;
+                        dropdownMenu.style.transform = 'none';
+                    }
                 }
             } else {
-                dropdownMenu.classList.add('hidden');
+                if (window.UIAnimator && typeof window.UIAnimator.closeDropdown === 'function') {
+                    window.UIAnimator.closeDropdown(dropdownMenu);
+                } else {
+                    dropdownMenu.classList.add('hidden');
+                }
             }
         });
 
         // Đóng dropdown khi click ra ngoài
         document.addEventListener('click', () => {
-            dropdownMenu.classList.add('hidden');
+            if (window.UIAnimator && typeof window.UIAnimator.closeDropdown === 'function') {
+                window.UIAnimator.closeDropdown(dropdownMenu);
+            } else {
+                dropdownMenu.classList.add('hidden');
+            }
         });
 
         // Bắt sự kiện click các nút trong dropdown menu
@@ -2038,7 +2113,11 @@ async function initThree() {
                 if (targetBtn) {
                     targetBtn.click(); // Giả lập click nút tab chính tương ứng
                 }
-                dropdownMenu.classList.add('hidden');
+                if (window.UIAnimator && typeof window.UIAnimator.closeDropdown === 'function') {
+                    window.UIAnimator.closeDropdown(dropdownMenu);
+                } else {
+                    dropdownMenu.classList.add('hidden');
+                }
             });
         });
     }
@@ -2067,6 +2146,9 @@ async function initThree() {
                 nestedSvg.style.height = '16px';
             }
         }
+        if (window.UIAnimator && typeof window.UIAnimator.popElement === 'function') {
+            window.UIAnimator.popElement(activeIcon, { peakScale: 1.15, duration: 240 });
+        }
     };
 
     // Khởi tạo trạng thái ban đầu cho indicator di động
@@ -2075,29 +2157,58 @@ async function initThree() {
     }
 
     // --- LOGIC CHUYỂN TAB CÀI ĐẶT ---
-    const settingTabBtns = document.querySelectorAll('#panel-settings .tab-btn');
+    const settingsTabsContainer = document.querySelector('.settings-tabs-container');
+    const settingTabBtns = Array.from(document.querySelectorAll('#panel-settings .tab-btn'));
+    const settingTabPanes = Array.from(document.querySelectorAll('#panel-settings .tab-pane'));
     settingTabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (settingsTabsContainer && settingsTabsContainer._wasDragged) return;
             const targetId = btn.dataset.tab;
-
-            settingTabBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-
-            document.querySelectorAll('#panel-settings .tab-pane').forEach(pane => pane.classList.add('hidden'));
             const targetPane = document.getElementById(targetId);
-            if (targetPane) {
-                targetPane.classList.remove('hidden');
+            if (!targetPane) return;
+
+            if (window.UIAnimator && typeof window.UIAnimator.switchDirectionalTab === 'function') {
+                window.UIAnimator.switchDirectionalTab({
+                    tabsContainer: settingsTabsContainer,
+                    buttons: settingTabBtns,
+                    targetBtn: btn,
+                    panes: settingTabPanes,
+                    targetPane,
+                    scrollContainer: targetPane.parentElement,
+                    variant: 'subtab',
+                    slideOffset: 20,
+                    exitOffset: 16,
+                    exitDuration: 85,
+                    duration: 190,
+                    staggerSelector: ':scope > *',
+                    staggerStep: 16,
+                    maxAnimated: 12,
+                    onBeforeShow: () => {
+                        if (targetId === 'tab-storage' && typeof window.renderStorageList === 'function') {
+                            window.renderStorageList();
+                        }
+                    },
+                    onAfterShow: () => {
+                        if (typeof window.adjustTabsKerning === 'function') {
+                            window.adjustTabsKerning();
+                        }
+                    }
+                });
+            } else {
+                settingTabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                settingTabPanes.forEach(pane => {
+                    pane.classList.add('hidden');
+                    pane.classList.remove('active');
+                });
                 if (targetId === 'tab-storage' && typeof window.renderStorageList === 'function') {
                     window.renderStorageList();
                 }
-                if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-                    targetPane.style.opacity = 0;
-                    targetPane.style.transform = 'translateX(-10px)';
-                    anime({ targets: targetPane, opacity: 1, translateX: 0, duration: 300, easing: 'easeOutQuad' });
-                } else {
-                    targetPane.style.opacity = 1;
-                    targetPane.style.transform = 'none';
-                }
+                targetPane.classList.remove('hidden');
+                targetPane.classList.add('active');
+                targetPane.style.opacity = 1;
+                targetPane.style.transform = 'none';
             }
 
             if (typeof window.adjustTabsKerning === 'function') {
@@ -2119,7 +2230,11 @@ async function initThree() {
     if (toggleRelativePC) toggleRelativePC.checked = isRelativePC;
     if (togglePointerLock) togglePointerLock.checked = pointerLockControlEnabled;
     if (typeof toggleRawInput !== 'undefined' && toggleRawInput) toggleRawInput.checked = rawInputEnabled;
+    if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect && typeof antialiasingMode !== 'undefined') {
+        antialiasingModeSelect.value = antialiasingMode;
+    }
     if (toggleAntialiasing) toggleAntialiasing.checked = antialiasingEnabled;
+    if (typeof window.updateAntiAliasingStatusUI === 'function') window.updateAntiAliasingStatusUI();
     if (toggleDynamicColors) toggleDynamicColors.checked = dynamicColorsEnabled;
     if (toggleVisualizer) toggleVisualizer.checked = visualizerEnabled;
     if (toggleBgParticles) toggleBgParticles.checked = bgParticlesEnabled;
@@ -2384,6 +2499,8 @@ function updateBackgroundStyle() {
         }
         computeTintedBgColor(tileColorHex, 0.035, 0.015, targetBgColor);
         currentBgColor.copy(targetBgColor);
+        _lastJapanTileHex = tileColorHex;
+        _japanBgSettled = true;
         applyFogAndClearColor(currentBgColor);
         return;
     }
@@ -2683,7 +2800,10 @@ let lastEnvironmentRecycleZ = 0;
 function recycleEnvironmentObjects(cameraZ) {
     if (selectedEnvironment === 'blueprint' && blueprintGrid) {
         const cellSize = 10;
-        blueprintGrid.position.z = Math.floor(cameraZ / cellSize) * cellSize;
+        const targetGridZ = Math.floor(cameraZ / cellSize) * cellSize;
+        if (blueprintGrid.position.z !== targetGridZ) {
+            blueprintGrid.position.z = targetGridZ;
+        }
     }
 
     if (Math.abs(cameraZ - lastEnvironmentRecycleZ) < 30) {
@@ -2797,6 +2917,15 @@ function getPatternTexture(type) {
     const texture = new THREE.CanvasTexture(canvas);
     texture.wrapS = THREE.RepeatWrapping;
     texture.wrapT = THREE.RepeatWrapping;
+    if (typeof renderer !== 'undefined' && renderer && renderer.capabilities && typeof renderer.capabilities.getMaxAnisotropy === 'function') {
+        const aaStatus = window.AntiAliasingManager ? window.AntiAliasingManager.getStatusInfo() : null;
+        const maxAniso = renderer.capabilities.getMaxAnisotropy() || 1;
+        if (aaStatus && aaStatus.effectiveMode === 'msaa_fxaa') {
+            texture.anisotropy = Math.min(8, maxAniso);
+        } else if (!aaStatus || aaStatus.effectiveMode !== 'off') {
+            texture.anisotropy = Math.min(4, maxAniso);
+        }
+    }
     patternTextures[type] = texture;
     return texture;
 }
@@ -2846,6 +2975,9 @@ window.updateBallCustomization = updateBallCustomization;
 // --- VÒNG LẶP CHÍNH ---
 let currentTileIndex = 0;
 let gameStarted = false;
+let isPaused = false;
+window.isPaused = false;
+let _worldAnimTime = 0;
 let lastTrailSpawnTime = 0;
 let totalTilesJumped = 0;
 let lastVisTime = 0;
@@ -2873,11 +3005,15 @@ let _lastSetClearColorHex = -1;
 let _lastRenderRafTime = 0;
 let _smoothedFrameDelta = 0;
 let _smoothedAudioDrift = 0;
+let _lastIdleMenuRenderTime = 0;
 let ledBoardMesh = null;
 let ledBoardUniforms = null;
 let _ledBoardElapsed = 0;
 let _ledBoardPulse = 0;
 let _diffBgSettled = true;
+let _japanBgSettled = true;
+let _lastJapanTileHex = -1;
+let _lastRecycleCallCamZ = NaN;
 
 function syncSharedMaterial(mat, currentFrameHex, tempColor) {
     if (!mat) return;
@@ -2916,7 +3052,14 @@ function animate(rafTime) {
         if (elapsed < frameDuration - jitterTolerance) {
             return;
         }
-        lastFrameTime = now - Math.min(frameDuration * 0.5, elapsed % frameDuration);
+        if (elapsed > frameDuration * 2) {
+            lastFrameTime = now;
+        } else if (elapsed >= frameDuration) {
+            lastFrameTime = now - Math.min(frameDuration * 0.5, elapsed - frameDuration);
+        } else {
+            // Wake sớm trong vùng jitterTolerance: giữ đúng pha frame tiếp theo, không trừ lùi half-frameDuration
+            lastFrameTime = Math.min(now + jitterTolerance, lastFrameTime + frameDuration);
+        }
     } else {
         lastFrameTime = now;
     }
@@ -2949,7 +3092,8 @@ function animate(rafTime) {
         clearPerfectComboUI();
     }
 
-    if (typeof recycleEnvironmentObjects === 'function' && camera) {
+    if (typeof recycleEnvironmentObjects === 'function' && camera && camera.position.z !== _lastRecycleCallCamZ) {
+        _lastRecycleCallCamZ = camera.position.z;
         recycleEnvironmentObjects(camera.position.z);
     }
 
@@ -3002,7 +3146,8 @@ function animate(rafTime) {
     // Liên tục kiểm tra tiến độ bài hát và bù trừ khung hình delta để ép game khớp chuẩn xác từng nhịp beat
     // Tiếp tục đồng bộ thời gian nhạc ngay cả khi đang rơi (trước lúc fail transition)
     // để tránh drift dồn nén khiến delta tăng vọt làm block tăng tốc nhanh khi bóng chạm Glow Mesh
-    const isInEndingTransition = isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition);
+    let isHoldExit = typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition;
+    let isInEndingTransition = isFailTransition || isHoldExit;
     if (isPlaying && !isInEndingTransition && audio && !audio.paused) {
         let rawDrift = currentAudioTime - accumulatedSongTime;
 
@@ -3033,6 +3178,18 @@ function animate(rafTime) {
 
     if (delta > 0.1) delta = 0.1;
 
+    const isStartMenuOpaqueIdle = !isPlaying &&
+        typeof startScreen !== 'undefined' && startScreen &&
+        startScreen.style.display !== 'none' &&
+        !startScreen.classList.contains('hidden') &&
+        (startScreen.style.opacity === '' || parseFloat(startScreen.style.opacity) >= 0.99) &&
+        (typeof gameoverScreen === 'undefined' || !gameoverScreen || gameoverScreen.style.display === 'none' || gameoverScreen.classList.contains('hidden'));
+
+    const shouldRunSceneAnimations = !isPaused && !isStartMenuOpaqueIdle;
+    if (shouldRunSceneAnimations) {
+        _worldAnimTime += delta;
+    }
+
     if (isPlaying) {
         // --- AUTOPLAY UPDATE ---
         if (window.AutoplayManager) {
@@ -3041,26 +3198,23 @@ function animate(rafTime) {
                 tiles,
                 currentTileIndex,
                 isFalling,
-                isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition),
+                isInEndingTransition,
                 jumpElapsedTime,
                 flightTime,
                 ball
             );
-            if (autoResult.holdExited && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) && !isFailTransition) {
+            if (autoResult.holdExited && !isInEndingTransition) {
                 isFalling = true;
                 fallVelocityY = 0; // Bóng rơi xuống luôn
                 fallVelocityZ = ballVelocityZ;
                 fallVelocityX = 0;
 
                 if (typeof isHoldExitTransition !== 'undefined') isHoldExitTransition = true;
+                isHoldExit = true;
+                isInEndingTransition = true;
                 failTimeElapsed = 0;
-                if (audio) {
-                    initialFailSpeed = audio.playbackRate;
-                    audio.preservesPitch = false;
-                    audio.mozPreservesPitch = false;
-                    audio.webkitPreservesPitch = false;
-                }
-            } else if (autoResult.targetX !== null && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) && !isFailTransition) {
+                startFailAudioEffect();
+            } else if (autoResult.targetX !== null && !isInEndingTransition) {
                 ballTargetX = autoResult.targetX;
             }
         }
@@ -3068,11 +3222,11 @@ function animate(rafTime) {
         // --- RENDER VISUALIZER ---
         if (typeof VisualizerManager !== 'undefined') {
             const nowTime = clock.getElapsedTime();
-            VisualizerManager.update(nowTime, isPlaying, isFailTransition, typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition, currentGraphicsQuality);
+            VisualizerManager.update(nowTime, isPlaying, isFailTransition, isHoldExit, currentGraphicsQuality);
         }
 
         // --- ĐỒNG BỘ ROUND & TỐC ĐỘ (ĐỒ THỊ TUYẾN TÍNH y = ax + b) ---
-        if (!isFailTransition) {
+        if (!isInEndingTransition) {
             if (audio && audio.duration) {
                 if (activeRoundCount >= 1 || activeEndlessMode || isEndlessMode) {
                     const currentTile = (typeof tiles !== 'undefined' && typeof currentTileIndex !== 'undefined') ? tiles[currentTileIndex] : null;
@@ -3151,7 +3305,9 @@ function animate(rafTime) {
                 if (speedEl) speedEl.textContent = `${roundedSpeed.toFixed(2)}x (${modeText})`;
             }
         }
+    }
 
+    if (shouldRunSceneAnimations) {
         // --- CẬP NHẬT MÀU BÓNG (THEO COMBO HOẶC TÙY CHỈNH) ---
         if (ball && ball.material) {
             if (selectedBallColor === 'dynamic') {
@@ -3176,7 +3332,7 @@ function animate(rafTime) {
         }
 
         // --- CẬP NHẬT GẠCH & MÀU SẮC ---
-        const time = clock.getElapsedTime();
+        const time = _worldAnimTime;
 
         let currentFrameHex = undefined;
         if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
@@ -3445,8 +3601,8 @@ function animate(rafTime) {
                 }
             }
 
-            // Xử lý xuất hiện trễ (giảm dần thời gian phản xạ theo Round ở tốc độ 1x: Warmup & Round 1 = 1.0s, chia đều 10 Round tới min 0.25s ở Round 10)
-            if (tile.userData.isDelayedAppearance) {
+            // Xử lý xuất hiện trễ (chỉ kích hoạt khi đang chơi thực sự để không lộ sớm trước lúc chạm)
+            if (isPlaying && tile.userData.isDelayedAppearance) {
                 const tileRound = (tile.userData && typeof tile.userData.roundValue !== 'undefined') ? tile.userData.roundValue : currentRoundCached;
                 let reactionTime = 1.0;
                 if (tileRound > 1) {
@@ -3502,7 +3658,7 @@ function animate(rafTime) {
         }
 
         // --- POOLING & LAZY SPAWN ---
-        if (currentTileIndex > blocksBehindLimit) {
+        if (isPlaying && currentTileIndex > blocksBehindLimit) {
             const recycled = tiles.shift();
             if (spawnAnimationMode !== 'none') {
                 recycled.userData.isExiting = true;
@@ -3570,25 +3726,27 @@ function animate(rafTime) {
 
         // --- CƠ CHẾ SPAWN MỚI: CHỈ LOAD KHỐI KHI VÀO VÙNG NHÌN THẤY ĐƯỢC ---
         // Thay vì load cố định số lượng khối, tính toán khoảng cách hiển thị tối đa (View Distance)
-        const viewDistance = Math.max(50, blocksAheadLimit * 10);
+        if (isPlaying) {
+            const viewDistance = Math.max(50, blocksAheadLimit * 10);
 
-        while (lastTileZ > ball.position.z - viewDistance) {
-            // Tuân thủ nghiêm ngặt giới hạn render tối đa từ Settings để đảm bảo hiệu năng (tránh giật lag)
-            if (tiles.length - currentTileIndex >= blocksAheadLimit) break;
-            const spawned = spawnTile(false);
-            if (spawned === false) break;
-        }
+            while (lastTileZ > ball.position.z - viewDistance) {
+                // Tuân thủ nghiêm ngặt giới hạn render tối đa từ Settings để đảm bảo hiệu năng (tránh giật lag)
+                if (tiles.length - currentTileIndex >= blocksAheadLimit) break;
+                const spawned = spawnTile(false);
+                if (spawned === false) break;
+            }
 
-        // Dự phòng bắt buộc: Đảm bảo luôn có tối thiểu vài khối phía trước để tránh lỡ nhịp nhảy
-        while (tiles.length - currentTileIndex < Math.min(3, blocksAheadLimit)) {
-            const spawned = spawnTile(false);
-            if (spawned === false) break;
+            // Dự phòng bắt buộc: Đảm bảo luôn có tối thiểu vài khối phía trước để tránh lỡ nhịp nhảy
+            while (tiles.length - currentTileIndex < Math.min(3, blocksAheadLimit)) {
+                const spawned = spawnTile(false);
+                if (spawned === false) break;
+            }
         }
 
         // --- CẬP NHẬT HIỆU ỨNG (SHOCKWAVES, BOUNDARY PULSES, FLAMES, TRAIL, DASH GLIDE) ---
         if (typeof GameEffectsManager !== 'undefined') {
             const camZ = typeof camera !== 'undefined' ? camera.position.z : (ball ? ball.position.z + 10 : 0);
-            const time = clock.getElapsedTime();
+            const time = _worldAnimTime;
             const nowTime = time;
             GameEffectsManager.updateShockwaves(delta, camZ);
             GameEffectsManager.updateBoundaryPulses(delta, gameSpeed);
@@ -3606,7 +3764,7 @@ function animate(rafTime) {
             let dustSpeedMult = typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0;
 
             // Giảm tốc độ bụi (tắt gió) khi thua game hoặc đang ở trạng thái chuyển cảnh
-            if (typeof isFailTransition !== 'undefined' && (isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition))) {
+            if (typeof isFailTransition !== 'undefined' && isInEndingTransition) {
                 dustSpeedMult *= (typeof audio !== 'undefined' && audio) ? Math.max(0, audio.playbackRate) : 0.05;
             } else if (typeof isVictoryTransition !== 'undefined' && isVictoryTransition) {
                 const elapsed = typeof victoryTimeElapsed !== 'undefined' ? victoryTimeElapsed : 0;
@@ -3636,8 +3794,9 @@ function animate(rafTime) {
                 starField.geometry.attributes.position.needsUpdate = true;
             }
         }
+    }
 
-
+    if (isPlaying) {
         // --- VẬT LÝ BÓNG ---
         if (isVictoryTransition) {
             victoryTimeElapsed += delta;
@@ -4016,7 +4175,7 @@ function animate(rafTime) {
             }
         } else {
             let slowMoFactor = 1.0;
-            if (isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
+            if (isInEndingTransition) {
                 let speedRatio = Math.max(0.0, 1.0 - Math.min(1.0, failTimeElapsed / failDuration));
                 slowMoFactor = speedRatio;
             } else if (audio && isFailTransition) {
@@ -4037,7 +4196,7 @@ function animate(rafTime) {
             const glowHeightHitbox = 1.2;
             const bottomY = -currentTileThickness / 2 - glowHeightHitbox + ballRadius;
 
-            if (targetTile && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
+            if (targetTile && !isHoldExit) {
                 const activeScale = targetTile.userData.scale || 1.0;
                 // Tăng độ rộng hitbox cứu bóng (X, Z) để khớp trực quan với phần viền sáng Neon Glow mở rộng
                 const maxAllowedOffset = (tileWidth * activeScale / 2) + (ballRadius * 1.25);
@@ -4059,6 +4218,7 @@ function animate(rafTime) {
                     isFalling = false;
                     isFailTransition = false;
                     failTimeElapsed = 0;
+                    resetFailAudioEffect({ keepGain: true, restorePitchFlag: true, restoreVolume: true });
 
                     if (audio) {
                         const targetRescueAudioSpeed = Math.min(3.0, gameSpeed);
@@ -4181,48 +4341,27 @@ function animate(rafTime) {
                     // Nếu đã rơi qua đáy glow, bắt đầu fail transition (1.5s chờ game over)
                     isFailTransition = true;
                     failTimeElapsed = 0;
-                    if (audio) {
-                        initialFailSpeed = audio.playbackRate;
-                        audio.preservesPitch = false;
-                        audio.mozPreservesPitch = false;
-                        audio.webkitPreservesPitch = false;
-                    }
+                    startFailAudioEffect();
                 }
-            } else if (!isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
+            } else if (!isInEndingTransition) {
                 // Trường hợp không còn gạch tiếp theo
                 isFailTransition = true;
+                isInEndingTransition = true;
                 failTimeElapsed = 0;
-                if (audio) {
-                    initialFailSpeed = audio.playbackRate;
-                    audio.preservesPitch = false;
-                    audio.mozPreservesPitch = false;
-                    audio.webkitPreservesPitch = false;
-                }
+                startFailAudioEffect();
             }
 
-            if (isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
+            if (isInEndingTransition) {
                 failTimeElapsed += delta;
                 let speedRatio = Math.max(0.0, 1.0 - Math.min(1.0, failTimeElapsed / failDuration));
 
-                if (audio) {
-                    let targetRate = initialFailSpeed * speedRatio;
-                    // Giới hạn tốc độ playbackRate tối thiểu là 0.20 để tránh méo âm/rè tiếng của trình duyệt
-                    audio.playbackRate = Math.max(0.20, targetRate);
-                    if (speedRatio <= 0.02 && !audio.paused) {
-                        audio.pause();
-                    }
-                }
-
-                if (gainNode) {
-                    // Giảm dần âm lượng mượt mà theo đường cong mũ khi tape stop
-                    const currentVol = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
-                    gainNode.gain.value = Math.max(0.0, currentVol * Math.pow(speedRatio, 1.5));
-                }
+                updateFailAudioEffect(speedRatio);
 
                 const totalFailTime = failDuration + (typeof failWaitDuration !== 'undefined' ? failWaitDuration : 0.22);
                 if (failTimeElapsed >= totalFailTime) {
-                    if (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition) {
+                    if (isHoldExit) {
                         isHoldExitTransition = false;
+                        isHoldExit = false;
                         returnToMenu();
                     } else {
                         isFailTransition = false;
@@ -4249,14 +4388,16 @@ function animate(rafTime) {
             const currentSpeedZ = isFalling ? Math.abs(fallVelocityZ) : Math.abs(ballVelocityZ);
             ball.rotation.x -= (currentSpeedZ * delta) / ballRadius;
         }
+    }
 
+    if (shouldRunSceneAnimations) {
         // --- CẬP NHẬT PHÁT SÁNG BÓNG (BALL GLOW) ---
         if (typeof ballGlowMesh !== 'undefined' && ballGlowMesh && typeof ballGlowLight !== 'undefined' && ballGlowLight) {
             let targetGlowOpacity = 0;
             let targetGlowIntensity = 0;
 
-            if (typeof ballGlowEnabled !== 'undefined' && ballGlowEnabled && comboCount >= 6 && !isFailTransition && !(typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) {
-                const time = clock.getElapsedTime();
+            if (typeof ballGlowEnabled !== 'undefined' && ballGlowEnabled && comboCount >= 6 && !isInEndingTransition) {
+                const time = _worldAnimTime;
                 let glowColor = comboCount >= 15 ? 0xff00ff : (comboCount >= 8 ? 0xffaa00 : 0xffff00);
                 if (ballGlowMesh.material && ballGlowMesh.material.color && ballGlowMesh.material.color.getHex() !== glowColor) {
                     ballGlowMesh.material.color.setHex(glowColor);
@@ -4275,21 +4416,25 @@ function animate(rafTime) {
 
             // Luôn giữ ballGlowMesh.visible = true và ballGlowLight.visible = true
             // Điều khiển thông qua opacity và intensity để Three.js không bao giờ phải recompile lại Shader khi chạm mốc Combo 6
-            if (ballGlowMesh.material) {
+            if (ballGlowMesh.material && (targetGlowOpacity !== 0 || ballGlowMesh.material.opacity !== 0)) {
                 ballGlowMesh.material.opacity += (targetGlowOpacity - ballGlowMesh.material.opacity) * 10 * delta;
                 if (targetGlowOpacity === 0 && ballGlowMesh.material.opacity <= 0.001) {
                     ballGlowMesh.material.opacity = 0;
                 }
             }
-            ballGlowMesh.visible = true;
+            if (!ballGlowMesh.visible) ballGlowMesh.visible = true;
 
-            ballGlowLight.intensity += (targetGlowIntensity - ballGlowLight.intensity) * 10 * delta;
-            if (targetGlowIntensity === 0 && ballGlowLight.intensity <= 0.001) {
-                ballGlowLight.intensity = 0;
+            if (targetGlowIntensity !== 0 || ballGlowLight.intensity !== 0) {
+                ballGlowLight.intensity += (targetGlowIntensity - ballGlowLight.intensity) * 10 * delta;
+                if (targetGlowIntensity === 0 && ballGlowLight.intensity <= 0.001) {
+                    ballGlowLight.intensity = 0;
+                }
             }
-            ballGlowLight.visible = true;
+            if (!ballGlowLight.visible) ballGlowLight.visible = true;
         }
+    }
 
+    if (isPlaying) {
         // --- CAMERA ---
         if (typeof GameCameraManager !== 'undefined') {
             GameCameraManager.update(delta, ball, gameStarted, typeof isVictoryTransition !== 'undefined' && isVictoryTransition, typeof victoryCameraDecay !== 'undefined' ? victoryCameraDecay : 1.0);
@@ -4301,54 +4446,87 @@ function animate(rafTime) {
         }
     }
 
-    // --- CẬP NHẬT MÀU SẮC HÌNH NỀN ---
-    if (selectedBackground === 'japan') {
-        let activeTile = tiles[currentTileIndex];
-        let tileColorHex = 0x00ffff;
-        if (activeTile && activeTile.userData && activeTile.userData.themeColor) {
-            tileColorHex = activeTile.userData.themeColor;
-        }
-
-        computeTintedBgColor(tileColorHex, 0.035, 0.015, targetBgColor);
-
-        const lerpSpeed = 3.0;
-        const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
-        currentBgColor.lerp(targetBgColor, lerpFactor);
-        applyFogAndClearColor(currentBgColor);
-    } else if (selectedBackground === 'difficulty') {
-        const diffHex = getDifficultyBackgroundHex();
-        computeTintedBgColor(diffHex, 0.09, 0.012, targetBgColor);
-        const dr = targetBgColor.r - currentBgColor.r;
-        const dg = targetBgColor.g - currentBgColor.g;
-        const db = targetBgColor.b - currentBgColor.b;
-        if ((dr * dr + dg * dg + db * db) > 1e-6) {
-            const lerpFactor = 1 - Math.exp(-5.0 * delta);
-            currentBgColor.lerp(targetBgColor, lerpFactor);
-            applyFogAndClearColor(currentBgColor);
-        } else if (!_diffBgSettled) {
-            currentBgColor.copy(targetBgColor);
-            applyFogAndClearColor(currentBgColor);
-            _diffBgSettled = true;
-        }
-    } else if (selectedBackground === 'led_board') {
-        if (ledBoardMesh && ledBoardMesh.visible && ledBoardUniforms) {
-            _ledBoardElapsed += delta;
-            if (_ledBoardElapsed > 3600.0) _ledBoardElapsed -= 3600.0;
-            ledBoardUniforms.uTime.value = _ledBoardElapsed;
-
-            let targetPulse = 0.15 + 0.12 * Math.sin(_ledBoardElapsed * 2.5);
-            if (isPlaying && window.VisualizerManager && window.VisualizerManager.cachedBarData && window.VisualizerManager.cachedBarData.length > 0) {
-                const bars = window.VisualizerManager.cachedBarData;
-                const mid = bars.length >> 1;
-                targetPulse = (bars[mid] || 0) * 0.65 + (bars[0] || 0) * 0.35;
+    // --- CẬP NHẬT MÀU SẮC HÌNH NỀN (chỉ đóng băng khi tạm dừng) ---
+    if (shouldRunSceneAnimations) {
+        if (selectedBackground === 'japan') {
+            let activeTile = tiles[currentTileIndex];
+            let tileColorHex = 0x00ffff;
+            if (activeTile && activeTile.userData && activeTile.userData.themeColor) {
+                tileColorHex = activeTile.userData.themeColor;
             }
-            _ledBoardPulse += (targetPulse - _ledBoardPulse) * (1 - Math.exp(-12.0 * delta));
-            ledBoardUniforms.uPulse.value = _ledBoardPulse;
-            ledBoardMesh.matrix.elements[14] = camera.position.z - 175;
+
+            if (_lastJapanTileHex !== tileColorHex) {
+                _lastJapanTileHex = tileColorHex;
+                _japanBgSettled = false;
+            }
+
+            if (!_japanBgSettled) {
+                computeTintedBgColor(tileColorHex, 0.035, 0.015, targetBgColor);
+                const dr = targetBgColor.r - currentBgColor.r;
+                const dg = targetBgColor.g - currentBgColor.g;
+                const db = targetBgColor.b - currentBgColor.b;
+                if ((dr * dr + dg * dg + db * db) > 1e-6) {
+                    const lerpSpeed = 3.0;
+                    const lerpFactor = 1 - Math.exp(-lerpSpeed * delta);
+                    currentBgColor.lerp(targetBgColor, lerpFactor);
+                    applyFogAndClearColor(currentBgColor);
+                } else {
+                    currentBgColor.copy(targetBgColor);
+                    applyFogAndClearColor(currentBgColor);
+                    _japanBgSettled = true;
+                }
+            }
+        } else if (selectedBackground === 'difficulty') {
+            const diffHex = getDifficultyBackgroundHex();
+            computeTintedBgColor(diffHex, 0.09, 0.012, targetBgColor);
+            const dr = targetBgColor.r - currentBgColor.r;
+            const dg = targetBgColor.g - currentBgColor.g;
+            const db = targetBgColor.b - currentBgColor.b;
+            if ((dr * dr + dg * dg + db * db) > 1e-6) {
+                const lerpFactor = 1 - Math.exp(-5.0 * delta);
+                currentBgColor.lerp(targetBgColor, lerpFactor);
+                applyFogAndClearColor(currentBgColor);
+            } else if (!_diffBgSettled) {
+                currentBgColor.copy(targetBgColor);
+                applyFogAndClearColor(currentBgColor);
+                _diffBgSettled = true;
+            }
+        } else if (selectedBackground === 'led_board') {
+            if (ledBoardMesh && ledBoardMesh.visible && ledBoardUniforms) {
+                _ledBoardElapsed += delta;
+                if (_ledBoardElapsed > 3600.0) _ledBoardElapsed -= 3600.0;
+                ledBoardUniforms.uTime.value = _ledBoardElapsed;
+
+                let targetPulse = 0.15 + 0.12 * Math.sin(_ledBoardElapsed * 2.5);
+                if (isPlaying && window.VisualizerManager && window.VisualizerManager.cachedBarData && window.VisualizerManager.cachedBarData.length > 0) {
+                    const bars = window.VisualizerManager.cachedBarData;
+                    const mid = bars.length >> 1;
+                    targetPulse = (bars[mid] || 0) * 0.65 + (bars[0] || 0) * 0.35;
+                }
+                _ledBoardPulse += (targetPulse - _ledBoardPulse) * (1 - Math.exp(-12.0 * delta));
+                ledBoardUniforms.uPulse.value = _ledBoardPulse;
+                ledBoardMesh.matrix.elements[14] = camera.position.z - 175;
+            }
         }
     }
 
-    renderer.render(scene, camera);
+    // Khi đang ở Menu chính che kín toàn màn hình, giảm nhịp render cảnh 3D ẩn phía sau xuống ~10 FPS
+    // để nhường tối đa GPU/compositor cho cuộn UI & animation mượt ở cả 60Hz lẫn 120–360Hz.
+    if (isStartMenuOpaqueIdle && !window._forceIdleSceneRender) {
+        if (now - _lastIdleMenuRenderTime < 100) {
+            return;
+        }
+        _lastIdleMenuRenderTime = now;
+    } else {
+        _lastIdleMenuRenderTime = 0;
+        window._forceIdleSceneRender = false;
+    }
+
+    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.render === 'function') {
+        window.AntiAliasingManager.render(renderer, scene, camera);
+    } else {
+        renderer.render(scene, camera);
+    }
 }
 
 // --- DỌN DẸP ĐỐI TƯỢNG CŨ ---
@@ -4451,10 +4629,72 @@ function updateFinalScoreStyle(currentValue, targetValue = currentValue) {
     }
 }
 
+function startFailAudioEffect() {
+    if (audio) {
+        initialFailSpeed = audio.playbackRate || 1.0;
+    }
+    const duration = typeof failDuration !== 'undefined' ? failDuration : 1.5;
+    if (typeof beginFailAudioTransition === 'function') {
+        beginFailAudioTransition(duration, initialFailSpeed);
+    } else if (audio) {
+        const keepPitch = typeof preservePitchEnabled !== 'undefined' && !!preservePitchEnabled;
+        if (!keepPitch) {
+            audio.preservesPitch = false;
+            audio.mozPreservesPitch = false;
+            audio.webkitPreservesPitch = false;
+        }
+    }
+}
+
+function updateFailAudioEffect(speedRatio) {
+    if (typeof updateFailAudioTransition === 'function') {
+        updateFailAudioTransition(speedRatio, initialFailSpeed);
+        return;
+    }
+    const ratio = Math.max(0.0, Math.min(1.0, speedRatio));
+    if (audio) {
+        const keepPitch = typeof preservePitchEnabled !== 'undefined' && !!preservePitchEnabled;
+        if (!keepPitch) {
+            audio.playbackRate = Math.max(0.20, initialFailSpeed * ratio);
+        }
+        if (ratio <= 0.02 && !audio.paused) {
+            audio.pause();
+        }
+    }
+    if (gainNode) {
+        const currentVol = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
+        gainNode.gain.value = Math.max(0.0, currentVol * Math.pow(ratio, 1.5));
+    }
+}
+
+function resetFailAudioEffect(options = {}) {
+    if (typeof resetFailAudioTransition === 'function') {
+        resetFailAudioTransition(options);
+        return;
+    }
+    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode && !options.keepGain) {
+        const now = audioCtx.currentTime;
+        gainNode.gain.cancelScheduledValues(now);
+        const targetVol = options.zeroGain
+            ? 0
+            : ((typeof isGameMuted !== 'undefined' && isGameMuted) ? 0 : (typeof gameVolume !== 'undefined' ? gameVolume : 1));
+        gainNode.gain.setValueAtTime(targetVol, now);
+    }
+    if (audio && options.restorePitchFlag) {
+        const pitchFlag = typeof preservePitchEnabled !== 'undefined' ? !!preservePitchEnabled : false;
+        audio.preservesPitch = pitchFlag;
+        audio.mozPreservesPitch = pitchFlag;
+        audio.webkitPreservesPitch = pitchFlag;
+    }
+}
+
 // --- GAME VICTORY ---
 async function gameVictory() {
     releaseGameplayPointerLock();
     isPlaying = false;
+    window.isPlaying = false;
+    isPaused = false;
+    window.isPaused = false;
     const maxSpeedReached = gameSpeed;
     isVictoryTransition = false;
     victoryTimeElapsed = 0;
@@ -4487,11 +4727,7 @@ async function gameVictory() {
     totalTilesJumped = 0;
     clearPerfectComboUI();
 
-    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(0, now);
-    }
+    resetFailAudioEffect({ zeroGain: true, restorePitchFlag: true, restoreVolume: true });
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -4628,7 +4864,7 @@ async function gameVictory() {
         textShadow = "0 0 8px rgba(16,185,129,0.6)";
     }
 
-    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} bg-[#060414]/90 min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
+    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} bg-[#030916]/95 shadow-[inset_0_1px_0_rgba(251,191,36,0.16)] min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
 
     const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
     const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
@@ -5064,6 +5300,9 @@ window.DefaultGameOverParticleManager = {
 async function gameOver() {
     releaseGameplayPointerLock();
     isPlaying = false;
+    window.isPlaying = false;
+    isPaused = false;
+    window.isPaused = false;
     const maxSpeedReached = gameSpeed;
     isVictoryTransition = false;
     victoryTimeElapsed = 0;
@@ -5111,11 +5350,7 @@ async function gameOver() {
     totalTilesJumped = 0;
     clearPerfectComboUI();
 
-    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(0, now);
-    }
+    resetFailAudioEffect({ zeroGain: true, restorePitchFlag: true, restoreVolume: true });
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -5224,7 +5459,7 @@ async function gameOver() {
         gameoverScreen.appendChild(gameOverMiniCard);
     }
 
-    let cardBorder = "border-pink-500/40 bg-[#060414]/90 shadow-[0_0_20px_rgba(236,72,153,0.2)]";
+    let cardBorder = "border-pink-500/40 bg-[#030916]/95 shadow-[0_0_20px_rgba(236,72,153,0.2)]";
     let iconColor = "text-pink-400";
     let iconBg = "bg-pink-900/50 border-pink-500/50";
     let textColor = "text-pink-300";
@@ -5522,8 +5757,13 @@ function resetGameScene() {
     releaseGameplayPointerLock();
     gameStarted = false;
     isPlaying = false;
+    isPaused = false;
     window.isPlaying = false;
+    window.isPaused = false;
     window.gameStarted = false;
+    _lastRecycleCallCamZ = NaN;
+    _japanBgSettled = false;
+    _lastJapanTileHex = -1;
 
     if (countdownInterval) {
         clearInterval(countdownInterval);
@@ -5680,11 +5920,7 @@ function resetGameScene() {
     }
     updateBackgroundStyle();
 
-    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(0, now);
-    }
+    resetFailAudioEffect({ zeroGain: true, restorePitchFlag: true, restoreVolume: true });
     if (audio) {
         audio.pause();
         audio.currentTime = 0;
@@ -5695,7 +5931,7 @@ function resetGameScene() {
     }
 
     if (gainNode) {
-        gainNode.gain.value = gameVolume;
+        gainNode.gain.value = (typeof isGameMuted !== 'undefined' && isGameMuted) ? 0 : gameVolume;
     }
 
     if (camera) {
@@ -5706,7 +5942,11 @@ function resetGameScene() {
     gameStarted = false;
 
     if (renderer && scene && camera) {
-        renderer.render(scene, camera);
+        if (window.AntiAliasingManager && typeof window.AntiAliasingManager.render === 'function') {
+            window.AntiAliasingManager.render(renderer, scene, camera);
+        } else {
+            renderer.render(scene, camera);
+        }
     }
 
     clock.getDelta();
@@ -6004,11 +6244,8 @@ function startGame() {
     audio.mozPreservesPitch = typeof preservePitchEnabled !== 'undefined' ? preservePitchEnabled : false;
     audio.webkitPreservesPitch = typeof preservePitchEnabled !== 'undefined' ? preservePitchEnabled : false;
 
-    if (gainNode && audioCtx) {
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume, now);
-    } else if (gainNode) {
+    resetFailAudioEffect({ restorePitchFlag: true, restoreVolume: true });
+    if (gainNode && !audioCtx) {
         gainNode.gain.value = typeof isGameMuted !== 'undefined' && isGameMuted ? 0 : gameVolume;
     }
 
@@ -6159,7 +6396,9 @@ function setupGameStates() {
     accumulatedSongTime = 0;
     gameStarted = true;
     isPlaying = true;
+    isPaused = false;
     window.isPlaying = true;
+    window.isPaused = false;
     window.gameStarted = true;
     try {
         window.history.pushState({ inGamePlaySession: true }, document.title, window.location.href);
@@ -6186,8 +6425,13 @@ function returnToMenu() {
         window.RageGameOverFireManager.stop();
     }
     isPlaying = false;
+    isPaused = false;
     window.isPlaying = false;
+    window.isPaused = false;
     window.gameStarted = false;
+    _lastRecycleCallCamZ = NaN;
+    _japanBgSettled = false;
+    _lastJapanTileHex = -1;
     if (typeof autoFullscreenEnabled !== 'undefined' && autoFullscreenEnabled && window.enteredByAutoFullscreen) {
         triggerExitFullscreen();
         window.enteredByAutoFullscreen = false;
@@ -6230,11 +6474,7 @@ function returnToMenu() {
         if (startScreenWindow) startScreenWindow.style.transform = '';
     }
 
-    if (typeof audioCtx !== 'undefined' && audioCtx && typeof gainNode !== 'undefined' && gainNode) {
-        const now = audioCtx.currentTime;
-        gainNode.gain.cancelScheduledValues(now);
-        gainNode.gain.setValueAtTime(0, now);
-    }
+    resetFailAudioEffect({ zeroGain: true, restorePitchFlag: true, restoreVolume: true });
     if (audio && typeof audio.pause === 'function') audio.pause();
 
     const finalizeReturn = () => {
@@ -6284,6 +6524,14 @@ function showTapToOverlay(type = 'start') {
 
     tapToPlayOverlay.style.display = 'flex';
     countdownNumber.innerText = type === 'start' ? t('tap_play') : t('tap_resume');
+    if (window.UIAnimator && typeof window.UIAnimator.staggerChildren === 'function') {
+        window.UIAnimator.staggerChildren(tapToPlayOverlay, '#countdown-number, #tap-back-btn', {
+            y: 12,
+            step: 45,
+            duration: 280,
+            scaleFrom: 0.94
+        });
+    }
 
     // Detect if game volume is too low or muted
     const lowVolWarn = document.getElementById('low-volume-warning');
@@ -6390,7 +6638,7 @@ function showTapToOverlay(type = 'start') {
     if (!miniCard) {
         miniCard = document.createElement('div');
         miniCard.id = 'tap-mini-music-card';
-        miniCard.className = "absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border border-cyan-500/40 bg-[#060414]/90 shadow-[0_0_20px_rgba(34,211,238,0.2)] min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none";
+        miniCard.className = "absolute top-12 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center px-6 py-3 rounded-2xl border border-cyan-500/40 bg-[#030916]/95 shadow-[0_0_20px_rgba(34,211,238,0.22),inset_0_1px_0_rgba(251,191,36,0.16)] min-w-[220px] max-w-[90vw] md:max-w-md pointer-events-none";
         tapToPlayOverlay.appendChild(miniCard);
     }
 
@@ -6483,13 +6731,13 @@ function showTapToOverlay(type = 'start') {
     if (!quickSettingsBtn) {
         quickSettingsBtn = document.createElement('button');
         quickSettingsBtn.id = 'tap-quick-settings-btn';
-        quickSettingsBtn.className = "absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-8 bg-[#060414]/95 border-t border-l border-r border-cyan-500/50 rounded-t-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-800 transition-all z-[60] cursor-pointer shadow-[0_0_10px_rgba(34,211,238,0.2)]";
+        quickSettingsBtn.className = "ui2-qs-btn absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-8 bg-[#040c1c]/95 border-t border-l border-r border-cyan-500/50 rounded-t-xl flex items-center justify-center text-cyan-400 hover:bg-cyan-950/60 transition-all z-[60] cursor-pointer shadow-[0_0_12px_rgba(34,211,238,0.24)]";
         quickSettingsBtn.innerHTML = `<svg class="w-5 h-5 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 21l7-7 7 7"></path></svg>`;
         tapToPlayOverlay.appendChild(quickSettingsBtn);
 
         quickSettingsPanel = document.createElement('div');
         quickSettingsPanel.id = 'tap-quick-settings-panel';
-        quickSettingsPanel.className = "absolute bottom-0 left-0 w-full rounded-t-2xl border-t border-cyan-500/40 bg-[#060414]/98 shadow-[0_-10px_30px_rgba(34,211,238,0.3)] p-5 flex flex-col gap-3 z-[60] font-rajdhani transform translate-y-full transition-transform duration-300 ease-out";
+        quickSettingsPanel.className = "ui2-qs-panel absolute bottom-0 left-0 w-full rounded-t-2xl border-t border-cyan-500/45 bg-[#030916]/98 shadow-[0_-10px_32px_rgba(34,211,238,0.28)] p-5 flex flex-col gap-3 z-[60] font-rajdhani transform translate-y-full transition-transform duration-300 ease-out";
 
         quickSettingsPanel.innerHTML = `
             <div class="flex justify-between items-center border-b border-cyan-500/30 pb-3 mb-1">
@@ -6550,7 +6798,7 @@ function showTapToOverlay(type = 'start') {
                     <div class="bg-black/30 p-3 rounded-lg border border-cyan-900/40 space-y-3">
                         <div class="flex flex-col gap-1">
                             <span class="text-gray-300 font-bold mb-0.5" data-i18n="quality_title">Chất lượng Đồ họa</span>
-                            <select id="qs-quality" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
+                            <select id="qs-quality" class="w-full bg-[#030916] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
                                 <option value="simple">Simple (Thấp)</option>
                                 <option value="hd">HD (Trung bình)</option>
                                 <option value="fhd">FHD (Cao)</option>
@@ -6560,7 +6808,7 @@ function showTapToOverlay(type = 'start') {
                         </div>
                         <div class="flex flex-col gap-1">
                             <span class="text-gray-300 font-bold mb-0.5" data-i18n="spawn_title">Xuất hiện Block</span>
-                            <select id="qs-spawn-mode" class="w-full bg-[#0c081e] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
+                            <select id="qs-spawn-mode" class="w-full bg-[#030916] border border-cyan-500/40 rounded-lg px-2 py-1 text-cyan-300 outline-none font-bold cursor-pointer">
                                 <option value="slide" data-i18n="spawn_slide">Hiệu ứng Trượt (Slide)</option>
                                 <option value="mix" data-i18n="spawn_mix">Hỗn hợp (Mix)</option>
                                 <option value="none" data-i18n="spawn_inst">Ngay lập tức (Instant)</option>
@@ -6592,14 +6840,6 @@ function showTapToOverlay(type = 'start') {
                             <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
                                 <span data-i18n="sw_title" class="text-xs">Sóng Xung Kích</span>
                                 <input type="checkbox" id="qs-shockwaves" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                            </label>
-                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30">
-                                <span data-i18n="boundaries_title" class="text-xs">Hiện Đường Biên</span>
-                                <input type="checkbox" id="qs-show-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
-                            </label>
-                            <label class="flex items-center justify-between text-gray-300 cursor-pointer p-1.5 rounded hover:bg-cyan-900/30 col-span-2">
-                                <span data-i18n="advanced_boundaries_title" class="text-xs">Boundary nâng cao</span>
-                                <input type="checkbox" id="qs-advanced-boundaries" class="accent-cyan-400 cursor-pointer w-3.5 h-3.5">
                             </label>
                         </div>
                     </div>
@@ -6740,8 +6980,6 @@ function showTapToOverlay(type = 'start') {
         bindCb('qs-ball-glow', typeof toggleBallGlow !== 'undefined' ? toggleBallGlow : null, 'ballGlowEnabled', 'ballGlowEnabled');
         bindCb('qs-ball-trail', typeof toggleBallTrail !== 'undefined' ? toggleBallTrail : null, 'ballTrailEnabled', 'ballTrailEnabled');
         bindCb('qs-shockwaves', typeof toggleShockwaves !== 'undefined' ? toggleShockwaves : null, 'shockwavesEnabled', 'shockwavesEnabled');
-        bindCb('qs-show-boundaries', typeof toggleShowBoundaries !== 'undefined' ? toggleShowBoundaries : null, 'showBoundariesEnabled', 'showBoundariesEnabled', typeof updateBoundariesVisibility === 'function' ? updateBoundariesVisibility : null);
-        bindCb('qs-advanced-boundaries', typeof toggleAdvancedBoundaries !== 'undefined' ? toggleAdvancedBoundaries : null, 'advancedBoundariesEnabled', 'advancedBoundariesEnabled', typeof updateBoundariesVisibility === 'function' ? updateBoundariesVisibility : null);
     }
 
     if (quickSettingsPanel) {
@@ -6780,8 +7018,6 @@ function showTapToOverlay(type = 'start') {
         setCb('qs-ball-glow', typeof ballGlowEnabled !== 'undefined' ? ballGlowEnabled : true);
         setCb('qs-ball-trail', typeof ballTrailEnabled !== 'undefined' ? ballTrailEnabled : true);
         setCb('qs-shockwaves', typeof shockwavesEnabled !== 'undefined' ? shockwavesEnabled : true);
-        setCb('qs-show-boundaries', typeof showBoundariesEnabled !== 'undefined' ? showBoundariesEnabled : true);
-        setCb('qs-advanced-boundaries', typeof advancedBoundariesEnabled !== 'undefined' ? advancedBoundariesEnabled : true);
 
         quickSettingsPanel.classList.add('translate-y-full');
         if (quickSettingsBtn) {
@@ -6807,7 +7043,9 @@ function pauseGame() {
     releaseGameplayPointerLock();
     if (!isPlaying || isFailTransition || (typeof isHoldExitTransition !== 'undefined' && isHoldExitTransition)) return;
     isPlaying = false;
+    isPaused = true;
     window.isPlaying = false;
+    window.isPaused = true;
 
     const ingamePauseBtn = document.getElementById('ingame-pause-btn');
     if (ingamePauseBtn) ingamePauseBtn.style.display = 'none';
@@ -6824,7 +7062,9 @@ function pauseGame() {
 
 function resumeGame() {
     isPlaying = true;
+    isPaused = false;
     window.isPlaying = true;
+    window.isPaused = false;
     clock.getDelta();
 
     const ingamePauseBtn = document.getElementById('ingame-pause-btn');

@@ -34,6 +34,8 @@ const toggleRelativePC = document.getElementById('toggle-relative-pc');
 const togglePointerLock = document.getElementById('toggle-pointer-lock');
 const toggleRawInput = document.getElementById('toggle-raw-input');
 const toggleAntialiasing = document.getElementById('toggle-antialiasing');
+const antialiasingModeSelect = document.getElementById('antialiasing-mode-select');
+const aaStatusBadge = document.getElementById('aa-status-badge');
 const toggleDynamicColors = document.getElementById('toggle-dynamic-colors');
 const toggleVisualizer = document.getElementById('toggle-visualizer');
 const bgVisualizerCanvas = document.getElementById('bg-visualizer');
@@ -1200,7 +1202,13 @@ function showCyberModal({ title, message, type = 'alert', confirmText, cancelTex
     if (cyberModalActions) cyberModalActions.innerHTML = '';
 
     const closeDialog = () => {
-        if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+        if (window.UIAnimator && typeof window.UIAnimator.hideModal === 'function') {
+            window.UIAnimator.hideModal(cyberModal, cyberModalWindow, {
+                useHiddenClass: false,
+                exitDuration: 220,
+                exitScale: 0.92
+            });
+        } else if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
             anime({ targets: cyberModal, opacity: 0, duration: 300, easing: 'easeInOutQuad', complete: () => cyberModal.style.display = 'none' });
             anime({ targets: cyberModalWindow, scale: [1, 0.92], duration: 300, easing: 'easeInQuad' });
         } else {
@@ -1269,17 +1277,28 @@ function showCyberModal({ title, message, type = 'alert', confirmText, cancelTex
     }
 
     if (cyberModal) {
-        const isAlreadyVisible = cyberModal.style.display === 'flex' && parseFloat(cyberModal.style.opacity || '1') > 0.5;
-
-        cyberModal.style.display = 'flex';
-        if (!isAlreadyVisible && typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-            cyberModal.style.opacity = 0;
-            if (cyberModalWindow) cyberModalWindow.style.transform = 'scale(0.92)';
-            anime({ targets: cyberModal, opacity: 1, duration: 400, easing: 'easeOutQuint' });
-            if (cyberModalWindow) anime({ targets: cyberModalWindow, scale: [0.92, 1], duration: 400, easing: 'easeOutQuint' });
+        if (window.UIAnimator && typeof window.UIAnimator.showModal === 'function') {
+            window.UIAnimator.showModal(cyberModal, cyberModalWindow, {
+                scaleFrom: 0.92,
+                y: 14,
+                duration: 340,
+                staggerSelector: '#cyber-modal-actions > button',
+                staggerStep: 35,
+                staggerStart: 70
+            });
         } else {
-            cyberModal.style.opacity = 1;
-            if (cyberModalWindow) cyberModalWindow.style.transform = 'scale(1)';
+            const isAlreadyVisible = cyberModal.style.display === 'flex' && parseFloat(cyberModal.style.opacity || '1') > 0.5;
+
+            cyberModal.style.display = 'flex';
+            if (!isAlreadyVisible && typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+                cyberModal.style.opacity = 0;
+                if (cyberModalWindow) cyberModalWindow.style.transform = 'scale(0.92)';
+                anime({ targets: cyberModal, opacity: 1, duration: 400, easing: 'easeOutQuint' });
+                if (cyberModalWindow) anime({ targets: cyberModalWindow, scale: [0.92, 1], duration: 400, easing: 'easeOutQuint' });
+            } else {
+                cyberModal.style.opacity = 1;
+                if (cyberModalWindow) cyberModalWindow.style.transform = 'scale(1)';
+            }
         }
     }
 }
@@ -1465,7 +1484,14 @@ const btnOpenAdminModal = document.getElementById('btn-open-admin-modal');
 if (btnOpenAdminModal) {
     btnOpenAdminModal.addEventListener('click', () => {
         if (adminPanelModal) {
-            adminPanelModal.style.display = 'flex';
+            if (window.UIAnimator && typeof window.UIAnimator.showModal === 'function') {
+                window.UIAnimator.showModal(adminPanelModal, adminPanelModal.firstElementChild, {
+                    staggerSelector: '.space-y-4 > *',
+                    staggerStep: 28
+                });
+            } else {
+                adminPanelModal.style.display = 'flex';
+            }
             if (adminAutoplayToggle) {
                 adminAutoplayToggle.checked = typeof isAutoplay !== 'undefined' ? isAutoplay : false;
             }
@@ -1501,7 +1527,7 @@ if (secretCreditBtn) {
             <div class="space-y-3 text-sm mt-2">
                 <div>
                     <span class="font-black text-cyan-400 font-orbitron text-xl leading-none block drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]">CYBER BEAT HOPPER</span>
-                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.0.10' : 'Version 1.0.10'}</span>
+                    <span class="text-[10px] text-gray-400 bg-cyan-950/40 border border-cyan-500/30 px-2 py-0.5 rounded uppercase mt-2 inline-block font-bold">${isVi ? 'Phiên bản 1.1.0' : 'Version 1.1.0'}</span>
                 </div>
                 <div class="bg-black/60 border border-cyan-500/20 rounded-lg p-4 text-left space-y-3 text-xs font-orbitron mt-4 shadow-inner">
                     <div class="flex justify-between border-b border-cyan-500/10 pb-2">
@@ -1572,7 +1598,11 @@ if (typeof cacheStaticResources === 'function') {
 
 if (closeAdminBtn && adminPanelModal) {
     closeAdminBtn.addEventListener('click', () => {
-        adminPanelModal.style.display = 'none';
+        if (window.UIAnimator && typeof window.UIAnimator.hideModal === 'function') {
+            window.UIAnimator.hideModal(adminPanelModal, adminPanelModal.firstElementChild, { useHiddenClass: false });
+        } else {
+            adminPanelModal.style.display = 'none';
+        }
     });
 }
 
@@ -1867,30 +1897,46 @@ const MAIN_MENU_THEMES = {
     normal: {
         name: 'normal',
         primaryColor: '#22d3ee',        // Neon Cyan
+        softColor: '#67e8f9',
         borderColor: 'rgba(6, 182, 212, 0.45)',
+        subtleBorderColor: 'rgba(6, 182, 212, 0.22)',
         glowColor: 'rgba(6, 182, 212, 0.3)',
-        activeTabBg: 'rgba(6, 182, 212, 0.15)'
+        strongGlowColor: 'rgba(34, 211, 238, 0.75)',
+        activeTabBg: 'rgba(6, 182, 212, 0.14)',
+        surfaceBg: 'rgba(6, 182, 212, 0.08)'
     },
     asian: {
         name: 'asian',
         primaryColor: '#f43f5e',        // Red / Crimson
+        softColor: '#fda4af',
         borderColor: 'rgba(239, 68, 68, 0.65)',
-        glowColor: 'rgba(239, 68, 68, 0.45)',
-        activeTabBg: 'rgba(239, 68, 68, 0.15)'
+        subtleBorderColor: 'rgba(244, 63, 94, 0.26)',
+        glowColor: 'rgba(239, 68, 68, 0.42)',
+        strongGlowColor: 'rgba(244, 63, 94, 0.78)',
+        activeTabBg: 'rgba(244, 63, 94, 0.16)',
+        surfaceBg: 'rgba(244, 63, 94, 0.09)'
     },
     hard: {
         name: 'hard',
-        primaryColor: '#fbbf24',        // Amber / Flame Orange
+        primaryColor: '#fbbf24',        // Amber / Flame Gold
+        softColor: '#fde68a',
         borderColor: 'rgba(245, 158, 11, 0.55)',
+        subtleBorderColor: 'rgba(245, 158, 11, 0.25)',
         glowColor: 'rgba(245, 158, 11, 0.35)',
-        activeTabBg: 'rgba(245, 158, 11, 0.15)'
+        strongGlowColor: 'rgba(251, 191, 36, 0.75)',
+        activeTabBg: 'rgba(245, 158, 11, 0.15)',
+        surfaceBg: 'rgba(245, 158, 11, 0.09)'
     },
     easy: {
         name: 'easy',
         primaryColor: '#34d399',        // Emerald Green
+        softColor: '#6ee7b7',
         borderColor: 'rgba(16, 185, 129, 0.55)',
+        subtleBorderColor: 'rgba(16, 185, 129, 0.24)',
         glowColor: 'rgba(16, 185, 129, 0.35)',
-        activeTabBg: 'rgba(16, 185, 129, 0.15)'
+        strongGlowColor: 'rgba(52, 211, 153, 0.75)',
+        activeTabBg: 'rgba(16, 185, 129, 0.15)',
+        surfaceBg: 'rgba(16, 185, 129, 0.09)'
     }
 };
 
@@ -1902,7 +1948,12 @@ function updateMainMenuTheme() {
     // Ưu tiên: Asian > Hard > Easy > Normal
     const theme = MAIN_MENU_THEMES[isAsian ? 'asian' : isHard ? 'hard' : isEasy ? 'easy' : 'normal'];
 
+    if (typeof document !== 'undefined' && document.documentElement) {
+        document.documentElement.dataset.difficultyTheme = theme.name;
+    }
+
     // Dynamic Style Tag Injection to apply theme to ALL UI elements seamlessly
+    // Lưu ý: Loại trừ hoàn toàn #tab-extensions (.difficulty-item, .extension-item: nút độ khó, game mode, bổ trợ)
     let styleTag = document.getElementById('dynamic-difficulty-theme-style');
     if (!styleTag) {
         styleTag = document.createElement('style');
@@ -1910,57 +1961,182 @@ function updateMainMenuTheme() {
         document.head.appendChild(styleTag);
     }
 
+    // Các vùng giao diện áp dụng style theo độ khó (KHÔNG gồm #tab-extensions)
+    const THEMED_SCOPES = [
+        '#start-screen-window > .border-b',
+        '#panel-home',
+        '#panel-personalize',
+        '#panel-music',
+        '#panel-account',
+        '#panel-settings .settings-tabs-container',
+        '#panel-settings > div > .relative',
+        '#tab-graphics',
+        '#tab-audio',
+        '#tab-control',
+        '#tab-gameplay',
+        '#tab-game',
+        '#tab-storage',
+        '#tab-language',
+        '#cyber-modal',
+        '#dynamic-cyber-modal',
+        '#download-app-modal',
+        '#page-viewer-modal',
+        '#song-context-menu',
+        '#tap-to-play-overlay',
+        '#tap-quick-settings-panel',
+        '#loading-overlay',
+        '#ingame-pause-btn',
+        '#autoplay-back-btn'
+    ];
+
+    const scopeSuffix = (suffix) => THEMED_SCOPES.map(root => `${root} ${suffix}`).join(',\n        ');
+    const GUARD = ':not(.difficulty-item):not(.extension-item):not(#connection-status-indicator):not(#mobile-connection-status):not(.no-difficulty-theme)';
+
     styleTag.textContent = `
         :root {
             --theme-color: ${theme.primaryColor} !important;
+            --theme-color-soft: ${theme.softColor} !important;
             --theme-border: ${theme.borderColor} !important;
+            --theme-border-subtle: ${theme.subtleBorderColor} !important;
             --theme-glow: ${theme.glowColor} !important;
+            --theme-glow-strong: ${theme.strongGlowColor} !important;
             --theme-bg-alpha: ${theme.activeTabBg} !important;
+            --theme-bg-surface: ${theme.surfaceBg} !important;
+            --pcb-trace: ${theme.primaryColor} !important;
+            --pcb-glow: ${theme.glowColor} !important;
         }
 
-        /* 1. Main Menu Window & Cyber Modal */
-        #start-screen-window, 
-        #dynamic-cyber-modal #cyber-modal-window {
+        /* 1. Main Menu Window & Modals */
+        #start-screen-window,
+        #dynamic-cyber-modal #cyber-modal-window,
+        #cyber-modal-window,
+        #download-app-modal > div,
+        #page-viewer-modal > div {
             border: 1.5px solid ${theme.borderColor} !important;
             box-shadow: 0 0 35px ${theme.glowColor}, inset 0 0 15px ${theme.glowColor} !important;
-            transition: border-color 0.5s ease-in-out, box-shadow 0.5s ease-in-out !important;
+            transition: border-color 0.45s ease-in-out, box-shadow 0.45s ease-in-out !important;
+        }
+
+        #start-screen-window > .border-b {
+            border-bottom-color: ${theme.subtleBorderColor} !important;
         }
 
         /* 2. Panel Titles & Modal Titles */
-        #panel-home h2, 
-        #panel-personalize h2, 
-        #panel-music h2, 
-        #panel-account h2, 
+        #panel-home h2,
+        #panel-personalize h2,
+        #panel-music h2,
+        #panel-account h2,
         #panel-settings h2,
-        #cyber-modal-title {
+        #cyber-modal-title,
+        #page-viewer-title {
             color: ${theme.primaryColor} !important;
             text-shadow: 0 0 12px ${theme.glowColor} !important;
-            transition: color 0.5s ease-in-out, text-shadow 0.5s ease-in-out !important;
+            transition: color 0.45s ease-in-out, text-shadow 0.45s ease-in-out !important;
         }
 
-        /* 3. Navigation Header Tabs */
+        /* 3. Navigation Header Tabs + Sliding Indicator */
         .main-nav-tabs-container .nav-btn.active {
             color: ${theme.primaryColor} !important;
-            border-bottom: 2px solid ${theme.primaryColor} !important;
+            background: ${theme.activeTabBg} !important;
             text-shadow: 0 0 8px ${theme.glowColor} !important;
         }
+        .main-nav-tabs-container:not(.has-tab-indicator) .nav-btn.active {
+            border-bottom: 3px solid ${theme.primaryColor} !important;
+        }
+        .main-nav-tabs-container.has-tab-indicator .nav-btn.active {
+            border-bottom-color: transparent !important;
+        }
+        .main-nav-tabs-container .nav-btn:hover:not(.active) {
+            color: ${theme.softColor} !important;
+            background: ${theme.surfaceBg} !important;
+        }
 
-        /* 4. Song Selector Cards & Active Highlights */
+        /* 4. Sub-tabs (BG & Balls + Settings + Account) */
+        .personalize-tabs-container,
+        .settings-tabs-container,
+        #account-subtabs {
+            border-bottom-color: ${theme.subtleBorderColor} !important;
+        }
+        #panel-personalize .tab-btn,
+        #panel-settings .tab-btn,
+        #account-subtabs .tab-btn {
+            border-color: ${theme.subtleBorderColor} !important;
+        }
+        #panel-personalize .tab-btn:hover:not(.active),
+        #panel-settings .tab-btn:hover:not(.active),
+        #account-subtabs .tab-btn:hover:not(.active) {
+            color: ${theme.softColor} !important;
+            border-color: ${theme.borderColor} !important;
+            background-color: ${theme.surfaceBg} !important;
+        }
+        #panel-personalize .tab-btn.active,
+        #panel-settings .tab-btn.active,
+        #account-subtabs .tab-btn.active {
+            color: ${theme.primaryColor} !important;
+            border-color: ${theme.primaryColor} !important;
+            background-color: ${theme.activeTabBg} !important;
+            text-shadow: 0 0 8px ${theme.glowColor} !important;
+            box-shadow: 0 0 10px ${theme.glowColor} !important;
+        }
+
+        /* 5. Mobile Nav Indicator, Hamburger Toggle, Dropdown & Header Action Pills */
+        #nav-menu-wrapper > div:first-child,
+        #active-tab-icon svg {
+            color: ${theme.primaryColor} !important;
+        }
+        #nav-menu-toggle,
+        #mobile-fullscreen-btn,
+        #header-search-toggle-btn,
+        #header-fullscreen-btn:not(.active-fullscreen) {
+            border-color: ${theme.borderColor} !important;
+            color: ${theme.primaryColor} !important;
+            box-shadow: 0 0 10px ${theme.glowColor} !important;
+        }
+        #nav-menu-toggle:hover,
+        #mobile-fullscreen-btn:hover,
+        #header-search-toggle-btn:hover,
+        #header-fullscreen-btn:not(.active-fullscreen):hover {
+            background-color: ${theme.activeTabBg} !important;
+            border-color: ${theme.primaryColor} !important;
+            color: ${theme.softColor} !important;
+        }
+        #nav-dropdown-menu {
+            border-bottom-color: ${theme.borderColor} !important;
+            box-shadow: 0 12px 28px ${theme.glowColor} !important;
+        }
+        #nav-dropdown-menu .dropdown-nav-btn {
+            border-bottom-color: ${theme.subtleBorderColor} !important;
+        }
+        #nav-dropdown-menu .dropdown-nav-btn:hover {
+            color: ${theme.primaryColor} !important;
+            background-color: ${theme.activeTabBg} !important;
+        }
+
+        /* 6. Song Selector Cards, Vinyl Info, Filters, Context Menu & Pagination */
+        .song-option {
+            border-color: ${theme.subtleBorderColor} !important;
+        }
+        .song-option:hover {
+            border-color: ${theme.borderColor} !important;
+            background: ${theme.surfaceBg} !important;
+        }
         .song-option.active {
             border-color: ${theme.primaryColor} !important;
-            background-color: #0c081e !important;
-            box-shadow: 0 0 15px ${theme.glowColor} !important;
+            background: linear-gradient(145deg, rgba(6, 17, 36, 0.96), rgba(3, 9, 21, 0.98)) !important;
+            box-shadow: 0 0 18px ${theme.glowColor}, inset 0 0 12px ${theme.surfaceBg} !important;
             position: relative !important;
             top: auto !important;
         }
         .song-option.active .text-cyan-400,
         .song-option:hover .text-cyan-400,
         .song-option.active h3,
-        .song-option:hover h3 {
+        .song-option:hover h3,
+        #featured-disc-info:hover #featured-disc-title,
+        #featured-disc-artist,
+        [data-i18n="filter_title"],
+        #page-info {
             color: ${theme.primaryColor} !important;
         }
-
-        /* 5. Preview & Play Buttons */
         .preview-btn {
             color: ${theme.primaryColor} !important;
             border-color: ${theme.borderColor} !important;
@@ -1970,41 +2146,123 @@ function updateMainMenuTheme() {
             color: #000000 !important;
             box-shadow: 0 0 10px ${theme.glowColor} !important;
         }
+        #song-search,
+        #settings-search-input,
+        #song-filter-artist-btn,
+        #song-filter-genre-btn,
+        #song-filter-copyright-btn,
+        #song-filter-artist-dropdown,
+        #song-filter-genre-dropdown,
+        #song-filter-copyright-dropdown {
+            border-color: ${theme.borderColor} !important;
+        }
+        #song-search:focus,
+        #settings-search-input:focus {
+            border-color: ${theme.primaryColor} !important;
+            box-shadow: 0 0 10px ${theme.glowColor} !important;
+        }
 
-        /* 6. Cyber Modal Actions & Main Buttons */
+        /* 7. Personalize Cards (.bg-option-card) & Radio Dots (trừ ảnh preview thumbnail) */
+        #panel-personalize .bg-option-card {
+            border-color: ${theme.subtleBorderColor} !important;
+        }
+        #panel-personalize .bg-option-card:hover {
+            border-color: ${theme.borderColor} !important;
+        }
+        #panel-personalize .bg-option-card.border-cyan-400 {
+            border-color: ${theme.primaryColor} !important;
+            background-color: ${theme.surfaceBg} !important;
+            box-shadow: 0 0 15px ${theme.glowColor} !important;
+        }
+        #panel-personalize .bg-option-card .radio-dot.border-cyan-400,
+        #panel-personalize label[data-ball-color].border-cyan-400,
+        #panel-personalize label[data-ball-color] .ring-indicator {
+            border-color: ${theme.primaryColor} !important;
+        }
+        #panel-personalize .bg-option-card .radio-dot > div {
+            background-color: ${theme.primaryColor} !important;
+        }
+        #panel-personalize .bg-option-card:hover .font-bold {
+            color: ${theme.primaryColor} !important;
+        }
+
+        /* 8. Full UI Token Mapping cho tất cả panel trừ #tab-extensions & phần tử ngoại lệ */
+        #secret-credit-btn.border-cyan-500\/20 {
+            border-top-color: ${theme.subtleBorderColor} !important;
+        }
+        #secret-credit-btn .text-cyan-500\/60,
+        #secret-credit-btn .text-cyan-400\/80 {
+            color: ${theme.softColor} !important;
+        }
+        ${scopeSuffix(`.text-cyan-400${GUARD}:not(#ball-pattern-grid):not(.h-24 *)`)} {
+            color: ${theme.primaryColor} !important;
+        }
+        ${scopeSuffix(`.text-cyan-300${GUARD}:not(.h-24 *)`)},
+        ${scopeSuffix(`.text-cyan-500${GUARD}:not(.h-24 *)`)},
+        ${scopeSuffix(`.text-cyan-400\\/80${GUARD}`)},
+        ${scopeSuffix(`.text-cyan-500\\/80${GUARD}`)},
+        ${scopeSuffix(`.text-cyan-500\\/70${GUARD}`)},
+        ${scopeSuffix(`.text-cyan-500\\/60${GUARD}`)},
+        ${scopeSuffix(`.text-cyan-500\\/50${GUARD}`)},
+        ${scopeSuffix(`.hover\\:text-cyan-400${GUARD}:hover`)},
+        ${scopeSuffix(`.hover\\:text-cyan-300${GUARD}:hover`)},
+        #panel-personalize .group\/opt:hover .group-hover\/opt\:text-cyan-400 {
+            color: ${theme.softColor} !important;
+        }
+
+        ${scopeSuffix(`.border-cyan-500\\/20${GUARD}:not(.difficulty-item *):not(.extension-item *)`)},
+        ${scopeSuffix(`.border-cyan-500\\/15${GUARD}`)},
+        ${scopeSuffix(`.border-cyan-500\\/30${GUARD}:not(.difficulty-item *):not(.extension-item *)`)},
+        ${scopeSuffix(`.border-cyan-500\\/40${GUARD}:not(.difficulty-item *):not(.extension-item *)`)} {
+            border-color: ${theme.subtleBorderColor} !important;
+        }
+        ${scopeSuffix(`.border-cyan-500\\/50${GUARD}`)},
+        ${scopeSuffix(`.border-cyan-400${GUARD}:not(.difficulty-item *):not(.extension-item *)`)},
+        ${scopeSuffix(`.border-cyan-400\\/50${GUARD}`)},
+        ${scopeSuffix(`.border-cyan-400\\/80${GUARD}`)},
+        ${scopeSuffix(`.hover\\:border-cyan-400${GUARD}:hover`)},
+        ${scopeSuffix(`.hover\\:border-cyan-400\\/50${GUARD}:hover`)},
+        ${scopeSuffix(`.focus\\:border-cyan-400${GUARD}:focus`)},
+        #featured-disc-info:hover .group-hover\:border-cyan-400 {
+            border-color: ${theme.primaryColor} !important;
+        }
+
+        ${scopeSuffix(`.bg-cyan-950\\/20${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-950\\/30${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-950\\/40${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-950\\/50${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-950\\/60${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-900\\/40${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-900\\/50${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-900\\/60${GUARD}`)},
+        ${scopeSuffix(`.bg-cyan-500\\/20${GUARD}`)},
+        ${scopeSuffix(`.hover\\:bg-cyan-950\\/40${GUARD}:hover`)},
+        ${scopeSuffix(`.hover\\:bg-cyan-950\\/30${GUARD}:hover`)},
+        ${scopeSuffix(`.hover\\:bg-cyan-950\\/20${GUARD}:hover`)},
+        ${scopeSuffix(`.hover\\:bg-cyan-900\\/40${GUARD}:hover`)},
+        ${scopeSuffix(`.hover\\:bg-cyan-900\\/60${GUARD}:hover`)},
+        #featured-disc-info:hover .group-hover\:bg-cyan-900\/60 {
+            background-color: ${theme.surfaceBg} !important;
+        }
+
+        ${scopeSuffix(`.accent-cyan-400${GUARD}`)} {
+            accent-color: ${theme.primaryColor} !important;
+        }
+
+        /* 9. Cyber Modal Actions */
         #cyber-modal-actions button:last-child {
             background-color: ${theme.primaryColor} !important;
             box-shadow: 0 0 15px ${theme.glowColor} !important;
             color: #000000 !important;
         }
 
-        /* 7. Mobile Header & Toggle */
-        #nav-menu-wrapper > div {
-            color: ${theme.primaryColor} !important;
-        }
-        #nav-menu-toggle, #mobile-fullscreen-btn {
-            border-color: ${theme.borderColor} !important;
-            color: ${theme.primaryColor} !important;
-        }
-        #header-fullscreen-btn:not(.active-fullscreen) {
-            border-color: ${theme.borderColor} !important;
-            color: ${theme.primaryColor} !important;
-        }
-
-        /* 8. Inputs & Filter Titles */
-        #song-search {
-            border-color: ${theme.borderColor} !important;
-        }
-        #song-search:focus {
-            border-color: ${theme.primaryColor} !important;
-            box-shadow: 0 0 10px ${theme.glowColor} !important;
-        }
-        [data-i18n="filter_title"] {
-            color: ${theme.primaryColor} !important;
+        /* 10. Đảm bảo tuyệt đối khu vực Extension (Độ khó, Game Mode, Bổ trợ) giữ nguyên style gốc */
+        #tab-extensions {
+            --theme-color: initial;
         }
     `;
 
-    // 8. Cập nhật nền Background động tương ứng cho từng chế độ
+    // Cập nhật lại màu nền Background động tương ứng cho từng chế độ
     if (window.EasyModeManager && typeof window.EasyModeManager.updateMenuBackground === 'function') {
         window.EasyModeManager.updateMenuBackground();
     }
@@ -2151,8 +2409,12 @@ window.openInGameViewer = function(url, title) {
         };
     }
     iframe.src = url;
-    modal.classList.remove('hidden');
-    modal.style.display = 'flex';
+    if (window.UIAnimator && typeof window.UIAnimator.showModal === 'function') {
+        window.UIAnimator.showModal(modal, null, { scaleFrom: 0.97, y: 10, duration: 280 });
+    } else {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    }
 };
 
 window.closeInGameViewer = function() {
@@ -2160,10 +2422,21 @@ window.closeInGameViewer = function() {
     const iframe = document.getElementById('page-viewer-iframe');
     if (!modal) return;
 
-    modal.classList.add('hidden');
-    modal.style.display = 'none';
-    if (iframe) {
-        iframe.src = 'about:blank';
+    if (window.UIAnimator && typeof window.UIAnimator.hideModal === 'function') {
+        window.UIAnimator.hideModal(modal, null, {
+            exitScale: 0.98,
+            exitY: 8,
+            exitDuration: 180,
+            onComplete: () => {
+                if (iframe) iframe.src = 'about:blank';
+            }
+        });
+    } else {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+        if (iframe) {
+            iframe.src = 'about:blank';
+        }
     }
 };
 
@@ -2269,23 +2542,39 @@ window.showGameToast = function (msg, duration, type) {
         ? '<svg style="width:20px;height:20px;flex-shrink:0;color:' + iconColor + ';" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
         : '<svg style="width:20px;height:20px;flex-shrink:0;color:' + iconColor + ';" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>';
 
-    toast.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 20px;background:rgba(8,13,24,0.94);border:1.5px solid ' + borderColor + ';border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.75),0 0 20px ' + glowColor + ';color:#f8fafc;font-family:Rajdhani,Orbitron,Segoe UI,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transform:translateY(-24px) scale(0.95);opacity:0;transition:transform 0.28s cubic-bezier(0.16,1,0.3,1),opacity 0.28s ease;pointer-events:auto;';
+    const useToastAnim = window.UIAnimator ? window.UIAnimator.canAnime() : (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+    toast.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 20px;background:rgba(8,13,24,0.94);border:1.5px solid ' + borderColor + ';border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.75),0 0 20px ' + glowColor + ';color:#f8fafc;font-family:Rajdhani,Orbitron,Segoe UI,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.5px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);pointer-events:auto;';
     toast.innerHTML = iconSvg + '<span>' + msg + '</span>';
 
     container.appendChild(toast);
 
-    requestAnimationFrame(() => {
-        toast.style.transform = 'translateY(0) scale(1)';
-        toast.style.opacity = '1';
-    });
-
-    setTimeout(() => {
-        toast.style.transform = 'translateY(-16px) scale(0.95)';
+    if (window.UIAnimator) {
+        window.UIAnimator.toastIn(toast, { y: -18 });
+        setTimeout(() => {
+            window.UIAnimator.toastOut(toast, () => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, { exitY: -14 });
+        }, duration);
+    } else if (useToastAnim) {
+        toast.style.transform = 'translateY(-24px) scale(0.95)';
         toast.style.opacity = '0';
+        toast.style.transition = 'transform 0.28s cubic-bezier(0.16,1,0.3,1),opacity 0.28s ease';
+        requestAnimationFrame(() => {
+            toast.style.transform = 'translateY(0) scale(1)';
+            toast.style.opacity = '1';
+        });
+        setTimeout(() => {
+            toast.style.transform = 'translateY(-16px) scale(0.95)';
+            toast.style.opacity = '0';
+            setTimeout(() => {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 320);
+        }, duration);
+    } else {
         setTimeout(() => {
             if (toast.parentNode) toast.parentNode.removeChild(toast);
-        }, 320);
-    }, duration);
+        }, duration);
+    }
 };
 window.showToast = window.showGameToast;
 
@@ -2358,9 +2647,8 @@ window.closeAnyOpenModal = function () {
     // 2. Download App modal
     const downloadModal = document.getElementById('download-app-modal');
     if (downloadModal && downloadModal.style.display !== 'none' && !downloadModal.classList.contains('hidden')) {
-        const closeBtn = document.getElementById('close-download-app-modal');
-        if (closeBtn) {
-            closeBtn.click();
+        if (typeof window.closeDownloadAppModal === 'function') {
+            window.closeDownloadAppModal();
         } else {
             downloadModal.classList.add('hidden');
             downloadModal.style.display = 'none';
@@ -2371,8 +2659,12 @@ window.closeAnyOpenModal = function () {
     // 3. Cyber modal
     const cyberModal = document.getElementById('cyber-modal');
     if (cyberModal && cyberModal.style.display !== 'none' && !cyberModal.classList.contains('hidden')) {
-        cyberModal.classList.add('hidden');
-        cyberModal.style.display = 'none';
+        if (window.UIAnimator && typeof window.UIAnimator.hideModal === 'function') {
+            window.UIAnimator.hideModal(cyberModal, document.getElementById('cyber-modal-window'), { useHiddenClass: false });
+        } else {
+            cyberModal.classList.add('hidden');
+            cyberModal.style.display = 'none';
+        }
         return true;
     }
 
@@ -2381,8 +2673,14 @@ window.closeAnyOpenModal = function () {
     for (let i = 0; i < openModals.length; i++) {
         const modal = openModals[i];
         if (modal.style.display !== 'none') {
-            modal.classList.add('hidden');
-            modal.style.display = 'none';
+            if (window.UIAnimator && typeof window.UIAnimator.hideModal === 'function') {
+                window.UIAnimator.hideModal(modal, modal.firstElementChild, {
+                    useHiddenClass: modal.id !== 'admin-panel-modal'
+                });
+            } else {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
             return true;
         }
     }

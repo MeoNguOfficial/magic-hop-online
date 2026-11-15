@@ -1,107 +1,62 @@
-# 🎵 Cyber Beat Hopper (v1.0.10)
+# 🎵 Cyber Beat Hopper (v1.1.0)
 
-**Cyber Beat Hopper** (phiên bản hiện tại **v1.0.10**, phát triển trên nền tảng *MeoTN HOP ENGINE v3.7*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
-
----
-## 🚀 Phiên Bản v1.0.10 Có gì mới?
-
-# 🚀 UPDATE LOG: TÁI CẤU TRÚC CÁ NHÂN HÓA ĐA TAB KÈM PREVIEW TRỰC QUAN, HỆ THỐNG HẠT ĐƯỜNG BIÊN (BOUNDARY PARTICLES), VORTEX BLOCK, KHỬ KHỰNG FPS CAO & PHÁT HÀNH CHÍNH THỨC v1.0.10 (RELEASE v1.0.10)
-
-Chào các bạn, bản cập nhật **v1.0.10** tập trung hoàn thiện chiều sâu cá nhân hóa, bổ sung hiệu ứng vật lý/đồ họa mới và giải quyết triệt để các lỗi khựng vi mô khi chơi ở FPS cao:
+**Cyber Beat Hopper** (phiên bản hiện tại **v1.1.0**, phát triển trên nền tảng *MeoTN HOP ENGINE v3.7*) là một tựa game nhịp điệu (Rhythm Game) 3D mang phong cách Cyberpunk/Neon rực rỡ và cuốn hút. Game kết hợp hoàn hảo giữa lối chơi nảy gạch theo giai điệu dồn dập, kết nối **Online** (bảng xếp hạng, lưu tài khoản, đồng bộ đám mây), khả năng chơi ngoại tuyến toàn diện (PWA & Desktop Standalone) và hệ thống tùy biến sâu rộng.
 
 ---
+## 🚀 Phiên Bản v1.1.0 Có gì mới?
 
-### 🎨 1. TÁI CẤU TRÚC MỤC CÁ NHÂN HÓA (PERSONALIZE REMASTER) & PREVIEW TRỰC QUAN
-- **Giao diện sub-tab gọn gàng chuẩn Settings:**
-  - Tổ chức lại toàn bộ mục **Nền & Bóng** thành 5 tab riêng biệt dễ thao tác trên cả PC lẫn Mobile: `Hình nền`, `Bóng`, `Môi trường`, `Đường biên`, `Hạt biên`.
-- **2 Hình nền mới tối ưu hiệu năng:**
-  - **Màu theo độ khó (`difficulty`):** Tự động chuyển đổi bảng màu nền theo chế độ chơi (*Easy*, *Normal*, *Hard*, *Asian*).
-  - **Công nghệ (`led_board`):** Không gian mạch điện tử viễn tưởng *Cyber Tech* & luồng dữ liệu GPU siêu nhẹ.
-  - Bổ sung đầy đủ thumbnail preview trực quan cho toàn bộ hình nền.
-- **Preview 3D cho Môi trường & Hoa văn Bóng:**
-  - Thêm thẻ preview phối cảnh 3D SVG siêu nhẹ cho 4 Môi trường (*Hư Không*, *Đường Lưới 3D*, *Thành Phố*, *Đồng Lúa*).
-  - Thêm preview quả cầu 3D cho 6 Hoa văn bóng (*Đặc*, *Khung*, *Caro*, *Sọc dọc*, *Chấm bi*, *Lưới vi mạch*) và tự động đổi màu preview theo **Màu Bóng** đang chọn.
-- **Sửa lỗi không lưu cài đặt Personalize:**
-  - Đồng bộ hóa `VALID_LOCAL_STORAGE_KEYS`, `personalize.js` và `initThree()`, đảm bảo mọi tùy chọn (hình nền, màu bóng, hoa văn, môi trường, đường biên, hạt biên) được lưu giữ 100% sau khi F5 hoặc khởi động lại ứng dụng.
+# 🚀 UPDATE LOG: ĐẠI TU GIAO DIỆN TECHNOLOGY STYLE (UI 2.0), KHỬ RĂNG CƯA HẬU KỲ, REMASTER ÂM THANH GAME OVER & TỐI ƯU HIỆU SUẤT HIGH-REFRESH-RATE (RELEASE v1.1.0)
+
+Chào các bạn, bản cập nhật **v1.1.0** đánh dấu cuộc lột xác toàn diện về mặt giao diện theo ngôn ngữ **Cyber Technology Style**, nâng cấp chất lượng hình ảnh/âm thanh và triệt tiêu các điểm nghẽn khung hình trên cả Web lẫn App Native:
 
 ---
 
-### ✨ 2. HẠT ĐƯỜNG BIÊN (BOUNDARY PARTICLES) & REMASTER ĐƯỜNG BIÊN
-- **Ra mắt mục độc lập Hạt Đường Biên (Boundary Particles):**
-  - Hệ thống hạt phát sáng bắn ra từ hai bên đường biên theo nhịp beat với 6 chế độ tùy chọn (*Off*, *Classic Particles*, *Normal Burst*, *Wave Shooter*, *Horizontal Spray*, *Random*) cùng khung preview mô phỏng riêng biệt.
-- **Remaster Đường Biên (Boundary Pulse):**
-  - Thiết kế lại các thẻ chọn hiệu ứng đường biên (*Off*, *Classic*, *Normal*, *Wave*, *Horizontal*, *Random*) với preview minh họa trực quan.
+### 🖥️ 1. ĐẠI TU GIAO DIỆN TECHNOLOGY STYLE (CYBER TECH UI)
+- **Đồng bộ ngôn ngữ thiết kế Technology Style trên toàn bộ ứng dụng:**
+  - Làm mới toàn bộ hệ thống giao diện từ Menu chính, Chọn bài hát, Bảng xếp hạng/Tài khoản, Cài đặt (Settings), Cài đặt nhanh (Quick Settings), Chat, Trình phát nhạc (Music Player) cho tới màn hình Game Over và HUD chiến đấu.
+- **Tối ưu thao tác Cài đặt & Tìm kiếm:**
+  - Khắc phục hiển thị icon kính lúp trong thanh tìm kiếm Settings (`SEARCH SETTINGS...`) và tinh gọn **Quick Settings** bằng cách loại bỏ các tùy chọn lỗi thời.
+  - Chuẩn hóa hệ thống hoạt ảnh chuyển tab mượt mà thông qua mô-đun mới [`js/core/ui-animations.js`](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/js/core/ui-animations.js).
 
 ---
 
-### 🎮 3. GAMEPLAY MỚI, ĐỒNG BỘ NHỊP MESH & KHỬ KHỰNG FPS CAO
-- **Bổ sung Vortex Block & Tinh chỉnh Dash Block:**
-  - Thêm loại gạch **Vortex Block** mới, đồng thời tối ưu hiệu ứng trượt và phản hồi trên **Dash Block**.
-- **Sửa lỗi lệch nhịp khi va chạm Mesh:**
-  - Khắc phục triệt để tình trạng bóng va chạm tại mesh khiến block tăng tốc đột ngột làm nhanh/chậm nhịp; bảo toàn giới hạn trần tốc độ nhạc `3.0` trong khi `gameSpeed` vẫn tăng tiến mượt mà.
-- **Khử khựng giả (High-FPS Micro-Stutter Fix):**
-  - Tinh chỉnh bộ điều phối khung hình và chu kỳ cập nhật để loại bỏ cảm giác giật/khựng nhẹ ngay cả khi máy đang đạt FPS cao.
-- **Nâng cấp UI & Điều khiển:**
-  - Bổ sung nút **Bỏ qua kiểm tra Online (Skip Online Check)** tại màn hình chọn bài hát, làm mới thiết kế **Logo**, tự động tắt **Pointer Lock** khi hoàn thành màn warm-up và sửa lỗi ô nhập văn bản không phản hồi.
+### 🎨 2. KHỬ RĂNG CƯA HẬU KỲ & TỐI ƯU HIỆU SUẤT HIGH-REFRESH-RATE (120HZ – 240HZ)
+- **Hệ thống khử răng cưa hậu kỳ (`AntiAliasingManager`):**
+  - Bổ sung [`js/engine/antialiasing.js`](file:///d:/MeoTN%20Games/MagicHopGame/magic-hop-online/js/engine/antialiasing.js) hỗ trợ nâng độ sắc nét cạnh khối 3D và phối hợp với bộ điều phối hiệu năng thích ứng (`AdaptivePerformanceManager`).
+- **Sửa lỗi nhận diện tần số quét màn hình:**
+  - Khắc phục hiện tượng nhận diện nhầm tần số quét màn hình trong `FPS Sync Mode`, giúp khóa nhịp và đồng bộ khung hình ổn định trên cả màn 60Hz/75Hz lẫn màn tần số quét cao 120Hz/144Hz/240Hz+.
+- **Triệt tiêu các điểm nghẽn gây tụt FPS (Zero-Stutter Hot Path):**
+  - **Fake Blocks Shared Materials:** Gom vật liệu khối giả dùng chung và pool vật liệu trượt thoát (`_exitingMatPool`) thay vì clone `ShaderMaterial` cho từng khối trong pool.
+  - **Prewarm toàn dải cho Dash & Normal Blocks:** Quét khởi tạo trước hình học **Dash Tile** theo bước lượng tử hóa `0.25` trên toàn dải góc xiên để đạt tỷ lệ trúng cache 100% giữa trận; prewarm sẵn `vortexMat` trong pool gạch và bộ nhãn Sprite (`Round`, `%`, `Star`).
+  - **Giảm tải CPU/GPU giữa trận:** Chặn việc ép hạ `pixelRatio` gây reallocate `RenderTarget` đột ngột ở tốc độ cao khi FPS đang ổn định, thay ring buffer cho lịch sử FPS, diff-cache DOM ở HUD FPS và tối giản kiểm tra vòng lặp `animate()`.
 
 ---
 
-### 🌐 4. ĐỒNG BỘ ĐA NGÔN NGỮ 100% (10 QUỐC GIA)
-- Bổ sung và chuẩn hóa đầy đủ **658 khóa dịch** trên toàn bộ 10 ngôn ngữ (`vi`, `en`, `es`, `fr`, `ja`, `ko`, `pt`, `ru`, `zh-CN`, `zh-TW`), bao phủ hoàn toàn giao diện Cá nhân hóa, Đường biên, Hạt biên, Biểu đồ FPS và Toàn màn hình.
+### 🎮 3. GAMEPLAY UX & REMASTER HIỆU ỨNG ÂM THANH GAME OVER
+- **Màn chờ Pre-start chạy xếp gạch liên tục:**
+  - Đường gạch ở màn hình chờ **Tap to Play** giờ sẽ tiếp tục chạy xếp tự nhiên, chỉ thực sự đóng băng không gian khi người chơi **Tạm dừng (Pause)**.
+- **Remaster hiệu ứng Game Over khi bật `Preserve Pitch`:**
+  - Thay vì giữ tốc độ/chất âm khô cứng hoặc tắt thô `preservesPitch`, chuỗi xử lý Web Audio mới kết hợp `DelayNode` + `BiquadFilterNode` + điều biến tốc độ tạo ra hiệu ứng **tape-stop** (băng đĩa chùng dần rồi tắt) tự nhiên tương đồng khi tắt `Preserve Pitch`, hỗ trợ cả chế độ fallback.
 
 ---
 
-## 🚀 Bản trước đó: Phiên Bản v1.0.9 Có gì mới?
+## 🚀 Bản trước đó: Phiên Bản v1.0.10 Có gì mới?
 
-# 🚀 UPDATE LOG: HERO ĐĨA THAN VINYL NỔI BẬT (FEATURED VINYL DISC), CẢI TỔ UI LANDSCAPE MOBILE/TABLET (APK), TỐI ƯU HIỆU SUẤT GAME THREE.JS & PHÁT HÀNH CHÍNH THỨC v1.0.9 (RELEASE v1.0.9)
+**Cyber Beat Hopper v1.0.10** tập trung hoàn thiện chiều sâu cá nhân hóa, bổ sung hiệu ứng vật lý/đồ họa mới và khử khựng vi mô ở FPS cao:
 
-Chào các bạn, bản cập nhật **v1.0.9** mang đến bước nhảy vọt về mặt thẩm mỹ thị giác và trải nghiệm mượt mà cho **Cyber Beat Hopper**: giới thiệu cụm Hero Đĩa Than Vinyl 3D tương tác tại màn hình chọn bài hát, nâng cấp toàn diện giao diện HUD chiến đấu khi chơi trên thiết bị di động/máy tính bảng xoay ngang (APK Landscape), tối ưu hóa sâu kiến trúc Three.js & WebGL, cùng cơ chế điều khiển Native tràn viền chuẩn Immersive:
-
----
-
-### 💿 1. CỤM HERO ĐĨA THAN VINYL NỔI BẬT (FEATURED VINYL DISC HERO & QUICK PLAY)
-- **Đĩa than phong cách Cyberpunk tương tác sống động:**
-  - Thiết kế đĩa vinyl 3D xoay tròn vô tận với hiệu ứng rãnh đĩa siêu nét, tâm đĩa mạ vàng, cùng vòng hào quang ánh sáng đổi màu theo nhịp điệu Cyberpunk rực rỡ.
-  - Tự động hiển thị và đồng bộ bài hát chơi lần gần nhất (hoặc bài mới nhất khi lần đầu vào game) cùng tên bài hát, nghệ sĩ và huy hiệu *"CHƠI NGAY"*.
-- **Tính năng Chơi Nhanh (Tap to Play Instantly):**
-  - Người chơi chỉ cần nhấp trực tiếp vào đĩa than để bắt đầu ván đấu ngay lập tức (hỗ trợ chuyển hướng chọn chế độ thông minh nếu bài hát đã đạt kỷ lục hoặc đang bật chế độ trợ giúp).
-- **Cuộn mượt mà & Chuyển đổi trạng thái thông minh (Smart Scroll & Seamless Collapse):**
-  - Đĩa than nằm ở vị trí trung tâm, cuộn tự nhiên cùng danh sách bài hát.
-  - Khi cuộn xuống làm đĩa khuất khỏi màn hình, thanh tìm kiếm và bộ lọc bài hát sẽ tự động trượt mở (accordion slide) xuống cực kỳ êm ái.
-  - Khi cuộn ngược trở lại đĩa, thanh tìm kiếm & bộ lọc sẽ tự động thu gọn êm ái, nhường không gian tối đa cho trải nghiệm thị giác.
+- **Tái cấu trúc Personalize đa tab kèm Preview trực quan:** Tổ chức lại mục **Nền & Bóng** thành 5 tab (`Hình nền`, `Bóng`, `Môi trường`, `Đường biên`, `Hạt biên`); thêm 2 hình nền **Màu theo độ khó (`difficulty`)** & **Công nghệ (`led_board`)** cùng preview 3D cho 4 Môi trường và 6 Hoa văn bóng; sửa lỗi lưu cài đặt Personalize.
+- **Hạt Đường Biên (`Boundary Particles`) & Remaster Đường Biên:** Bổ sung 6 chế độ hạt bắn từ hai bên đường biên theo nhịp beat cùng thẻ preview minh họa mới.
+- **Vortex Block, Dash Block & Sửa lỗi lệch nhịp Mesh:** Ra mắt **Vortex Block**, tinh chỉnh **Dash Block**, sửa lỗi va chạm mesh gây trôi nhịp, thêm nút **Bỏ qua kiểm tra Online**, làm mới Logo và tắt Pointer Lock tự động sau warm-up.
+- **Đồng bộ 10 ngôn ngữ:** Chuẩn hóa 658 khóa dịch trên toàn bộ 10 quốc gia.
 
 ---
 
-### 📱 2. TỐI ƯU HÓA GIAO DIỆN CHƠI GAME TRÊN MOBILE & TABLET MÀN HÌNH NGANG (APK LANDSCAPE HUD)
-- **Chuẩn hóa tỷ lệ hiển thị chuẩn PC trên màn hình ngang di động:**
-  - Thiết kế lại các thành phần HUD chiến đấu trên thiết bị di động và tablet khi xoay ngang: căn chỉnh độ cao cân đối, mở rộng tầm quan sát đường bay của bóng và nhịp gạch.
-  - Bố trí lại nút "THOÁT / GIỮ VÁN ĐẤU" sang góc phải tinh tế, hạ thấp thanh tiến trình bài hát và bộ đếm combo/điểm số để không che chắn tầm nhìn.
-- **Trải nghiệm Native Immersive Fullscreen trên Android APK:**
-  - Nhận diện môi trường APK tự động và ẩn hoàn toàn các nút toàn màn hình dư thừa (cả màn hình ngang và dọc), vì trò chơi trên APK đã kích hoạt chế độ toàn màn hình tràn viền (`IMMERSIVE_STICKY`) sẵn.
-  - Tối ưu hóa phản hồi cảm ứng đa điểm, loại bỏ triệt để độ trễ.
-
----
-
-### ⚡ 3. SỬA LỖI ĐỒ HỌA, MÀU SẮC & BÀN PHÍM ẢO TRÊN APK
-- **Sửa lỗi sóng xung kích (Shockwaves):** Khôi phục trạng thái cập nhật ma trận chuẩn xác của Three.js cho toàn bộ hệ thống Object Pool, triệt tiêu lỗi sóng xung kích xuất hiện xa vị trí gạch hoặc biến mất ngẫu nhiên.
-- **Sửa lỗi nhấp nháy màu sắc (Color Glitch):** Khử hoàn toàn hiện tượng nhấp nháy màu trên WebGL và Canvas nền bằng cách đồng bộ chuẩn double-buffering và tách biệt bộ màu bóng động độc lập.
-- **Khắc phục lỗi nhập văn bản trên APK (cả ngang & dọc):**
-  - Tắt cờ `captureInput` của Capacitor để trả lại quyền điều khiển bàn phím ảo cho Android IME.
-  - Cấu hình `windowSoftInputMode="adjustResize"` và bật focusable cho Android WebView giúp mở bàn phím ảo mượt mà khi chạm vào bất kỳ ô nhập văn bản nào.
-  - Tối ưu hóa animation mở/đóng thanh tìm kiếm bài hát theo cuộn trên mọi kích thước màn hình.
-
----
-
-### 🔊 4. SỬA LỖI ÂM THANH & ĐỒNG BỘ FOCUS NATIVE
-- **Sửa lỗi âm thanh intro:** Đảm bảo nhạc nền không phát sớm khi đang chạy màn hình intro (logo, audio disclaimer, intro sequence) trên tất cả các nền tảng.
-- **Sửa lỗi dừng nhạc đột ngột:** Hoàn thiện cơ chế tự động khôi phục và tiếp tục phát nhạc khi chuyển tab, thu nhỏ ứng dụng hoặc quay lại game trên PC, Web và Android APK.
-
----
-
-## 📜 Tóm tắt các phiên bản trước (v1.0.0 – v1.0.8)
+## 📜 Tóm tắt các phiên bản trước (v1.0.0 – v1.0.9)
 
 <details>
-<summary>Xem tóm tắt thay đổi từ v1.0.0 đến v1.0.8</summary>
+<summary>Xem tóm tắt thay đổi từ v1.0.0 đến v1.0.9</summary>
+
+- **v1.0.9:** Ra mắt cụm Hero Đĩa Than Vinyl 3D tương tác tại màn chọn bài hát, tối ưu HUD Landscape mobile/tablet (APK), kích hoạt Immersive Fullscreen, sửa lỗi Shockwaves, nhấp nháy màu, bàn phím ảo trên Android APK và đồng bộ âm thanh focus/intro.
 
 - **v1.0.8:** Anti-Back & Reload Shield bảo vệ ván đấu, nhấn 2 lần nút Back để thoát, tái cấu trúc menu FPS Sync Mode theo tần số quét màn hình và khai báo đa nền tảng 10 ngôn ngữ.
 - **v1.0.7:** Ra mắt bản đóng gói Native PC Standalone (C# Winsock + WebView2/Chromium, không Electron) và Android APK, bảo toàn dữ liệu 100% khi cập nhật, In-Game Page Viewer, modal Tải App 5 nền tảng & bộ kiểm tra cập nhật đa tầng.
@@ -355,4 +310,4 @@ Dự án phát hành dưới điều khoản **MIT License**:
 
 ---
 
-*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.0.10*
+*Bản quyền © 2026 **MeoTN Gaming** | Phiên bản v1.1.0*

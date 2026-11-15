@@ -7,6 +7,10 @@ window.FakeBlocksManager = {
     fakeTilePool: [],
     fragments: [],
     fragmentPool: [],
+    _sharedFakeMats: { cyan: null, magenta: null, dynamic: null },
+    _exitingMatPool: [],
+    _lastDynamicHex: -1,
+    _lastGlowCapMat: null,
     maxPoolSize: (typeof maxTilePoolSize !== 'undefined') ? maxTilePoolSize * 2 : 40,
     _disposeMaterial: function(mat) {
         if (!mat) return;
@@ -14,6 +18,126 @@ window.FakeBlocksManager = {
             mat.forEach(m => { if (m && typeof m.dispose === 'function') m.dispose(); });
         } else if (typeof mat.dispose === 'function') {
             mat.dispose();
+        }
+    },
+    _createFakeMatSet: function(templateTile, hexColor) {
+        const refBodyMat = templateTile && templateTile.material ? templateTile.material : null;
+        const bodyMat = refBodyMat ? refBodyMat.clone() : new THREE.MeshBasicMaterial({ color: hexColor, transparent: true, opacity: 0.25, depthWrite: false });
+        if (bodyMat.color) bodyMat.color.setHex(hexColor);
+        if (bodyMat.emissive) {
+            bodyMat.emissive.setHex(hexColor).multiplyScalar(0.2);
+        }
+        bodyMat.opacity = 0.25;
+        bodyMat.transparent = true;
+        bodyMat.depthWrite = false;
+
+        let borderMat = null;
+        const refBorder = (templateTile && templateTile.userData && templateTile.userData.borderLine && templateTile.userData.borderLine.material)
+            ? templateTile.userData.borderLine.material
+            : null;
+        if (refBorder) {
+            borderMat = refBorder.clone();
+            if (borderMat.color) borderMat.color.setHex(hexColor);
+            borderMat.opacity = 0.15;
+            borderMat.transparent = true;
+        } else {
+            borderMat = new THREE.MeshBasicMaterial({ color: hexColor, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
+        }
+
+        let glowMat = null;
+        let capMat = null;
+        const refGlowMesh = (templateTile && templateTile.userData && templateTile.userData.glowMesh)
+            ? templateTile.userData.glowMesh
+            : (templateTile && typeof templateTile.getObjectByName === 'function' ? templateTile.getObjectByName('glowMesh') : null);
+        if (refGlowMesh && refGlowMesh.material) {
+            const isArr = Array.isArray(refGlowMesh.material);
+            const origGlow = isArr ? refGlowMesh.material[1] : refGlowMesh.material;
+            if (isArr) {
+                capMat = this._lastGlowCapMat || refGlowMesh.material[0];
+                this._lastGlowCapMat = capMat;
+            }
+            if (origGlow && origGlow.uniforms) {
+                glowMat = new THREE.ShaderMaterial({
+                    uniforms: {
+                        color: { value: new THREE.Color(hexColor) },
+                        opacityMultiplier: { value: 0.3 },
+                        glowHeight: { value: (origGlow.uniforms.glowHeight && origGlow.uniforms.glowHeight.value) ? origGlow.uniforms.glowHeight.value : 1.5 }
+                    },
+                    vertexShader: glowVertexShader,
+                    fragmentShader: glowFragmentShader,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.FrontSide
+                });
+            } else if (origGlow) {
+                glowMat = new THREE.MeshBasicMaterial({
+                    color: hexColor,
+                    map: (typeof getSharedGlowTexture === 'function') ? getSharedGlowTexture() : origGlow.map,
+                    transparent: true,
+                    blending: THREE.AdditiveBlending,
+                    depthWrite: false,
+                    side: THREE.FrontSide,
+                    opacity: 0.15
+                });
+            }
+        }
+
+        const glowArr = (capMat && glowMat) ? [capMat, glowMat] : null;
+        return { bodyMat, borderMat, glowMat, glowArr };
+    },
+    _ensureSharedFakeMats: function(templateTile) {
+        if (!this._sharedFakeMats.cyan) {
+            this._sharedFakeMats.cyan = this._createFakeMatSet(templateTile, 0x00ffff);
+        }
+        if (!this._sharedFakeMats.magenta) {
+            this._sharedFakeMats.magenta = this._createFakeMatSet(templateTile, 0xff00ff);
+        }
+        if (!this._sharedFakeMats.dynamic) {
+            this._sharedFakeMats.dynamic = this._createFakeMatSet(templateTile, 0x00ffff);
+        }
+        while (this._exitingMatPool.length < 4) {
+            this._exitingMatPool.push(this._createFakeMatSet(templateTile, 0x00ffff));
+        }
+    },
+    _syncMatSetColorAndOpacity: function(matSet, hexColor, sourceColor) {
+        if (!matSet) return;
+        if (matSet.bodyMat) {
+            if (sourceColor) {
+                matSet.bodyMat.color.copy(sourceColor);
+                if (matSet.bodyMat.emissive) matSet.bodyMat.emissive.copy(sourceColor).multiplyScalar(0.2);
+            } else {
+                matSet.bodyMat.color.setHex(hexColor);
+                if (matSet.bodyMat.emissive) matSet.bodyMat.emissive.setHex(hexColor).multiplyScalar(0.2);
+            }
+            matSet.bodyMat.opacity = 0.25;
+        }
+        if (matSet.borderMat) {
+            if (sourceColor) matSet.borderMat.color.copy(sourceColor);
+            else matSet.borderMat.color.setHex(hexColor);
+            matSet.borderMat.opacity = 0.15;
+        }
+        if (matSet.glowMat) {
+            if (matSet.glowMat.uniforms) {
+                if (sourceColor) matSet.glowMat.uniforms.color.value.copy(sourceColor);
+                else matSet.glowMat.uniforms.color.value.setHex(hexColor);
+                matSet.glowMat.uniforms.opacityMultiplier.value = 0.3;
+            } else {
+                if (sourceColor) matSet.glowMat.color.copy(sourceColor);
+                else matSet.glowMat.color.setHex(hexColor);
+                matSet.glowMat.opacity = 0.15;
+            }
+        }
+    },
+    _applyFakeMatSet: function(fTile, matSet) {
+        if (!fTile || !matSet) return;
+        fTile.material = matSet.bodyMat;
+        if (fTile.userData && fTile.userData.borderLine && matSet.borderMat) {
+            fTile.userData.borderLine.material = matSet.borderMat;
+        }
+        const gMesh = fTile.userData ? (fTile.userData.glowMesh || (fTile.userData.glowMesh = fTile.getObjectByName('glowMesh'))) : null;
+        if (gMesh && matSet.glowMat) {
+            gMesh.material = matSet.glowArr || matSet.glowMat;
         }
     },
     spawnCounter: 0,
@@ -208,6 +332,20 @@ window.FakeBlocksManager = {
             }
         }
 
+        const isDynamicMode = typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled;
+        this._ensureSharedFakeMats(realTile);
+        const realMat = realTile.material;
+        const realHex = (realTile.userData && realTile.userData.themeColor !== undefined)
+            ? realTile.userData.themeColor
+            : (realMat && realMat.color ? realMat.color.getHex() : 0x00ffff);
+        const targetMatSet = isDynamicMode
+            ? this._sharedFakeMats.dynamic
+            : (realHex === 0xff00ff ? this._sharedFakeMats.magenta : this._sharedFakeMats.cyan);
+        if (isDynamicMode && realMat && realMat.color && this._lastDynamicHex !== realHex) {
+            this._lastDynamicHex = realHex;
+            this._syncMatSetColorAndOpacity(this._sharedFakeMats.dynamic, realHex, realMat.color);
+        }
+
         for (let pIdx = 0; pIdx < positionsToSpawn.length; pIdx++) {
             const posX = positionsToSpawn[pIdx];
             let fakeTile;
@@ -215,48 +353,11 @@ window.FakeBlocksManager = {
             if (this.fakeTilePool.length > 0) {
                 fakeTile = this.fakeTilePool.pop();
                 fakeTile.visible = true;
-                
                 fakeTile.scale.copy(realTile.scale);
-
-                const realMat = realTile.material;
-                const fakeMat = fakeTile.material;
-
-                if (fakeMat && realMat) {
-                    fakeMat.color.copy(realMat.color);
-                    if (fakeMat.emissive && realMat.emissive) fakeMat.emissive.copy(realMat.emissive);
-                    // Quay lại dùng opacity nguyên bản của fake block
-                    fakeMat.opacity = 0.25;
-                    fakeMat.transparent = true;
-                    fakeMat.depthWrite = false;
-                }
-                
-                if (fakeTile.userData.borderLine && realTile.userData.borderLine && realTile.userData.borderLine.material) {
-                    fakeTile.userData.borderLine.material.color.copy(realTile.userData.borderLine.material.color);
-                }
-                
-                // Cài đặt độ mờ các con
-                for (let i = fakeTile.children.length - 1; i >= 0; i--) {
-                    const child = fakeTile.children[i];
-                    if (child.name === 'glowMesh') {
-                        const glowMat = Array.isArray(child.material) ? child.material[1] : child.material;
-                        if (glowMat) {
-                            if (glowMat.uniforms) {
-                                if (realMat) glowMat.uniforms.color.value.copy(realMat.color);
-                                // Quay lại độ mờ glow nguyên bản (0.3)
-                                glowMat.uniforms.opacityMultiplier.value = 0.3;
-                            } else {
-                                if (realMat) glowMat.color.copy(realMat.color);
-                                // Quay lại độ mờ glow nguyên bản (0.15)
-                                glowMat.opacity = 0.15;
-                            }
-                        }
-                    } else if (child.name !== 'bodyMesh' && child.name !== 'edgeMesh' && child.material) {
-                        // Quay lại độ mờ viền nguyên bản (0.15)
-                        child.material.opacity = 0.15;
-                    }
-                }
+                this._applyFakeMatSet(fakeTile, targetMatSet);
             } else {
                 fakeTile = this._createTileMesh(realTile);
+                this._applyFakeMatSet(fakeTile, targetMatSet);
                 if (typeof scene !== 'undefined') scene.add(fakeTile);
             }
             
@@ -294,6 +395,7 @@ window.FakeBlocksManager = {
             fud.isDelayedAppearance = realTile.userData.isDelayedAppearance || false;
             
             // Xóa sạch các cờ động vận tốc của chu kỳ sống trước
+            fud._exitStarted = false;
             fud.exitVelZ = 0;
             fud.exitStartZ = 0;
             fud.exitOpacity = 0;
@@ -347,6 +449,7 @@ window.FakeBlocksManager = {
         ud.bounceY = 0;
         ud.bounceIntensity = 1.0;
         ud.baseY = 0;
+        ud._exitStarted = false;
         ud.exitVelZ = 0;
         ud.exitStartZ = 0;
         ud.exitOpacity = 0;
@@ -357,24 +460,12 @@ window.FakeBlocksManager = {
         ud.baseX = 0;
         ud.originX = 0;
 
-        if (t.material) {
-            t.material.opacity = 0.25;
-            t.material.transparent = true;
-            t.material.depthWrite = false;
+        if (ud._exitMatSet) {
+            this._exitingMatPool.push(ud._exitMatSet);
+            ud._exitMatSet = null;
         }
-        if (bLine && bLine.material) {
-            bLine.material.opacity = 0.15;
-            bLine.material.transparent = true;
-        }
-        if (gMesh && gMesh.material) {
-            const glowMat = Array.isArray(gMesh.material) ? gMesh.material[1] : gMesh.material;
-            if (glowMat) {
-                if (glowMat.uniforms && glowMat.uniforms.opacityMultiplier) {
-                    glowMat.uniforms.opacityMultiplier.value = 0.3;
-                } else {
-                    glowMat.opacity = 0.08;
-                }
-            }
+        if (this._sharedFakeMats && this._sharedFakeMats.cyan) {
+            this._applyFakeMatSet(t, this._sharedFakeMats.cyan);
         }
 
         // Loại bỏ giới hạn maxPoolSize để tái sử dụng toàn bộ object và tránh GC Allocation
@@ -730,67 +821,30 @@ window.FakeBlocksManager = {
     },
 
     _createTileMesh: function(realTile) {
+        this._ensureSharedFakeMats(realTile);
         const fakeTile = realTile.clone();
-        
-        fakeTile.material = realTile.material.clone();
-        fakeTile.material.opacity = 0.25; 
-        fakeTile.material.transparent = true;
-        fakeTile.material.depthWrite = realTile.material.depthWrite;
-        
+        if (!fakeTile.userData) fakeTile.userData = {};
+
         for (let i = fakeTile.children.length - 1; i >= 0; i--) {
             const child = fakeTile.children[i];
             if (child.type === 'Sprite') {
                 fakeTile.remove(child);
-            } else if (child.name === 'centerMesh' || (child.type === 'Mesh' && child.name !== 'borderLine' && child.name !== 'glowMesh')) { 
+            } else if (child.name === 'centerMesh' || (child.type === 'Mesh' && child.name !== 'borderLine' && child.name !== 'glowMesh')) {
                 fakeTile.remove(child);
             } else if (child.name === 'glowMesh') {
                 fakeTile.userData.glowMesh = child;
-                if (Array.isArray(child.material)) {
-                    const origGlow = child.material[1];
-                    let newGlowMat;
-                    if (origGlow && origGlow.uniforms) {
-                        newGlowMat = new THREE.ShaderMaterial({
-                            uniforms: {
-                                color: { value: new THREE.Color(origGlow.uniforms.color ? origGlow.uniforms.color.value.getHex() : 0x00ffff) },
-                                opacityMultiplier: { value: 0.3 },
-                                glowHeight: { value: (origGlow.uniforms.glowHeight && origGlow.uniforms.glowHeight.value) ? origGlow.uniforms.glowHeight.value : 1.5 }
-                            },
-                            vertexShader: glowVertexShader,
-                            fragmentShader: glowFragmentShader,
-                            transparent: true,
-                            blending: THREE.AdditiveBlending,
-                            depthWrite: false,
-                            side: THREE.FrontSide
-                        });
-                    } else if (origGlow) {
-                        newGlowMat = new THREE.MeshBasicMaterial({
-                            color: origGlow.color ? origGlow.color.getHex() : 0x00ffff,
-                            map: (typeof getSharedGlowTexture === 'function') ? getSharedGlowTexture() : origGlow.map,
-                            transparent: true,
-                            blending: THREE.AdditiveBlending,
-                            depthWrite: false,
-                            side: THREE.FrontSide,
-                            opacity: 0.08
-                        });
-                    }
-                    if (newGlowMat) {
-                        child.material = [child.material[0], newGlowMat];
-                    }
-                }
-            } else if (child.material) {
-                child.material = child.material.clone();
-                child.material.opacity = 0.15;
-                child.material.transparent = true;
-                
-                if (child.name === 'borderLine' || child.type === "LineLoop" || child.type === "Line") fakeTile.userData.borderLine = child;
+            } else if (child.name === 'borderLine' || child.type === "LineLoop" || child.type === "Line") {
+                fakeTile.userData.borderLine = child;
             }
         }
+        this._applyFakeMatSet(fakeTile, this._sharedFakeMats.cyan);
         return fakeTile;
     },
 
     prewarmFakeTilePool: function(sampleTile, count = 25) {
         if (!this.fakeTilePool) this.fakeTilePool = [];
         if (!sampleTile) return;
+        this._ensureSharedFakeMats(sampleTile);
         while (this.fakeTilePool.length < count) {
             const fakeTile = this._createTileMesh(sampleTile);
             fakeTile.visible = false;
@@ -878,6 +932,10 @@ window.FakeBlocksManager = {
     },
     
     update: function(delta, gameSpeed, ball, currentTileIndex, frameHex) {
+        const hasFakeTiles = this.fakeTiles.length > 0;
+        const hasFragments = this.fragments && this.fragments.length > 0;
+        if (!hasFakeTiles && !hasFragments) return;
+
         const ballZ = ball.position.z;
         const ballX = ball.position.x;
         const ballY = ball.position.y;
@@ -886,18 +944,51 @@ window.FakeBlocksManager = {
         const rTileL = typeof tileLength !== 'undefined' ? tileLength : 4.0;
         const bRadius = typeof ballRadius !== 'undefined' ? ballRadius : 0.75;
         const mFloor = typeof minFloor !== 'undefined' ? minFloor : 0.95;
+
+        const camZForFake = typeof camera !== 'undefined' && camera ? camera.position.z : ballZ + 10;
+        const isDynamicMode = typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled;
+        const safeGameSpeed = typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0;
+        const fadeDelta = 2.2 * delta * Math.max(1.0, Math.min(3.0, safeGameSpeed * 0.95));
+        const animMode = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'slide';
+        const isSlidingMode = animMode === 'slide' || animMode === 'mix';
+        const enterSpeed = isSlidingMode ? (1 - Math.exp(-12 * Math.max(1.0, safeGameSpeed * 0.8) * delta)) : 1.0;
+
+        if (isDynamicMode && hasFakeTiles) {
+            let hex = frameHex;
+            if (hex === undefined && typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
+                const hue = (clock.getElapsedTime() * 0.2) % 1;
+                tempColor.setHSL(hue, 0.8, 0.5);
+                hex = tempColor.getHex();
+            }
+            if (hex !== undefined && this._lastDynamicHex !== hex && this._sharedFakeMats && this._sharedFakeMats.dynamic) {
+                this._lastDynamicHex = hex;
+                this._syncMatSetColorAndOpacity(this._sharedFakeMats.dynamic, hex, typeof tempColor !== 'undefined' ? tempColor : null);
+            }
+        }
         
         for (let i = this.fakeTiles.length - 1; i >= 0; i--) {
             const fTile = this.fakeTiles[i];
 
             // --- XỬ LÝ TRƯỢT THOÁT CỦA FAKE BLOCK (ĐỒNG BỘ VỚI BLOCK CHÍNH) ---
             if (fTile.userData.isExiting) {
-                // Khởi tạo exit state khi mới bắt đầu thoát
-                if (fTile.userData.exitVelZ === undefined) {
+                // Khởi tạo exit state khi mới bắt đầu thoát & mượn material riêng để fade độc lập
+                if (!fTile.userData._exitStarted) {
+                    fTile.userData._exitStarted = true;
                     fTile.userData.exitVelZ = 0;
                     fTile.userData.exitStartZ = fTile.position.z;
+                    if (!fTile.userData._exitMatSet) {
+                        const exitSet = this._exitingMatPool.length > 0
+                            ? this._exitingMatPool.pop()
+                            : this._createFakeMatSet(fTile, 0x00ffff);
+                        const activeHex = (this._lastDynamicHex !== -1 && isDynamicMode)
+                            ? this._lastDynamicHex
+                            : (fTile.userData.themeColor !== undefined ? fTile.userData.themeColor : 0x00ffff);
+                        this._syncMatSetColorAndOpacity(exitSet, activeHex);
+                        fTile.userData._exitMatSet = exitSet;
+                        this._applyFakeMatSet(fTile, exitSet);
+                    }
                     const bl = fTile.userData.borderLine;
-                    fTile.userData.exitOpacity = (bl && bl.material) ? (bl.material.opacity || 1.0) : 1.0;
+                    fTile.userData.exitOpacity = (bl && bl.material) ? (bl.material.opacity || 0.15) : 0.15;
                 }
 
                 // Tăng tốc dần về phía sau (hướng camera) — ease-in
@@ -905,8 +996,6 @@ window.FakeBlocksManager = {
                 fTile.position.z += fTile.userData.exitVelZ * delta;
 
                 // Fade tất cả các phần hiển thị (tỷ lệ thuận theo tốc độ game)
-                const fadeSpeedMult = Math.max(1.0, Math.min(3.0, (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * 0.95));
-                const fadeDelta = 2.2 * delta * fadeSpeedMult;
                 fTile.userData.exitOpacity = Math.max(0, fTile.userData.exitOpacity - fadeDelta);
                 const op = fTile.userData.exitOpacity;
 
@@ -919,7 +1008,7 @@ window.FakeBlocksManager = {
                 }
 
                 // Glow
-                const glowMesh = fTile.userData.glowMesh || (fTile.userData.glowMesh = fTile.getObjectByName("glowMesh"));
+                const glowMesh = fTile.userData.glowMesh;
                 if (glowMesh && glowMesh.material) {
                     const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
                     if (glowMat) {
@@ -932,8 +1021,7 @@ window.FakeBlocksManager = {
                 }
 
                 // Thu hồi khi viền đã fade hết hoặc đã trượt ra quá xa
-                const camZ = typeof camera !== 'undefined' ? camera.position.z : fTile.userData.exitStartZ + 20;
-                if (op <= 0 || fTile.position.z > camZ + 5) {
+                if (op <= 0 || fTile.position.z > camZForFake + 5) {
                     this._recycleTile(fTile);
                     const last = this.fakeTiles.pop();
                     if (i < this.fakeTiles.length) {
@@ -944,7 +1032,6 @@ window.FakeBlocksManager = {
             }
             
             // --- TỐI ƯU CULLING KHỐI GIẢ NGOÀI VÙNG NHÌN ---
-            const camZForFake = typeof camera !== 'undefined' && camera ? camera.position.z : ballZ + 10;
             const isFakeVisible = fTile.position.z < camZForFake + 30 && fTile.position.z > camZForFake - 250;
             if (!isFakeVisible) {
                 if (fTile.visible && !fTile.userData.isEntering) fTile.visible = false;
@@ -953,37 +1040,8 @@ window.FakeBlocksManager = {
                 if (!fTile.visible && !fTile.userData.isDelayedAppearance) fTile.visible = true;
             }
 
-            // --- ĐỒNG BỘ MÀU SẮC ĐỘNG NHƯ KHỐI THẬT ---
-            if (typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled) {
-                let hex = frameHex;
-                if (hex === undefined && typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
-                    const hue = (clock.getElapsedTime() * 0.2) % 1;
-                    tempColor.setHSL(hue, 0.8, 0.5);
-                    hex = tempColor.getHex();
-                }
-                if (hex !== undefined && fTile.userData.themeColor !== hex) {
-                    fTile.userData.themeColor = hex;
-                    if (fTile.material) {
-                        fTile.material.color.setHex(hex);
-                        if (fTile.material.emissive && typeof tempColor !== 'undefined') {
-                            fTile.material.emissive.copy(tempColor).multiplyScalar(0.2);
-                        }
-                    }
-                    if (fTile.userData.borderLine && fTile.userData.borderLine.material) {
-                        fTile.userData.borderLine.material.color.setHex(hex);
-                    }
-                    const glowMesh = fTile.userData.glowMesh || (fTile.userData.glowMesh = fTile.getObjectByName("glowMesh"));
-                    if (glowMesh && glowMesh.material) {
-                        const glowMat = Array.isArray(glowMesh.material) ? glowMesh.material[1] : glowMesh.material;
-                        if (glowMat) {
-                            if (glowMat.uniforms) {
-                                glowMat.uniforms.color.value.setHex(hex);
-                            } else {
-                                glowMat.color.setHex(hex);
-                            }
-                        }
-                    }
-                }
+            if (isDynamicMode && this._sharedFakeMats && this._sharedFakeMats.dynamic && fTile.material !== this._sharedFakeMats.dynamic.bodyMat) {
+                this._applyFakeMatSet(fTile, this._sharedFakeMats.dynamic);
             }
             
             // Xử lý xuất hiện trễ (đồng bộ thời gian phản xạ theo Round với block thật ở tốc độ 1x chuẩn: Warmup & Round 1 = 1.0s, chia đều 10 Round tới min 0.25s ở Round 10)
@@ -1001,8 +1059,7 @@ window.FakeBlocksManager = {
                     fTile.visible = true;
                     fTile.userData.isDelayedAppearance = false;
 
-                    const animMode = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'slide';
-                    if (animMode === 'slide' || animMode === 'mix') {
+                    if (isSlidingMode) {
                         fTile.position.z = fTile.userData.targetZ - 40;
                         fTile.userData.isEntering = true;
                     } else {
@@ -1014,12 +1071,7 @@ window.FakeBlocksManager = {
 
             // Animation lúc spawn (đồng bộ với block chính)
             if (fTile.userData.isEntering) {
-                const animationMultiplier = Math.max(1.0, gameSpeed * 0.8);
-                const enterSpeed = 1 - Math.exp(-12 * animationMultiplier * delta);
-                
-                const animMode = typeof spawnAnimationMode !== 'undefined' ? spawnAnimationMode : 'slide';
-
-                if (animMode === 'slide' || animMode === 'mix') {
+                if (isSlidingMode) {
                     const targetZ = fTile.userData.targetZ;
                     fTile.position.z += (targetZ - fTile.position.z) * enterSpeed;
 
@@ -1036,8 +1088,8 @@ window.FakeBlocksManager = {
                 }
             }
             
-            // Xử lý va chạm phá vỡ khối fake
-            if (!fTile.userData.isBroken && typeof isFalling !== 'undefined' && !isFalling) {
+            // Xử lý va chạm phá vỡ khối fake (chỉ khi đang chơi thực sự)
+            if ((typeof isPlaying === 'undefined' || isPlaying) && !fTile.userData.isBroken && typeof isFalling !== 'undefined' && !isFalling) {
                 if (Math.abs(ballZ - fTile.position.z) < (rTileL / 2)) {
                     if (ballY - mFloor < 0.5) {
                         const fakeTileScale = fTile.userData.scale || 1.0;
@@ -1137,13 +1189,25 @@ window.FakeBlocksManager = {
         // Giải phóng các tile trong pool
         this.fakeTilePool.forEach(t => {
             if (t.geometry) t.geometry.dispose();
-            this._disposeMaterial(t.material);
             t.children.forEach(c => {
                 if (c.geometry) c.geometry.dispose();
-                this._disposeMaterial(c.material);
             });
         });
         this.fakeTilePool = [];
+
+        const disposeMatSet = (matSet) => {
+            if (!matSet) return;
+            this._disposeMaterial(matSet.bodyMat);
+            this._disposeMaterial(matSet.borderMat);
+            this._disposeMaterial(matSet.glowMat);
+        };
+        disposeMatSet(this._sharedFakeMats.cyan);
+        disposeMatSet(this._sharedFakeMats.magenta);
+        disposeMatSet(this._sharedFakeMats.dynamic);
+        this._sharedFakeMats = { cyan: null, magenta: null, dynamic: null };
+        this._exitingMatPool.forEach(disposeMatSet);
+        this._exitingMatPool = [];
+        this._lastDynamicHex = -1;
         
         // Giải phóng các mảnh vỡ trong pool
         if (this.fragmentPool) {

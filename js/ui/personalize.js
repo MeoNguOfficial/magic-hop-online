@@ -198,6 +198,9 @@
                                 setGlobal(e.target.value);
                                 localStorage.setItem(storageKey, e.target.value);
                                 updateUI();
+                                if (window.UIAnimator && typeof window.UIAnimator.popElement === 'function') {
+                                    window.UIAnimator.popElement(e.target.closest('label'));
+                                }
                                 if (onApply) onApply();
                             }
                         });
@@ -254,6 +257,9 @@
                             localStorage.setItem(storageKey, style);
                             if (onApply) onApply();
                             updateUI();
+                            if (window.UIAnimator && typeof window.UIAnimator.popElement === 'function') {
+                                window.UIAnimator.popElement(card);
+                            }
                         });
                     }
                 });
@@ -319,30 +325,49 @@
         },
 
         switchTab(targetId) {
-            const tabBtns = document.querySelectorAll('#panel-personalize .tab-btn[data-personalize-tab]');
-            const tabPanes = document.querySelectorAll('#personalize-tab-contents .tab-pane');
+            const tabsContainer = document.querySelector('.personalize-tabs-container');
+            const tabBtns = Array.from(document.querySelectorAll('#panel-personalize .tab-btn[data-personalize-tab]'));
+            const tabPanes = Array.from(document.querySelectorAll('#personalize-tab-contents .tab-pane'));
             const targetBtn = document.querySelector(`#panel-personalize .tab-btn[data-personalize-tab="${targetId}"]`);
             const targetPane = document.getElementById(targetId);
             if (!targetPane) return;
 
-            tabBtns.forEach(b => b.classList.remove('active'));
-            if (targetBtn) targetBtn.classList.add('active');
-
-            tabPanes.forEach(pane => {
-                pane.classList.add('hidden');
-                pane.classList.remove('active');
-            });
-            targetPane.classList.remove('hidden');
-            targetPane.classList.add('active');
-
-            const contentsEl = document.getElementById('personalize-tab-contents');
-            if (contentsEl) contentsEl.scrollTop = 0;
-
-            if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-                targetPane.style.opacity = 0;
-                targetPane.style.transform = 'translateX(-10px)';
-                anime({ targets: targetPane, opacity: 1, translateX: 0, duration: 280, easing: 'easeOutQuad' });
+            if (window.UIAnimator && typeof window.UIAnimator.switchDirectionalTab === 'function') {
+                window.UIAnimator.switchDirectionalTab({
+                    tabsContainer,
+                    buttons: tabBtns,
+                    targetBtn,
+                    panes: tabPanes,
+                    targetPane,
+                    scrollContainer: '#personalize-tab-contents',
+                    variant: 'subtab',
+                    slideOffset: 20,
+                    exitOffset: 16,
+                    exitDuration: 85,
+                    duration: 190,
+                    staggerSelector: 'label',
+                    staggerStep: 18,
+                    maxAnimated: 14,
+                    onAfterShow: () => {
+                        if (typeof window.adjustTabsKerning === 'function') {
+                            window.adjustTabsKerning();
+                        }
+                    }
+                });
             } else {
+                tabBtns.forEach(b => b.classList.remove('active'));
+                if (targetBtn) targetBtn.classList.add('active');
+
+                tabPanes.forEach(pane => {
+                    pane.classList.add('hidden');
+                    pane.classList.remove('active');
+                });
+                targetPane.classList.remove('hidden');
+                targetPane.classList.add('active');
+
+                const contentsEl = document.getElementById('personalize-tab-contents');
+                if (contentsEl) contentsEl.scrollTop = 0;
+
                 targetPane.style.opacity = 1;
                 targetPane.style.transform = 'none';
             }
@@ -365,29 +390,14 @@
                 });
             });
 
-            if (tabsContainer && !tabsContainer._personalizeDragBound) {
-                tabsContainer._personalizeDragBound = true;
-                let isDown = false;
-                let startX = 0;
-                let scrollLeft = 0;
-                tabsContainer.addEventListener('mousedown', (e) => {
-                    isDown = true;
-                    tabsContainer._wasDragged = false;
-                    startX = e.pageX - tabsContainer.offsetLeft;
-                    scrollLeft = tabsContainer.scrollLeft;
-                });
-                window.addEventListener('mouseup', () => {
-                    isDown = false;
-                    setTimeout(() => { tabsContainer._wasDragged = false; }, 30);
-                });
-                tabsContainer.addEventListener('mousemove', (e) => {
-                    if (!isDown) return;
-                    const x = e.pageX - tabsContainer.offsetLeft;
-                    if (Math.abs(x - startX) > 4) {
-                        tabsContainer._wasDragged = true;
-                    }
-                    tabsContainer.scrollLeft = scrollLeft - (x - startX);
-                });
+            if (window.UIAnimator && typeof window.UIAnimator.syncAllTabIndicators === 'function') {
+                window.UIAnimator.syncAllTabIndicators(true);
+            }
+
+            if (tabsContainer) {
+                if (window.UIAnimator && typeof window.UIAnimator.bindHorizontalScrollOnly === 'function') {
+                    window.UIAnimator.bindHorizontalScrollOnly(tabsContainer);
+                }
             }
         }
     };

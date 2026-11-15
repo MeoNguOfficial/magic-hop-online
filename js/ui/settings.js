@@ -14,6 +14,7 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'rawInputEnabled',
     'bgParticlesEnabled',
     'antialiasingEnabled',
+    'antialiasingMode',
     'shockwavesEnabled',
     'dynamicColorsEnabled',
     'visualizerEnabled',
@@ -205,7 +206,18 @@ let preferDiscreteGpu = JSON.parse(localStorage.getItem('preferDiscreteGpu')) !=
 let isRelativePC = JSON.parse(localStorage.getItem('isRelativePC')) === true;
 let rawInputEnabled = JSON.parse(localStorage.getItem('rawInputEnabled')) === true;
 let bgParticlesEnabled = JSON.parse(localStorage.getItem('bgParticlesEnabled')) !== false;
-let antialiasingEnabled = JSON.parse(localStorage.getItem('antialiasingEnabled')) === true;
+let antialiasingMode = (() => {
+    const raw = localStorage.getItem('antialiasingMode');
+    if (raw && ['auto', 'off', 'fxaa', 'msaa', 'msaa_fxaa'].includes(raw)) return raw;
+    const legacy = localStorage.getItem('antialiasingEnabled');
+    if (legacy === 'false') return 'off';
+    return 'auto';
+})();
+let antialiasingEnabled = antialiasingMode !== 'off';
+window.antialiasingMode = antialiasingMode;
+window.antialiasingEnabled = antialiasingEnabled;
+window.performanceModeEnabled = performanceModeEnabled;
+window.currentGraphicsQuality = currentGraphicsQuality;
 let shockwavesEnabled = JSON.parse(localStorage.getItem('shockwavesEnabled')) !== false;
 let dynamicColorsEnabled = JSON.parse(localStorage.getItem('dynamicColorsEnabled')) !== false;
 let visualizerEnabled = JSON.parse(localStorage.getItem('visualizerEnabled')) === true;
@@ -243,8 +255,13 @@ if (typeof document !== 'undefined' && document.documentElement) {
 }
 let tileDetailScale = localStorage.getItem('tileDetailScale') !== null ? parseFloat(localStorage.getItem('tileDetailScale')) : 1.0;
 // Screen Refresh Rate & FPS Synchronization Mode Management
+const hasVerifiedRefreshAlgoV2 = (() => {
+    try { return localStorage.getItem('detectedRefreshRateAlgoV2') === '1'; } catch (e) { return false; }
+})();
 const savedDetectedHz = parseInt(localStorage.getItem('detectedRefreshRate'), 10);
-window.screenRefreshRate = (!isNaN(savedDetectedHz) && savedDetectedHz >= 50 && savedDetectedHz <= 360) ? savedDetectedHz : 60;
+window.screenRefreshRate = (hasVerifiedRefreshAlgoV2 && !isNaN(savedDetectedHz) && savedDetectedHz >= 50 && savedDetectedHz <= 360)
+    ? savedDetectedHz
+    : 60;
 let fpsSyncMode = localStorage.getItem('fpsSyncMode') || 'vsync';
 let maxFps = localStorage.getItem('maxFps') !== null ? parseInt(localStorage.getItem('maxFps')) : 144;
 
@@ -423,7 +440,10 @@ function applyRefreshRateBound(detectedHz) {
     if (!detectedHz || detectedHz < 50) detectedHz = 60;
     if (detectedHz > 360) detectedHz = 360;
     window.screenRefreshRate = detectedHz;
-    try { localStorage.setItem('detectedRefreshRate', String(detectedHz)); } catch (e) {}
+    try {
+        localStorage.setItem('detectedRefreshRate', String(detectedHz));
+        localStorage.setItem('detectedRefreshRateAlgoV2', '1');
+    } catch (e) {}
 
     const modeSelect = document.getElementById('fps-sync-mode-select');
     const rateMap = {
@@ -470,13 +490,168 @@ function applyRefreshRateBound(detectedHz) {
 window.applyRefreshRateBound = applyRefreshRateBound;
 
 /**
+ * Ước lượng tần số quét chuẩn xác từ danh sách frame deltas (ms):
+ * 1. Coalesce các cặp giật + catch-up rebound của Chromium/DWM ([chậm, sớm] hoặc [sớm, chậm] quanh median)
+ *    để không nhận nhầm nhịp bù trễ ~13.3ms trên màn 60Hz thành 75Hz.
+ * 2. Kiểm tra harmonic sub-multiple cho màn hình tần số cao (90..360Hz) bị rớt frame từng phần
+ *    (ví dụ 144Hz rớt 1 nhịp thành 13.89ms = 72Hz) bằng chuỗi liên tiếp >= 4 tick & tỷ lệ chia nguyên.
+ * 3. Dùng cụm trung vị (+/-15% quanh p50) thay vì lấy 15%..40% thấp nhất,
+ *    kèm ngưỡng snap chặt và kiểm tra độ ổn định riêng cho 75Hz để tránh false-positive.
+ */
+function estimateRefreshRateFromFrameTimes(rawDeltas, prevKnownHz) {
+    const clean = Array.isArray(rawDeltas)
+        ? rawDeltas.filter(d => typeof d === 'number' && isFinite(d) && d >= 2.0 && d <= 45.0)
+        : [];
+    if (clean.length < 20) {
+        return { hz: prevKnownHz || 60, confidence: 'low', reason: 'insufficient_samples' };
+    }
+
+    const initialSorted = [...clean].sort((a, b) => a - b);
+    const initialMedian = initialSorted[Math.floor(initialSorted.length * 0.5)];
+
+    // Bước 1: Gộp các cặp jitter đối xứng [slow, fast] hoặc [fast, slow] quanh initialMedian
+    // (xảy ra khi 1 frame trễ ở vblank và frame kế tiếp wake sớm để bắt kịp nhịp DWM/VSync)
+    const normalized = [];
+    for (let i = 0; i < clean.length; i++) {
+        const curr = clean[i];
+        if (i + 1 < clean.length) {
+            const next = clean[i + 1];
+            const pairMin = Math.min(curr, next);
+            const pairMax = Math.max(curr, next);
+            const pairAvg = (curr + next) * 0.5;
+            if (
+                pairMin < initialMedian * 0.90 &&
+                pairMax > initialMedian * 1.12 &&
+                Math.abs(pairAvg - initialMedian) <= initialMedian * 0.14
+            ) {
+                normalized.push(pairAvg, pairAvg);
+                i++;
+                continue;
+            }
+        }
+        normalized.push(curr);
+    }
+
+    const sorted = [...normalized].sort((a, b) => a - b);
+    const n = sorted.length;
+    const p25 = sorted[Math.floor(n * 0.25)];
+    const p50 = sorted[Math.floor(n * 0.50)];
+    const p75 = sorted[Math.floor(n * 0.75)];
+    const iqrSpread = p75 - p25;
+
+    // Bước 2: Phát hiện màn hình tần số cao (>= 90Hz) kể cả khi 1 phần frame bị rớt về 2x/3x period
+    const highRefreshCandidates = [360, 300, 280, 240, 200, 180, 165, 144, 120, 100, 90];
+    for (const candHz of highRefreshCandidates) {
+        const basePeriod = 1000 / candHz;
+        let nativeCount = 0;
+        let maxRun = 0;
+        let curRun = 0;
+        let harmonicMatches = 0;
+
+        for (let i = 0; i < normalized.length; i++) {
+            const d = normalized[i];
+            if (Math.abs(d - basePeriod) <= basePeriod * 0.08) {
+                nativeCount++;
+                curRun++;
+                if (curRun > maxRun) maxRun = curRun;
+            } else {
+                curRun = 0;
+            }
+
+            const mult = Math.round(d / basePeriod);
+            if (mult >= 1 && mult <= 4) {
+                const expected = mult * basePeriod;
+                if (Math.abs(d - expected) <= Math.max(0.9, basePeriod * 0.11)) {
+                    harmonicMatches++;
+                }
+            }
+        }
+
+        const nativeRatio = nativeCount / normalized.length;
+        const harmonicRatio = harmonicMatches / normalized.length;
+        if (nativeRatio >= 0.30 && maxRun >= 3 && harmonicRatio >= 0.75) {
+            return { hz: candHz, confidence: 'high', rawHz: candHz, method: 'harmonic' };
+        }
+    }
+
+    // Bước 3: Tính trung bình cụm quanh trung vị (+/-15% quanh p50) để loại tail giật
+    let centerSum = 0;
+    let centerCount = 0;
+    for (let i = 0; i < n; i++) {
+        if (Math.abs(sorted[i] - p50) <= p50 * 0.15) {
+            centerSum += sorted[i];
+            centerCount++;
+        }
+    }
+    const stableDelta = centerCount > 0 ? (centerSum / centerCount) : p50;
+    const rawHz = 1000 / stableDelta;
+
+    const standardBuckets = [60, 75, 90, 100, 120, 144, 165, 180, 200, 240, 280, 300, 360];
+    let detected = Math.round(rawHz);
+    for (const std of standardBuckets) {
+        // Ngưỡng chặt để 72.0Hz (half-144Hz) hoặc 60Hz jitter không bao giờ trượt vào 75Hz
+        const tol = std <= 90 ? Math.max(1.8, std * 0.028) : Math.min(4.0, Math.max(2.5, std * 0.032));
+        if (Math.abs(rawHz - std) <= tol) {
+            detected = std;
+            break;
+        }
+    }
+
+    // Bảo vệ bổ sung cho mốc 75Hz: đòi hỏi cụm 13.33ms thật sự ổn định & liên tục (>= 4 tick),
+    // không phải nhiễu catch-up xen kẽ với nhịp 60Hz (~16.67ms)
+    if (detected === 75) {
+        const target75Period = 1000 / 75; // 13.333ms
+        let near75Count = 0;
+        let near60Count = 0;
+        let maxRun75 = 0;
+        let run75 = 0;
+        for (let i = 0; i < normalized.length; i++) {
+            const d = normalized[i];
+            if (Math.abs(d - target75Period) <= 0.85) {
+                near75Count++;
+                run75++;
+                if (run75 > maxRun75) maxRun75 = run75;
+            } else {
+                run75 = 0;
+            }
+            if (Math.abs(d - 16.667) <= 1.2) {
+                near60Count++;
+            }
+        }
+        const ratio75 = near75Count / normalized.length;
+        const ratio60 = near60Count / normalized.length;
+        if (iqrSpread > 2.4 || ratio75 < 0.45 || maxRun75 < 4 || ratio60 >= 0.25) {
+            if (ratio60 >= ratio75 || iqrSpread > 2.8) {
+                return {
+                    hz: (prevKnownHz && prevKnownHz !== 75) ? prevKnownHz : 60,
+                    confidence: 'low',
+                    rawHz,
+                    reason: 'unstable_75_rejection'
+                };
+            }
+        }
+    }
+
+    if (detected < 55) detected = 60;
+    if (detected > 360) detected = 360;
+
+    const relativeSpread = iqrSpread / Math.max(1, stableDelta);
+    const confidence = (clean.length >= 36 && relativeSpread <= 0.22) ? 'high' : 'medium';
+    return { hz: detected, confidence, rawHz, method: 'center_median' };
+}
+window.estimateRefreshRateFromFrameTimes = estimateRefreshRateFromFrameTimes;
+
+/**
  * Tự động đo tần số quét tối đa của màn hình hiện tại (Display Refresh Rate)
  * - Bỏ qua lúc tab bị ẩn (tránh nhận nhầm nhịp tiết kiệm 1Hz-30Hz)
- * - Bỏ qua 4 frame khởi động và dùng cụm 15%–40% nhanh ổn định để chống sai số do stutter khởi tạo hoặc frame rớt
+ * - Warmup 10 frame đầu và khử rebound jitter để đo chính xác 60/75/90/120/144/165/240/360Hz
  */
 let isMeasuringRefreshRate = false;
 let pendingRefreshVisibilityHook = false;
-function detectScreenRefreshRate(callback) {
+let refreshRetryCount = 0;
+function detectScreenRefreshRate(callback, _isRetry) {
+    if (!_isRetry) refreshRetryCount = 0;
+
     if (typeof requestAnimationFrame === 'undefined') {
         if (callback) callback(window.screenRefreshRate || 60);
         return;
@@ -488,7 +663,7 @@ function detectScreenRefreshRate(callback) {
                 if (!document.hidden) {
                     pendingRefreshVisibilityHook = false;
                     document.removeEventListener('visibilitychange', onVisibleMeasure);
-                    detectScreenRefreshRate(callback);
+                    setTimeout(() => detectScreenRefreshRate(callback), 250);
                 }
             });
         }
@@ -499,15 +674,16 @@ function detectScreenRefreshRate(callback) {
 
     const frameTimes = [];
     let totalTicks = 0;
-    const warmupTicks = 4;
-    const targetValidSamples = 48;
+    const warmupTicks = 6;
+    const targetValidSamples = 44;
     const maxTicks = 96;
     let lastTime = performance.now();
+    let hadGap = true;
 
     function sample(now) {
         if (typeof document !== 'undefined' && document.hidden) {
             isMeasuringRefreshRate = false;
-            detectScreenRefreshRate(callback);
+            detectScreenRefreshRate(callback, _isRetry);
             return;
         }
 
@@ -515,9 +691,19 @@ function detectScreenRefreshRate(callback) {
         lastTime = now;
         totalTicks++;
 
-        // Chỉ ghi nhận sau khi qua warmup và nằm trong dải VSync hợp lệ (22Hz .. 666Hz)
-        if (totalTicks > warmupTicks && delta >= 1.5 && delta <= 45) {
-            frameTimes.push(delta);
+        // Chỉ ghi nhận sau khi qua warmup, bỏ qua tick ngay sau gap/spike > 45ms để tránh catch-up rebound
+        const isValidStep = delta >= 2.0 && delta <= 45.0;
+        if (totalTicks > warmupTicks) {
+            if (isValidStep) {
+                if (!hadGap) {
+                    frameTimes.push(delta);
+                }
+                hadGap = false;
+            } else {
+                hadGap = true;
+            }
+        } else {
+            hadGap = !isValidStep;
         }
 
         if (frameTimes.length < targetValidSamples && totalTicks < maxTicks) {
@@ -526,39 +712,17 @@ function detectScreenRefreshRate(callback) {
         }
 
         isMeasuringRefreshRate = false;
-        if (frameTimes.length < 18) {
+        const result = estimateRefreshRateFromFrameTimes(frameTimes, window.screenRefreshRate);
+        if (result.confidence === 'low' && refreshRetryCount < 2) {
+            refreshRetryCount++;
+            setTimeout(() => detectScreenRefreshRate(callback, true), 900);
             updateFpsSyncUI();
-            if (callback) callback(window.screenRefreshRate || 60);
+            if (callback) callback(window.screenRefreshRate || result.hz || 60);
             return;
         }
 
-        frameTimes.sort((a, b) => a - b);
-
-        // Lấy dải phân vị 15%..40%: loại nhiễu rAF bắn kép (<15%) và loại các frame bị giật trễ (>40%)
-        const startIdx = Math.floor(frameTimes.length * 0.15);
-        const endIdx = Math.max(startIdx + 1, Math.floor(frameTimes.length * 0.40));
-        let sum = 0;
-        let count = 0;
-        for (let i = startIdx; i < endIdx; i++) {
-            sum += frameTimes[i];
-            count++;
-        }
-        const stableDelta = count > 0 ? (sum / count) : frameTimes[Math.floor(frameTimes.length / 2)];
-        const rawHz = 1000 / stableDelta;
-
-        const standardBuckets = [60, 75, 90, 100, 120, 144, 165, 180, 200, 240, 280, 300, 360];
-        let detected = Math.round(rawHz);
-        for (const std of standardBuckets) {
-            if (Math.abs(rawHz - std) <= Math.max(3, std * 0.045)) {
-                detected = std;
-                break;
-            }
-        }
-        if (detected < 55) detected = 60;
-        if (detected > 360) detected = 360;
-
-        applyRefreshRateBound(detected);
-        if (callback) callback(detected);
+        applyRefreshRateBound(result.hz);
+        if (callback) callback(result.hz);
     }
 
     requestAnimationFrame((t0) => {
@@ -574,27 +738,27 @@ window.addEventListener('resize', () => {
     if (resizeRefreshTimeout) clearTimeout(resizeRefreshTimeout);
     resizeRefreshTimeout = setTimeout(() => {
         detectScreenRefreshRate();
-    }, 350);
+    }, 450);
 });
 
 if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
-            setTimeout(() => detectScreenRefreshRate(), 250);
+            setTimeout(() => detectScreenRefreshRate(), 350);
         }
     });
 }
 
 if (typeof window.screen !== 'undefined' && typeof window.screen.addEventListener === 'function') {
     window.screen.addEventListener('change', () => {
-        setTimeout(() => detectScreenRefreshRate(), 200);
+        setTimeout(() => detectScreenRefreshRate(), 250);
     });
 }
 
-// Đo tần số quét sau khi trang tải xong (tránh bị nhiễu lag khi khởi tạo GPU/Audio lúc boot)
+// Đo tần số quét sau khi trang ổn định hoàn toàn (tránh bị nhiễu stutter khi khởi tạo GPU/Audio lúc boot)
 function scheduleStartupRefreshRateDetection() {
-    setTimeout(() => detectScreenRefreshRate(), 350);
-    setTimeout(() => detectScreenRefreshRate(), 1800);
+    setTimeout(() => detectScreenRefreshRate(), 900);
+    setTimeout(() => detectScreenRefreshRate(), 2800);
 }
 if (typeof requestAnimationFrame !== 'undefined') {
     if (typeof document !== 'undefined' && document.readyState === 'complete') {
@@ -728,6 +892,76 @@ function applyGpuInfoToDOM(gpuInfo) {
     }
 }
 
+function updateAntiAliasingStatusUI() {
+    const badge = (typeof aaStatusBadge !== 'undefined' && aaStatusBadge)
+        ? aaStatusBadge
+        : document.getElementById('aa-status-badge');
+    if (!badge) return;
+
+    const getTr = (key, fallback) => {
+        try {
+            if (typeof translations !== 'undefined' && translations && translations[currentLang] && translations[currentLang][key]) {
+                return translations[currentLang][key];
+            }
+        } catch (e) {}
+        return fallback;
+    };
+
+    const status = (window.AntiAliasingManager && typeof window.AntiAliasingManager.getStatusInfo === 'function')
+        ? window.AntiAliasingManager.getStatusInfo()
+        : null;
+
+    let label = 'AUTO';
+    let colorClasses = 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40';
+
+    if (performanceModeEnabled || currentGraphicsQuality === 'simple' || !status) {
+        if (performanceModeEnabled || currentGraphicsQuality === 'simple') {
+            label = performanceModeEnabled
+                ? getTr('aa_badge_perf', 'PERF MODE · OFF')
+                : getTr('aa_badge_off', 'OFF');
+            colorClasses = 'bg-slate-900/80 text-gray-400 border-gray-600/40';
+        } else {
+            const effFallback = (antialiasingMode === 'off') ? 'off' : 'auto';
+            label = effFallback === 'off' ? getTr('aa_badge_off', 'OFF') : 'AUTO';
+            if (effFallback === 'off') colorClasses = 'bg-slate-900/80 text-gray-400 border-gray-600/40';
+        }
+    } else {
+        const samplesText = `${status.samples || 2}x`;
+        switch (status.effectiveMode) {
+            case 'off':
+                label = getTr('aa_badge_off', 'OFF');
+                colorClasses = 'bg-slate-900/80 text-gray-400 border-gray-600/40';
+                break;
+            case 'fxaa':
+                label = getTr('aa_badge_fxaa', 'FXAA · FAST');
+                colorClasses = 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40';
+                break;
+            case 'msaa_native':
+                label = getTr('aa_badge_msaa_native', 'MSAA {samples}').replace('{samples}', samplesText);
+                colorClasses = 'bg-cyan-950/60 text-cyan-300 border-cyan-500/40';
+                break;
+            case 'msaa_rt':
+                label = getTr('aa_badge_msaa_live', 'MSAA {samples} LIVE').replace('{samples}', samplesText);
+                colorClasses = 'bg-sky-950/60 text-sky-300 border-sky-500/40';
+                break;
+            case 'msaa_fxaa':
+                label = getTr('aa_badge_ultra', 'MSAA {samples} + FXAA').replace('{samples}', samplesText);
+                colorClasses = 'bg-fuchsia-950/60 text-fuchsia-300 border-fuchsia-500/40';
+                break;
+            default:
+                label = 'AUTO';
+                break;
+        }
+        if (status.perfTier > 0 && status.effectiveMode !== 'off') {
+            label += ' · ADAPT';
+        }
+    }
+
+    badge.textContent = label;
+    badge.className = `text-[9px] font-bold font-orbitron px-2 py-0.5 rounded-full border shrink-0 uppercase ${colorClasses}`;
+}
+window.updateAntiAliasingStatusUI = updateAntiAliasingStatusUI;
+
 function updateGpuDetectionUI() {
     let gpuInfo = detectActiveGPU();
     applyGpuInfoToDOM(gpuInfo);
@@ -738,7 +972,11 @@ window.updateGpuDetectionUI = updateGpuDetectionUI;
 if (performanceModeEnabled) {
     currentGraphicsQuality = 'simple';
     bgParticlesEnabled = false;
+    antialiasingMode = 'off';
     antialiasingEnabled = false;
+    window.currentGraphicsQuality = 'simple';
+    window.antialiasingMode = 'off';
+    window.antialiasingEnabled = false;
     shockwavesEnabled = false;
     visualizerEnabled = false;
     tileBounceEnabled = false;
@@ -1044,7 +1282,8 @@ function applySettings() {
                 const backup = {
                     graphicsQuality: localStorage.getItem('graphicsQuality') || 'fhd',
                     bgParticlesEnabled: localStorage.getItem('bgParticlesEnabled') !== 'false',
-                    antialiasingEnabled: localStorage.getItem('antialiasingEnabled') === 'true',
+                    antialiasingMode: localStorage.getItem('antialiasingMode') || (localStorage.getItem('antialiasingEnabled') === 'false' ? 'off' : 'auto'),
+                    antialiasingEnabled: localStorage.getItem('antialiasingEnabled') !== 'false',
                     shockwavesEnabled: localStorage.getItem('shockwavesEnabled') !== 'false',
                     visualizerEnabled: localStorage.getItem('visualizerEnabled') === 'true',
                     tileBounceEnabled: localStorage.getItem('tileBounceEnabled') !== 'false',
@@ -1072,10 +1311,15 @@ function applySettings() {
                             localStorage.setItem('bgParticlesEnabled', val);
                             if (toggleBgParticles) toggleBgParticles.checked = val;
                         }
-                        if (backup.antialiasingEnabled !== undefined) {
-                            const val = backup.antialiasingEnabled === true || backup.antialiasingEnabled === 'true';
-                            localStorage.setItem('antialiasingEnabled', val);
-                            if (toggleAntialiasing) toggleAntialiasing.checked = val;
+                        if (backup.antialiasingMode !== undefined || backup.antialiasingEnabled !== undefined) {
+                            const restoredMode = (backup.antialiasingMode && ['auto', 'off', 'fxaa', 'msaa', 'msaa_fxaa'].includes(backup.antialiasingMode))
+                                ? backup.antialiasingMode
+                                : ((backup.antialiasingEnabled === false || backup.antialiasingEnabled === 'false') ? 'off' : 'auto');
+                            const enabledBool = restoredMode !== 'off';
+                            localStorage.setItem('antialiasingMode', restoredMode);
+                            localStorage.setItem('antialiasingEnabled', enabledBool);
+                            if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.value = restoredMode;
+                            if (toggleAntialiasing) toggleAntialiasing.checked = enabledBool;
                         }
                         if (backup.shockwavesEnabled !== undefined) {
                             const val = backup.shockwavesEnabled === true || backup.shockwavesEnabled === 'true';
@@ -1136,10 +1380,16 @@ function applySettings() {
         }
     }
 
+    window.performanceModeEnabled = performanceModeEnabled;
+
     if (performanceModeEnabled) {
         currentGraphicsQuality = 'simple';
+        window.currentGraphicsQuality = 'simple';
         bgParticlesEnabled = false;
+        antialiasingMode = 'off';
+        window.antialiasingMode = 'off';
         antialiasingEnabled = false;
+        window.antialiasingEnabled = false;
         shockwavesEnabled = false;
         visualizerEnabled = false;
         tileBounceEnabled = false;
@@ -1153,6 +1403,7 @@ function applySettings() {
         const simpleRadio = document.querySelector('input[name="graphics-quality"][value="simple"]');
         if (simpleRadio) simpleRadio.checked = true;
         if (toggleBgParticles) toggleBgParticles.checked = false;
+        if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.value = 'off';
         if (toggleAntialiasing) toggleAntialiasing.checked = false;
         if (toggleShockwaves) toggleShockwaves.checked = false;
         if (toggleVisualizer) toggleVisualizer.checked = false;
@@ -1174,6 +1425,7 @@ function applySettings() {
         // Disable elements in UI
         document.querySelectorAll('input[name="graphics-quality"]').forEach(el => el.disabled = true);
         if (toggleBgParticles) toggleBgParticles.disabled = true;
+        if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.disabled = true;
         if (toggleAntialiasing) toggleAntialiasing.disabled = true;
         if (toggleShockwaves) toggleShockwaves.disabled = true;
         if (toggleVisualizer) toggleVisualizer.disabled = true;
@@ -1202,6 +1454,7 @@ function applySettings() {
         // Enable elements in UI
         document.querySelectorAll('input[name="graphics-quality"]').forEach(el => el.disabled = false);
         if (toggleBgParticles) toggleBgParticles.disabled = false;
+        if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.disabled = false;
         if (toggleAntialiasing) toggleAntialiasing.disabled = false;
         if (toggleShockwaves) toggleShockwaves.disabled = false;
         if (toggleVisualizer) toggleVisualizer.disabled = false;
@@ -1225,6 +1478,7 @@ function applySettings() {
         const selectedQualityNode = document.querySelector('input[name="graphics-quality"]:checked');
         if (selectedQualityNode) {
             currentGraphicsQuality = selectedQualityNode.value;
+            window.currentGraphicsQuality = currentGraphicsQuality;
             localStorage.setItem('graphicsQuality', currentGraphicsQuality);
         }
 
@@ -1459,10 +1713,35 @@ function applySettings() {
         shockwavesEnabled = toggleShockwaves.checked;
         localStorage.setItem('shockwavesEnabled', shockwavesEnabled);
     }
-    if (toggleAntialiasing && !performanceModeEnabled) {
-        antialiasingEnabled = toggleAntialiasing.checked;
+    if (!performanceModeEnabled) {
+        if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) {
+            antialiasingMode = antialiasingModeSelect.value || 'auto';
+        } else if (toggleAntialiasing) {
+            antialiasingMode = toggleAntialiasing.checked ? 'auto' : 'off';
+        }
+        antialiasingEnabled = antialiasingMode !== 'off';
+        window.antialiasingMode = antialiasingMode;
+        window.antialiasingEnabled = antialiasingEnabled;
+        localStorage.setItem('antialiasingMode', antialiasingMode);
         localStorage.setItem('antialiasingEnabled', antialiasingEnabled);
     }
+
+    if (window.AntiAliasingManager) {
+        const prevAA = window.AntiAliasingManager.getStatusInfo ? window.AntiAliasingManager.getStatusInfo() : null;
+        const rendererRef = (typeof renderer !== 'undefined') ? renderer : null;
+        const nextAA = window.AntiAliasingManager.applySettings(rendererRef, antialiasingMode);
+        const aaChanged = !prevAA || prevAA.effectiveMode !== nextAA.effectiveMode || prevAA.samples !== nextAA.samples;
+
+        if (rendererRef) {
+            if (aaChanged && typeof updatePixelRatio === 'function') {
+                updatePixelRatio();
+            }
+            if (typeof scene !== 'undefined' && scene && typeof camera !== 'undefined' && camera && typeof isPlaying !== 'undefined' && !isPlaying) {
+                window.AntiAliasingManager.render(rendererRef, scene, camera);
+            }
+        }
+    }
+    updateAntiAliasingStatusUI();
     if (toggleDynamicColors) {
         dynamicColorsEnabled = toggleDynamicColors.checked;
         localStorage.setItem('dynamicColorsEnabled', dynamicColorsEnabled);
@@ -1497,9 +1776,12 @@ function applySettings() {
     }
     if (typeof toggleUiAnimations !== 'undefined' && toggleUiAnimations) {
         uiAnimationsEnabled = toggleUiAnimations.checked;
+        window.uiAnimationsEnabled = uiAnimationsEnabled;
         localStorage.setItem('uiAnimationsEnabled', uiAnimationsEnabled);
     }
-    if (uiAnimationsEnabled) {
+    if (window.UIAnimator && typeof window.UIAnimator.sync === 'function') {
+        window.UIAnimator.sync(uiAnimationsEnabled);
+    } else if (uiAnimationsEnabled) {
         document.body.classList.remove('disable-animations');
     } else {
         document.body.classList.add('disable-animations');
@@ -2150,13 +2432,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (graphicsTabBtn) {
         graphicsTabBtn.addEventListener('click', () => {
             updateGpuDetectionUI();
+            updateAntiAliasingStatusUI();
         });
     }
     const gameTabBtn = document.querySelector('.tab-btn[data-tab="tab-game"]');
     if (gameTabBtn) {
         gameTabBtn.addEventListener('click', () => {
-            detectScreenRefreshRate();
+            setTimeout(() => detectScreenRefreshRate(), 220);
             if (typeof applyPlatformUIAdjustments === 'function') applyPlatformUIAdjustments();
+        });
+    }
+    const settingsNavBtn = document.querySelector('.nav-btn[data-panel="panel-settings"]');
+    if (settingsNavBtn) {
+        settingsNavBtn.addEventListener('click', () => {
+            setTimeout(() => detectScreenRefreshRate(), 280);
         });
     }
     const hzBadgeEl = document.getElementById('detected-hz-badge');
@@ -2173,6 +2462,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (toggleRelativePC) toggleRelativePC.addEventListener('change', applySettings);
     if (typeof togglePointerLock !== 'undefined' && togglePointerLock) togglePointerLock.addEventListener('change', applySettings);
     if (typeof toggleRawInput !== 'undefined' && toggleRawInput) toggleRawInput.addEventListener('change', applySettings);
+    if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.addEventListener('change', applySettings);
     if (toggleAntialiasing) toggleAntialiasing.addEventListener('change', applySettings);
     if (toggleDynamicColors) toggleDynamicColors.addEventListener('change', applySettings);
     if (toggleVisualizer) toggleVisualizer.addEventListener('change', applySettings);
@@ -3282,6 +3572,10 @@ window.adjustTabsKerning = function () {
                 if (span) span.style.transition = originalTransitions[index].span;
             });
         }, 100);
+    }
+
+    if (window.UIAnimator && typeof window.UIAnimator.syncAllTabIndicators === 'function') {
+        window.UIAnimator.syncAllTabIndicators(true);
     }
 };
 

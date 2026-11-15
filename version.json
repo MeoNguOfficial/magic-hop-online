@@ -1,10 +1,10 @@
 {
-  "version": "1.0.10",
-  "versionCode": 1794662600,
-  "releaseDate": "2026-11-14",
+  "version": "1.1.0",
+  "versionCode": 1794713824,
+  "releaseDate": "2026-11-15",
   "changelog": {
-    "vi": "Phiên bản v1.0.10: Tái cấu trúc giao diện Cá nhân hóa (Nền & Bóng) thành các tab con kèm preview cho 2 hình nền mới (Màu theo độ khó, Công nghệ), 4 Môi trường và 6 Hoa văn bóng; ra mắt hệ thống Hạt Đường Biên (Boundary Particles) & làm mới Đường Biên; thêm Vortex Block, tinh chỉnh Dash Block và nút Skip Online Check; sửa lỗi tăng tốc bất thường khi va chạm mesh; khắc phục hiện tượng khựng giả ở FPS cao, lỗi không lưu cài đặt Personalize, lỗi input/Pointer Lock và đồng bộ đầy đủ 10 ngôn ngữ.",
-    "en": "Version v1.0.10: Redesigned Personalize panel with Settings-style sub-tabs and live previews for 2 new backgrounds (Difficulty Hue, Cyber Tech), 4 Environments, and 6 Ball Patterns; introduced Boundary Particles & remastered Boundaries; added Vortex Block, refined Dash Block and Skip Online Check button; fixed mesh collision speed-up drift; eliminated high-FPS micro-stutter, Personalize persistence bug, Pointer Lock/input issues, and completed localization across all 10 languages."
+    "vi": "Phiên bản v1.1.0: Đại tu toàn bộ giao diện theo phong cách Cyber Technology (UI 2.0) kèm hệ thống hoạt ảnh chuyển tab (ui-animations.js); bổ sung bộ khử răng cưa hậu kỳ (AntiAliasingManager); sửa lỗi nhận diện tần số quét màn hình cho 120Hz–240Hz+; tối ưu các điểm nghẽn hiệu suất hot-path (Shared Fake Materials, Prewarm toàn dải Dash 0.25 & Label Sprite, tránh resize RenderTarget đột ngột ở Adaptive Performance); cho phép đường gạch Pre-start chạy xếp liên tục trước khi Tap to Play; remaster hiệu ứng Game Over tape-stop khi bật Preserve Pitch; sửa icon tìm kiếm Settings và tinh gọn Quick Settings.",
+    "en": "Version v1.1.0: Full Cyber Technology UI overhaul across all screens and modals with unified tab animations (ui-animations.js); added post-processing AntiAliasingManager; fixed display refresh rate detection for 120Hz–240Hz+; eliminated hot-path frame-drop bottlenecks (Shared Fake Materials & exit pool, quantized 0.25 Dash geometry range prewarm, Vortex/Label sprite prewarm, guarded Adaptive Performance pixelRatio resizes); enabled live tile stacking during Pre-start before Tap to Play; remastered Game Over tape-stop audio effect when Preserve Pitch is enabled; fixed Settings search icon and streamlined Quick Settings."
   },
   "downloads": {
     "pc": "https://github.com/MeoNguOfficial/magic-hop-online/releases/latest",

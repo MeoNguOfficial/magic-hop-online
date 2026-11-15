@@ -28,6 +28,11 @@
     let cachedAmberGrad = null;
     let cachedRedGrad = null;
     let cachedGradH = 0;
+    const DASH_PATTERN = [3, 3];
+    const EMPTY_DASH = [];
+    let lastFpsValue = -1;
+    let lastFpsColor = '';
+    let lastFrameMsTenths = -1;
 
     function getGradient(ctx, h, colorType) {
         if (!cachedCyanGrad || cachedGradH !== h) {
@@ -149,22 +154,26 @@
                 if (currentFps > maxFps) maxFps = currentFps;
             }
 
-            // Cập nhật text số liệu
+            // Cập nhật text số liệu (chỉ ghi DOM khi giá trị hoặc màu sắc thực sự thay đổi)
             if (fpsValueEl) {
-                fpsValueEl.textContent = `FPS: ${currentFps}`;
-                if (currentFps >= 55) {
-                    fpsValueEl.style.color = '#00f0ff'; // Neon Cyan
-                } else if (currentFps >= 42) {
-                    fpsValueEl.style.color = '#f59e0b'; // Amber Warning
-                } else {
-                    fpsValueEl.style.color = '#ef4444'; // Red Drop
+                if (currentFps !== lastFpsValue) {
+                    lastFpsValue = currentFps;
+                    fpsValueEl.textContent = `FPS: ${currentFps}`;
+                }
+                const nextColor = currentFps >= 55 ? '#00f0ff' : (currentFps >= 42 ? '#f59e0b' : '#ef4444');
+                if (nextColor !== lastFpsColor) {
+                    lastFpsColor = nextColor;
+                    fpsValueEl.style.color = nextColor;
                 }
             }
 
             if (fpsTimeEl) {
                 const safeDelta = (typeof delta === 'number' && !isNaN(delta) && delta > 0 && delta <= 0.05) ? delta : (1 / Math.max(1, currentFps));
-                const frameMs = Math.round(safeDelta * 10000) / 10;
-                fpsTimeEl.textContent = `${frameMs.toFixed(1)}ms`;
+                const frameMsTenths = Math.round(safeDelta * 10000);
+                if (frameMsTenths !== lastFrameMsTenths) {
+                    lastFrameMsTenths = frameMsTenths;
+                    fpsTimeEl.textContent = `${(frameMsTenths / 10).toFixed(1)}ms`;
+                }
             }
 
             // Chỉ vẽ biểu đồ nếu biểu đồ đang bật
@@ -196,12 +205,12 @@
             const targetY = h - (60 / maxScale) * (h - 8) - 4;
             ctx.strokeStyle = 'rgba(0, 240, 255, 0.22)';
             ctx.lineWidth = 1;
-            ctx.setLineDash([3, 3]);
+            ctx.setLineDash(DASH_PATTERN);
             ctx.beginPath();
             ctx.moveTo(0, targetY);
             ctx.lineTo(w, targetY);
             ctx.stroke();
-            ctx.setLineDash([]); // Reset line dash
+            ctx.setLineDash(EMPTY_DASH); // Reset line dash
 
             // Vẽ đường đồ thị FPS (Zero-ShadowBlur để triệt tiêu tải CPU 4-8ms)
             const step = w / (SAMPLES - 1);

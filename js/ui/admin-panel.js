@@ -332,6 +332,10 @@ if (sidebar && sidebarToggleBtn) {
 // --- MODAL OPEN/CLOSE ANIMATION (Windows-style) ---
 function openModal(modal) {
     if (!modal) return;
+    if (window.UIAnimator && !window.UIAnimator.isEnabled()) {
+        modal.classList.remove('hidden', 'modal-closing', 'modal-opening');
+        return;
+    }
     modal.classList.remove('hidden', 'modal-closing');
     modal.classList.add('modal-opening');
     void modal.offsetWidth;
@@ -342,6 +346,11 @@ function openModal(modal) {
 
 function closeModal(modal) {
     if (!modal) return;
+    if (window.UIAnimator && !window.UIAnimator.isEnabled()) {
+        modal.classList.add('hidden');
+        modal.classList.remove('modal-closing', 'modal-opening');
+        return;
+    }
     modal.classList.add('modal-closing');
     const onEnd = () => {
         modal.classList.add('hidden');
@@ -633,6 +642,7 @@ const AdminAutoReloader = (() => {
 
         const toast = document.createElement('div');
         toast.id = 'admin-autoreload-toast';
+        const useAnim = window.UIAnimator ? window.UIAnimator.isEnabled() : (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
         toast.style.cssText = [
             'position:fixed', 'bottom:24px', 'right:24px', 'z-index:99999',
             'background:rgba(6,182,212,0.15)', 'border:1px solid rgba(6,182,212,0.4)',
@@ -641,21 +651,29 @@ const AdminAutoReloader = (() => {
             'font-size:13px', 'font-weight:500',
             'box-shadow:0 4px 24px rgba(0,0,0,0.4)',
             'display:flex', 'align-items:center', 'gap:8px',
-            'transition:opacity 0.4s ease',
-            'opacity:0'
+            useAnim ? 'transition:opacity 0.4s ease;opacity:0' : 'opacity:1'
         ].join(';');
         toast.innerHTML = `<span style="font-size:15px">✓</span> ${message}`;
         document.body.appendChild(toast);
 
-        // Fade in
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => { toast.style.opacity = '1'; });
-        });
-        // Fade out & remove sau 3s
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            setTimeout(() => toast.remove(), 400);
-        }, 3000);
+        if (window.UIAnimator) {
+            window.UIAnimator.toastIn(toast, { y: 12 });
+            setTimeout(() => {
+                window.UIAnimator.toastOut(toast, () => toast.remove(), { exitY: 10 });
+            }, 3000);
+        } else if (useAnim) {
+            // Fade in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => { toast.style.opacity = '1'; });
+            });
+            // Fade out & remove sau 3s
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 400);
+            }, 3000);
+        } else {
+            setTimeout(() => toast.remove(), 3000);
+        }
     }
 
     function _buildSignature(responseData) {

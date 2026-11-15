@@ -216,7 +216,7 @@
     <meta name="apple-mobile-web-app-title" content="CyberHop">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <!-- Tailwind CSS (Precompiled Static Build) -->
-    <link rel="stylesheet" href="css/tailwind.min.css">
+    <link rel="stylesheet" href="css/tailwind.min.css?v=1.1.0-1">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <!-- Google Fonts for Cyberpunk Aesthetic -->
     <link
@@ -263,8 +263,8 @@
         })();
     </script>
     <!-- AnimeJS for UI animations (Local Vendor) -->
-    <script src="js/libs/anime.min.js"></script>
-    <link rel="stylesheet" href="css/style.css">
+    <script src="js/libs/anime.min.js?v=1.1.0-1"></script>
+    <link rel="stylesheet" href="css/style.css?v=1.1.0-3">
 
     <style>
         /* Custom styles for extreme neon glow and layout corrections */
@@ -365,31 +365,34 @@
             gap: 14px;
         }
         .bp-card {
-            --c: #22d3ee;
+            --c: var(--theme-color, #22d3ee);
             position: relative;
-            background: #1b0d12;
-            border: 1px solid #3a1a22;
+            background: linear-gradient(145deg, rgba(6, 16, 34, 0.90), rgba(3, 8, 19, 0.96));
+            border: 1px solid var(--theme-border-subtle, rgba(6, 182, 212, 0.24));
             border-radius: 14px;
             padding: 14px;
             cursor: pointer;
             text-align: left;
-            color: #e9e3e5;
+            color: #e2e8f0;
             font: inherit;
             outline: none;
             display: block;
             width: 100%;
             -webkit-appearance: none;
             appearance: none;
-            transition: border-color .2s, transform .2s, box-shadow .2s;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.35);
+            transition: border-color .2s, transform .2s, box-shadow .2s, background .2s;
             user-select: none;
         }
         .bp-card:hover {
             transform: translateY(-2px);
-            border-color: color-mix(in srgb, var(--c) 50%, #3a1a22);
+            border-color: color-mix(in srgb, var(--c) 65%, rgba(56, 189, 248, 0.35));
+            background: linear-gradient(145deg, rgba(7, 20, 42, 0.94), rgba(3, 10, 24, 0.98));
         }
         .bp-card.on {
             border-color: var(--c);
-            box-shadow: 0 0 0 1px var(--c), 0 8px 28px -10px var(--c);
+            background: linear-gradient(145deg, rgba(8, 22, 46, 0.96), rgba(3, 10, 24, 0.98));
+            box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.24), 0 0 0 1px var(--c), 0 8px 28px -10px var(--c);
         }
         .bp-head {
             display: flex;
@@ -408,7 +411,7 @@
             width: 18px;
             height: 18px;
             border-radius: 50%;
-            border: 2px solid #8d7a80;
+            border: 2px solid #475569;
             display: grid;
             place-items: center;
             transition: .2s;
@@ -429,8 +432,9 @@
             height: 110px;
             border-radius: 10px;
             overflow: hidden;
-            background: #0d0509;
-            border: 1px solid #2a1218;
+            background: radial-gradient(circle at 50% 45%, rgba(8, 28, 56, 0.52) 0%, #020714 78%);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.72);
         }
         .bp-tag {
             position: absolute;
@@ -628,27 +632,27 @@
         /* Active song styling override */
         .song-option.active {
             border-color: var(--theme-color, rgba(34, 211, 238, 0.8)) !important;
-            background-color: #0c081e !important;
+            background: linear-gradient(145deg, rgba(6, 17, 36, 0.96), rgba(3, 9, 21, 0.98)) !important;
             box-shadow: 0 4px 20px var(--theme-glow, rgba(6, 182, 212, 0.3)) !important;
             position: relative;
         }
 
         /* Active setting tab styling */
         .tab-btn.active {
-            color: #22d3ee;
-            border-color: #22d3ee;
-            background-color: rgba(34, 211, 238, 0.05);
-            text-shadow: 0 0 8px rgba(34, 211, 238, 0.6);
+            color: var(--theme-color, #22d3ee);
+            border-color: var(--theme-color, #22d3ee);
+            background-color: var(--theme-bg-alpha, rgba(34, 211, 238, 0.08));
+            text-shadow: 0 0 8px var(--theme-glow, rgba(34, 211, 238, 0.6));
         }
 
 
 
         /* Main Navigation Tabs */
         .nav-btn.active {
-            color: #22d3ee;
-            background: rgba(34, 211, 238, 0.1);
-            border-bottom: 3px solid #22d3ee;
-            text-shadow: 0 0 10px rgba(34, 211, 238, 0.4);
+            color: var(--theme-color, #22d3ee);
+            background: var(--theme-bg-alpha, rgba(34, 211, 238, 0.1));
+            border-bottom: 3px solid var(--theme-color, #22d3ee);
+            text-shadow: 0 0 10px var(--theme-glow, rgba(34, 211, 238, 0.4));
         }
 
         /* Responsive Navigation Menu Breakpoint */
@@ -657,9 +661,9 @@
         }
 
         #nav-dropdown-menu {
-            background-color: rgba(12, 8, 30, 0.96) !important;
-            backdrop-filter: blur(12px) !important;
-            -webkit-backdrop-filter: blur(12px) !important;
+            background-color: rgba(3, 9, 22, 0.97) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
         }
 
         @media (max-width: 400px) {
@@ -898,11 +902,11 @@
     </div>
 
     <!-- Intro Overlay -->
-    <div id="intro-overlay" class="absolute inset-0 z-50 bg-[#020108] flex flex-col justify-center items-center px-4">
+    <div id="intro-overlay" class="ui2-tech-backdrop absolute inset-0 z-50 bg-[#02060f] flex flex-col justify-center items-center px-4">
 
         <!-- SLIDE 1: Brand Logo (MeoTN Gaming Intro) -->
         <div id="intro-slide-logos"
-            class="hidden flex flex-col justify-center items-center transition-opacity duration-700 opacity-0 absolute inset-0 bg-[#020108] p-6 select-none">
+            class="hidden flex flex-col justify-center items-center transition-opacity duration-700 opacity-0 absolute inset-0 bg-[#02060f] p-6 select-none">
             <div class="flex justify-center items-center w-full max-w-2xl px-4">
                 <img id="intro-logo-img" src="resources/meotn-gaming-intro.svg" alt="MeoTN Gaming"
                     class="w-[82%] sm:w-[70%] max-w-[540px] max-h-[32vh] object-contain drop-shadow-[0_0_30px_rgba(240,74,58,0.25)] pointer-events-none"
@@ -912,9 +916,9 @@
 
         <!-- SLIDE 3: Audio Disclaimer -->
         <div id="intro-slide-disclaimer"
-            class="hidden flex flex-col justify-center items-center transition-opacity duration-700 opacity-0 absolute inset-0 bg-[#020108] px-4 py-8 overflow-y-auto">
+            class="hidden flex flex-col justify-center items-center transition-opacity duration-700 opacity-0 absolute inset-0 bg-[#02060f] px-4 py-8 overflow-y-auto">
             <div
-                class="max-w-2xl w-full bg-[#0c081e]/60 border border-yellow-500/30 rounded-2xl p-6 md:p-10 flex flex-col shadow-[0_0_40px_rgba(234,179,8,0.15)] relative text-center">
+                class="max-w-2xl w-full bg-[#040c1c]/90 border border-yellow-500/35 rounded-2xl p-6 md:p-10 flex flex-col shadow-[0_0_40px_rgba(234,179,8,0.15)] relative text-center">
 
                 <!-- Title Header -->
                 <div class="flex items-center justify-center mb-6 mx-auto">
@@ -1017,9 +1021,9 @@
                         <circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle>
                     </svg>
                 </div>
-                <div class="w-full h-2 bg-gray-900/80 rounded-full overflow-hidden p-0.5 border border-purple-500/20">
+                <div class="w-full h-2 bg-[#030916] rounded-full overflow-hidden p-0.5 border border-cyan-500/25">
                     <div id="intro-progress-bar" style="width: 0%;"
-                        class="h-full bg-gradient-to-r from-cyan-400 to-pink-500 rounded-full transition-all duration-100">
+                        class="h-full bg-gradient-to-r from-cyan-400 via-sky-400 to-amber-400 rounded-full transition-all duration-100">
                     </div>
                 </div>
                 <div class="flex justify-between text-xs text-gray-400">
@@ -1041,11 +1045,11 @@
         </div>
     </div>
 
-    <!-- Main Menu / Start Screen -->
-    <div id="start-screen" class="absolute inset-0 z-30 bg-[#0c081e]/85 backdrop-blur-xl flex flex-col w-full h-full">
-        <div id="start-screen-window" class="w-full h-full overflow-hidden shadow-2xl flex flex-col relative">
-            <!-- Ambient Rotating Hexagons Background -->
-            <div id="menu-bg-hexagons" class="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-40">
+    <!-- Main Menu / Start Screen (UI 2.0 Cyber Circuit Shell) -->
+    <div id="start-screen" class="ui2-circuit-shell absolute inset-0 z-30 bg-[#02060f]/95 flex flex-col w-full h-full">
+        <div id="start-screen-window" class="ui2-window w-full h-full overflow-hidden shadow-2xl flex flex-col relative">
+            <!-- PCB Motherboard Circuit Traces Background -->
+            <div id="menu-bg-hexagons" class="ui2-pcb-backdrop absolute inset-0 pointer-events-none overflow-hidden z-0">
             </div>
 
             <!-- Main Navigation Header -->
@@ -1376,20 +1380,24 @@
                                         <!-- Ambient Colorful Halo Glow -->
                                         <div class="absolute -inset-3 rounded-full bg-gradient-to-tr from-pink-600/35 via-purple-600/25 to-cyan-500/35 blur-xl opacity-75 group-hover:opacity-100 transition-opacity pointer-events-none"></div>
 
-                                        <!-- Vinyl Disc Body -->
-                                        <div id="featured-disc-body" class="featured-vinyl-disc overflow-hidden">
-                                            <!-- Vinyl Grooves Overlay -->
-                                            <div class="featured-vinyl-grooves"></div>
+                                        <!-- Outer Turntable Disc Rim -->
+                                        <div class="featured-disc-rim">
+                                            <!-- Vinyl Disc Body (Spins continuously) -->
+                                            <div id="featured-disc-body" class="featured-vinyl-disc overflow-hidden">
+                                                <!-- Vinyl Grooves & Specular Sheen Overlays -->
+                                                <div class="featured-vinyl-grooves"></div>
+                                                <div class="featured-vinyl-sheen"></div>
 
-                                            <!-- Inner Black Ring -->
-                                            <div class="featured-disc-center-ring">
-                                                <!-- Golden Center Spindle Dot -->
-                                                <div class="featured-disc-center-dot">
-                                                    <div class="featured-disc-center-hole"></div>
+                                                <!-- Inner Black Ring -->
+                                                <div class="featured-disc-center-ring">
+                                                    <!-- Golden Center Spindle Dot -->
+                                                    <div class="featured-disc-center-dot">
+                                                        <div class="featured-disc-center-hole"></div>
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <!-- Hover/Tap Play Overlay Icon -->
+                                            <!-- Hover/Tap Play Overlay Icon (Stays upright above spinning disc) -->
                                             <div class="featured-disc-play-overlay">
                                                 <div class="featured-disc-play-icon">
                                                     <svg class="w-6 h-6 fill-current translate-x-0.5" viewBox="0 0 24 24">
@@ -1452,9 +1460,9 @@
                             <canvas id="mp-visualizer" class="absolute inset-0 w-full h-full pointer-events-none"
                                 width="192" height="192"></canvas>
 
-                            <div
-                                class="w-32 h-32 rounded-full border-4 border-pink-500/50 flex items-center justify-center bg-pink-900/20 shadow-[0_0_15px_rgba(236,72,153,0.3)] relative z-10">
-                                <svg class="w-16 h-16 text-pink-400" fill="currentColor" viewBox="0 0 20 20">
+                            <div id="mp-disc-ring"
+                                class="w-32 h-32 rounded-full border-4 border-cyan-400/55 flex items-center justify-center bg-cyan-950/30 shadow-[0_0_18px_rgba(34,211,238,0.28)] relative z-10">
+                                <svg class="w-16 h-16 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
                                     <path
                                         d="M18 3a1 1 0 00-1.196-.98l-10 2A1 1 0 006 5v9.114A4.369 4.369 0 005 14c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V7.28l8-1.6v5.434a4.369 4.369 0 00-1 1.286c-1.657 0-3 .895-3 2s1.343 2 3 2 3-.895 3-2V3z" />
                                 </svg>
@@ -1470,7 +1478,7 @@
                         <div class="w-full flex items-center gap-2 mb-4 text-[10px] font-orbitron text-gray-400">
                             <span id="mp-time-current">0:00</span>
                             <input type="range" id="mp-progress" min="0" max="100" value="0"
-                                class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none accent-pink-500 cursor-pointer">
+                                class="flex-1 h-1 bg-slate-800 rounded-lg appearance-none accent-cyan-400 cursor-pointer">
                             <span id="mp-time-total">0:00</span>
                         </div>
 
@@ -1486,7 +1494,7 @@
                                     <path
                                         d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
                                 </svg></button>
-                            <button id="mp-btn-play" class="text-pink-500 hover:text-pink-400 transition-colors"><svg
+                            <button id="mp-btn-play" class="text-cyan-400 hover:text-cyan-300 transition-colors"><svg
                                     class="w-14 h-14" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd"
                                         d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
@@ -1839,7 +1847,7 @@
                                     <input type="radio" name="selected-ball-pattern" value="solid" class="hidden">
                                     <div
                                         class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
-                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                        <svg class="w-18 h-18 shrink-0" width="72" height="72" viewBox="0 0 80 80" aria-hidden="true">
                                             <defs>
                                                 <radialGradient id="bp-vol-solid" cx="34%" cy="28%" r="68%">
                                                     <stop offset="0%" stop-color="#ffffff" stop-opacity="0.48" />
@@ -1875,7 +1883,7 @@
                                     <input type="radio" name="selected-ball-pattern" value="wireframe" class="hidden">
                                     <div
                                         class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
-                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                        <svg class="w-18 h-18 shrink-0" width="72" height="72" viewBox="0 0 80 80" aria-hidden="true">
                                             <defs>
                                                 <clipPath id="bp-clip-wire">
                                                     <circle cx="40" cy="38" r="23" />
@@ -1938,7 +1946,7 @@
                                         class="hidden">
                                     <div
                                         class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
-                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                        <svg class="w-18 h-18 shrink-0" width="72" height="72" viewBox="0 0 80 80" aria-hidden="true">
                                             <defs>
                                                 <clipPath id="bp-clip-check">
                                                     <circle cx="40" cy="38" r="23" />
@@ -2001,7 +2009,7 @@
                                     <input type="radio" name="selected-ball-pattern" value="stripes" class="hidden">
                                     <div
                                         class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
-                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                        <svg class="w-18 h-18 shrink-0" width="72" height="72" viewBox="0 0 80 80" aria-hidden="true">
                                             <defs>
                                                 <clipPath id="bp-clip-stripes">
                                                     <circle cx="40" cy="38" r="23" />
@@ -2051,7 +2059,7 @@
                                     <input type="radio" name="selected-ball-pattern" value="dots" class="hidden">
                                     <div
                                         class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
-                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                        <svg class="w-18 h-18 shrink-0" width="72" height="72" viewBox="0 0 80 80" aria-hidden="true">
                                             <defs>
                                                 <clipPath id="bp-clip-dots">
                                                     <circle cx="40" cy="38" r="23" />
@@ -2104,7 +2112,7 @@
                                     <input type="radio" name="selected-ball-pattern" value="grid" class="hidden">
                                     <div
                                         class="w-full h-24 rounded-xl bg-gradient-to-b from-[#030712] via-[#060d1e] to-black border border-white/10 relative overflow-hidden flex items-center justify-center">
-                                        <svg class="w-18 h-18" viewBox="0 0 80 80" aria-hidden="true">
+                                        <svg class="w-18 h-18 shrink-0" width="72" height="72" viewBox="0 0 80 80" aria-hidden="true">
                                             <defs>
                                                 <clipPath id="bp-clip-grid">
                                                     <circle cx="40" cy="38" r="23" />
@@ -2714,18 +2722,18 @@
 
                     <!-- Settings Search Bar -->
                     <div class="relative shrink-0 mb-3">
-                        <div class="relative flex items-center">
-                            <svg class="absolute left-2.5 w-3.5 h-3.5 text-cyan-500/70 pointer-events-none" fill="none"
-                                stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                        <div class="relative flex items-center group">
                             <input type="text" id="settings-search-input"
                                 class="w-full bg-black/50 border border-cyan-500/20 rounded-lg pl-8 pr-8 py-2 text-xs font-orbitron text-gray-200 placeholder-gray-600 focus:outline-none focus:border-cyan-400 transition-colors"
                                 data-i18n-placeholder="settings_search_placeholder" placeholder="Tìm kiếm cài đặt..."
                                 autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+                            <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 z-10 w-3.5 h-3.5 text-cyan-500/75 group-focus-within:text-cyan-400 transition-colors pointer-events-none" fill="none"
+                                stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
                             <button id="settings-search-clear"
-                                class="absolute right-2 text-gray-600 hover:text-cyan-400 transition-colors hidden"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 z-10 text-gray-500 hover:text-cyan-400 transition-colors hidden"
                                 aria-label="Clear search">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -2975,17 +2983,23 @@
                                     <input type="checkbox" id="toggle-ui-animations" checked
                                         class="accent-cyan-400 w-4 h-4">
                                 </label>
-                                <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
-                                    <div class="flex flex-col">
-                                        <span class="font-bold uppercase text-gray-200" data-i18n="aa_title">Khử răng
+                                <div id="aa-setting-block" class="space-y-2 pt-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-bold uppercase text-gray-200 text-xs" data-i18n="aa_title">Khử răng
                                             cưa (Anti-Aliasing)</span>
-                                        <span class="text-[9px] text-gray-500" data-i18n="aa_desc">Làm mịn cạnh viền
-                                            khối
-                                            (Yêu cầu cấu hình
-                                            mạnh).</span>
+                                        <span id="aa-status-badge"
+                                            class="text-[9px] font-bold font-orbitron px-2 py-0.5 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/40 shrink-0 uppercase">AUTO</span>
                                     </div>
-                                    <input type="checkbox" id="toggle-antialiasing" class="accent-cyan-400 w-4 h-4">
-                                </label>
+                                    <p class="text-[9px] text-gray-500" data-i18n="aa_desc">Làm mịn cạnh khối và viền bóng trực tiếp không cần tải lại, tự tối ưu theo GPU.</p>
+                                    <select id="antialiasing-mode-select"
+                                        class="w-full bg-[#0c081e] text-white border border-cyan-500/30 p-2 rounded-lg text-xs focus:outline-none cursor-pointer font-orbitron">
+                                        <option value="auto" data-i18n="aa_mode_auto">Tự động (Tối ưu GPU - Khuyên dùng)</option>
+                                        <option value="off" data-i18n="aa_mode_off">Tắt (Tối đa FPS)</option>
+                                        <option value="fxaa" data-i18n="aa_mode_fxaa">FXAA (Nhanh &amp; Mượt cạnh - Nhẹ GPU)</option>
+                                        <option value="msaa" data-i18n="aa_mode_msaa">MSAA (Đa mẫu sắc nét)</option>
+                                        <option value="msaa_fxaa" data-i18n="aa_mode_ultra">MSAA + FXAA (Siêu mịn - GPU Mạnh)</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="space-y-4 pt-4 border-t border-cyan-500/20">
                                 <div class="space-y-1">
@@ -4063,7 +4077,7 @@
                     </div>
                     <div id="secret-credit-btn"
                         class="shrink-0 text-center text-[10px] text-gray-500 mt-4 pt-4 border-t border-cyan-500/20 tracking-wide uppercase font-orbitron cursor-pointer select-none active:text-gray-400">
-                        MeoTN HOP ENGINE v3.7 (Build v1.0.10)
+                        MeoTN HOP ENGINE v3.7 (Build v1.1.0)
                         <div class="mt-1 text-gray-600"><span class="text-cyan-500/60">MeoTN Gaming</span> | <span
                                 class="text-pink-500/60">Powered by MeoTN Digital</span> | <a href="license.html" onclick="event.preventDefault(); event.stopPropagation(); window.openInGameViewer ? window.openInGameViewer('license.html', 'MIT LICENSE') : window.open('license.html');" class="text-cyan-400/80 hover:text-cyan-300 underline pointer-events-auto cursor-pointer">MIT License</a></div>
                     </div>
@@ -4074,7 +4088,7 @@
 
     <!-- Tap to Play -->
     <div id="tap-to-play-overlay"
-        class="absolute inset-0 z-30 bg-[#060414]/85 hidden flex flex-col justify-center items-center cursor-pointer">
+        class="ui2-tech-backdrop absolute inset-0 z-30 bg-[#02060f]/88 hidden flex flex-col justify-center items-center cursor-pointer">
         <button id="tap-back-btn"
             class="absolute top-6 left-6 z-50 text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-2 font-orbitron font-bold uppercase pointer-events-auto">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -4102,7 +4116,7 @@
 
     <!-- Loading Music -->
     <div id="loading-overlay"
-        class="absolute inset-0 z-40 bg-black/95 hidden flex flex-col justify-center items-center px-4">
+        class="ui2-tech-backdrop absolute inset-0 z-40 bg-[#02060f]/95 hidden flex flex-col justify-center items-center px-4">
         <div class="max-w-md w-full flex flex-col items-center">
             <!-- Concentric Arc Spinning Loader -->
             <div class="flex justify-center items-center py-4 mb-4">
@@ -4115,9 +4129,9 @@
                 </svg>
             </div>
 
-            <div class="w-full h-2 bg-gray-900/80 rounded-full overflow-hidden p-0.5 border border-purple-500/20 mb-3">
+            <div class="w-full h-2 bg-[#030916] rounded-full overflow-hidden p-0.5 border border-cyan-500/25 mb-3">
                 <div id="music-progress-bar" style="width: 0%;"
-                    class="h-full bg-gradient-to-r from-cyan-400 to-pink-500 rounded-full transition-all duration-100">
+                    class="h-full bg-gradient-to-r from-cyan-400 via-sky-400 to-amber-400 rounded-full transition-all duration-100">
                 </div>
             </div>
 
@@ -4144,7 +4158,7 @@
 
     <!-- In-Game Pause Button (Dành cho lối chơi thường, cho phép pause tức thì như phím ESC trên PC) -->
     <button id="ingame-pause-btn" aria-label="Pause Game"
-        class="absolute top-6 right-6 z-20 hidden items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-xl bg-[#040814]/80 hover:bg-[#040814] active:scale-95 border border-cyan-500/30 hover:border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] text-cyan-400 transition-all backdrop-blur-md cursor-pointer select-none">
+        class="ui2-hud-btn absolute top-6 right-6 z-20 hidden items-center justify-center w-11 h-11 md:w-12 md:h-12 rounded-xl bg-[#040c1c]/85 hover:bg-[#061329] active:scale-95 border border-cyan-500/35 hover:border-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] text-cyan-400 transition-all backdrop-blur-md cursor-pointer select-none">
         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24">
             <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
         </svg>
@@ -4174,20 +4188,20 @@
         <!-- Fire canvas for Rage Mode -->
         <canvas id="gameover-fire-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
 
-        <!-- Tech/Cyber Grid background overlay -->
+        <!-- UI 2.0 PCB Circuit Grid & Node Backdrop -->
         <div
-            class="absolute inset-0 bg-[linear-gradient(to_right,#ec48990a_1px,transparent_1px),linear-gradient(to_bottom,#ec48990a_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none z-0">
+            class="ui2-gameover-grid absolute inset-0 pointer-events-none z-0">
         </div>
 
-        <!-- Glowing ambient orb lights (GPU-accelerated radial gradients without expensive CSS filter blur passes) -->
+        <!-- Glowing ambient PCB core lights -->
         <div
-            class="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(236,72,153,0.18)_0%,transparent_70%)] pointer-events-none z-0">
+            class="absolute -top-32 -left-32 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(14,165,233,0.18)_0%,transparent_70%)] pointer-events-none z-0">
         </div>
         <div
-            class="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.18)_0%,transparent_70%)] pointer-events-none z-0">
+            class="absolute -bottom-32 -right-32 w-80 h-80 rounded-full bg-[radial-gradient(circle,rgba(251,191,36,0.12)_0%,transparent_70%)] pointer-events-none z-0">
         </div>
         <div
-            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-[radial-gradient(circle,rgba(147,51,234,0.14)_0%,transparent_70%)] pointer-events-none z-0">
+            class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-[radial-gradient(circle,rgba(34,211,238,0.16)_0%,transparent_70%)] pointer-events-none z-0">
         </div>
 
         <div id="gameover-screen-window"
@@ -4241,7 +4255,7 @@
                     class="flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black text-cyan-400 bg-cyan-950/40 border border-cyan-400/50 hover:bg-cyan-500/20 hover:border-cyan-400 rounded-xl sm:rounded-2xl font-orbitron uppercase tracking-wider transition-all duration-200 shadow-[0_0_15px_rgba(34,211,238,0.15)] active:scale-95 cursor-pointer">MENU</button>
                 <button id="restart-btn" data-i18n="btn_restart"
                     style="opacity: 0; pointer-events: none;"
-                    class="flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black text-white bg-gradient-to-r from-pink-500 via-purple-600 to-cyan-500 hover:from-pink-400 hover:to-cyan-400 rounded-xl sm:rounded-2xl font-orbitron uppercase tracking-wider transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(236,72,153,0.4)] cursor-pointer">CHƠI
+                    class="flex-1 py-3 sm:py-3.5 text-xs sm:text-sm font-black text-slate-950 bg-gradient-to-r from-cyan-400 via-sky-400 to-amber-300 hover:from-cyan-300 hover:to-amber-200 border border-amber-300/60 rounded-xl sm:rounded-2xl font-orbitron uppercase tracking-wider transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-[0_0_24px_rgba(34,211,238,0.42)] cursor-pointer">CHƠI
                     LẠI</button>
             </div>
         </div>
@@ -4310,7 +4324,7 @@
                     PC Windows (.exe)
                 </h3>
                 <p id="hero-platform-desc" class="text-xs text-slate-400 font-sans mb-3 leading-relaxed" data-i18n="download_opt_pc_desc">
-                    Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.10 · 48 MB
+                    Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.1.0 · < 4 MB
                 </p>
                 <a id="hero-action-btn" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
                     class="w-full block py-2.5 sm:py-3 bg-cyan-400 hover:bg-cyan-300 active:scale-[0.98] text-slate-950 font-orbitron font-black text-xs sm:text-sm uppercase tracking-widest rounded-xl text-center shadow-[0_0_18px_rgba(6,182,212,0.35)] transition-all cursor-pointer whitespace-nowrap" data-i18n="download_btn_download">
@@ -4350,7 +4364,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-orbitron font-bold text-xs sm:text-sm text-slate-200" data-i18n="download_opt_apk_title">Android (APK)</div>
-                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_apk_desc">v1.0.10 · 32 MB</div>
+                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_apk_desc">v1.1.0 · < 16 MB</div>
                         </div>
                     </div>
                     <a id="download-opt-apk" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
@@ -4367,7 +4381,7 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-orbitron font-bold text-xs sm:text-sm text-slate-200" data-i18n="download_opt_pc_title">PC Windows (.exe)</div>
-                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_pc_desc">Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.10 · 48 MB</div>
+                            <div class="text-[11px] text-slate-400 font-sans truncate" data-i18n="download_opt_pc_desc">Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.1.0 · < 4 MB</div>
                         </div>
                     </div>
                     <a id="download-opt-pc" href="https://github.com/MeoNguOfficial/magic-hop-online/releases/latest" target="_blank"
@@ -4415,7 +4429,7 @@
     <div id="cyber-modal"
         class="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex-col justify-center items-center p-4">
         <div id="cyber-modal-window"
-            class="bg-[#0c081e]/95 border-2 border-cyan-500/40 p-6 rounded-xl max-w-sm w-full text-center shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+            class="bg-[#040c1c]/95 border-2 border-cyan-500/40 p-6 rounded-xl max-w-sm w-full text-center shadow-[0_0_20px_rgba(34,211,238,0.2)]">
             <h3 id="cyber-modal-title"
                 class="text-xl font-black text-cyan-400 font-orbitron uppercase mb-3 neon-glow-cyan tracking-widest">
                 THÔNG BÁO</h3>
@@ -4428,7 +4442,7 @@
     <div id="admin-panel-modal"
         class="absolute inset-0 z-[60] bg-black/90 backdrop-blur-md hidden flex-col items-center justify-center p-4">
         <div
-            class="bg-[#0c081e] border-2 border-red-500/40 p-6 rounded-xl max-w-sm w-full shadow-[0_0_20px_rgba(239,68,68,0.2)] relative">
+            class="bg-[#040c1c] border-2 border-red-500/40 p-6 rounded-xl max-w-sm w-full shadow-[0_0_20px_rgba(239,68,68,0.2)] relative">
             <button id="close-admin-btn"
                 class="absolute top-2 right-3 text-red-500 hover:text-red-400 font-bold font-orbitron">X</button>
             <h2
@@ -4588,74 +4602,126 @@
 
             // Max FPS UI is synchronized centrally by js/ui/settings.js
 
-            // Horizontal drag to scroll for Setting Tabs (PC Support)
+            // Horizontal drag/wheel/touch-scroll only for Setting Tabs
             const tabsContainer = document.querySelector('.settings-tabs-container');
-            if (tabsContainer) {
-                let isDown = false;
-                let startX;
-                let scrollLeft;
-
-                tabsContainer.addEventListener('mousedown', (e) => {
-                    isDown = true;
-                    startX = e.pageX - tabsContainer.offsetLeft;
-                    scrollLeft = tabsContainer.scrollLeft;
-                });
-                tabsContainer.addEventListener('mouseleave', () => { isDown = false; });
-                tabsContainer.addEventListener('mouseup', () => { isDown = false; });
-                tabsContainer.addEventListener('mousemove', (e) => {
-                    if (!isDown) return;
-                    e.preventDefault();
-                    const x = e.pageX - tabsContainer.offsetLeft;
-                    const walk = (x - startX) * 2; // Tốc độ trượt
-                    tabsContainer.scrollLeft = scrollLeft - walk;
-                });
+            if (tabsContainer && window.UIAnimator && typeof window.UIAnimator.bindHorizontalScrollOnly === 'function') {
+                window.UIAnimator.bindHorizontalScrollOnly(tabsContainer);
             }
 
-            // Ambient Rotating Hexagons Background Initialization
+            // UI 2.0 PCB Motherboard Circuit Substrate Initialization
             function initBackgroundHexagons() {
                 const container = document.getElementById('menu-bg-hexagons');
                 if (!container) return;
 
-                container.innerHTML = '';
+                container.innerHTML = `
+                    <svg class="ui2-pcb-svg w-full h-full" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <radialGradient id="ui2PcbCoreGlow" cx="50%" cy="48%" r="55%">
+                                <stop offset="0%" stop-color="var(--theme-color, #22d3ee)" stop-opacity="0.14" />
+                                <stop offset="42%" stop-color="var(--theme-color, #0284c7)" stop-opacity="0.06" />
+                                <stop offset="100%" stop-color="#02060f" stop-opacity="0" />
+                            </radialGradient>
+                            <radialGradient id="ui2GoldPad" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#fffbeb" stop-opacity="0.95" />
+                                <stop offset="45%" stop-color="#fbbf24" stop-opacity="0.82" />
+                                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+                            </radialGradient>
+                            <radialGradient id="ui2CyanPad" cx="50%" cy="50%" r="50%">
+                                <stop offset="0%" stop-color="#ecfeff" stop-opacity="0.85" />
+                                <stop offset="50%" stop-color="var(--theme-color, #22d3ee)" stop-opacity="0.72" />
+                                <stop offset="100%" stop-color="var(--theme-color, #22d3ee)" stop-opacity="0" />
+                            </radialGradient>
+                        </defs>
 
-                const count = 15; // Increased count for better distribution
-                const colors = [
-                    'text-cyan-500/20',
-                    'text-pink-500/20',
-                    'text-purple-500/20',
-                    'text-cyan-400/15',
-                    'text-pink-400/15'
-                ];
+                        <!-- Subtle deep atmospheric glow -->
+                        <rect width="1200" height="800" fill="url(#ui2PcbCoreGlow)" />
 
-                for (let i = 0; i < count; i++) {
-                    const size = Math.floor(Math.random() * 160) + 60; // 60px to 220px
-                    const left = Math.floor(Math.random() * 100);
-                    const color = colors[Math.floor(Math.random() * colors.length)];
-                    const duration = Math.floor(Math.random() * 20) + 20; // 20s to 40s (slow fall)
-                    const delay = Math.floor(Math.random() * -duration); // Stagger mid-animation
+                        <!-- Left / Upper-Left 45-degree etched circuit buses -->
+                        <g class="ui2-pcb-base" fill="none" stroke="var(--theme-color, #22d3ee)" stroke-linecap="round" stroke-linejoin="round" opacity="0.22" stroke-width="1.15">
+                            <polyline points="552,336 472,336 420,284 260,284 195,219 0,219" />
+                            <polyline points="544,352 456,352 396,292 220,292 140,212 140,0" />
+                            <polyline points="540,368 430,368 355,443 190,443 115,518 0,518" />
+                            <polyline points="548,386 446,386 380,452 245,452 160,537 160,800" />
+                            <polyline points="498,298 424,224 275,224 205,154 205,0" />
+                            <polyline points="518,284 446,212 315,212 240,137 0,137" />
+                            <polyline points="355,140 280,65 100,65 40,5" />
+                            <polyline points="300,630 190,630 120,700 0,700" />
+                            <polyline points="420,520 330,610 215,610 155,670 60,670" />
+                        </g>
 
-                    const drift = (Math.random() * 100 - 50) + 'px'; // Sway left/right -50px to 50px
+                        <!-- Right / Lower-Right 45-degree etched circuit buses -->
+                        <g class="ui2-pcb-base" fill="none" stroke="var(--theme-color, #22d3ee)" stroke-linecap="round" stroke-linejoin="round" opacity="0.22" stroke-width="1.15">
+                            <polyline points="648,336 730,336 786,280 945,280 1015,210 1200,210" />
+                            <polyline points="656,352 752,352 818,286 985,286 1055,216 1055,0" />
+                            <polyline points="660,368 770,368 845,443 1010,443 1085,518 1200,518" />
+                            <polyline points="652,386 756,386 824,454 960,454 1040,534 1040,800" />
+                            <polyline points="702,298 776,224 925,224 995,154 995,0" />
+                            <polyline points="682,284 754,212 885,212 960,137 1200,137" />
+                            <polyline points="845,140 920,65 1100,65 1160,5" />
+                            <polyline points="900,630 1010,630 1080,700 1200,700" />
+                            <polyline points="780,520 870,610 985,610 1045,670 1140,670" />
+                        </g>
 
-                    const hex = document.createElement('div');
-                    hex.style.position = 'absolute';
-                    hex.style.width = `${size}px`;
-                    hex.style.height = `${size}px`;
-                    hex.style.left = `${left}%`;
-                    hex.style.top = `0px`; // All start at 0 and translated by CSS
-                    hex.style.animationDuration = `${duration}s`;
-                    hex.style.animationDelay = `${delay}s`;
-                    hex.style.setProperty('--hex-drift', drift);
-                    hex.className = `hex-bg-shape ${color}`;
+                        <!-- Subtle vertical data lanes -->
+                        <g class="ui2-pcb-base" fill="none" stroke="var(--theme-color, #22d3ee)" stroke-linecap="round" stroke-linejoin="round" opacity="0.16" stroke-width="1">
+                            <polyline points="564,414 564,530 510,584 510,800" />
+                            <polyline points="582,418 582,555 548,589 548,800" />
+                            <polyline points="618,418 618,555 652,589 652,800" />
+                            <polyline points="636,414 636,530 690,584 690,800" />
+                            <polyline points="572,320 572,190 525,143 525,0" />
+                            <polyline points="628,320 628,190 675,143 675,0" />
+                        </g>
 
-                    hex.innerHTML = `
-                        <svg viewBox="0 0 100 100" class="w-full h-full">
-                            <polygon points="50,2 91.5,26 91.5,74 50,98 8.5,74 8.5,26" fill="none" stroke="currentColor" stroke-width="1.2" />
-                            <polygon points="50,12 83,31 83,69 50,88 17,69 17,31" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2,3" />
-                            <circle cx="50" cy="50" r="3.5" fill="currentColor" opacity="0.3" />
-                        </svg>
-                    `;
-                    container.appendChild(hex);
-                }
+                        <!-- Animated Data Signal Pulses Traveling Along Flank Traces -->
+                        <g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6">
+                            <polyline class="ui2-pcb-flow ui2-flow-a" stroke="var(--theme-color-soft, #67e8f9)" points="472,336 420,284 260,284 195,219 0,219" />
+                            <polyline class="ui2-pcb-flow ui2-flow-b" stroke="#fbbf24" points="430,368 355,443 190,443 115,518 0,518" />
+                            <polyline class="ui2-pcb-flow ui2-flow-c" stroke="var(--theme-color, #22d3ee)" points="498,298 424,224 275,224 205,154 205,0" />
+                            <polyline class="ui2-pcb-flow ui2-flow-b" stroke="var(--theme-color-soft, #67e8f9)" points="420,520 330,610 215,610 155,670 60,670" />
+
+                            <polyline class="ui2-pcb-flow ui2-flow-a" stroke="var(--theme-color-soft, #67e8f9)" points="730,336 786,280 945,280 1015,210 1200,210" />
+                            <polyline class="ui2-pcb-flow ui2-flow-c" stroke="#fbbf24" points="770,368 845,443 1010,443 1085,518 1200,518" />
+                            <polyline class="ui2-pcb-flow ui2-flow-b" stroke="var(--theme-color, #22d3ee)" points="702,298 776,224 925,224 995,154 995,0" />
+                            <polyline class="ui2-pcb-flow ui2-flow-a" stroke="var(--theme-color-soft, #67e8f9)" points="780,520 870,610 985,610 1045,670 1140,670" />
+                        </g>
+
+                        <!-- Subdued Central Etched Socket Silhouette (low glare behind center UI) -->
+                        <g transform="translate(600, 368)" opacity="0.22">
+                            <rect x="-44" y="-44" width="88" height="88" rx="6" fill="none" stroke="var(--theme-color, #22d3ee)" stroke-width="1" />
+                            <rect x="-24" y="-24" width="48" height="48" rx="4" fill="none" stroke="var(--theme-color-soft, #67e8f9)" stroke-width="0.9" stroke-dasharray="4 4" />
+                        </g>
+
+                        <!-- Warm Gold & Cyan Solder Pad Vias / Pin Clusters -->
+                        <g class="ui2-pcb-pins">
+                            <circle class="ui2-pin-a" cx="420" cy="284" r="4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-b" cx="260" cy="284" r="3.8" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-c" cx="275" cy="224" r="3.5" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-b" cx="355" cy="443" r="4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-a" cx="245" cy="452" r="3.8" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-c" cx="330" cy="610" r="4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-a" cx="215" cy="610" r="3.4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-b" cx="190" cy="630" r="3.4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-c" cx="100" cy="65" r="3.6" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-a" cx="355" cy="140" r="3.6" fill="url(#ui2GoldPad)" />
+
+                            <circle class="ui2-pin-b" cx="786" cy="280" r="4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-a" cx="945" cy="280" r="3.8" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-c" cx="925" cy="224" r="3.5" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-a" cx="845" cy="443" r="4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-b" cx="960" cy="454" r="3.8" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-c" cx="870" cy="610" r="4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-b" cx="985" cy="610" r="3.4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-a" cx="1010" cy="630" r="3.4" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-c" cx="1100" cy="65" r="3.6" fill="url(#ui2GoldPad)" />
+                            <circle class="ui2-pin-b" cx="845" cy="140" r="3.6" fill="url(#ui2GoldPad)" />
+
+                            <circle class="ui2-pin-c" cx="472" cy="336" r="3.2" fill="url(#ui2CyanPad)" />
+                            <circle class="ui2-pin-c" cx="730" cy="336" r="3.2" fill="url(#ui2CyanPad)" />
+                            <circle class="ui2-pin-a" cx="195" cy="219" r="3.5" fill="url(#ui2CyanPad)" />
+                            <circle class="ui2-pin-a" cx="1015" cy="210" r="3.5" fill="url(#ui2CyanPad)" />
+                        </g>
+                    </svg>
+                `;
             }
 
             // Run background hexagons on startup
@@ -4681,6 +4747,7 @@
             "js/audio/playlist.js",
             "js/services/cacheManager.js",
             "js/services/storage-manager.js",
+            "js/core/ui-animations.js",
             "js/core/pwa-installer.js",
             "js/core/desktop-app.js",
             "js/core/mobile-app.js",
@@ -4700,6 +4767,7 @@
             "js/engine/game-effects.js",
             "js/engine/game-camera.js",
             "js/audio/visualizer.js",
+            "js/engine/antialiasing.js",
             "js/engine/adaptive-performance.js",
             "js/engine/fps-graph.js",
             "js/engine/game.js",
@@ -4713,11 +4781,12 @@
             // "js/ui/alert.js"
         ];
 
-        const SCRIPT_BUILD_VERSION = window.SCRIPT_BUILD_VERSION = '1.0.10';
+        const SCRIPT_BUILD_VERSION = window.SCRIPT_BUILD_VERSION = '1.1.0';
+        const ASSET_CACHE_TAG = window.ASSET_CACHE_TAG = '1.1.0-3';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = src + (src.includes('?') ? '&' : '?') + 'v=' + SCRIPT_BUILD_VERSION;
+                s.src = src + (src.includes('?') ? '&' : '?') + 'v=' + ASSET_CACHE_TAG;
                 s.async = false;
                 s.onload = resolve;
                 s.onerror = reject;

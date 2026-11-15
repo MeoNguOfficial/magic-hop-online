@@ -1,4 +1,4 @@
-# 🌟 Cyber Beat Hopper — Credits & Tín Nhiệm (v1.0.10)
+# 🌟 Cyber Beat Hopper — Credits & Tín Nhiệm (v1.1.0)
 
 Dự án game âm nhạc 3D nhịp điệu phong cách Cyberpunk mã nguồn mở, được phát triển và vận hành bởi **MeoTN Gaming** & **MeoTN Digital**.
 

@@ -355,6 +355,16 @@ function updateFilteredList(term, forceUpdate = false, specificIndices = null) {
     }
 }
 
+const SONG_DISC_PALETTES = 6;
+function getSongDiscPaletteIndex(song, fallbackIndex = 0) {
+    const seedStr = String((song && (song.id ?? song.beatmap_id ?? song.name ?? song.title)) ?? fallbackIndex);
+    let hash = 0;
+    for (let i = 0; i < seedStr.length; i++) {
+        hash = ((hash * 31) + seedStr.charCodeAt(i)) >>> 0;
+    }
+    return (hash + (fallbackIndex | 0)) % SONG_DISC_PALETTES;
+}
+
 window.renderSongList = renderSongList;
 function renderSongList(filterTerm = null, specificIndices = null) {
     const currentRenderId = ++renderId;
@@ -520,15 +530,28 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         }
 
         const opt = document.createElement('div');
-        const extraOptClasses = (isAdmin && isOutOrHidden) ? 'border-dashed border-red-500/30 bg-red-950/10' : 'border-cyan-500/10 bg-cyan-950/5';
-        opt.className = `song-option ${selectedSongIndex === originalIndex ? 'active' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-lg border hover:border-cyan-400/40 flex flex-col transition-all duration-200`;
+        const extraOptClasses = (isAdmin && isOutOrHidden) ? 'border-dashed border-red-500/30 bg-red-950/10' : 'border-cyan-500/15 bg-cyan-950/5';
+        const isCurrentlyActive = selectedSongIndex === originalIndex;
+        const isCurrentlyPreviewing = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === originalIndex);
+        const discPaletteIdx = getSongDiscPaletteIndex(song, originalIndex);
+        opt.className = `song-option ui2-song-card ${isCurrentlyActive ? 'active' : ''} ${isCurrentlyPreviewing ? 'is-previewing' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-xl border hover:border-cyan-400/50 flex flex-col transition-all duration-200`;
         opt.dataset.index = originalIndex;
         const isExpanded = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === originalIndex);
         const isKnownCached = (song.loaded && song.beats && song.beats.length > 4) || song._isCached === true;
         
         opt.innerHTML = `
-            <div class="song-option-main flex justify-between items-center w-full pointer-events-none">
-                <div class="flex-1 min-w-0 pr-2 overflow-hidden pointer-events-auto">
+            <div class="song-option-main flex justify-between items-center gap-2.5 w-full pointer-events-none">
+                <div class="song-disc-wrap shrink-0 pointer-events-none" aria-hidden="true">
+                    <div class="song-mini-disc song-disc-palette-${discPaletteIdx}">
+                        <div class="song-mini-disc-grooves"></div>
+                        <div class="song-mini-disc-ring">
+                            <div class="song-mini-disc-dot">
+                                <div class="song-mini-disc-hole"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex-1 min-w-0 pr-1 overflow-hidden pointer-events-auto">
                     <div class="flex items-center gap-1.5 min-w-0 w-full">
                         <h3 class="font-bold text-white group-hover:text-cyan-300 font-orbitron text-sm pointer-events-none overflow-hidden whitespace-nowrap flex-1 min-w-0 marquee-container">
                             <span class="marquee-text inline-block">${song.name || song.title || 'Untitled'}</span>
@@ -536,9 +559,9 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         ${adminEyeBadgeHtml}
                         <div id="cache-status-${originalIndex}" class="shrink-0 pointer-events-none inline-flex items-center justify-center self-center my-auto"></div>
                     </div>
-                    <p class="text-[10px] text-gray-400 pointer-events-none">${song.artist || 'Unknown Artist'}</p>
+                    <p class="text-[10px] text-gray-400 pointer-events-none truncate">${song.artist || 'Unknown Artist'}</p>
                 </div>
-                <div class="flex items-center pointer-events-auto">
+                <div class="flex items-center shrink-0 pointer-events-auto">
                     <svg class="w-5 h-5 text-cyan-500 transition-transform duration-300 expand-icon ${isExpanded ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                     </svg>
@@ -659,26 +682,28 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                 const details = opt.querySelector('.song-option-details');
                 const expandIcon = opt.querySelector('.expand-icon');
                 if (details) {
-                    const isAnimEnabled = (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+                    const isAnimEnabled = window.UIAnimator ? window.UIAnimator.canAnime() : (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled));
                     if (typeof playClickSound === 'function') playClickSound();
 
                     if (details.classList.contains('hidden')) {
                         // Close other opened options
                         selector.querySelectorAll('.song-option-details').forEach(el => {
                             if (!el.classList.contains('hidden') && el !== details) {
-                                if (isAnimEnabled && typeof anime !== 'undefined') {
+                                if (typeof anime !== 'undefined') anime.remove(el);
+                                if (isAnimEnabled) {
                                     el.style.overflow = 'hidden';
                                     anime({
                                         targets: el,
                                         height: [el.offsetHeight + 'px', 0],
                                         opacity: [1, 0],
-                                        duration: 250,
+                                        duration: 240,
                                         easing: 'easeInQuad',
                                         complete: () => {
                                             el.classList.add('hidden');
                                             el.style.height = '';
                                             el.style.opacity = '';
                                             el.style.display = '';
+                                            el.style.overflow = '';
                                         }
                                     });
                                 } else {
@@ -686,6 +711,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                                     el.style.height = '';
                                     el.style.opacity = '';
                                     el.style.display = '';
+                                    el.style.overflow = '';
                                 }
                             }
                         });
@@ -693,6 +719,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                             if (icon !== expandIcon) icon.classList.remove('rotate-180');
                         });
 
+                        if (typeof anime !== 'undefined') anime.remove(details);
                         details.classList.remove('hidden');
                         if (expandIcon) expandIcon.classList.add('rotate-180');
                         if (typeof updateFeaturedDisc === 'function') updateFeaturedDisc(originalIndex);
@@ -707,7 +734,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                             }
                         }
 
-                        if (isAnimEnabled && typeof anime !== 'undefined') {
+                        if (isAnimEnabled) {
                             details.style.display = 'flex';
                             const targetHeight = details.scrollHeight;
                             details.style.height = '0px';
@@ -717,13 +744,19 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                                 targets: details,
                                 height: [0, targetHeight + 'px'],
                                 opacity: [0, 1],
-                                duration: 300,
-                                easing: 'easeOutQuad',
+                                duration: 280,
+                                easing: 'easeOutCubic',
                                 complete: () => {
                                     details.style.height = 'auto';
+                                    details.style.opacity = '';
                                     details.style.overflow = 'visible';
                                 }
                             });
+                        } else {
+                            details.style.display = 'flex';
+                            details.style.height = '';
+                            details.style.opacity = '';
+                            details.style.overflow = 'visible';
                         }
                         
                         // Play preview automatically
@@ -745,24 +778,29 @@ function renderSongList(filterTerm = null, specificIndices = null) {
                         // Stop preview when collapsed (with false to allow menu music resume)
                         if (typeof stopPreview === 'function') stopPreview(false);
                         
-                        if (isAnimEnabled && typeof anime !== 'undefined') {
+                        if (isAnimEnabled) {
+                            if (typeof anime !== 'undefined') anime.remove(details);
                             details.style.overflow = 'hidden';
                             anime({
                                 targets: details,
                                 height: [details.offsetHeight + 'px', 0],
                                 opacity: [1, 0],
-                                duration: 250,
+                                duration: 240,
                                 easing: 'easeInQuad',
                                 complete: () => {
                                     details.classList.add('hidden');
                                     details.style.height = '';
                                     details.style.opacity = '';
                                     details.style.display = '';
+                                    details.style.overflow = '';
                                 }
                             });
                         } else {
                             details.classList.add('hidden');
+                            details.style.height = '';
+                            details.style.opacity = '';
                             details.style.display = '';
+                            details.style.overflow = '';
                         }
                     }
                 }
@@ -814,6 +852,15 @@ function renderSongList(filterTerm = null, specificIndices = null) {
     });
 
     selector.appendChild(songCardsFragment);
+
+    if (window.UIAnimator && typeof window.UIAnimator.staggerChildren === 'function') {
+        window.UIAnimator.staggerChildren(selector, '.song-option', {
+            y: 10,
+            step: 20,
+            duration: 240,
+            maxAnimated: 12
+        });
+    }
 
     // Xóa nút "Tải thêm" cũ nếu có
     const oldLoadMoreBtn = document.getElementById('load-more-btn');
@@ -871,6 +918,17 @@ window.updateSongWaveBadge = updateSongWaveBadge;
 
 function updatePreviewUI(index, state) {
     if (typeof index === 'undefined' || index === null || index === -1) return;
+
+    document.querySelectorAll('.song-option.is-previewing').forEach(el => {
+        if (String(el.dataset.index) !== String(index) || (state !== 'playing' && state !== 'loading')) {
+            el.classList.remove('is-previewing');
+        }
+    });
+    const targetCard = document.querySelector(`.song-option[data-index="${index}"]`);
+    if (targetCard && (state === 'playing' || state === 'loading')) {
+        targetCard.classList.add('is-previewing');
+    }
+
     const btn = document.getElementById(`preview-btn-${index}`);
     if (!btn) return;
 
@@ -1063,6 +1121,14 @@ async function showLeaderboard(songIndex, forceRefresh = false, targetMode = nul
         const listEl = document.getElementById('lb-modal-list');
         if (listEl) {
             listEl.innerHTML = listHtml;
+            if (window.UIAnimator && typeof window.UIAnimator.staggerChildren === 'function') {
+                window.UIAnimator.staggerChildren(listEl, ':scope > div', {
+                    y: 8,
+                    step: 24,
+                    duration: 220,
+                    maxAnimated: 12
+                });
+            }
         }
 
         const btnRef = document.getElementById(`btn-refresh-lb-${song.id}`);
@@ -1194,8 +1260,16 @@ function initSearchableFilterDropdown(cfg) {
                     const svg = parentBtn.querySelector('svg');
                     if (svg) svg.classList.remove('rotate-180');
                 }
-                d.classList.add('hidden');
-                if (parentWrapper) parentWrapper.style.zIndex = '';
+                if (window.UIAnimator && typeof window.UIAnimator.closeDropdown === 'function') {
+                    window.UIAnimator.closeDropdown(d, {
+                        onComplete: () => {
+                            if (parentWrapper) parentWrapper.style.zIndex = '';
+                        }
+                    });
+                } else {
+                    d.classList.add('hidden');
+                    if (parentWrapper) parentWrapper.style.zIndex = '';
+                }
             }
         });
         const section = document.getElementById('song-search-filter-section');
@@ -1213,7 +1287,6 @@ function initSearchableFilterDropdown(cfg) {
         closeAllDropdowns();
 
         if (!isOpen) {
-            dropdown.classList.remove('hidden');
             const parentWrapper = dropdown.closest('.relative');
             if (parentWrapper) parentWrapper.style.zIndex = '35';
             if (section) section.classList.add('has-open-dropdown');
@@ -1222,12 +1295,16 @@ function initSearchableFilterDropdown(cfg) {
             if (svg) svg.classList.add('rotate-180');
 
             if (searchEl) {
+                dropdown.classList.remove('hidden');
                 searchEl.value = '';
                 searchEl.focus();
             }
             renderList('');
 
-            if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+            if (window.UIAnimator && typeof window.UIAnimator.openDropdown === 'function') {
+                window.UIAnimator.openDropdown(dropdown, { y: -6, duration: 180 });
+            } else if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
+                dropdown.classList.remove('hidden');
                 anime.remove(dropdown);
                 anime({
                     targets: dropdown,
@@ -1238,6 +1315,7 @@ function initSearchableFilterDropdown(cfg) {
                     easing: 'easeOutQuad'
                 });
             } else {
+                dropdown.classList.remove('hidden');
                 dropdown.style.opacity = 1;
                 dropdown.style.transform = 'none';
             }
@@ -1255,9 +1333,17 @@ function initSearchableFilterDropdown(cfg) {
             if (!dropdown.classList.contains('hidden')) {
                 const svg = btn.querySelector('svg');
                 if (svg) svg.classList.remove('rotate-180');
-                dropdown.classList.add('hidden');
                 const parentWrapper = dropdown.closest('.relative');
-                if (parentWrapper) parentWrapper.style.zIndex = '';
+                if (window.UIAnimator && typeof window.UIAnimator.closeDropdown === 'function') {
+                    window.UIAnimator.closeDropdown(dropdown, {
+                        onComplete: () => {
+                            if (parentWrapper) parentWrapper.style.zIndex = '';
+                        }
+                    });
+                } else {
+                    dropdown.classList.add('hidden');
+                    if (parentWrapper) parentWrapper.style.zIndex = '';
+                }
                 const section = document.getElementById('song-search-filter-section');
                 if (section && !document.querySelector('.searchable-filter-dropdown:not(.hidden)')) {
                     section.classList.remove('has-open-dropdown');
@@ -1659,7 +1745,7 @@ function updateFeaturedDisc(songIndex) {
 
     const titleEl = document.getElementById('featured-disc-title');
     const artistEl = document.getElementById('featured-disc-artist');
-    const discBody = document.getElementById('featured-disc-body');
+    const discCard = document.getElementById('featured-disc-card');
 
     const songTitle = song.name || song.title || 'Untitled';
     const songArtist = song.artist || 'Unknown Artist';
@@ -1676,10 +1762,15 @@ function updateFeaturedDisc(songIndex) {
         artistEl.title = songArtist;
     }
 
-    if (discBody) {
-        discBody.classList.remove('featured-disc-stepping');
-        void discBody.offsetWidth; // Force reflow
-        discBody.classList.add('featured-disc-stepping');
+    if (discCard) {
+        discCard.classList.remove('featured-disc-stepping');
+        void discCard.offsetWidth; // Force reflow
+        discCard.classList.add('featured-disc-stepping');
+        if (discCard._stepTimer) clearTimeout(discCard._stepTimer);
+        discCard._stepTimer = setTimeout(() => {
+            discCard.classList.remove('featured-disc-stepping');
+            discCard._stepTimer = null;
+        }, 380);
     }
 
     // Đồng bộ class active trong danh sách bài hát

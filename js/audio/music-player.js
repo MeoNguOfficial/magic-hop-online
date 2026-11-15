@@ -9,6 +9,8 @@ window.MusicPlayer = {
     loopMode: 0, // 0: Normal/Loop All, 1: Loop One, 2: Shuffle
     isDraggingProgress: false,
     fadeInterval: null,
+    _playRequestToken: 0,
+    _mobileAudioUnlocked: false,
     
     // Audio Context & Visualizer variables
     audioCtx: null,
@@ -183,11 +185,14 @@ window.MusicPlayer = {
             if (!this.isPlaying) return;
             this.animationFrameId = requestAnimationFrame(draw);
             
-            // Giới hạn tốc độ quét xuống ~30fps để tối ưu hiệu suất
-            // Hỗ trợ tần số quét màn hình cao mượt mà (60Hz, 120Hz, 144Hz, 240Hz)
-            const targetHz = (typeof window.getEffectiveTargetFps === 'function')
+            // Bỏ qua vẽ canvas nếu Music tab đang ẩn để tiết kiệm CPU/GPU ở màn tần số quét cao
+            if (!this.visCanvas || this.visCanvas.offsetParent === null) return;
+
+            // Giới hạn tốc độ vẽ visualizer ~30-75Hz tối đa để giữ UI mượt mà ở màn hình 60Hz–360Hz
+            const rawTargetHz = (typeof window.getEffectiveTargetFps === 'function')
                 ? window.getEffectiveTargetFps()
                 : (typeof window.screenRefreshRate === 'number' ? window.screenRefreshRate : 60);
+            const targetHz = Math.min(75, Math.max(30, rawTargetHz));
             const minVisInterval = targetHz > 60 ? (1000 / (targetHz * 1.05)) : 16;
             if (time - this.lastVisTime < minVisInterval) return;
             this.lastVisTime = time;
@@ -246,29 +251,37 @@ window.MusicPlayer = {
     },
 
     playIndex: async function(index, withFade = false) {
+        const reqToken = ++this._playRequestToken;
         if (!this.audioCtx) this.initAudioContext();
         if (this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume();
 
-        // Đánh thức Audio trên di động bằng cách chạy một track rỗng
-        if (!this.audio.src || this.audio.src === window.location.href || this.audio.src.startsWith('data:audio/')) {
+        // Đánh thức Audio trên di động đúng 1 lần đầu trong user gesture (tránh đè src lặp gây AbortError)
+        const hasRealTrackSrc = !!(this.audio.src && this.audio.src !== window.location.href && !this.audio.src.startsWith('data:audio/'));
+        if (!this._mobileAudioUnlocked && !hasRealTrackSrc) {
+            this._mobileAudioUnlocked = true;
             this.audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-            this.audio.play().catch(()=>{});
+            const unlockPromise = this.audio.play();
+            if (unlockPromise && typeof unlockPromise.catch === 'function') {
+                unlockPromise.catch(() => {});
+            }
         }
 
         if (typeof ensureSongLoaded === 'function') {
             await ensureSongLoaded(index);
+            if (reqToken !== this._playRequestToken) return;
         }
 
         const song = playlist[index];
-        
+
         if (!song || !song.url) {
-            this.stop();
+            if (reqToken === this._playRequestToken) this.stop();
             return;
         }
 
         // --- OFFLINE CHECK ---
         if (!navigator.onLine) {
             const isCached = typeof isAudioCached === 'function' ? await isAudioCached(song.url) : false;
+            if (reqToken !== this._playRequestToken) return;
             if (!isCached) {
                 if (typeof showCyberModal === 'function') {
                     showCyberModal({
@@ -302,6 +315,17 @@ window.MusicPlayer = {
         
         // Tận dụng CacheManager để load cực mượt
         const url = typeof getCachedAudioUrl === 'function' ? await getCachedAudioUrl(song.url) : song.url;
+        if (reqToken !== this._playRequestToken) return;
+
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+        }
+
+        try {
+            if (!this.audio.paused) this.audio.pause();
+        } catch (e) {}
+
         this.audio.src = url;
         this.audio.playbackRate = parseFloat(this.sliderSpeed.value);
         
@@ -313,11 +337,10 @@ window.MusicPlayer = {
         if (withFade) {
             this.fadeIn();
         } else {
-            if (this.fadeInterval) clearInterval(this.fadeInterval);
             this.audio.volume = 1.0;
         }
 
-        this.audio.play().catch(e => console.error("Music Player Playback failed:", e));
+        this._playAudioSafe(reqToken);
         this.isPlaying = true;
         this.updatePlayBtnUI();
         this.startVisualizer();
@@ -327,12 +350,8 @@ window.MusicPlayer = {
         if (!this.audioCtx) this.initAudioContext();
         if (this.audioCtx && this.audioCtx.state === 'suspended') this.audioCtx.resume();
 
-        if (!this.audio.src || this.audio.src === window.location.href || this.audio.src.startsWith('data:audio/')) {
-            this.audio.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-            this.audio.play().catch(()=>{});
-        }
-
         if (this.isPlaying) {
+            this._playRequestToken++;
             if (withFade) {
                 // Cross-fade 2 chiều: Tự động làm lớn dần nhạc nền BGM khi dừng Music Player
                 if (typeof audioCtx !== 'undefined' && audioCtx && typeof menuGainNode !== 'undefined' && menuGainNode && (typeof currentPreviewIndex === 'undefined' || currentPreviewIndex === -1)) {
@@ -382,6 +401,7 @@ window.MusicPlayer = {
             if (!this.audio.src || this.audio.src === window.location.href || this.audio.src.startsWith('data:audio/')) {
                 this.playIndex(this.currentIndex, withFade);
             } else {
+                const reqToken = ++this._playRequestToken;
                 if (typeof stopPreview === 'function') stopPreview(true);
                 
                 if (typeof audioCtx !== 'undefined' && audioCtx && typeof menuGainNode !== 'undefined' && menuGainNode) {
@@ -396,11 +416,14 @@ window.MusicPlayer = {
                 if (withFade) {
                     this.fadeIn();
                 } else {
-                    if (this.fadeInterval) clearInterval(this.fadeInterval);
+                    if (this.fadeInterval) {
+                        clearInterval(this.fadeInterval);
+                        this.fadeInterval = null;
+                    }
                     this.audio.volume = 1.0;
                 }
 
-                this.audio.play().catch(e => console.error(e));
+                this._playAudioSafe(reqToken);
                 this.isPlaying = true;
                 this.startVisualizer();
             }
@@ -454,7 +477,24 @@ window.MusicPlayer = {
         }, 25);
     },
     
+    _playAudioSafe: function(reqToken) {
+        this._mobileAudioUnlocked = true;
+        const playPromise = this.audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch((e) => {
+                if (e && e.name === 'AbortError') return;
+                if (reqToken !== this._playRequestToken) return;
+                console.error("Music Player Playback failed:", e);
+            });
+        }
+    },
+
     stop: function() {
+        this._playRequestToken++;
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+        }
         this.audio.pause();
         this.isPlaying = false;
         this.updatePlayBtnUI();

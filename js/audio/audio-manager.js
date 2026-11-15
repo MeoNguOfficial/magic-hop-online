@@ -16,6 +16,9 @@ const STAR_COLLECT_SFX_URL = "https://an4sdmu4yskbqrq6.public.blob.vercel-storag
 const BREAK_BLOCK_SFX_URL = "https://an4sdmu4yskbqrq6.public.blob.vercel-storage.com/fake-block-break.ogg";
 
 let audio, audioCtx, source, filterNode, gainNode;
+let tapeStopDelayNode = null;
+let failAudioTransitionMode = 'none';
+const _tapeStopCurveCache = new Map();
 let analyserNode = null;
 let visualizerCtx = null;
 let visDataArray = null; // Dùng chung mảng dữ liệu Visualizer để tránh GC
@@ -179,6 +182,9 @@ function initAudio() {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         source = audioCtx.createMediaElementSource(audio);
+        tapeStopDelayNode = audioCtx.createDelay(2.5);
+        tapeStopDelayNode.delayTime.value = 0;
+
         filterNode = audioCtx.createBiquadFilter();
         filterNode.type = 'lowpass';
         filterNode.frequency.value = 22050;
@@ -190,7 +196,8 @@ function initAudio() {
         analyserNode.smoothingTimeConstant = 0.7;
 
         source.connect(analyserNode);
-        analyserNode.connect(filterNode);
+        analyserNode.connect(tapeStopDelayNode);
+        tapeStopDelayNode.connect(filterNode);
         filterNode.connect(gainNode);
         gainNode.connect(audioCtx.destination);
 
@@ -1146,3 +1153,157 @@ window.addEventListener('focus', () => {
         }
     }
 });
+
+// --- REMASTERED GAME OVER / FAIL TAPE-STOP AUDIO TRANSITION ---
+/**
+ * Build or retrieve a cached quadratic delay curve for Web Audio tape-stop.
+ * Delay d(t) = 0.5 * T * (t / T)^2 yields linear speed+pitch scale (1 - t / T).
+ */
+function _getTapeStopDelayCurve(duration) {
+    const safeDuration = Math.max(0.1, Number(duration) || 1.5);
+    const cacheKey = Math.round(safeDuration * 1000);
+    let curve = _tapeStopCurveCache.get(cacheKey);
+    if (curve) return curve;
+
+    const samples = 129;
+    const maxDelay = Math.min(2.4, 0.5 * safeDuration);
+    curve = new Float32Array(samples);
+    for (let i = 0; i < samples; i++) {
+        const u = i / (samples - 1);
+        curve[i] = maxDelay * u * u;
+    }
+    _tapeStopCurveCache.set(cacheKey, curve);
+    return curve;
+}
+
+/**
+ * Start Game Over / Hold-Exit slowdown effect.
+ * When preservePitchEnabled is ON, keeps audio.preservesPitch=true intact (no pitch jump)
+ * and renders a smooth C++ audio-thread Doppler tape-stop via DelayNode + analog lowpass sweep.
+ */
+function beginFailAudioTransition(duration, initialSpeed) {
+    const safeDuration = Math.max(0.1, Number(duration) || 1.5);
+    const currentRate = (typeof audio !== 'undefined' && audio) ? (audio.playbackRate || 1.0) : 1.0;
+    const safeInitialSpeed = Math.max(0.20, Number(initialSpeed) || currentRate || 1.0);
+    const preservePitch = typeof preservePitchEnabled !== 'undefined' && !!preservePitchEnabled;
+
+    resetFailAudioTransition({ keepGain: true, keepPlaybackRate: true });
+
+    if (preservePitch) {
+        if (typeof audio !== 'undefined' && audio) {
+            // Keep preservesPitch untouched & steady playbackRate above browser WSOLA glitch zone
+            audio.preservesPitch = true;
+            audio.mozPreservesPitch = true;
+            audio.webkitPreservesPitch = true;
+            audio.playbackRate = Math.max(0.25, safeInitialSpeed);
+        }
+
+        if (typeof audioCtx !== 'undefined' && audioCtx && !(typeof useAudioContextFallback !== 'undefined' && useAudioContextFallback) && tapeStopDelayNode && filterNode) {
+            failAudioTransitionMode = 'web-audio-tape-stop';
+            try {
+                if (audioCtx.state === 'suspended' && typeof audioCtx.resume === 'function') {
+                    audioCtx.resume().catch(() => { });
+                }
+                const now = audioCtx.currentTime;
+                const startTime = now + 0.004;
+                const curve = _getTapeStopDelayCurve(safeDuration);
+
+                tapeStopDelayNode.delayTime.cancelScheduledValues(now);
+                tapeStopDelayNode.delayTime.setValueAtTime(0, now);
+                tapeStopDelayNode.delayTime.setValueCurveAtTime(curve, startTime, safeDuration);
+
+                filterNode.frequency.cancelScheduledValues(now);
+                filterNode.frequency.setValueAtTime(22050, now);
+                filterNode.frequency.setValueAtTime(22050, startTime);
+                filterNode.frequency.exponentialRampToValueAtTime(550, startTime + safeDuration);
+            } catch (e) {
+                failAudioTransitionMode = 'fallback';
+            }
+        } else {
+            failAudioTransitionMode = 'fallback';
+        }
+    } else {
+        if (typeof audio !== 'undefined' && audio) {
+            audio.preservesPitch = false;
+            audio.mozPreservesPitch = false;
+            audio.webkitPreservesPitch = false;
+        }
+        failAudioTransitionMode = 'native';
+    }
+
+    return failAudioTransitionMode;
+}
+
+/**
+ * Per-frame update during fail/hold-exit transition.
+ */
+function updateFailAudioTransition(speedRatio, initialSpeed) {
+    const ratio = Math.max(0.0, Math.min(1.0, Number(speedRatio) || 0));
+    const safeInitialSpeed = Math.max(0.20, Number(initialSpeed) || 1.0);
+    const currentVol = (typeof isGameMuted !== 'undefined' && isGameMuted) ? 0 : (typeof gameVolume !== 'undefined' ? gameVolume : 1);
+    const fadedVol = Math.max(0.0, currentVol * Math.pow(ratio, 1.5));
+
+    if (typeof audio !== 'undefined' && audio) {
+        if (failAudioTransitionMode === 'native' || failAudioTransitionMode === 'fallback') {
+            audio.playbackRate = Math.max(0.20, safeInitialSpeed * ratio);
+        }
+        if (ratio <= 0.02 && !audio.paused) {
+            audio.pause();
+        }
+        if (typeof useAudioContextFallback !== 'undefined' && useAudioContextFallback) {
+            audio.volume = fadedVol;
+        }
+    }
+
+    if (typeof gainNode !== 'undefined' && gainNode) {
+        gainNode.gain.value = fadedVol;
+    }
+}
+
+/**
+ * Cancel scheduled tape-stop delay/filter curves and restore clean normal playback graph.
+ */
+function resetFailAudioTransition(options = {}) {
+    failAudioTransitionMode = 'none';
+
+    if (typeof audioCtx !== 'undefined' && audioCtx) {
+        const now = audioCtx.currentTime;
+        if (tapeStopDelayNode) {
+            tapeStopDelayNode.delayTime.cancelScheduledValues(now);
+            tapeStopDelayNode.delayTime.setValueAtTime(0, now);
+        }
+        if (filterNode) {
+            filterNode.frequency.cancelScheduledValues(now);
+            filterNode.frequency.setValueAtTime(22050, now);
+        }
+        if (!options.keepGain && typeof gainNode !== 'undefined' && gainNode) {
+            const targetVol = options.zeroGain
+                ? 0
+                : ((typeof isGameMuted !== 'undefined' && isGameMuted) ? 0 : (typeof gameVolume !== 'undefined' ? gameVolume : 1));
+            gainNode.gain.cancelScheduledValues(now);
+            gainNode.gain.setValueAtTime(targetVol, now);
+        }
+    } else if (!options.keepGain && typeof gainNode !== 'undefined' && gainNode) {
+        const targetVol = options.zeroGain
+            ? 0
+            : ((typeof isGameMuted !== 'undefined' && isGameMuted) ? 0 : (typeof gameVolume !== 'undefined' ? gameVolume : 1));
+        gainNode.gain.value = targetVol;
+    }
+
+    if (typeof audio !== 'undefined' && audio) {
+        if (options.restoreVolume && typeof useAudioContextFallback !== 'undefined' && useAudioContextFallback) {
+            audio.volume = (typeof isGameMuted !== 'undefined' && isGameMuted) ? 0 : (typeof gameVolume !== 'undefined' ? gameVolume : 1);
+        }
+        if (options.restorePitchFlag) {
+            const pitchFlag = typeof preservePitchEnabled !== 'undefined' ? !!preservePitchEnabled : false;
+            audio.preservesPitch = pitchFlag;
+            audio.mozPreservesPitch = pitchFlag;
+            audio.webkitPreservesPitch = pitchFlag;
+        }
+    }
+}
+
+window._getTapeStopDelayCurve = _getTapeStopDelayCurve;
+window.beginFailAudioTransition = beginFailAudioTransition;
+window.updateFailAudioTransition = updateFailAudioTransition;
+window.resetFailAudioTransition = resetFailAudioTransition;

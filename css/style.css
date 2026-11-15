@@ -110,11 +110,11 @@ html, body {
     transition: all 0.3s;
 }
 
-.song-option:hover { border-color: rgba(6, 182, 212, 0.6); background: rgba(8, 47, 73, 0.4); }
+.song-option:hover { border-color: var(--theme-border, rgba(6, 182, 212, 0.6)); background: var(--theme-bg-surface, rgba(8, 47, 73, 0.4)); }
 .song-option.active {
-    border-color: #00ffff;
-    background: rgba(8, 47, 73, 0.5);
-    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    border-color: var(--theme-color, #22d3ee);
+    background: var(--theme-bg-alpha, rgba(8, 47, 73, 0.5));
+    box-shadow: 0 0 15px var(--theme-glow, rgba(0, 255, 255, 0.2));
 }
 
 /* --- ANIMATED AUDIO WAVE EQUALIZER BARS --- */
@@ -176,7 +176,12 @@ html, body {
 }
 
 /* Tab switching */
-.tab-btn.active { background: rgba(0, 255, 255, 0.1); border-color: #00ffff; color: #00ffff; }
+.tab-btn.active {
+    background: var(--theme-bg-alpha, rgba(0, 255, 255, 0.1));
+    border-color: var(--theme-color, #22d3ee);
+    color: var(--theme-color, #22d3ee);
+    text-shadow: 0 0 8px var(--theme-glow, rgba(34, 211, 238, 0.6));
+}
 
 @keyframes pulse {
     0%, 100% { opacity: 0.6; transform: scale(1); }
@@ -213,8 +218,8 @@ html, body {
     top: 0;
     width: 4px;
     border-radius: 9999px;
-    background: rgba(34, 211, 238, 0.75);
-    box-shadow: 0 0 8px rgba(6, 182, 212, 0.8);
+    background: var(--theme-color, rgba(34, 211, 238, 0.75));
+    box-shadow: 0 0 8px var(--theme-glow-strong, rgba(6, 182, 212, 0.8));
     opacity: 0;
     transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.15s ease, background-color 0.2s ease;
     pointer-events: auto;
@@ -225,8 +230,8 @@ html, body {
 
 .floating-scrollbar-thumb:hover,
 .floating-scrollbar-thumb.is-dragging {
-    background: #22d3ee !important;
-    box-shadow: 0 0 12px rgba(6, 182, 212, 1) !important;
+    background: var(--theme-color, #22d3ee) !important;
+    box-shadow: 0 0 12px var(--theme-glow-strong, rgba(6, 182, 212, 1)) !important;
     width: 6px;
 }
 
@@ -1181,6 +1186,30 @@ html, body {
 }
 
 /* --- FEATURED VINYL DISC HERO COMPONENT (SELECT SONG SCREEN) --- */
+.featured-disc-rim {
+    position: relative;
+    padding: 6px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at 50% 50%, #030916 62%, rgba(9, 22, 46, 0.98) 90%, #020611 100%);
+    border: 2px solid var(--theme-border, rgba(34, 211, 238, 0.58));
+    box-shadow:
+        inset 0 0 12px rgba(0, 0, 0, 0.92),
+        0 0 24px var(--theme-glow, rgba(6, 182, 212, 0.34)),
+        0 0 0 1px rgba(251, 191, 36, 0.16);
+}
+
+.featured-disc-rim::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 9999px;
+    border: 1px solid rgba(251, 191, 36, 0.24);
+    pointer-events: none;
+}
+
 .featured-vinyl-disc {
     width: 175px !important;
     height: 175px !important;
@@ -1191,6 +1220,7 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 4px solid rgba(5, 10, 22, 0.94);
     background: conic-gradient(
         from 180deg at 50% 50%,
         #e11d48 0deg,
@@ -1202,8 +1232,11 @@ html, body {
         #ec4899 340deg,
         #e11d48 360deg
     );
-    box-shadow: 0 0 36px rgba(236, 72, 153, 0.4), 0 0 18px rgba(6, 182, 212, 0.35);
-    animation: featuredDiscIdleSpin 28s linear infinite;
+    box-shadow:
+        inset 0 0 0 1.5px rgba(255, 255, 255, 0.18),
+        inset 0 0 16px rgba(0, 0, 0, 0.65),
+        0 0 18px rgba(236, 72, 153, 0.3);
+    animation: featuredDiscIdleSpin 12s linear infinite;
     transform-origin: center center;
     will-change: transform;
     cursor: pointer;
@@ -1235,11 +1268,28 @@ html, body {
         circle at 50% 50%,
         transparent 0,
         transparent 3px,
-        rgba(0, 0, 0, 0.16) 3.5px,
-        rgba(255, 255, 255, 0.05) 4px,
+        rgba(0, 0, 0, 0.22) 3.5px,
+        rgba(255, 255, 255, 0.06) 4px,
         transparent 5px
     );
-    opacity: 0.9;
+    opacity: 0.92;
+    pointer-events: none;
+}
+
+.featured-vinyl-sheen {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: conic-gradient(
+        from 30deg at 50% 50%,
+        rgba(255, 255, 255, 0.22) 0deg,
+        rgba(255, 255, 255, 0.04) 36deg,
+        transparent 58deg,
+        transparent 172deg,
+        rgba(255, 255, 255, 0.18) 208deg,
+        transparent 246deg,
+        transparent 360deg
+    );
     pointer-events: none;
 }
 
@@ -1281,7 +1331,7 @@ html, body {
 
 .featured-disc-play-overlay {
     position: absolute;
-    inset: 0;
+    inset: 6px;
     border-radius: 9999px;
     background: rgba(4, 2, 10, 0.35);
     backdrop-filter: blur(1.5px);
@@ -1291,6 +1341,7 @@ html, body {
     align-items: center;
     justify-content: center;
     transition: opacity 0.2s ease;
+    pointer-events: none;
     z-index: 30;
 }
 
@@ -1352,13 +1403,13 @@ html, body {
 }
 
 @keyframes featuredDiscStepSpin {
-    0% { transform: scale(0.9) rotate(-15deg); }
-    50% { transform: scale(1.06) rotate(25deg); }
-    100% { transform: scale(1) rotate(0deg); }
+    0% { transform: scale(0.92); }
+    50% { transform: scale(1.06); }
+    100% { transform: scale(1); }
 }
 
 .featured-disc-stepping {
-    animation: featuredDiscStepSpin 0.36s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    animation: featuredDiscStepSpin 0.36s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* --- INPUT FOCUS & TEXT SELECTION (ĐẢM BẢO HOẠT ĐỘNG HOÀN HẢO TRÊN CẢ PC VÀ APK DI ĐỘNG) --- */
@@ -1493,5 +1544,821 @@ html.android-apk-mode #mobile-fullscreen-btn,
 html.android-apk-mode #label-auto-fullscreen {
     display: none !important;
 }
+
+/* ============================================================
+   REMASTERED CYBERPUNK UI ANIMATIONS & MICRO-INTERACTIONS
+   Tuân thủ 100% thiết lập UI Animations (body.disable-animations)
+   ============================================================ */
+
+body:not(.disable-animations) .tab-btn,
+body:not(.disable-animations) #nav-buttons button,
+body:not(.disable-animations) .dropdown-nav-btn,
+body:not(.disable-animations) #song-context-menu button,
+body:not(.disable-animations) #cyber-modal button,
+body:not(.disable-animations) #download-app-modal button,
+body:not(.disable-animations) #download-app-modal a {
+    transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+                background-color 0.2s ease,
+                border-color 0.2s ease,
+                box-shadow 0.2s ease,
+                color 0.18s ease,
+                opacity 0.18s ease;
+    will-change: transform;
+}
+
+body:not(.disable-animations) #nav-buttons button:hover,
+body:not(.disable-animations) .tab-btn:hover {
+    transform: translateY(-1px);
+}
+
+body:not(.disable-animations) #nav-buttons button:active,
+body:not(.disable-animations) .tab-btn:active,
+body:not(.disable-animations) #cyber-modal button:active,
+body:not(.disable-animations) #download-app-modal button:active,
+body:not(.disable-animations) #download-app-modal a:active {
+    transform: scale(0.96);
+}
+
+/* Song item card elevation & tactile feedback */
+body:not(.disable-animations) .song-option {
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.2s ease,
+                background-color 0.2s ease,
+                box-shadow 0.22s ease;
+}
+
+body:not(.disable-animations) .song-option:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(6, 182, 212, 0.16);
+}
+
+body:not(.disable-animations) .song-option.active {
+    box-shadow: 0 0 18px rgba(0, 255, 255, 0.26);
+}
+
+/* Personalize cards & color swatches */
+body:not(.disable-animations) #panel-personalize label {
+    transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.2s ease,
+                box-shadow 0.22s ease,
+                background-color 0.2s ease;
+}
+
+body:not(.disable-animations) #panel-personalize label:hover {
+    transform: translateY(-2px);
+}
+
+body:not(.disable-animations) #panel-personalize label:active {
+    transform: scale(0.97);
+}
+
+/* Context menu & filter dropdown items hover slide */
+body:not(.disable-animations) #song-context-menu button:hover,
+body:not(.disable-animations) .searchable-filter-dropdown button:hover,
+body:not(.disable-animations) #nav-dropdown-menu .dropdown-nav-btn:hover {
+    transform: translateX(3px);
+}
+
+/* Setting cards & toggle feedback */
+body:not(.disable-animations) #panel-settings label {
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.16s ease;
+}
+
+body:not(.disable-animations) #panel-settings label:active {
+    transform: scale(0.99);
+}
+
+/* Modal opening/closing helper classes for admin-panel & standalone dialogs */
+@keyframes uiModalFadeIn {
+    from { opacity: 0; transform: translateY(14px) scale(0.94); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes uiFadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+body:not(.disable-animations) .ui-anim-enter {
+    animation: uiFadeSlideUp 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Sliding Neon Tab Indicator (Main Nav + BG & Balls / Settings Sub-tabs) */
+.has-tab-indicator {
+    position: relative;
+}
+
+.main-nav-tabs-container.has-tab-indicator .nav-btn.active {
+    border-bottom-color: transparent;
+}
+
+.ui-tab-indicator {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    pointer-events: none;
+    z-index: 5;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, var(--theme-border, rgba(34, 211, 238, 0.45)), var(--theme-color, #22d3ee) 25%, var(--theme-color-soft, #a5f3fc) 50%, var(--theme-color, #22d3ee) 75%, var(--theme-border, rgba(34, 211, 238, 0.45)));
+    box-shadow: 0 0 12px var(--theme-glow-strong, rgba(34, 211, 238, 0.85)), 0 0 4px var(--theme-color, #22d3ee);
+    transition: background 0.35s ease, box-shadow 0.35s ease;
+    will-change: transform, width;
+}
+
+.ui-tab-indicator--main {
+    height: 3px;
+}
+
+.ui-tab-indicator--sub {
+    height: 2.5px;
+    bottom: 0;
+}
+
+body:not(.disable-animations) .main-nav-tabs-container .nav-btn svg {
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), filter 0.2s ease;
+}
+
+body:not(.disable-animations) .main-nav-tabs-container .nav-btn.active svg {
+    filter: drop-shadow(0 0 6px var(--theme-glow-strong, rgba(34, 211, 238, 0.65)));
+}
+
+body:not(.disable-animations) .main-nav-tabs-container .nav-btn:active {
+    transform: scale(0.95);
+}
+
+/* Đảm bảo trạng thái TẮT animations luôn gọn gàng, không kẹt hover/transform/collapse */
+body.disable-animations #song-search-filter-section {
+    transition: none !important;
+}
+
+body.disable-animations .ui-tab-indicator {
+    transition: none !important;
+}
+
+body.disable-animations .song-option:hover,
+body.disable-animations #nav-buttons button:hover,
+body.disable-animations #nav-buttons button:active,
+body.disable-animations .main-nav-tabs-container .nav-btn:active,
+body.disable-animations .tab-btn:hover,
+body.disable-animations .tab-btn:active,
+body.disable-animations #panel-personalize label:hover,
+body.disable-animations #panel-personalize label:active,
+body.disable-animations #song-context-menu button:hover {
+    transform: none !important;
+}
+
+/* ============================================================
+   UI 2.0 REMASTER — GLOWING PCB CIRCUITRY + BEATMAP LEFT DISC
+   (Giữ nguyên hoàn toàn #tab-extensions: .difficulty-item / .extension-item)
+   ============================================================ */
+
+:root {
+    --ui2-obsidian: #02060f;
+    --ui2-panel: rgba(3, 9, 21, 0.88);
+    --ui2-card: linear-gradient(145deg, rgba(6, 16, 34, 0.90), rgba(3, 8, 19, 0.96));
+    --ui2-card-active: linear-gradient(145deg, rgba(8, 22, 46, 0.96), rgba(3, 10, 24, 0.98));
+    --ui2-gold: #fbbf24;
+    --ui2-gold-soft: #fde68a;
+    --ui2-gold-glow: rgba(251, 191, 36, 0.55);
+}
+
+/* --- 1. Main Shell & Glowing PCB Substrate --- */
+.ui2-circuit-shell {
+    background-color: #02060f !important;
+    background-image:
+        radial-gradient(circle at 50% 45%, var(--theme-bg-surface, rgba(6, 182, 212, 0.08)) 0%, rgba(2, 6, 15, 0.94) 58%, #01040a 100%) !important;
+}
+
+.ui2-circuit-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.14;
+    background-image:
+        repeating-linear-gradient(45deg, transparent 0, transparent 52px, var(--theme-border-subtle, rgba(56, 189, 248, 0.10)) 52px, var(--theme-border-subtle, rgba(56, 189, 248, 0.10)) 53px),
+        repeating-linear-gradient(-45deg, transparent 0, transparent 52px, var(--theme-bg-surface, rgba(56, 189, 248, 0.05)) 52px, var(--theme-bg-surface, rgba(56, 189, 248, 0.05)) 53px);
+}
+
+#menu-bg-hexagons.ui2-pcb-backdrop {
+    z-index: 0 !important;
+    opacity: 0.48 !important;
+    contain: strict;
+    -webkit-mask-image: radial-gradient(ellipse 52% 62% at 50% 50%, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.52) 56%, rgba(0, 0, 0, 1) 100%);
+    mask-image: radial-gradient(ellipse 52% 62% at 50% 50%, rgba(0, 0, 0, 0.12) 0%, rgba(0, 0, 0, 0.52) 56%, rgba(0, 0, 0, 1) 100%);
+}
+
+/* Chỉ áp drop-shadow nhẹ lên các đường mạch tĩnh để tránh re-blur toàn màn hình ở 120-360Hz */
+.ui2-pcb-backdrop .ui2-pcb-base {
+    filter: drop-shadow(0 0 4px var(--theme-glow, rgba(34, 211, 238, 0.18)));
+}
+
+/* Signal flow animations along peripheral circuit traces */
+.ui2-pcb-flow {
+    stroke-dasharray: 42 260;
+    stroke-dashoffset: 302;
+    opacity: 0.62;
+}
+
+body:not(.disable-animations) .ui2-pcb-flow.ui2-flow-a {
+    animation: ui2TraceFlow 8.5s linear infinite;
+}
+
+body:not(.disable-animations) .ui2-pcb-flow.ui2-flow-b {
+    animation: ui2TraceFlow 11.5s linear infinite -3.2s;
+}
+
+body:not(.disable-animations) .ui2-pcb-flow.ui2-flow-c {
+    animation: ui2TraceFlowReverse 10s linear infinite -5.1s;
+}
+
+@keyframes ui2TraceFlow {
+    0%   { stroke-dashoffset: 302; }
+    100% { stroke-dashoffset: 0; }
+}
+
+@keyframes ui2TraceFlowReverse {
+    0%   { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: 302; }
+}
+
+body:not(.disable-animations) .ui2-pcb-pins .ui2-pin-a {
+    animation: ui2PinPulse 3.2s ease-in-out infinite alternate;
+}
+
+body:not(.disable-animations) .ui2-pcb-pins .ui2-pin-b {
+    animation: ui2PinPulse 4.1s ease-in-out infinite alternate -1.4s;
+}
+
+body:not(.disable-animations) .ui2-pcb-pins .ui2-pin-c {
+    animation: ui2PinPulse 2.8s ease-in-out infinite alternate -2.3s;
+}
+
+@keyframes ui2PinPulse {
+    0%   { opacity: 0.35; }
+    100% { opacity: 0.92; }
+}
+
+body.disable-animations .ui2-pcb-flow,
+body.disable-animations .ui2-pcb-pins circle {
+    animation: none !important;
+}
+
+body.disable-animations .ui2-pcb-flow {
+    opacity: 0.22 !important;
+    stroke-dashoffset: 40 !important;
+}
+
+/* Force all menu panels strictly above #menu-bg-hexagons (z-index: 0) with centered dark scrim */
+#panel-home,
+#panel-personalize,
+#panel-account,
+#panel-settings,
+#panel-music {
+    position: relative;
+    z-index: 10 !important;
+    background: radial-gradient(ellipse 68% 76% at 50% 48%, rgba(2, 6, 15, 0.72) 0%, rgba(2, 6, 15, 0.42) 60%, rgba(2, 6, 15, 0.12) 100%) !important;
+}
+
+/* --- 2. Header Bus Bar, Navigation Tabs & Solder-Node Indicator --- */
+#start-screen-window > .border-b {
+    background: linear-gradient(180deg, rgba(4, 11, 25, 0.96) 0%, rgba(2, 7, 17, 0.90) 100%) !important;
+    box-shadow: 0 4px 22px rgba(0, 0, 0, 0.55), inset 0 -1px 0 var(--theme-border-subtle, rgba(6, 182, 212, 0.22));
+    z-index: 20;
+}
+
+.main-nav-tabs-container .nav-btn {
+    position: relative;
+}
+
+.main-nav-tabs-container .nav-btn + .nav-btn::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 24%;
+    bottom: 24%;
+    width: 1px;
+    background: linear-gradient(180deg, transparent, var(--theme-border-subtle, rgba(56, 189, 248, 0.25)), transparent);
+    pointer-events: none;
+}
+
+.main-nav-tabs-container .nav-btn.active {
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.28);
+}
+
+/* Glowing gold center via dot on sliding indicator */
+.ui-tab-indicator {
+    overflow: visible;
+}
+
+.ui-tab-indicator::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    transform: translate(-50%, -50%);
+    background: var(--ui2-gold-soft);
+    box-shadow: 0 0 8px var(--ui2-gold), 0 0 4px #ffffff;
+    pointer-events: none;
+}
+
+#header-search-toggle-btn,
+#header-fullscreen-btn,
+#mobile-fullscreen-btn,
+#nav-menu-toggle {
+    background: linear-gradient(145deg, rgba(6, 16, 34, 0.92), rgba(2, 7, 16, 0.96)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 10px var(--theme-glow, rgba(6, 182, 212, 0.16));
+}
+
+/* Sub-tabs Hardware Cut Style (Personalize, Settings, Account) + Horizontal-Only Scroll & Mobile Drag */
+.personalize-tabs-container,
+.settings-tabs-container,
+#account-subtabs {
+    display: flex;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    touch-action: pan-x !important;
+    -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.personalize-tabs-container::-webkit-scrollbar,
+.settings-tabs-container::-webkit-scrollbar,
+#account-subtabs::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.personalize-tabs-container .tab-btn,
+.settings-tabs-container .tab-btn,
+#account-subtabs button {
+    background: linear-gradient(145deg, rgba(5, 13, 28, 0.9), rgba(2, 7, 17, 0.96));
+    border-radius: 6px 6px 2px 2px;
+    letter-spacing: 0.05em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    touch-action: pan-x !important;
+    flex-shrink: 0 !important;
+    white-space: nowrap !important;
+}
+
+.personalize-tabs-container .tab-btn.active,
+.settings-tabs-container .tab-btn.active,
+#account-subtabs .tab-btn.active {
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.35), 0 0 12px var(--theme-glow, rgba(34, 211, 238, 0.25));
+}
+
+/* --- 3. BEATMAP LEFT VINYL MUSIC DISC + UI 2.0 BEATMAP CARD --- */
+.ui2-song-card.song-option {
+    padding: 0.65rem 0.75rem;
+    border-radius: 0.75rem;
+    align-items: stretch;
+    background: var(--ui2-card);
+    border-color: var(--theme-border-subtle, rgba(6, 182, 212, 0.24));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 2px 10px rgba(0, 0, 0, 0.35);
+    position: relative;
+    overflow: hidden;
+    contain: layout style;
+}
+
+.ui2-song-card.song-option::before {
+    content: "";
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    width: 4px;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--theme-border, rgba(56, 189, 248, 0.48));
+    pointer-events: none;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.ui2-song-card.song-option:hover {
+    border-color: var(--theme-border, rgba(34, 211, 238, 0.55));
+    background: linear-gradient(145deg, rgba(7, 20, 42, 0.94), rgba(3, 10, 24, 0.98));
+}
+
+.ui2-song-card.song-option:hover::before,
+.ui2-song-card.song-option.active::before {
+    background: var(--ui2-gold);
+    box-shadow: 0 0 6px var(--ui2-gold-glow);
+}
+
+.ui2-song-card.song-option.active {
+    background: var(--ui2-card-active) !important;
+    border-color: var(--theme-color, #22d3ee) !important;
+    box-shadow: 0 0 18px var(--theme-glow, rgba(6, 182, 212, 0.32)), inset 0 1px 0 rgba(251, 191, 36, 0.25) !important;
+}
+
+/* Left Music Disc on Each Beatmap */
+.song-disc-wrap {
+    width: 38px;
+    height: 38px;
+    padding: 2px;
+    border-radius: 9999px;
+    background: radial-gradient(circle, rgba(2, 6, 15, 0.95) 60%, var(--theme-bg-surface, rgba(14, 165, 233, 0.2)) 100%);
+    border: 1px solid var(--theme-border-subtle, rgba(56, 189, 248, 0.28));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+@media (min-width: 640px) {
+    .song-disc-wrap {
+        width: 42px;
+        height: 42px;
+    }
+}
+
+.song-option:hover .song-disc-wrap {
+    border-color: var(--theme-border, rgba(34, 211, 238, 0.65));
+    transform: scale(1.04);
+}
+
+.song-option.active .song-disc-wrap,
+.song-option.is-previewing .song-disc-wrap {
+    border-color: var(--theme-color, #22d3ee);
+    box-shadow: 0 0 12px var(--theme-glow-strong, rgba(34, 211, 238, 0.65)), 0 0 4px rgba(251, 191, 36, 0.4);
+}
+
+.song-mini-disc {
+    width: 100%;
+    height: 100%;
+    border-radius: 9999px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+.song-option.active .song-mini-disc,
+.song-option.is-previewing .song-mini-disc {
+    will-change: transform;
+}
+
+.song-disc-palette-0 {
+    background: conic-gradient(from 140deg, #06b6d4, #2563eb, #a855f7, #ec4899, #06b6d4);
+}
+.song-disc-palette-1 {
+    background: conic-gradient(from 200deg, #22d3ee, #0ea5e9, #fbbf24, #0284c7, #22d3ee);
+}
+.song-disc-palette-2 {
+    background: conic-gradient(from 90deg, #ec4899, #f97316, #fbbf24, #7c3aed, #ec4899);
+}
+.song-disc-palette-3 {
+    background: conic-gradient(from 45deg, #10b981, #06b6d4, #3b82f6, #14b8a6, #10b981);
+}
+.song-disc-palette-4 {
+    background: conic-gradient(from 260deg, #8b5cf6, #ec4899, #06b6d4, #6366f1, #8b5cf6);
+}
+.song-disc-palette-5 {
+    background: conic-gradient(from 10deg, #f43f5e, #fbbf24, #0ea5e9, #e11d48, #f43f5e);
+}
+
+.song-mini-disc-grooves {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: repeating-radial-gradient(
+        circle at 50% 50%,
+        transparent 0,
+        transparent 1.8px,
+        rgba(0, 0, 0, 0.34) 2.2px,
+        rgba(255, 255, 255, 0.08) 2.6px
+    );
+    pointer-events: none;
+}
+
+.song-mini-disc-ring {
+    width: 42%;
+    height: 42%;
+    border-radius: 9999px;
+    background: #030916;
+    border: 1.5px solid rgba(0, 0, 0, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+}
+
+.song-mini-disc-dot {
+    width: 58%;
+    height: 58%;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 35%, #fef08a 0%, #fbbf24 58%, #b45309 100%);
+    box-shadow: 0 0 6px rgba(251, 191, 36, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.song-mini-disc-hole {
+    width: 36%;
+    height: 36%;
+    border-radius: 9999px;
+    background: #02060f;
+}
+
+body:not(.disable-animations) .song-option.active .song-mini-disc {
+    animation: featuredDiscIdleSpin 14s linear infinite;
+}
+
+body:not(.disable-animations) .song-option.is-previewing .song-mini-disc {
+    animation: featuredDiscIdleSpin 3.8s linear infinite !important;
+}
+
+body.disable-animations .song-mini-disc,
+body.disable-animations .song-option.active .song-mini-disc,
+body.disable-animations .song-option.is-previewing .song-mini-disc {
+    animation: none !important;
+    transform: none !important;
+}
+
+/* Featured Hero Quick Play Pill Upgrade */
+#featured-disc-info > div {
+    background: linear-gradient(135deg, rgba(5, 16, 36, 0.92), rgba(2, 8, 20, 0.96)) !important;
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.22), 0 0 14px var(--theme-glow, rgba(6, 182, 212, 0.25)) !important;
+}
+
+/* --- 4. Cards Across Personalize, Music, Account & Settings (Excluding #tab-extensions & semantic alert colors) --- */
+#panel-personalize .bg-option-card,
+#panel-music > div > div,
+#panel-account .bg-black\/40,
+#panel-settings .tab-pane:not(#tab-extensions) label[class*="border"]:not(.difficulty-item):not(.extension-item):not(.no-difficulty-theme):not([class*="yellow"]):not([class*="red"]):not([class*="emerald"]),
+#panel-settings .tab-pane:not(#tab-extensions) .bg-black\/40,
+#panel-settings .tab-pane:not(#tab-extensions) .bg-cyan-950\/20,
+#panel-settings .tab-pane:not(#tab-extensions) .bg-cyan-950\/30 {
+    background: var(--ui2-card);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.32);
+}
+
+#panel-settings .tab-pane:not(#tab-extensions) label[class*="border"]:not(.difficulty-item):not(.extension-item):not([class*="yellow"]):not([class*="red"]):has(input:checked) {
+    background: var(--ui2-card-active);
+    border-color: var(--theme-color, #22d3ee) !important;
+    box-shadow: 0 0 14px var(--theme-glow, rgba(34, 211, 238, 0.35)), inset 0 1px 0 rgba(251, 191, 36, 0.25);
+}
+
+#panel-personalize .bg-option-card.border-cyan-400 {
+    background: var(--ui2-card-active) !important;
+    box-shadow: 0 0 16px var(--theme-glow, rgba(34, 211, 238, 0.3)), inset 0 1px 0 rgba(251, 191, 36, 0.25) !important;
+}
+
+#panel-home #mobile-optimize-notice {
+    background: linear-gradient(90deg, rgba(24, 16, 4, 0.85), rgba(45, 27, 4, 0.9), rgba(24, 16, 4, 0.85)) !important;
+    border-color: rgba(251, 191, 36, 0.38) !important;
+    box-shadow: inset 0 1px 0 rgba(253, 230, 138, 0.14), 0 0 12px rgba(245, 158, 11, 0.12);
+}
+
+/* Inputs, Selects & Dropdown Surfaces 2.0 */
+#start-screen input[type="text"],
+#start-screen input[type="search"],
+#start-screen input[type="password"],
+#start-screen input[type="email"],
+#start-screen input[type="number"],
+#start-screen select,
+#song-filter-artist-btn,
+#song-filter-genre-btn,
+#song-filter-copyright-btn,
+#song-filter-artist-dropdown,
+#song-filter-genre-dropdown,
+#song-filter-copyright-dropdown {
+    background-color: #030916 !important;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.65);
+}
+
+/* Custom Sleek PCB Range Sliders inside Main Menu & Quick Settings */
+#start-screen input[type="range"],
+#tap-quick-settings-panel input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px !important;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, rgba(4, 16, 36, 0.95), var(--theme-bg-alpha, rgba(14, 116, 144, 0.38))) !important;
+    border: 1px solid var(--theme-border-subtle, rgba(6, 182, 212, 0.32));
+    outline: none;
+}
+
+#start-screen input[type="range"]::-webkit-slider-thumb,
+#tap-quick-settings-panel input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 15px;
+    height: 15px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 35%, #ffffff 0%, var(--theme-color, #22d3ee) 60%, #0369a1 100%);
+    border: 1.5px solid var(--ui2-gold-soft);
+    box-shadow: 0 0 10px var(--theme-glow-strong, rgba(34, 211, 238, 0.85));
+    cursor: pointer;
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
+}
+
+#start-screen input[type="range"]::-webkit-slider-thumb:hover,
+#tap-quick-settings-panel input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.16);
+}
+
+#start-screen input[type="range"]::-moz-range-thumb,
+#tap-quick-settings-panel input[type="range"]::-moz-range-thumb {
+    width: 15px;
+    height: 15px;
+    border-radius: 9999px;
+    background: var(--theme-color, #22d3ee);
+    border: 1.5px solid var(--ui2-gold-soft);
+    box-shadow: 0 0 10px var(--theme-glow-strong, rgba(34, 211, 238, 0.85));
+    cursor: pointer;
+}
+
+/* --- 4B. Full Technology Style Extension across ALL New & Remaining UI Components --- */
+
+/* Personalize .bp-card PCB micro-via & subtle grid trace bay */
+#panel-personalize .bp-card::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    width: 4px;
+    height: 4px;
+    border-radius: 9999px;
+    background: var(--theme-border, rgba(56, 189, 248, 0.45));
+    pointer-events: none;
+    transition: background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+#panel-personalize .bp-card:hover::before,
+#panel-personalize .bp-card.on::before {
+    background: var(--ui2-gold);
+    box-shadow: 0 0 6px var(--ui2-gold-glow);
+}
+
+#panel-personalize .bp-card .bp-prev {
+    background-image:
+        repeating-linear-gradient(45deg, transparent 0, transparent 22px, rgba(56, 189, 248, 0.04) 22px, rgba(56, 189, 248, 0.04) 23px),
+        radial-gradient(circle at 50% 45%, rgba(8, 28, 56, 0.56) 0%, #020714 78%);
+}
+
+/* Music Player Hardware Chassis & Theme Reactive Disc Housing */
+#panel-music > div > div {
+    position: relative;
+    overflow: hidden;
+    background: var(--ui2-card) !important;
+    border-color: var(--theme-border, rgba(6, 182, 212, 0.35)) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(251, 191, 36, 0.16), 0 0 22px var(--theme-glow, rgba(6, 182, 212, 0.14)) !important;
+}
+
+#panel-music > div > div::before {
+    content: "";
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    width: 5px;
+    height: 5px;
+    border-radius: 9999px;
+    background: var(--ui2-gold);
+    box-shadow: 0 0 6px var(--ui2-gold-glow);
+    pointer-events: none;
+}
+
+#mp-disc-ring {
+    border-color: var(--theme-color, #22d3ee) !important;
+    background: radial-gradient(circle at 35% 35%, var(--theme-bg-surface, rgba(6, 182, 212, 0.18)), rgba(2, 7, 17, 0.96) 75%) !important;
+    box-shadow: 0 0 20px var(--theme-glow, rgba(34, 211, 238, 0.35)), inset 0 0 10px var(--theme-bg-alpha, rgba(6, 182, 212, 0.18)) !important;
+}
+
+#mp-disc-ring svg,
+#mp-btn-play {
+    color: var(--theme-color, #22d3ee) !important;
+    filter: drop-shadow(0 0 8px var(--theme-glow, rgba(34, 211, 238, 0.4)));
+}
+
+/* Home Pagination & Search/Filter Technology Controls */
+#pagination-controls #page-prev,
+#pagination-controls #page-next,
+#panel-account button[class*="border"]:not([class*="red"]):not([class*="yellow"]):not([class*="purple"]),
+#subtab-content-chat .btn-chat-type-select,
+#lb-modal-container .lb-diff-tab,
+#lb-modal-container #lb-modal-list > div,
+#lb-modal-container button[id^="btn-refresh-lb-"] {
+    background: var(--ui2-card);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#download-hero-card,
+#download-app-modal [id^="row-opt-"],
+#admin-panel-modal label,
+#admin-panel-modal #admin-clear-scores,
+#admin-panel-modal > div > div > div:last-child {
+    background: var(--ui2-card);
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.12), 0 4px 14px rgba(0, 0, 0, 0.38);
+}
+
+#download-hero-card {
+    background: linear-gradient(145deg, rgba(8, 22, 46, 0.96), rgba(3, 9, 21, 0.98)) !important;
+    border-color: var(--theme-border, rgba(34, 211, 238, 0.55)) !important;
+}
+
+/* Quick Settings Drawer & Trigger Button 2.0 */
+.ui2-qs-panel {
+    background: linear-gradient(155deg, rgba(4, 12, 28, 0.98) 0%, rgba(2, 6, 16, 0.99) 100%) !important;
+    border-top: 1.5px solid var(--theme-border, rgba(34, 211, 238, 0.5)) !important;
+    box-shadow: 0 -10px 36px var(--theme-glow, rgba(6, 182, 212, 0.28)), inset 0 1px 0 rgba(251, 191, 36, 0.22) !important;
+}
+
+.ui2-qs-panel .bg-black\/30 {
+    background: var(--ui2-card) !important;
+    border-color: var(--theme-border-subtle, rgba(6, 182, 212, 0.25)) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.ui2-qs-btn,
+.ui2-hud-btn {
+    background: linear-gradient(145deg, rgba(6, 16, 34, 0.92), rgba(2, 7, 17, 0.97)) !important;
+    border-color: var(--theme-border, rgba(6, 182, 212, 0.45)) !important;
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.2), 0 0 14px var(--theme-glow, rgba(6, 182, 212, 0.28)) !important;
+}
+
+/* Subtle Diagonal PCB Matrix for Full-screen Overlays (Intro, Loading, Tap-to-Play)
+   Dùng isolation: isolate + z-index: -1 cho ::before để không bao giờ ghi đè position/z-index của con .absolute */
+.ui2-tech-backdrop {
+    isolation: isolate;
+}
+
+.ui2-tech-backdrop::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.22;
+    background-image:
+        repeating-linear-gradient(45deg, transparent 0, transparent 52px, var(--theme-border-subtle, rgba(56, 189, 248, 0.12)) 52px, var(--theme-border-subtle, rgba(56, 189, 248, 0.12)) 53px),
+        repeating-linear-gradient(-45deg, transparent 0, transparent 52px, rgba(251, 191, 36, 0.04) 52px, rgba(251, 191, 36, 0.04) 53px);
+}
+
+/* --- 5. Modals, Context Menu, Intro Card & Telemetry HUD 2.0 --- */
+#cyber-modal-window,
+#dynamic-cyber-modal > div,
+#download-app-modal > div,
+#admin-panel-modal > div,
+#song-context-menu,
+#intro-slide-disclaimer > div {
+    background: linear-gradient(155deg, rgba(4, 12, 28, 0.97) 0%, rgba(2, 6, 16, 0.99) 100%) !important;
+    box-shadow: 0 12px 42px rgba(0, 0, 0, 0.78), 0 0 28px var(--theme-glow, rgba(6, 182, 212, 0.24)), inset 0 1px 0 rgba(251, 191, 36, 0.18) !important;
+}
+
+#page-viewer-modal > div:first-child {
+    background: linear-gradient(90deg, rgba(3, 9, 22, 0.98), rgba(6, 18, 40, 0.98), rgba(3, 9, 22, 0.98)) !important;
+}
+
+#fps-hud {
+    background: linear-gradient(145deg, rgba(3, 9, 22, 0.92), rgba(2, 6, 15, 0.96)) !important;
+    border-color: var(--theme-border-subtle, rgba(56, 189, 248, 0.34)) !important;
+    box-shadow: 0 0 14px var(--theme-glow, rgba(14, 165, 233, 0.22)), inset 0 1px 0 rgba(251, 191, 36, 0.18) !important;
+}
+
+/* --- 6. Game Over & Tap-to-Play Screen 2.0 --- */
+#gameover-screen {
+    background: radial-gradient(ellipse at 50% 45%, var(--theme-bg-surface, rgba(5, 20, 44, 0.95)) 0%, rgba(2, 6, 15, 0.99) 76%) !important;
+}
+
+.ui2-gameover-grid {
+    opacity: 0.36;
+    background-image:
+        repeating-linear-gradient(45deg, transparent 0, transparent 52px, var(--theme-border-subtle, rgba(34, 211, 238, 0.09)) 52px, var(--theme-border-subtle, rgba(34, 211, 238, 0.09)) 53px),
+        repeating-linear-gradient(-45deg, transparent 0, transparent 52px, rgba(251, 191, 36, 0.05) 52px, rgba(251, 191, 36, 0.05) 53px);
+}
+
+#gameover-stats-row > div {
+    background: linear-gradient(155deg, rgba(5, 14, 32, 0.85), rgba(2, 7, 17, 0.94));
+    border: 1px solid var(--theme-border-subtle, rgba(56, 189, 248, 0.25));
+    border-radius: 0.75rem;
+    padding: 0.55rem 0.75rem;
+    box-shadow: inset 0 1px 0 rgba(251, 191, 36, 0.16), 0 4px 18px rgba(0, 0, 0, 0.4);
+}
+
+#tap-to-play-overlay {
+    background: radial-gradient(circle at 50% 45%, var(--theme-bg-surface, rgba(5, 18, 40, 0.84)) 0%, rgba(2, 6, 15, 0.94) 100%) !important;
+}
+
+/* Cô lập phạm vi layout/style cho các pane và card danh sách để cuộn mượt ở 60Hz–360Hz */
+#settings-tab-contents .tab-pane,
+#panel-personalize .tab-pane,
+#song-list-container .bg-option-card,
+#panel-personalize .bg-option-card {
+    contain: layout style;
+}
+
 
 

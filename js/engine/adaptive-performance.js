@@ -17,6 +17,7 @@
         maxDetectedFps: 60,
         fpsHistory: [],
         maxHistory: 5,
+        _fpsIdx: 0,
         
         // Bộ đếm thời gian sụt/tăng FPS
         lowFpsDuration: 0,
@@ -42,6 +43,7 @@
             this.lowFpsDuration = 0;
             this.highFpsDuration = 0;
             this.fpsHistory = [];
+            this._fpsIdx = 0;
             this.frameCount = 0;
             this.maxDetectedFps = 60;
             this._cappedForSpeed = false;
@@ -62,14 +64,21 @@
                 return;
             }
 
-            // Bảo vệ băng thông Fillrate khi tốc độ game cao (gameSpeed >= 1.35)
-            // Trên màn hình DPI cao (Windows scaling 125%/150% hoặc Retina), pixelRatio > 1.0
-            // làm GPU phải render lượng pixel gấp 1.5x - 2.25x gây drop FPS sâu khi tốc độ tăng cao.
+            // Bảo vệ băng thông Fillrate khi tốc độ game cao (gameSpeed >= 1.35):
+            // Chỉ cap pixelRatio khi thiết bị thực sự có DPI rất cao (> 1.75) hoặc FPS bắt đầu sụt (< 90% target),
+            // tránh gây reallocate RenderTarget đột ngột giữa bài trên máy đang chạy mượt ở target Hz.
             if (gameSpeed >= 1.35 && typeof renderer !== 'undefined' && renderer) {
-                if (renderer.getPixelRatio() > 1.0) {
-                    this.saveOriginalState();
-                    renderer.setPixelRatio(1.0);
-                    this._cappedForSpeed = true;
+                const curRatio = renderer.getPixelRatio();
+                if (curRatio > 1.0) {
+                    const targetFps = (typeof window.getEffectiveTargetFps === 'function')
+                        ? window.getEffectiveTargetFps()
+                        : (typeof window.screenRefreshRate === 'number' ? window.screenRefreshRate : 60);
+                    const isFpsDropping = this.fpsHistory.length > 0 && this.rollingFps < targetFps * 0.90;
+                    if (curRatio > 1.75 || isFpsDropping) {
+                        this.saveOriginalState();
+                        renderer.setPixelRatio(1.0);
+                        this._cappedForSpeed = true;
+                    }
                 }
             } else if (this._cappedForSpeed && gameSpeed < 1.15 && this.currentLevel === 0) {
                 this._cappedForSpeed = false;
@@ -91,9 +100,11 @@
                     this.maxDetectedFps = currentFps;
                 }
 
-                this.fpsHistory.push(currentFps);
-                if (this.fpsHistory.length > this.maxHistory) {
-                    this.fpsHistory.shift();
+                if (this.fpsHistory.length < this.maxHistory) {
+                    this.fpsHistory.push(currentFps);
+                } else {
+                    this.fpsHistory[this._fpsIdx] = currentFps;
+                    this._fpsIdx = (this._fpsIdx + 1) % this.maxHistory;
                 }
 
                 // Tính FPS trung bình trượt
@@ -195,10 +206,13 @@
                             renderer.setPixelRatio(1.0);
                         }
                     }
+                    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.setPerformanceTier === 'function') {
+                        window.AntiAliasingManager.setPerformanceTier(1, typeof renderer !== 'undefined' ? renderer : null);
+                    }
                     if (typeof GameEffectsManager !== 'undefined') {
                         GameEffectsManager.maxShockwaves = 20;
                     }
-                    console.log("%c[AdaptivePerf] Kích hoạt Cấp 1: Capped PixelRatio 1.0, giảm tải Shockwaves", "color: #eab308;");
+                    console.log("%c[AdaptivePerf] Kích hoạt Cấp 1: Capped PixelRatio 1.0, giảm tải Shockwaves & MSAA", "color: #eab308;");
                     break;
 
                 case 2:
@@ -206,6 +220,9 @@
                     // Giảm pixelRatio xuống 0.85 (tăng mạnh tốc độ render trên GPU tích hợp Intel HD/UHD)
                     if (typeof renderer !== 'undefined' && renderer) {
                         renderer.setPixelRatio(0.85);
+                    }
+                    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.setPerformanceTier === 'function') {
+                        window.AntiAliasingManager.setPerformanceTier(2, typeof renderer !== 'undefined' ? renderer : null);
                     }
                     // Tạm ẩn StarField nếu đang bật để giải phóng băng thông GPU
                     if (typeof starField !== 'undefined' && starField) {
@@ -219,13 +236,16 @@
                         blocksAheadLimit = Math.max(4, Math.min(blocksAheadLimit, 5));
                     }
                     document.body.classList.add('adaptive-perf-boost');
-                    console.log("%c[AdaptivePerf] Kích hoạt Cấp 2: PixelRatio 0.85, ẩn bụi sao, rút ngắn tầm nhìn", "color: #f97316; font-weight: bold;");
+                    console.log("%c[AdaptivePerf] Kích hoạt Cấp 2: PixelRatio 0.85, tạm tắt hậu kỳ AA, ẩn bụi sao, rút ngắn tầm nhìn", "color: #f97316; font-weight: bold;");
                     break;
 
                 case 3:
                     // Cấp độ 3: Tối đa hóa hiệu năng (Ultra-Eco Mode)
                     if (typeof renderer !== 'undefined' && renderer) {
                         renderer.setPixelRatio(0.75);
+                    }
+                    if (window.AntiAliasingManager && typeof window.AntiAliasingManager.setPerformanceTier === 'function') {
+                        window.AntiAliasingManager.setPerformanceTier(3, typeof renderer !== 'undefined' ? renderer : null);
                     }
                     if (typeof starField !== 'undefined' && starField) {
                         starField.visible = false;
@@ -243,6 +263,9 @@
         },
 
         restore: function () {
+            if (window.AntiAliasingManager && typeof window.AntiAliasingManager.setPerformanceTier === 'function') {
+                window.AntiAliasingManager.setPerformanceTier(0, typeof renderer !== 'undefined' ? renderer : null);
+            }
             if (!this.savedSettings.isApplied) return;
 
             if (typeof renderer !== 'undefined' && renderer && typeof updatePixelRatio === 'function') {

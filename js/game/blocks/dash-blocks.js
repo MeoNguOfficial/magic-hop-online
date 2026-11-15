@@ -274,19 +274,30 @@ window.DashBlocksManager = {
         const quality = currentGraphicsQuality || 'fhd';
         const dScale = (typeof detailScale !== 'undefined') ? detailScale : 1.0;
 
-        // Quét các beat dash trong bài hát (thẳng và các góc xiên tiêu chuẩn)
-        const slantOffsets = [0, 1.5, 2.5, 3.5];
+        // Quét toàn bộ dải độ dài theo bước 0.25 (từ thẳng dX=0 tới xiên tối đa) để đạt 100% cache hit giữa trận
+        const seenDurations = new Set();
         for (let i = 0; i < beats.length; i++) {
             const item = beats[i];
             if (this.isDashBeat(item)) {
                 const dashTimes = this.getDashTimes(item);
                 if (dashTimes.duration > 0) {
-                    for (let s = 0; s < slantOffsets.length; s++) {
-                        const dX = slantOffsets[s];
-                        const zCalc = this.calculateDashZ(0, dashTimes.duration, velZ, 0, dX);
-                        const physicalLength = Math.max(0, zCalc.dashLength || 0);
-                        const dashLength = Math.max(tLen, physicalLength + padLength * 2);
-                        this.getOrCreateGeometries(dashLength, tWidth, quality, dScale);
+                    const durKey = Math.round(dashTimes.duration * 1000);
+                    if (seenDurations.has(durKey)) continue;
+                    seenDurations.add(durKey);
+
+                    const zStraight = this.calculateDashZ(0, dashTimes.duration, velZ, 0, 0);
+                    const minPhysical = Math.max(0, zStraight.dashLength || 0);
+                    const minDashLen = Math.max(tLen, minPhysical + padLength * 2);
+
+                    const maxDeltaX = Math.min(4.0, Math.max(0, minPhysical));
+                    const zSlanted = this.calculateDashZ(0, dashTimes.duration, velZ, 0, maxDeltaX);
+                    const maxPhysical = Math.max(minPhysical, zSlanted.dashLength || 0);
+                    const maxDashLen = Math.max(minDashLen, maxPhysical + padLength * 2);
+
+                    const minQ = Math.max(tWidth, Math.round(minDashLen * 4) / 4);
+                    const maxQ = Math.max(minQ, Math.round(maxDashLen * 4) / 4);
+                    for (let qLen = minQ; qLen <= maxQ + 0.001; qLen += 0.25) {
+                        this.getOrCreateGeometries(qLen, tWidth, quality, dScale);
                     }
                 }
             }

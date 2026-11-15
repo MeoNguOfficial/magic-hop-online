@@ -412,6 +412,14 @@ async function loadConversationMessages() {
         });
 
         // Tự động cuộn xuống dưới cùng nếu người dùng không cuộn lên xem lịch sử cũ
+        if (window.UIAnimator && typeof window.UIAnimator.staggerChildren === 'function') {
+            window.UIAnimator.staggerChildren(bodyArea, ':scope > div', {
+                y: 8,
+                step: 18,
+                duration: 210,
+                maxAnimated: 10
+            });
+        }
         if (shouldScrollToBottom) {
             bodyArea.scrollTop = bodyArea.scrollHeight;
         }

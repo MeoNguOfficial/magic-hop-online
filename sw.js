@@ -4,8 +4,8 @@
 //  Chiến lược: Network-First (Ưu tiên mạng, dự phòng Cache)
 // ============================================================
 
-const STATIC_CACHE = 'magic-hop-static-v1.0.10';
-const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.0.10';
+const STATIC_CACHE = 'magic-hop-static-v1.1.0';
+const DYNAMIC_CACHE = 'magic-hop-dynamic-v1.1.0';
 
 // Pre-load toàn bộ các file hệ thống cốt lõi & JS
 const CORE_ASSETS = [
@@ -29,6 +29,7 @@ const CORE_ASSETS = [
     './warning.html',
     './js/ui/warning-alert.js',
     './js/core/config.js',
+    './js/core/ui-animations.js',
     './js/core/app-main.js',
     './js/audio/playlist.js',
     './js/services/cacheManager.js',
@@ -57,6 +58,7 @@ const CORE_ASSETS = [
     './js/engine/game-effects.js',
     './js/engine/game-camera.js',
     './js/audio/visualizer.js',
+    './js/engine/antialiasing.js',
     './js/engine/adaptive-performance.js',
     './js/engine/fps-graph.js',
     './js/engine/game.js',
@@ -161,8 +163,8 @@ self.addEventListener('fetch', event => {
                 return networkResponse;
             })
             .catch(async () => {
-                // Khi mất mạng/Fetch thất bại -> Lấy từ Cache
-                const cachedResponse = await caches.match(event.request);
+                // Khi mất mạng/Fetch thất bại -> Lấy từ Cache (khớp cả URL có ?v= cache-buster)
+                const cachedResponse = (await caches.match(event.request)) || (await caches.match(event.request, { ignoreSearch: true }));
                 if (cachedResponse) return cachedResponse;
 
                 // Nếu trong Cache cũng không có -> Trả về lỗi 503 thay vì ném (throw) lỗi ra Console

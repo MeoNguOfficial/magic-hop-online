@@ -2,10 +2,10 @@
 //  pwa-installer.js — Quản lý Cài đặt Ứng dụng & Kiểm tra Cập nhật (PWA / PC / APK)
 // ============================================================
 
-window.APP_VERSION = (typeof window !== 'undefined' && window.SCRIPT_BUILD_VERSION) ? window.SCRIPT_BUILD_VERSION : '1.0.10';
+window.APP_VERSION = (typeof window !== 'undefined' && window.SCRIPT_BUILD_VERSION) ? window.SCRIPT_BUILD_VERSION : '1.1.0';
 
 function getCurrentAppVersion() {
-    return (typeof window !== 'undefined' && (window.SCRIPT_BUILD_VERSION || window.APP_VERSION)) || '1.0.10';
+    return (typeof window !== 'undefined' && (window.SCRIPT_BUILD_VERSION || window.APP_VERSION)) || '1.1.0';
 }
 window.getCurrentAppVersion = getCurrentAppVersion;
 
@@ -140,9 +140,9 @@ function updateHeroPlatformCard() {
 
     const downloadText = (typeof t === 'function' ? t('download_btn_download') : null) || 'TẢI VỀ';
     const pcTitle = (typeof t === 'function' ? t('download_opt_pc_title') : null) || 'PC Windows (.exe)';
-    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.0.10 · 48 MB';
+    const pcDesc = (typeof t === 'function' ? t('download_opt_pc_desc') : null) || 'Bản độc lập, tối ưu đồ họa, hỗ trợ 144Hz+. · v1.1.0 · < 4 MB';
     const apkTitle = (typeof t === 'function' ? t('download_opt_apk_title') : null) || 'Android (APK)';
-    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.0.10 · 32 MB';
+    const apkDesc = (typeof t === 'function' ? t('download_opt_apk_desc') : null) || 'Bản độc lập, cảm ứng siêu nhạy. · v1.1.0 · < 16 MB';
 
     if (dev === 'android') {
         if (heroTitle) {
@@ -268,18 +268,35 @@ function showDownloadAppModal() {
     if (typeof checkPWAInstallationStatus === 'function') checkPWAInstallationStatus();
     if (typeof applyTranslations === 'function') applyTranslations();
 
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    modal.style.display = 'flex';
+    if (window.UIAnimator && typeof window.UIAnimator.showModal === 'function') {
+        modal.classList.add('flex');
+        window.UIAnimator.showModal(modal, modal.firstElementChild, {
+            staggerSelector: '#download-hero-card, [id^="row-opt-"]',
+            staggerStep: 32,
+            staggerStart: 70
+        });
+    } else {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        modal.style.display = 'flex';
+    }
 }
 window.showDownloadAppModal = showDownloadAppModal;
 
 function closeDownloadAppModal() {
     const modal = document.getElementById('download-app-modal');
     if (!modal) return;
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-    modal.style.display = 'none';
+    if (window.UIAnimator && typeof window.UIAnimator.hideModal === 'function') {
+        window.UIAnimator.hideModal(modal, modal.firstElementChild, {
+            onComplete: () => {
+                modal.classList.remove('flex');
+            }
+        });
+    } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        modal.style.display = 'none';
+    }
 }
 window.closeDownloadAppModal = closeDownloadAppModal;
 

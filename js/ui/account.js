@@ -445,10 +445,10 @@ function renderLoggedInState(user) {
     container.innerHTML = `
         <div class="space-y-4 p-2">
             <!-- TABS -->
-            <div class="flex border-b border-cyan-500/30 mb-2">
-                <button id="subtab-account" class="flex-1 py-2 text-[11px] font-bold text-cyan-400 border-b-2 border-cyan-400 uppercase font-orbitron transition-all" data-i18n="account_info">${t('account_info')}</button>
-                <button id="subtab-chat" class="flex-1 py-2 text-[11px] font-bold text-gray-500 hover:text-cyan-300 border-b-2 border-transparent uppercase font-orbitron transition-all" data-i18n="subtab_chat">${t('subtab_chat')}</button>
-                ${isAdmin ? `<button id="subtab-manage" class="flex-1 py-2 text-[11px] font-bold text-gray-500 hover:text-cyan-300 border-b-2 border-transparent uppercase font-orbitron transition-all" data-i18n="subtab_manage">${t('subtab_manage')}</button>` : ''}
+            <div id="account-subtabs" class="flex overflow-x-auto gap-2 border-b border-cyan-500/30 mb-2 pb-2 justify-start select-none cursor-grab active:cursor-grabbing">
+                <button id="subtab-account" class="tab-btn active shrink-0 whitespace-nowrap py-1.5 px-3 text-[11px] font-bold text-cyan-400 border border-cyan-400 uppercase font-orbitron transition-all" data-i18n="account_info">${t('account_info')}</button>
+                <button id="subtab-chat" class="tab-btn shrink-0 whitespace-nowrap py-1.5 px-3 text-[11px] font-bold text-gray-500 hover:text-cyan-300 border border-transparent uppercase font-orbitron transition-all" data-i18n="subtab_chat">${t('subtab_chat')}</button>
+                ${isAdmin ? `<button id="subtab-manage" class="tab-btn shrink-0 whitespace-nowrap py-1.5 px-3 text-[11px] font-bold text-gray-500 hover:text-cyan-300 border border-transparent uppercase font-orbitron transition-all" data-i18n="subtab_manage">${t('subtab_manage')}</button>` : ''}
             </div>
             
             <!-- ACCOUNT SUBTAB CONTENT -->
@@ -546,6 +546,17 @@ function renderLoggedInState(user) {
     const subtabContentChat = document.getElementById('subtab-content-chat');
     const subtabContentManage = document.getElementById('subtab-content-manage');
 
+    const accountSubtabBtns = [subtabAccount, subtabChat, subtabManage].filter(Boolean);
+    const accountSubtabPanes = [subtabContentAccount, subtabContentChat, subtabContentManage].filter(Boolean);
+
+    if (window.UIAnimator && typeof window.UIAnimator.bindHorizontalScrollOnly === 'function') {
+        window.UIAnimator.bindHorizontalScrollOnly('#account-subtabs');
+        const subtabsEl = document.getElementById('account-subtabs');
+        if (subtabsEl && subtabAccount && typeof window.UIAnimator.animateTabIndicator === 'function') {
+            window.UIAnimator.animateTabIndicator(subtabsEl, subtabAccount, { variant: 'subtab', instant: true, autoScroll: false });
+        }
+    }
+
     // Hàm thu hồi dọn dẹp các tab đang active
     const deactivateTabs = () => {
         if (typeof deactivateChat === 'function') {
@@ -563,32 +574,56 @@ function renderLoggedInState(user) {
         });
     };
 
+    const switchAccountSubtab = (btn, pane, staggerSel, afterHook) => {
+        if (!btn || !pane) return;
+        if (btn !== subtabChat && typeof deactivateChat === 'function') {
+            deactivateChat();
+        }
+        if (window.UIAnimator && typeof window.UIAnimator.switchDirectionalTab === 'function') {
+            window.UIAnimator.switchDirectionalTab({
+                tabsContainer: '#account-subtabs',
+                buttons: accountSubtabBtns,
+                targetBtn: btn,
+                panes: accountSubtabPanes,
+                targetPane: pane,
+                activeClasses: ['active', 'text-cyan-400', 'border-cyan-400'],
+                inactiveClasses: ['text-gray-500', 'border-transparent'],
+                variant: 'subtab',
+                slideOffset: 18,
+                exitOffset: 14,
+                exitDuration: 80,
+                duration: 185,
+                staggerSelector: staggerSel || null,
+                maxAnimated: 10,
+                onAfterShow: afterHook
+            });
+        } else {
+            deactivateTabs();
+            btn.classList.replace('text-gray-500', 'text-cyan-400');
+            btn.classList.replace('border-transparent', 'border-cyan-400');
+            pane.classList.remove('hidden');
+            if (typeof afterHook === 'function') afterHook();
+        }
+    };
+
     if (subtabAccount) {
         subtabAccount.addEventListener('click', () => {
-            deactivateTabs();
-            subtabAccount.classList.replace('text-gray-500', 'text-cyan-400');
-            subtabAccount.classList.replace('border-transparent', 'border-cyan-400');
-            subtabContentAccount.classList.remove('hidden');
+            switchAccountSubtab(subtabAccount, subtabContentAccount, ':scope > *');
         });
     }
 
     if (subtabChat) {
         subtabChat.addEventListener('click', () => {
-            deactivateTabs();
-            subtabChat.classList.replace('text-gray-500', 'text-cyan-400');
-            subtabChat.classList.replace('border-transparent', 'border-cyan-400');
-            subtabContentChat.classList.remove('hidden');
-            // Khởi chạy luồng nạp tin nhắn chatroom
-            initChatModule(isAdmin, user);
+            switchAccountSubtab(subtabChat, subtabContentChat, null, () => {
+                // Khởi chạy luồng nạp tin nhắn chatroom
+                initChatModule(isAdmin, user);
+            });
         });
     }
 
     if (subtabManage) {
         subtabManage.addEventListener('click', () => {
-            deactivateTabs();
-            subtabManage.classList.replace('text-gray-500', 'text-cyan-400');
-            subtabManage.classList.replace('border-transparent', 'border-cyan-400');
-            subtabContentManage.classList.remove('hidden');
+            switchAccountSubtab(subtabManage, subtabContentManage, ':scope > *');
         });
     }
 
@@ -598,7 +633,14 @@ function renderLoggedInState(user) {
             btnOpenAdmin.addEventListener('click', () => {
                 const adminPanelModal = document.getElementById('admin-panel-modal');
                 if (adminPanelModal) {
-                    adminPanelModal.style.display = 'flex';
+                    if (window.UIAnimator && typeof window.UIAnimator.showModal === 'function') {
+                        window.UIAnimator.showModal(adminPanelModal, adminPanelModal.firstElementChild, {
+                            staggerSelector: '.space-y-4 > *',
+                            staggerStep: 28
+                        });
+                    } else {
+                        adminPanelModal.style.display = 'flex';
+                    }
                     const adminAutoplayToggle = document.getElementById('admin-autoplay-toggle');
                     if (adminAutoplayToggle) {
                         adminAutoplayToggle.checked = typeof isAutoplay !== 'undefined' ? isAutoplay : false;

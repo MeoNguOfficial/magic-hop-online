@@ -1085,6 +1085,10 @@ window.GameEffectsManager = {
             }
         }
 
+        if (!hasActiveWave && !this.boundaryBurstMesh.visible) {
+            return;
+        }
+
         // 2. Cập nhật vị trí và ma trận toàn bộ tia hạt bắn ra
         let hasActiveSpark = false;
         const maxCount = this.MAX_BOUNDARY_BURSTS;
@@ -1241,6 +1245,9 @@ window.GameEffectsManager = {
                 this.ballTrailInstancedMesh.setMatrixAt(i, this.trailDummyMatrix);
                 this.ballTrailInstancedMesh.setColorAt(i, this.tempColor);
             }
+            this.ballTrailInstancedMesh.count = 0;
+            this.ballTrailInstancedMesh.visible = false;
+            this._lastActiveTrailCount = 0;
             this.ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
             if (this.ballTrailInstancedMesh.instanceColor) this.ballTrailInstancedMesh.instanceColor.needsUpdate = true;
         }
@@ -1309,6 +1316,13 @@ window.GameEffectsManager = {
         }
 
         if (this.ballTrailInstancedMesh) {
+            const prevActive = (this._lastActiveTrailCount !== undefined) ? this._lastActiveTrailCount : this.MAX_TRAIL_INSTANCES;
+            if (this.ballTrailSegments.length === 0 && prevActive === 0) {
+                if (this.ballTrailInstancedMesh.visible) {
+                    this.ballTrailInstancedMesh.visible = false;
+                }
+                return;
+            }
             const mArray = this.ballTrailInstancedMesh.instanceMatrix.array;
             let colorsNeedUpdate = false;
             const trailFadeRate = 1.8 + Math.min(1.5, (typeof gameSpeed !== 'undefined' ? gameSpeed : 1.0) * 0.6);
@@ -1372,7 +1386,7 @@ window.GameEffectsManager = {
                 }
             }
             const activeCount = this.ballTrailSegments.length;
-            const lastActive = this._lastActiveTrailCount || this.MAX_TRAIL_INSTANCES;
+            const lastActive = (this._lastActiveTrailCount !== undefined) ? this._lastActiveTrailCount : this.MAX_TRAIL_INSTANCES;
             if (activeCount < lastActive) {
                 for (let i = activeCount; i < lastActive; i++) {
                     const offset = i << 4;
@@ -1382,7 +1396,11 @@ window.GameEffectsManager = {
                 }
             }
             this._lastActiveTrailCount = activeCount;
-            this.ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
+            this.ballTrailInstancedMesh.count = activeCount;
+            this.ballTrailInstancedMesh.visible = activeCount > 0;
+            if (activeCount > 0 || lastActive > 0) {
+                this.ballTrailInstancedMesh.instanceMatrix.needsUpdate = true;
+            }
             if (colorsNeedUpdate && this.ballTrailInstancedMesh.instanceColor) {
                 this.ballTrailInstancedMesh.instanceColor.needsUpdate = true;
             }
@@ -1640,27 +1658,36 @@ window.GameEffectsManager = {
             }
         }
 
-        // Cập nhật tọa độ và ma trận các tia toé sáng đang bay
-        if (this.dashSprayMesh) {
+        // Cập nhật tọa độ và ma trận các tia toé sáng đang bay (chỉ xử lý khi đang Dash hoặc vẫn còn hạt hiển thị)
+        if (this.dashSprayMesh && (isDashingActive || this.dashSprayMesh.visible)) {
             let hasActive = false;
+            let matrixDirty = false;
             for (let i = 0; i < this.dashSprayPool.length; i++) {
                 const p = this.dashSprayPool[i];
 
                 if (!p.active) {
-                    this.sprayDummyMatrix.makeScale(0, 0, 0);
-                    this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                    if (p._matrixCleared !== true) {
+                        this.sprayDummyMatrix.makeScale(0, 0, 0);
+                        this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                        p._matrixCleared = true;
+                        matrixDirty = true;
+                    }
                     continue;
                 }
 
                 p.life -= delta;
                 if (p.life <= 0) {
                     p.active = false;
+                    p._matrixCleared = true;
                     this.sprayDummyMatrix.makeScale(0, 0, 0);
                     this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                    matrixDirty = true;
                     continue;
                 }
 
                 hasActive = true;
+                matrixDirty = true;
+                p._matrixCleared = false;
                 p.x += p.vx * delta;
                 p.y += p.vy * delta;
                 p.z += p.vz * delta;
@@ -1678,7 +1705,9 @@ window.GameEffectsManager = {
                 this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
             }
 
-            this.dashSprayMesh.instanceMatrix.needsUpdate = true;
+            if (matrixDirty) {
+                this.dashSprayMesh.instanceMatrix.needsUpdate = true;
+            }
             if (!hasActive && !isDashingActive) {
                 this.dashSprayMesh.visible = false;
             }
@@ -1695,6 +1724,7 @@ window.GameEffectsManager = {
             if (this.dashSprayPool) {
                 for (let i = 0; i < this.dashSprayPool.length; i++) {
                     this.dashSprayPool[i].active = false;
+                    this.dashSprayPool[i]._matrixCleared = true;
                     this.sprayDummyMatrix.makeScale(0, 0, 0);
                     this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
                 }
