@@ -34,7 +34,7 @@ const dict = {};
 const availableLangs = ['vi', 'en', 'fr', 'zh-CN', 'zh-TW', 'ko', 'ja', 'es', 'pt', 'ru'];
 
 // Tải dữ liệu ngôn ngữ từ thư mục language/ (luôn bypass cache cũ trên PC/PWA)
-const langCacheTag = (typeof window !== 'undefined' && (window.ASSET_CACHE_TAG || window.SCRIPT_BUILD_VERSION)) || '1.1.0-3';
+const langCacheTag = (typeof window !== 'undefined' && (window.ASSET_CACHE_TAG || window.SCRIPT_BUILD_VERSION)) || '1.1.0-4';
 const translationsPromise = Promise.all(
     availableLangs.map(lang => 
         fetch(`language/${lang}.json?v=${encodeURIComponent(langCacheTag)}`, { cache: 'no-store' })

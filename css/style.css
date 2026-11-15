@@ -107,7 +107,7 @@ html, body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    transition: all 0.3s;
+    transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
 }
 
 .song-option:hover { border-color: var(--theme-border, rgba(6, 182, 212, 0.6)); background: var(--theme-bg-surface, rgba(8, 47, 73, 0.4)); }
@@ -1023,7 +1023,6 @@ body.disable-animations #music-progress-bar {
 #fps-graph-canvas {
     contain: strict;
     transform: translate3d(0, 0, 0);
-    will-change: contents;
     filter: drop-shadow(0 0 3px rgba(0, 240, 255, 0.45));
 }
 
@@ -1379,7 +1378,7 @@ html, body {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    transition: all 0.2s ease !important;
+    transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease !important;
     cursor: pointer !important;
     box-shadow: 0 0 12px rgba(6, 182, 212, 0.2) !important;
     user-select: none !important;
@@ -1474,7 +1473,7 @@ textarea::placeholder {
     transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
                 opacity 0.25s ease,
                 margin-bottom 0.3s ease;
-    will-change: max-height, opacity, margin-bottom;
+    will-change: opacity;
 }
 
 #song-search-filter-section.is-expanded {
@@ -1803,6 +1802,13 @@ body:not(.disable-animations) .ui2-pcb-pins .ui2-pin-c {
 body.disable-animations .ui2-pcb-flow,
 body.disable-animations .ui2-pcb-pins circle {
     animation: none !important;
+}
+
+#start-screen.hidden .featured-vinyl-disc,
+#start-screen.hidden .ui2-pcb-flow,
+#start-screen.hidden .ui2-pcb-pins circle {
+    animation-play-state: paused !important;
+}
 }
 
 body.disable-animations .ui2-pcb-flow {

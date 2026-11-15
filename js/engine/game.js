@@ -3046,22 +3046,22 @@ function animate(rafTime) {
 
     if (limitValue > 0) {
         const frameDuration = 1000 / limitValue;
-        const elapsed = now - lastFrameTime;
-        // Dùng dung sai thích ứng theo tần số quét để tránh rớt nhịp VSync khi rAF dao động ±1ms
-        const jitterTolerance = Math.min(1.5, frameDuration * 0.18);
+        const elapsed = frameTimestamp - lastFrameTime;
+        // Dùng dung sai thích ứng theo tần số quét để tránh rớt nhịp VSync khi rAF dao động ±2ms trên Windows/WebView2
+        const jitterTolerance = Math.min(2.5, frameDuration * 0.35);
         if (elapsed < frameDuration - jitterTolerance) {
             return;
         }
         if (elapsed > frameDuration * 2) {
-            lastFrameTime = now;
+            lastFrameTime = frameTimestamp;
         } else if (elapsed >= frameDuration) {
-            lastFrameTime = now - Math.min(frameDuration * 0.5, elapsed - frameDuration);
+            lastFrameTime = frameTimestamp - Math.min(frameDuration * 0.5, elapsed - frameDuration);
         } else {
             // Wake sớm trong vùng jitterTolerance: giữ đúng pha frame tiếp theo, không trừ lùi half-frameDuration
-            lastFrameTime = Math.min(now + jitterTolerance, lastFrameTime + frameDuration);
+            lastFrameTime = Math.min(frameTimestamp + jitterTolerance, lastFrameTime + frameDuration);
         }
     } else {
-        lastFrameTime = now;
+        lastFrameTime = frameTimestamp;
     }
 
     const clockDelta = clock.getDelta();
@@ -3100,7 +3100,7 @@ function animate(rafTime) {
     if (typeof showFpsEnabled !== 'undefined' && showFpsEnabled) {
         fpsFrameCount++;
         const elapsedFps = now - fpsLastTime;
-        if (elapsedFps >= 180) {
+        if (elapsedFps >= 250) {
             if (elapsedFps > 400) {
                 // Nếu khoảng thời gian đo bị gián đoạn do pause, chuyển tab hoặc hitch OS,
                 // reset bộ đếm để không tính ra mẫu FPS rác (1-10 FPS) làm biến dạng đồ thị.
@@ -6410,6 +6410,10 @@ function setupGameStates() {
     lastFrameTime = now;
     fpsLastTime = now;
     fpsFrameCount = 0;
+    _lastRenderRafTime = 0;
+    _smoothedFrameDelta = 0;
+    _smoothedAudioDrift = 0;
+    _lastIdleMenuRenderTime = 0;
 }
 
 function returnToMenu() {
@@ -7056,6 +7060,10 @@ function pauseGame() {
     lastFrameTime = now;
     fpsLastTime = now;
     fpsFrameCount = 0;
+    _lastRenderRafTime = 0;
+    _smoothedFrameDelta = 0;
+    _smoothedAudioDrift = 0;
+    _lastIdleMenuRenderTime = 0;
 
     showTapToOverlay('resume');
 }
@@ -7077,6 +7085,10 @@ function resumeGame() {
     lastFrameTime = now;
     fpsLastTime = now;
     fpsFrameCount = 0;
+    _lastRenderRafTime = 0;
+    _smoothedFrameDelta = 0;
+    _smoothedAudioDrift = 0;
+    _lastIdleMenuRenderTime = 0;
 
     if (window.AdaptivePerformanceManager) {
         window.AdaptivePerformanceManager.reset();

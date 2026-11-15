@@ -376,7 +376,9 @@ async function getCachedAudioUrlWithProgress(url, onProgress) {
         if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
         const contentLength = response.headers.get('content-length');
-        const total = contentLength ? parseInt(contentLength, 10) : 4 * 1024 * 1024; // Giả định 4MB nếu server ẩn Content-Length
+        const parsedLength = contentLength ? parseInt(contentLength, 10) : 0;
+        const hasValidTotal = Number.isFinite(parsedLength) && parsedLength > 0;
+        const total = hasValidTotal ? parsedLength : 4 * 1024 * 1024; // Giả định 4MB nếu server ẩn hoặc trả Content-Length <= 0
         let loaded = 0;
         const reader = response.body.getReader();
         const chunks = [];
@@ -392,12 +394,12 @@ async function getCachedAudioUrlWithProgress(url, onProgress) {
             chunks.push(value);
             loaded += value.length;
 
-            let percent = Math.round((loaded / total) * 100);
-            // Nếu không có contentLength, giữ tối đa 95% cho đến khi tải xong thực sự
-            if (!contentLength && percent > 95) percent = 95; 
+            let percent = Math.min(100, Math.max(0, Math.round((loaded / total) * 100)));
+            // Nếu không có contentLength hợp lệ, giữ tối đa 95% cho đến khi tải xong thực sự
+            if (!hasValidTotal && percent > 95) percent = 95;
             if (onProgress) onProgress(percent);
         }
-        if (!contentLength && onProgress) onProgress(100);
+        if (!hasValidTotal && onProgress) onProgress(100);
         const downloadedBlob = new Blob(chunks);
 
         // Lưu vào cache

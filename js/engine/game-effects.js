@@ -1093,7 +1093,7 @@ window.GameEffectsManager = {
         let hasActiveSpark = false;
         const maxCount = this.MAX_BOUNDARY_BURSTS;
         const pool = this.boundaryBurstPool;
-        const zeroMat = this.sprayDummyMatrix;
+        const mArray = this.boundaryBurstMesh.instanceMatrix.array;
 
         for (let i = 0; i < maxCount; i++) {
             const p = pool[i];
@@ -1102,8 +1102,10 @@ window.GameEffectsManager = {
             p.life -= delta;
             if (p.life <= 0) {
                 p.active = false;
-                zeroMat.makeScale(0, 0, 0);
-                this.boundaryBurstMesh.setMatrixAt(i, zeroMat);
+                const offset = i << 4;
+                mArray[offset + 0] = 0;
+                mArray[offset + 5] = 0;
+                mArray[offset + 10] = 0;
                 continue;
             }
 
@@ -1130,7 +1132,7 @@ window.GameEffectsManager = {
             this.sprayDummyPosition.set(p.x, p.y, p.z);
             this.sprayDummyScale.set(curScale, curScale * p.stretch, curScale);
             this.sprayDummyMatrix.compose(this.sprayDummyPosition, this.sprayDummyQuaternion, this.sprayDummyScale);
-            this.boundaryBurstMesh.setMatrixAt(i, this.sprayDummyMatrix);
+            this.sprayDummyMatrix.toArray(mArray, i << 4);
         }
 
         if (hasActiveSpark || hasActiveWave) {

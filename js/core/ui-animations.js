@@ -93,7 +93,7 @@
         const isAlreadyVisible =
             !backdropEl.classList.contains('hidden') &&
             backdropEl.style.display === displayMode &&
-            parseFloat(getComputedStyle(backdropEl).opacity || '1') > 0.5;
+            backdropEl.style.opacity !== '0';
 
         const token = nextToken(backdropEl);
         if (targetCard) nextToken(targetCard);
@@ -249,6 +249,7 @@
                 if (panelEl._uiAnimToken === token) {
                     panelEl.style.opacity = '';
                     panelEl.style.transform = '';
+                    panelEl.style.willChange = '';
                 }
             }
         };
@@ -258,6 +259,7 @@
         }
 
         panelEl.style.opacity = '0';
+        panelEl.style.willChange = 'transform, opacity';
         anime(animProps);
 
         if (opts.staggerSelector) {
@@ -302,6 +304,7 @@
             trackTarget(n);
             clearInlineMotion(n);
             n.style.opacity = '0';
+            n.style.willChange = 'transform, opacity';
         });
 
         const tokenMap = animatedNodes.map((n) => n._uiAnimToken);
@@ -318,6 +321,7 @@
                     if (n._uiAnimToken === tokenMap[idx]) {
                         n.style.opacity = '';
                         n.style.transform = '';
+                        n.style.willChange = '';
                     }
                 });
             }
