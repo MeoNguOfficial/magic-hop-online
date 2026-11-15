@@ -8,7 +8,7 @@ echo ========================================================
 echo.
 
 :: 1. Chuan bi tai nguyen Web www/
-echo [1/3] Dang dong goi tai nguyen web vao www/ ...
+echo [1/4] Dang dong goi tai nguyen web vao www/ ...
 call node scripts/prepare-www.js
 if %errorlevel% neq 0 (
     echo [LOI] Khong the chuan bi thu muc www!
@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 )
 
 :: 2. Bien dich trinh khoi chay C# CyberBeatHopper.exe
-echo [2/3] Dang bien dich CyberBeatHopper.exe bang C# Compiler ...
+echo [2/4] Dang bien dich CyberBeatHopper.exe bang C# Compiler ...
 if not exist "dist-pc" mkdir "dist-pc"
 "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32icon:"src-pc\app.ico" /optimize+ /out:"dist-pc\CyberBeatHopper.exe" "src-pc\Program.cs"
 if %errorlevel% neq 0 (
@@ -27,15 +27,27 @@ if %errorlevel% neq 0 (
 )
 
 :: 3. Dong bo tai nguyen vao dist-pc/www/
-echo [3/3] Dang dong bo dist-pc\www\ ...
+echo [3/4] Dang dong bo dist-pc\www\ ...
 if not exist "dist-pc\www" mkdir "dist-pc\www"
 xcopy /e /i /y "www\*" "dist-pc\www\" >nul
+
+:: 4. Nen thanh file ZIP gom CyberBeatHopper.exe + www/
+echo [4/4] Dang nen file ZIP phat hanh ...
+for /f "delims=" %%v in ('node -p "require('./package.json').version"') do set "APP_VER=%%v"
+set "ZIP_PATH=dist-pc\CyberBeatHopper-v%APP_VER%-PC.zip"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path '%ZIP_PATH%') { Remove-Item -Force '%ZIP_PATH%' }; Compress-Archive -Path 'dist-pc\CyberBeatHopper.exe','dist-pc\www' -DestinationPath '%ZIP_PATH%' -CompressionLevel Optimal"
+if %errorlevel% neq 0 (
+    echo [LOI] Nen file ZIP that bai!
+    pause
+    exit /b %errorlevel%
+)
 
 echo.
 echo ========================================================
 echo  BUILD PC APP THANH CONG!
 echo  Thu muc xuat ban: dist-pc\
 echo  File chay: dist-pc\CyberBeatHopper.exe
+echo  File ZIP: %ZIP_PATH%
 echo ========================================================
 pause
 exit /b 0
