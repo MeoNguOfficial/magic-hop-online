@@ -657,13 +657,16 @@ async function loadPlaylistData(search = '', forceRefresh = false, options = {})
     let indices = [];
     let syncError = null;
     currentSearchTerm = search;
+    nextCursor = null;
+    hasMore = false;
+    isLoadingMore = false;
     const isAdmin = isCurrentUserAdmin();
     const isBrowserOffline = (typeof navigator !== 'undefined' && !navigator.onLine);
 
     // 1. SERVER TRƯỚC (Network-First): Nếu thiết bị có mạng và có ApiService, LUÔN gọi trực tiếp Server API
     if (!isBrowserOffline && window.ApiService && typeof window.ApiService.getPublicBeatmaps === 'function') {
         try {
-            const params = { limit: 100 };
+            const params = {};
             if (isAdmin) {
                 params.mode = 'admin';
             }
@@ -676,8 +679,8 @@ async function loadPlaylistData(search = '', forceRefresh = false, options = {})
             const apiResponse = await ApiService.getPublicBeatmaps(params, reqOptions);
             
             if (apiResponse.data?.meta) {
-                nextCursor = apiResponse.data.meta.next_cursor;
-                hasMore = apiResponse.data.meta.has_more;
+                nextCursor = apiResponse.data.meta.next_cursor ?? null;
+                hasMore = Boolean(apiResponse.data.meta.has_more && nextCursor !== null);
             }
 
             // Lưu filter_options từ API vào biến toàn cục để dropdown dùng
@@ -788,25 +791,26 @@ async function loadPlaylistData(search = '', forceRefresh = false, options = {})
 
 
 async function loadMoreSongs() {
-    const loadMoreBtn = document.getElementById('load-more-btn');
     if (isLoadingMore || !hasMore || !nextCursor) {
-        if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+        if (typeof window.updateSongInfiniteSentinel === 'function') {
+            window.updateSongInfiniteSentinel();
+        }
         return;
     }
 
     isLoadingMore = true;
-    if (loadMoreBtn) {
-        loadMoreBtn.disabled = true;
-        loadMoreBtn.innerText = typeof t === 'function' ? t('msg_loading') : 'Đang tải...';
+    if (typeof window.updateSongInfiniteSentinel === 'function') {
+        window.updateSongInfiniteSentinel('loading');
     }
 
     const isAdmin = isCurrentUserAdmin();
+    const activeSearch = currentSearchTerm || (typeof currentFilterTerm !== 'undefined' ? currentFilterTerm : '') || '';
     try {
         const params = { cursor: nextCursor };
         if (isAdmin) {
             params.mode = 'admin';
         }
-        if (currentSearchTerm) params.search = currentSearchTerm;
+        if (activeSearch) params.search = activeSearch;
         if (window.selectedArtistFilter) params.artist = window.selectedArtistFilter;
         if (window.selectedGenreFilter) params.genre = window.selectedGenreFilter;
         if (window.selectedCopyrightFilter) params.copyright_status = window.selectedCopyrightFilter;
@@ -816,21 +820,26 @@ async function loadMoreSongs() {
         const newMaps = (Array.isArray(rawList) ? rawList : []).filter(m => Boolean(m && typeof m === 'object' && (m.name || m.title)));
 
         if (apiResponse.data?.meta) {
-            nextCursor = apiResponse.data.meta.next_cursor;
-            hasMore = apiResponse.data.meta.has_more;
+            nextCursor = apiResponse.data.meta.next_cursor ?? null;
+            hasMore = Boolean(apiResponse.data.meta.has_more && nextCursor !== null);
         } else {
+            nextCursor = null;
             hasMore = false;
         }
 
-        const indices = window.mergeIntoPlaylist(newMaps);
-        currentPlaylistIndices.push(...indices);
+        const mergedIndices = window.mergeIntoPlaylist(newMaps);
+        const existingSet = new Set(currentPlaylistIndices);
+        const uniqueNewIndices = mergedIndices.filter(idx => !existingSet.has(idx));
+        if (uniqueNewIndices.length > 0) {
+            currentPlaylistIndices.push(...uniqueNewIndices);
+        }
 
         if (typeof window.preloadBackendAndPassedStatusOnStartup === 'function') {
             window.preloadBackendAndPassedStatusOnStartup();
         }
 
         // Cập nhật thêm vào cache offline để tránh mất dữ liệu mới kéo (lưu cho cả admin và khách)
-        if (typeof cachePlaylistToDB === 'function' && !currentSearchTerm && typeof getCachedPlaylistFromDB === 'function') {
+        if (typeof cachePlaylistToDB === 'function' && !activeSearch && typeof getCachedPlaylistFromDB === 'function') {
             const existingMaps = await getCachedPlaylistFromDB() || [];
             const existingIds = new Set(existingMaps.map(m => m.id));
             const mapsToCache = [...existingMaps, ...newMaps.filter(m => !existingIds.has(m.id))];
@@ -858,30 +867,23 @@ async function loadMoreSongs() {
             });
         }
 
-        // QUAN TRỌNG: Cần gán false cho cờ tải TRƯỚC KHI gọi hàm render giao diện.
-        // Nếu không, song-selector.js sẽ tưởng đang tải và xóa vĩnh viễn nút "Tải Thêm".
         isLoadingMore = false;
 
-        // Trượt cửa sổ hiển thị xuống cuối để thấy dữ liệu mới
-        if (typeof playlistRenderStartIndex !== 'undefined' && typeof PLAYLIST_MAX_VISIBLE !== 'undefined') {
-            playlistRenderStartIndex = Math.max(0, currentPlaylistIndices.length - PLAYLIST_MAX_VISIBLE);
-        }
-
-        // Render lại toàn bộ danh sách với dữ liệu mới
-        if (typeof renderSongList === 'function') {
-            renderSongList(currentSearchTerm, currentPlaylistIndices);
+        // Nối mượt các bài mới trực tiếp vào cuối danh sách mà không xóa/nhảy vị trí cuộn
+        if (typeof window.appendSongCards === 'function') {
+            window.appendSongCards(uniqueNewIndices);
+        } else if (typeof renderSongList === 'function') {
+            renderSongList(activeSearch, currentPlaylistIndices);
         }
 
     } catch (e) {
         console.error("Failed to load more songs:", e);
-        if (loadMoreBtn) {
-            loadMoreBtn.disabled = false;
-            loadMoreBtn.innerText = typeof t === 'function' ? t('msg_error_retry') : 'Lỗi, thử lại';
+        isLoadingMore = false;
+        if (typeof window.updateSongInfiniteSentinel === 'function') {
+            window.updateSongInfiniteSentinel('error');
         }
     } finally {
         isLoadingMore = false;
-        // Hàm renderSongList sẽ tự động tạo lại nút "Tải thêm" nếu cần,
-        // nên không cần xử lý bật/tắt nút ở đây.
     }
 }
 

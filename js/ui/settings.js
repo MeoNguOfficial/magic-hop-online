@@ -1093,6 +1093,7 @@ function playEndSceneAndReload(reloadCallback) {
     }
 }
 
+let masterVolume = localStorage.getItem('masterVolume') !== null ? parseFloat(localStorage.getItem('masterVolume')) : 1.0;
 let gameVolume = localStorage.getItem('gameVolume') !== null ? parseFloat(localStorage.getItem('gameVolume')) : 0.8;
 let playSfxVolume = localStorage.getItem('playSfxVolume') !== null ? parseFloat(localStorage.getItem('playSfxVolume')) : 0.8;
 let pregameVolume = localStorage.getItem('pregameVolume') !== null ? parseFloat(localStorage.getItem('pregameVolume')) : 0.8;
@@ -1102,6 +1103,7 @@ let mfxGameOverVolume = localStorage.getItem('mfxGameOverVolume') !== null ? par
 let uiVolume = localStorage.getItem('uiVolume') !== null ? parseFloat(localStorage.getItem('uiVolume')) : 0.8;
 let breakBlockVolume = localStorage.getItem('breakBlockVolume') !== null ? parseFloat(localStorage.getItem('breakBlockVolume')) : 0.8;
 
+let isMasterMuted = localStorage.getItem('isMasterMuted') === 'true';
 let isMenuMuted = localStorage.getItem('isMenuMuted') === 'true';
 let isPreviewMuted = localStorage.getItem('isPreviewMuted') === 'true';
 let isPlaySfxMuted = localStorage.getItem('isPlaySfxMuted') === 'true';
@@ -1906,11 +1908,20 @@ function applySettings() {
     }
 
     // Audio volumes
+    const masterVolumeSlider = document.getElementById('master-volume-slider');
+    const masterVolumeValue = document.getElementById('master-volume-value');
+    if (masterVolumeSlider) {
+        masterVolume = parseFloat(masterVolumeSlider.value);
+        window.debouncedLocalStorageSet('masterVolume', masterVolume);
+        if (masterVolumeValue) masterVolumeValue.innerText = Math.round(masterVolume * 100) + '%';
+    }
+    const masterMult = isMasterMuted ? 0 : masterVolume;
+    window.getMasterVolumeMultiplier = () => masterMult;
     if (menuVolumeSlider) {
         menuVolume = parseFloat(menuVolumeSlider.value);
         window.debouncedLocalStorageSet('menuVolume', menuVolume);
         if (menuVolumeValue) menuVolumeValue.innerText = Math.round(menuVolume * 100) + '%';
-        const targetVol = isMenuMuted ? 0 : menuVolume;
+        const targetVol = (isMenuMuted ? 0 : menuVolume) * masterMult;
         if (menuGainNode && audioCtx) {
             if (typeof currentPreviewIndex === 'undefined' || currentPreviewIndex === -1) {
                 menuGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
@@ -1921,7 +1932,7 @@ function applySettings() {
         previewVolume = parseFloat(previewVolumeSlider.value);
         window.debouncedLocalStorageSet('previewVolume', previewVolume);
         if (typeof previewVolumeValue !== 'undefined' && previewVolumeValue) previewVolumeValue.innerText = Math.round(previewVolume * 100) + '%';
-        const targetVol = isPreviewMuted ? 0 : previewVolume;
+        const targetVol = (isPreviewMuted ? 0 : previewVolume) * masterMult;
         if (typeof previewGainNode !== 'undefined' && previewGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
             if (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex !== -1) {
                 previewGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
@@ -1932,7 +1943,7 @@ function applySettings() {
         gameVolume = parseFloat(gameVolumeSlider.value);
         window.debouncedLocalStorageSet('gameVolume', gameVolume);
         if (gameVolumeValue) gameVolumeValue.innerText = Math.round(gameVolume * 100) + '%';
-        const targetVol = isGameMuted ? 0 : gameVolume;
+        const targetVol = (isGameMuted ? 0 : gameVolume) * masterMult;
         if (gainNode && audioCtx) gainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
 
         // Update low volume warning dynamically if overlay is visible
@@ -1958,7 +1969,7 @@ function applySettings() {
         sfxVolume = parseFloat(sfxVolumeSlider.value);
         window.debouncedLocalStorageSet('sfxVolume', sfxVolume);
         if (sfxVolumeValue) sfxVolumeValue.innerText = Math.round(sfxVolume * 100) + '%';
-        const targetVol = isSfxMuted ? 0 : sfxVolume;
+        const targetVol = (isSfxMuted ? 0 : sfxVolume) * masterMult;
         if (sfxGainNode && audioCtx) {
             sfxGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
         } else if (typeof clickAudio !== 'undefined' && clickAudio) {
@@ -1969,7 +1980,7 @@ function applySettings() {
         playSfxVolume = parseFloat(playSfxVolumeSlider.value);
         window.debouncedLocalStorageSet('playSfxVolume', playSfxVolume);
         if (typeof playSfxVolumeValue !== 'undefined' && playSfxVolumeValue) playSfxVolumeValue.innerText = Math.round(playSfxVolume * 100) + '%';
-        const targetVol = isPlaySfxMuted ? 0 : playSfxVolume;
+        const targetVol = (isPlaySfxMuted ? 0 : playSfxVolume) * masterMult;
         if (typeof playSfxGainNode !== 'undefined' && playSfxGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
             playSfxGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
         } else if (typeof playAudio !== 'undefined' && playAudio) {
@@ -1980,7 +1991,7 @@ function applySettings() {
         pregameVolume = parseFloat(pregameVolumeSlider.value);
         window.debouncedLocalStorageSet('pregameVolume', pregameVolume);
         if (typeof pregameVolumeValue !== 'undefined' && pregameVolumeValue) pregameVolumeValue.innerText = Math.round(pregameVolume * 100) + '%';
-        const targetVol = isPregameMuted ? 0 : pregameVolume;
+        const targetVol = (isPregameMuted ? 0 : pregameVolume) * masterMult;
         if (typeof pregameGainNode !== 'undefined' && pregameGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
             pregameGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
         } else if (typeof pregameAudio !== 'undefined' && pregameAudio) {
@@ -1991,14 +2002,14 @@ function applySettings() {
         roundVolume = parseFloat(roundVolumeSlider.value);
         window.debouncedLocalStorageSet('roundVolume', roundVolume);
         if (roundVolumeValue) roundVolumeValue.innerText = Math.round(roundVolume * 100) + '%';
-        const targetVol = isRoundMuted ? 0 : roundVolume;
+        const targetVol = (isRoundMuted ? 0 : roundVolume) * masterMult;
         if (roundGainNode && audioCtx) roundGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
     }
     if (typeof mfxGameOverVolumeSlider !== 'undefined' && mfxGameOverVolumeSlider) {
         mfxGameOverVolume = parseFloat(mfxGameOverVolumeSlider.value);
         window.debouncedLocalStorageSet('mfxGameOverVolume', mfxGameOverVolume);
         if (typeof mfxGameOverVolumeValue !== 'undefined' && mfxGameOverVolumeValue) mfxGameOverVolumeValue.innerText = Math.round(mfxGameOverVolume * 100) + '%';
-        const targetVol = isMfxGameOverMuted ? 0 : mfxGameOverVolume;
+        const targetVol = (isMfxGameOverMuted ? 0 : mfxGameOverVolume) * masterMult;
         if (typeof mfxGameOverGainNode !== 'undefined' && mfxGameOverGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
             mfxGameOverGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
         }
@@ -2007,7 +2018,7 @@ function applySettings() {
         uiVolume = parseFloat(uiVolumeSlider.value);
         window.debouncedLocalStorageSet('uiVolume', uiVolume);
         if (uiVolumeValue) uiVolumeValue.innerText = Math.round(uiVolume * 100) + '%';
-        const targetVol = isUiMuted ? 0 : uiVolume;
+        const targetVol = (isUiMuted ? 0 : uiVolume) * masterMult;
         if (uiGainNode && audioCtx) uiGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
     }
     if (typeof breakBlockVolumeSlider !== 'undefined' && breakBlockVolumeSlider) {
@@ -2016,7 +2027,7 @@ function applySettings() {
         if (typeof breakBlockVolumeValue !== 'undefined' && breakBlockVolumeValue) {
             breakBlockVolumeValue.innerText = Math.round(breakBlockVolume * 100) + '%';
         }
-        const targetVol = isBreakBlockMuted ? 0 : breakBlockVolume;
+        const targetVol = (isBreakBlockMuted ? 0 : breakBlockVolume) * masterMult;
         if (typeof breakBlockGainNode !== 'undefined' && breakBlockGainNode && typeof audioCtx !== 'undefined' && audioCtx) {
             breakBlockGainNode.gain.setTargetAtTime(targetVol, audioCtx.currentTime, 0.05);
         } else if (typeof breakBlockAudios !== 'undefined' && breakBlockAudios) {
@@ -2527,6 +2538,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
+        });
+    }
+    const masterVolumeSliderEl = document.getElementById('master-volume-slider');
+    const masterVolumeValueEl = document.getElementById('master-volume-value');
+    if (masterVolumeSliderEl) {
+        masterVolumeSliderEl.value = masterVolume;
+        if (masterVolumeValueEl) masterVolumeValueEl.innerText = Math.round(masterVolume * 100) + '%';
+        masterVolumeSliderEl.addEventListener('input', applySettings);
+    }
+    const btnMuteMaster = document.getElementById('btn-mute-master');
+    if (btnMuteMaster) {
+        updateMuteButtonUI(btnMuteMaster, isMasterMuted);
+        btnMuteMaster.addEventListener('click', () => {
+            isMasterMuted = !isMasterMuted;
+            localStorage.setItem('isMasterMuted', isMasterMuted);
+            updateMuteButtonUI(btnMuteMaster, isMasterMuted);
+            applySettings();
         });
     }
     if (menuVolumeSlider) menuVolumeSlider.addEventListener('input', applySettings);

@@ -203,6 +203,8 @@
   "aa_title": "안티앨리어싱",
   "aa_desc": "새로고침 없이 블록과 공의 가장자리를 실시간으로 부드럽게 처리하며 GPU에 맞춰 최적화됩니다.",
   "audio_controls": "오디오 제어",
+  "master_vol": "마스터 볼륨",
+  "master_vol_desc": "게임 내 모든 오디오를 제어하는 마스터 볼륨입니다.",
   "mute_all": "모두 음소거",
   "unmute_all": "모두 음소거 해제",
   "menu_vol_desc": "메인 메뉴의 배경 음악 볼륨.",

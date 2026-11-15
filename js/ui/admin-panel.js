@@ -1211,14 +1211,17 @@ document.getElementById('btn-confirm-delete-user').addEventListener('click', asy
     }
 });
 
-// --- BEATMAPS SEARCH & LAZY LOADING ---
+// --- BEATMAPS SEARCH & INFINITE SCROLL ---
 let globalBeatmapsList = [];
 let adminBmNextCursor = null;
 let adminBmHasMore = true;
 let isAdminBmLoading = false;
 let adminBmRenderStartIndex = 0;
+let adminBmRenderedCount = 0;
 const ADMIN_BM_MAX_VISIBLE = 20;
 let adminBmSearchTerm = '';
+let _adminBmInfiniteObserver = null;
+let _adminBmScrollFallbackBound = false;
 
 const adminBmSearchInput = document.getElementById('admin-beatmaps-search');
 if (adminBmSearchInput) {
@@ -1235,6 +1238,11 @@ window.adminSelectedCopyright = '';
 async function loadBeatmaps() {
     const tbody = document.getElementById('table-beatmaps-body');
     if (!tbody) return;
+    adminBmNextCursor = null;
+    adminBmHasMore = false;
+    isAdminBmLoading = false;
+    adminBmRenderStartIndex = 0;
+    adminBmRenderedCount = 0;
     try {
         const params = {};
         if (adminBmSearchTerm) params.search = adminBmSearchTerm;
@@ -1294,9 +1302,10 @@ async function loadBeatmaps() {
         tbody.innerHTML = '';
 
         if (res.data?.meta) {
-            adminBmNextCursor = res.data.meta.next_cursor;
-            adminBmHasMore = res.data.meta.has_more;
+            adminBmNextCursor = res.data.meta.next_cursor ?? null;
+            adminBmHasMore = Boolean(res.data.meta.has_more && adminBmNextCursor !== null);
         } else {
+            adminBmNextCursor = null;
             adminBmHasMore = false;
         }
 
@@ -1322,11 +1331,13 @@ async function loadBeatmaps() {
 }
 
 async function loadMoreBeatmapsFromAPI() {
-    if (isAdminBmLoading || !adminBmHasMore || !adminBmNextCursor) return;
+    if (isAdminBmLoading || !adminBmHasMore || !adminBmNextCursor) {
+        updateAdminBeatmapsSentinel();
+        return;
+    }
 
     isAdminBmLoading = true;
-    const btnLoadMore = document.getElementById('btn-load-more-beatmaps');
-    if (btnLoadMore) btnLoadMore.innerText = t('admin_msg_loading');
+    updateAdminBeatmapsSentinel('loading');
 
     try {
         const params = { cursor: adminBmNextCursor };
@@ -1380,26 +1391,25 @@ async function loadMoreBeatmapsFromAPI() {
         }
 
         if (res.data?.meta) {
-            adminBmNextCursor = res.data.meta.next_cursor;
-            adminBmHasMore = res.data.meta.has_more;
+            adminBmNextCursor = res.data.meta.next_cursor ?? null;
+            adminBmHasMore = Boolean(res.data.meta.has_more && adminBmNextCursor !== null);
         } else {
+            adminBmNextCursor = null;
             adminBmHasMore = false;
         }
 
-        globalBeatmapsList.push(...newMaps);
-        isAdminBmLoading = false;
-
-        // Cửa sổ trượt đi xuống dưới cùng
-        if (globalBeatmapsList.length > ADMIN_BM_MAX_VISIBLE) {
-            adminBmRenderStartIndex = globalBeatmapsList.length - ADMIN_BM_MAX_VISIBLE;
-        } else {
-            adminBmRenderStartIndex = 0;
+        const existingIds = new Set(globalBeatmapsList.map(m => String(m.id)));
+        const uniqueNewMaps = newMaps.filter(m => m && !existingIds.has(String(m.id)));
+        const prevTotal = globalBeatmapsList.length;
+        if (uniqueNewMaps.length > 0) {
+            globalBeatmapsList.push(...uniqueNewMaps);
         }
 
-        renderAdminBeatmapsTable();
+        isAdminBmLoading = false;
+        appendAdminBeatmapsRows(uniqueNewMaps, prevTotal);
     } catch (error) {
         isAdminBmLoading = false;
-        if (btnLoadMore) btnLoadMore.innerText = t('admin_msg_error_retry');
+        updateAdminBeatmapsSentinel('error');
     }
 }
 
@@ -1906,102 +1916,95 @@ document.getElementById('btn-load-prev-scores')?.addEventListener('click', loadP
 const scoreRefreshBtn = document.getElementById('admin-score-refresh-btn');
 if (scoreRefreshBtn) scoreRefreshBtn.addEventListener('click', () => { if (currentScoreBeatmapId) { const map = globalBeatmapsList.find(m => m.id === currentScoreBeatmapId); if (map) loadTopScoresForBeatmap(map); } });
 
-function renderAdminBeatmapsTable() {
-    const tbody = document.getElementById('table-beatmaps-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+function buildAdminBeatmapRowHtml(m, absoluteIndex) {
+    const statusClass = m.is_available ? 'text-green-400' : 'text-gray-500';
+    const statusText = m.is_available ? t('admin_status_active') : t('admin_status_hidden');
 
-    const endIndex = Math.min(adminBmRenderStartIndex + ADMIN_BM_MAX_VISIBLE, globalBeatmapsList.length);
-    const visibleMaps = globalBeatmapsList.slice(adminBmRenderStartIndex, endIndex);
-
-    visibleMaps.forEach((m, index) => {
-        const absoluteIndex = adminBmRenderStartIndex + index;
-        const statusClass = m.is_available ? 'text-green-400' : 'text-gray-500';
-        const statusText = m.is_available ? t('admin_status_active') : t('admin_status_hidden');
-
-        const isMVerified = m.verified === true || m.verified === 1 || m.verified === 'true' || m.verified === 'verified';
-        let cpStatus = m.copyright_status || '';
-        if (!cpStatus && isMVerified) {
-            cpStatus = 'No copyright';
+    const isMVerified = m.verified === true || m.verified === 1 || m.verified === 'true' || m.verified === 'verified';
+    let cpStatus = m.copyright_status || '';
+    if (!cpStatus && isMVerified) {
+        cpStatus = 'No copyright';
+    }
+    const lowerCp = cpStatus.toLowerCase();
+    let cpBadge = '';
+    if (isMVerified) {
+        cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30" title="Đã xác minh (Verified)">✓ Verified</span> `;
+    }
+    if (cpStatus) {
+        if (lowerCp.includes('no') || lowerCp.includes('free') || lowerCp.includes('không')) {
+            cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="Bản quyền: ${cpStatus}">Free</span>`;
+        } else {
+            cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30" title="Bản quyền: ${cpStatus}">Claimed</span>`;
         }
-        const lowerCp = cpStatus.toLowerCase();
-        let cpBadge = '';
-        if (isMVerified) {
-            cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30" title="Đã xác minh (Verified)">✓ Verified</span> `;
-        }
-        if (cpStatus) {
-            if (lowerCp.includes('no') || lowerCp.includes('free') || lowerCp.includes('không')) {
-                cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" title="Bản quyền: ${cpStatus}">Free</span>`;
-            } else {
-                cpBadge += `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30" title="Bản quyền: ${cpStatus}">Claimed</span>`;
-            }
-        }
+    }
 
-        tbody.innerHTML += `
-                    <tr class="hover:bg-cyan-950/30 transition-colors">
-                        <td class="p-4 border-b border-cyan-500/10">${absoluteIndex + 1}</td>
-                        <td class="p-4 border-b border-cyan-500/10">
-                            <div class="font-bold text-white flex items-center gap-2 flex-wrap">
-                                <span>${m.title || m.name || 'Untitled'}</span>
-                                ${cpBadge}
-                            </div>
-                            ${m.genre ? `<div class="text-[11px] text-gray-500 mt-0.5 font-orbitron">${m.genre}</div>` : ''}
-                        </td>
-                        <td class="p-4 border-b border-cyan-500/10 text-gray-400">${m.artist || 'Unknown'}</td>
-                        <td class="p-4 border-b border-cyan-500/10 ${statusClass}">${statusText}</td>
-                        <td class="p-4 border-b border-cyan-500/10 text-right space-x-3">
-                            <button class="text-green-400 hover:text-green-300 btn-preview-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" data-url="${m.file_url || m.url}" title="${t('admin_action_preview') || 'Nghe thử'}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                </svg>
-                            </button>
-                            <button class="text-purple-400 hover:text-purple-300 btn-edit-in-editor inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="Sửa nhịp trong Beat Editor">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
-                                </svg>
-                            </button>
-                            <button class="text-cyan-400 hover:text-cyan-300 btn-edit-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_edit') || 'Edit'}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                                </svg>
-                            </button>
-                            <button class="text-yellow-400 hover:text-yellow-300 btn-export-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_export_json') || 'Export JSON'}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                                </svg>
-                            </button>
-                            <button class="text-red-400 hover:text-red-300 btn-delete-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_delete') || 'Delete'}">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                                </svg>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-    });
+    return `
+        <tr class="hover:bg-cyan-950/30 transition-colors">
+            <td class="p-4 border-b border-cyan-500/10">${absoluteIndex + 1}</td>
+            <td class="p-4 border-b border-cyan-500/10">
+                <div class="font-bold text-white flex items-center gap-2 flex-wrap">
+                    <span>${m.title || m.name || 'Untitled'}</span>
+                    ${cpBadge}
+                </div>
+                ${m.genre ? `<div class="text-[11px] text-gray-500 mt-0.5 font-orbitron">${m.genre}</div>` : ''}
+            </td>
+            <td class="p-4 border-b border-cyan-500/10 text-gray-400">${m.artist || 'Unknown'}</td>
+            <td class="p-4 border-b border-cyan-500/10 ${statusClass}">${statusText}</td>
+            <td class="p-4 border-b border-cyan-500/10 text-right space-x-3">
+                <button class="text-green-400 hover:text-green-300 btn-preview-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" data-url="${m.file_url || m.url}" title="${t('admin_action_preview') || 'Nghe thử'}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </button>
+                <button class="text-purple-400 hover:text-purple-300 btn-edit-in-editor inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="Sửa nhịp trong Beat Editor">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+                    </svg>
+                </button>
+                <button class="text-cyan-400 hover:text-cyan-300 btn-edit-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_edit') || 'Edit'}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                    </svg>
+                </button>
+                <button class="text-yellow-400 hover:text-yellow-300 btn-export-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_export_json') || 'Export JSON'}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                    </svg>
+                </button>
+                <button class="text-red-400 hover:text-red-300 btn-delete-beatmap inline-block align-middle hover:scale-110 transition-transform" data-id="${m.id}" title="${t('admin_action_delete') || 'Delete'}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                </button>
+            </td>
+        </tr>
+    `;
+}
 
-    // Gắn sự kiện sửa/xóa/export/preview cho Beatmap
-    document.querySelectorAll('.btn-preview-beatmap').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const url = btn.getAttribute('data-url');
+function bindAdminBeatmapsTableDelegation(tbody) {
+    if (!tbody || tbody._bmDelegationBound) return;
+    tbody._bmDelegationBound = true;
+
+    tbody.addEventListener('click', async (e) => {
+        const previewBtn = e.target.closest('.btn-preview-beatmap');
+        if (previewBtn) {
+            const url = previewBtn.getAttribute('data-url');
             if (!url) {
                 if (typeof logToConsole === 'function') logToConsole('URL nhạc không hợp lệ!', 'error');
                 return;
             }
-            
-            // Toggle play/pause if clicking the same button
-            if (currentPreviewBtn === btn && currentPreviewAudio) {
+
+            if (currentPreviewBtn === previewBtn && currentPreviewAudio) {
                 if (!currentPreviewAudio.paused) {
                     currentPreviewAudio.pause();
-                    btn.classList.remove('text-blue-400');
-                    btn.classList.add('text-green-400');
-                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                    previewBtn.classList.remove('text-blue-400');
+                    previewBtn.classList.add('text-green-400');
+                    previewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
                     return;
                 }
             }
 
-            // Stop previous audio
             if (currentPreviewAudio) {
                 currentPreviewAudio.pause();
                 currentPreviewAudio.currentTime = 0;
@@ -2012,49 +2015,45 @@ function renderAdminBeatmapsTable() {
                 currentPreviewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
             }
 
-            currentPreviewBtn = btn;
-            
+            currentPreviewBtn = previewBtn;
             try {
-                // Change icon to loading
-                btn.innerHTML = `<svg class="w-4 h-4 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg>`;
-                
+                previewBtn.innerHTML = `<svg class="w-4 h-4 text-current magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg>`;
+
                 let playUrl = url;
                 if (typeof window.getCachedAudioUrl === 'function') {
                     playUrl = await window.getCachedAudioUrl(url);
                 }
-                
+
                 currentPreviewAudio = new Audio(playUrl);
                 currentPreviewAudio.volume = 0.5;
-                
+
                 currentPreviewAudio.addEventListener('ended', () => {
-                    btn.classList.remove('text-blue-400');
-                    btn.classList.add('text-green-400');
-                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                    previewBtn.classList.remove('text-blue-400');
+                    previewBtn.classList.add('text-green-400');
+                    previewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
                 });
 
                 await currentPreviewAudio.play();
-                
-                // Change icon to pause
-                btn.classList.remove('text-green-400');
-                btn.classList.add('text-blue-400');
-                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
-                if (typeof logToConsole === 'function') logToConsole(`Đang phát: \${url}`, 'success');
+
+                previewBtn.classList.remove('text-green-400');
+                previewBtn.classList.add('text-blue-400');
+                previewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                if (typeof logToConsole === 'function') logToConsole(`Đang phát: ${url}`, 'success');
             } catch (error) {
                 console.error("Preview play error:", error);
                 if (typeof logToConsole === 'function') logToConsole('Không thể phát nhạc.', 'error');
-                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                previewBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
             }
-        });
-    });
+            return;
+        }
 
-    document.querySelectorAll('.btn-edit-in-editor').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
+        const editorBtn = e.target.closest('.btn-edit-in-editor');
+        if (editorBtn) {
+            const id = editorBtn.getAttribute('data-id');
             if (id) {
                 const map = globalBeatmapsList.find(m => m.id == id);
                 if (map) {
                     const audioUrl = map.file_url || map.url;
-
                     const importData = {
                         title: map.title || map.name,
                         audioUrl: audioUrl,
@@ -2069,60 +2068,165 @@ function renderAdminBeatmapsTable() {
                     }
                 }
             }
-        });
-    });
-
-    document.querySelectorAll('.btn-edit-beatmap').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-id');
-            if (id) {
-                openEditBeatmapModal(id);
-            }
-        });
-    });
-
-    document.querySelectorAll('.btn-export-beatmap').forEach(btn => {
-        btn.addEventListener('click', () => {
-            exportBeatmapAsJson(btn.getAttribute('data-id'));
-        });
-    });
-
-    document.querySelectorAll('.btn-delete-beatmap').forEach(btn => {
-        btn.addEventListener('click', () => {
-            openDeleteBeatmapModal(btn.getAttribute('data-id'));
-        });
-    });
-
-    // Nút tải phần trước (Hiển thị ở đầu)
-    const topContainer = document.getElementById('admin-beatmap-load-prev-container');
-    const btnLoadPrev = document.getElementById('btn-load-prev-beatmaps');
-    if (adminBmRenderStartIndex > 0) {
-        topContainer?.classList.remove('hidden');
-        if (btnLoadPrev) btnLoadPrev.innerText = t('admin_btn_load_prev_hidden').replace('{count}', adminBmRenderStartIndex);
-    } else {
-        topContainer?.classList.add('hidden');
-    }
-
-    // Nút tải phần tiếp theo (Hiển thị ở cuối)
-    let bottomContainer = document.getElementById('admin-beatmap-load-more-container');
-    const btnLoadMore = document.getElementById('btn-load-more-beatmaps');
-    if (btnLoadMore) {
-        const newBtnLoadMore = btnLoadMore.cloneNode(true);
-        btnLoadMore.parentNode.replaceChild(newBtnLoadMore, btnLoadMore);
-
-        if (endIndex < globalBeatmapsList.length) {
-            bottomContainer?.classList.remove('hidden');
-            const hiddenCount = globalBeatmapsList.length - endIndex;
-            newBtnLoadMore.innerText = t('admin_btn_load_next_hidden').replace('{count}', hiddenCount);
-            newBtnLoadMore.addEventListener('click', loadNextBeatmapsFromMemory);
-        } else if (adminBmHasMore) {
-            bottomContainer?.classList.remove('hidden');
-            newBtnLoadMore.innerText = t('admin_btn_load_more_data');
-            newBtnLoadMore.addEventListener('click', loadMoreBeatmapsFromAPI);
-        } else {
-            bottomContainer?.classList.add('hidden');
+            return;
         }
+
+        const editBtn = e.target.closest('.btn-edit-beatmap');
+        if (editBtn) {
+            const id = editBtn.getAttribute('data-id');
+            if (id) openEditBeatmapModal(id);
+            return;
+        }
+
+        const exportBtn = e.target.closest('.btn-export-beatmap');
+        if (exportBtn) {
+            exportBeatmapAsJson(exportBtn.getAttribute('data-id'));
+            return;
+        }
+
+        const deleteBtn = e.target.closest('.btn-delete-beatmap');
+        if (deleteBtn) {
+            openDeleteBeatmapModal(deleteBtn.getAttribute('data-id'));
+        }
+    });
+}
+
+function maybeTriggerAdminBeatmapsInfiniteLoad() {
+    const tabBeatmaps = document.getElementById('tab-beatmaps');
+    if (tabBeatmaps && tabBeatmaps.classList.contains('hidden')) return;
+
+    if (adminBmRenderedCount < globalBeatmapsList.length) {
+        const nextEnd = Math.min(adminBmRenderedCount + ADMIN_BM_MAX_VISIBLE, globalBeatmapsList.length);
+        const batch = globalBeatmapsList.slice(adminBmRenderedCount, nextEnd);
+        appendAdminBeatmapsRows(batch, adminBmRenderedCount);
+        return;
     }
+
+    if (adminBmHasMore && adminBmNextCursor && !isAdminBmLoading) {
+        loadMoreBeatmapsFromAPI();
+    }
+}
+
+function setupAdminBeatmapsInfiniteScroll() {
+    const bottomContainer = document.getElementById('admin-beatmap-load-more-container');
+    if (!bottomContainer || bottomContainer.classList.contains('hidden')) {
+        if (_adminBmInfiniteObserver) _adminBmInfiniteObserver.disconnect();
+        return;
+    }
+
+    if (typeof IntersectionObserver !== 'undefined') {
+        if (!_adminBmInfiniteObserver) {
+            _adminBmInfiniteObserver = new IntersectionObserver((entries) => {
+                for (let i = 0; i < entries.length; i++) {
+                    if (entries[i].isIntersecting) {
+                        maybeTriggerAdminBeatmapsInfiniteLoad();
+                        break;
+                    }
+                }
+            }, {
+                root: null,
+                rootMargin: '400px 0px',
+                threshold: 0.01
+            });
+        } else {
+            _adminBmInfiniteObserver.disconnect();
+        }
+        _adminBmInfiniteObserver.observe(bottomContainer);
+    }
+
+    if (!_adminBmScrollFallbackBound && typeof window !== 'undefined') {
+        _adminBmScrollFallbackBound = true;
+        let _adminBmScrollRaf = 0;
+        window.addEventListener('scroll', () => {
+            if (_adminBmScrollRaf) return;
+            _adminBmScrollRaf = window.requestAnimationFrame(() => {
+                _adminBmScrollRaf = 0;
+                const tab = document.getElementById('tab-beatmaps');
+                if (!tab || tab.classList.contains('hidden')) return;
+                if ((window.innerHeight + window.scrollY) >= (document.documentElement.scrollHeight - 400)) {
+                    maybeTriggerAdminBeatmapsInfiniteLoad();
+                }
+            });
+        }, { passive: true });
+    }
+}
+
+function updateAdminBeatmapsSentinel(state = 'idle') {
+    const topContainer = document.getElementById('admin-beatmap-load-prev-container');
+    if (topContainer) topContainer.classList.add('hidden');
+
+    const bottomContainer = document.getElementById('admin-beatmap-load-more-container');
+    const btnLoadMore = document.getElementById('btn-load-more-beatmaps');
+    if (!bottomContainer || !btnLoadMore) return;
+
+    const hasMoreLocal = adminBmRenderedCount < globalBeatmapsList.length;
+    const hasMoreRemote = Boolean(adminBmHasMore && adminBmNextCursor);
+
+    if (!hasMoreLocal && !hasMoreRemote) {
+        bottomContainer.classList.add('hidden');
+        if (_adminBmInfiniteObserver) _adminBmInfiniteObserver.disconnect();
+        return;
+    }
+
+    bottomContainer.classList.remove('hidden');
+    if (!btnLoadMore._infiniteClickBound) {
+        btnLoadMore._infiniteClickBound = true;
+        btnLoadMore.addEventListener('click', () => maybeTriggerAdminBeatmapsInfiniteLoad());
+    }
+
+    if (state === 'loading' || isAdminBmLoading) {
+        btnLoadMore.disabled = true;
+        btnLoadMore.classList.add('opacity-80', 'cursor-wait');
+        btnLoadMore.innerText = t('admin_msg_loading');
+    } else if (state === 'error') {
+        btnLoadMore.disabled = false;
+        btnLoadMore.classList.remove('opacity-80', 'cursor-wait');
+        btnLoadMore.innerText = t('admin_msg_error_retry');
+    } else {
+        btnLoadMore.disabled = false;
+        btnLoadMore.classList.remove('opacity-80', 'cursor-wait');
+        btnLoadMore.innerText = hasMoreLocal
+            ? t('admin_btn_load_next_hidden').replace('{count}', globalBeatmapsList.length - adminBmRenderedCount)
+            : t('admin_btn_load_more_data');
+    }
+
+    setupAdminBeatmapsInfiniteScroll();
+}
+
+function appendAdminBeatmapsRows(mapsSlice, startAbsoluteIndex) {
+    const tbody = document.getElementById('table-beatmaps-body');
+    if (!tbody) return;
+    bindAdminBeatmapsTableDelegation(tbody);
+
+    if (Array.isArray(mapsSlice) && mapsSlice.length > 0) {
+        let html = '';
+        for (let i = 0; i < mapsSlice.length; i++) {
+            html += buildAdminBeatmapRowHtml(mapsSlice[i], startAbsoluteIndex + i);
+        }
+        tbody.insertAdjacentHTML('beforeend', html);
+        adminBmRenderedCount += mapsSlice.length;
+    }
+
+    updateAdminBeatmapsSentinel();
+}
+
+function renderAdminBeatmapsTable() {
+    const tbody = document.getElementById('table-beatmaps-body');
+    if (!tbody) return;
+    bindAdminBeatmapsTableDelegation(tbody);
+
+    adminBmRenderStartIndex = 0;
+    const initialCount = Math.min(ADMIN_BM_MAX_VISIBLE, globalBeatmapsList.length);
+    const visibleMaps = globalBeatmapsList.slice(0, initialCount);
+
+    let html = '';
+    for (let i = 0; i < visibleMaps.length; i++) {
+        html += buildAdminBeatmapRowHtml(visibleMaps[i], i);
+    }
+    tbody.innerHTML = html;
+    adminBmRenderedCount = visibleMaps.length;
+
+    updateAdminBeatmapsSentinel();
 }
 
 document.getElementById('btn-load-prev-beatmaps')?.addEventListener('click', loadPreviousBeatmapsFromMemory);

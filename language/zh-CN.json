@@ -179,6 +179,8 @@
   "aa_title": "抗锯齿",
   "aa_desc": "实时平滑方块与球体边缘，无需刷新页面，根据 GPU 性能智能优化。",
   "audio_controls": "音频控制",
+  "master_vol": "主音量",
+  "master_vol_desc": "控制游戏内所有音频的主音量。",
   "mute_all": "全部静音",
   "unmute_all": "全部取消静音",
   "menu_vol_desc": "主菜单中的背景音乐音量。",

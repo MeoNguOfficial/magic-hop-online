@@ -4,9 +4,12 @@ let currentFilterTerm = '';
 let filteredIndices = []; // Lưu trữ các index bài hát thỏa mãn điều kiện tìm kiếm
 let renderId = 0;
 
-// Thêm cấu hình Virtual Scrolling
+// Thêm cấu hình Progressive Infinite Scrolling
 const PLAYLIST_MAX_VISIBLE = 20;
 let playlistRenderStartIndex = 0;
+let playlistRenderedCount = 0;
+let _songInfiniteObserver = null;
+let _songRenderBeforeSentinel = null;
 
 window.selectedArtistFilter = '';
 window.selectedGenreFilter = '';
@@ -382,14 +385,12 @@ function renderSongList(filterTerm = null, specificIndices = null) {
     populateFilterDropdowns();
     if (typeof updateFeaturedDisc === 'function') updateFeaturedDisc(typeof selectedSongIndex === 'number' ? selectedSongIndex : 0);
 
-    // Áp dụng Virtual Scrolling (Chỉ hiển thị tối đa PLAYLIST_MAX_VISIBLE bài)
+    // Progressive Infinite Scroll: bắt đầu từ đầu danh sách và nạp nối tiếp khi cuộn xuống
     const totalItems = filteredIndices.length;
-    if (playlistRenderStartIndex > totalItems) {
-        playlistRenderStartIndex = Math.max(0, totalItems - PLAYLIST_MAX_VISIBLE);
-    }
-    
-    const endIndex = Math.min(playlistRenderStartIndex + PLAYLIST_MAX_VISIBLE, totalItems);
-    const displayIndices = filteredIndices.slice(playlistRenderStartIndex, endIndex);
+    playlistRenderStartIndex = 0;
+    const initialCount = Math.min(PLAYLIST_MAX_VISIBLE, totalItems);
+    playlistRenderedCount = initialCount;
+    const displayIndices = filteredIndices.slice(0, initialCount);
 
     selector.innerHTML = '';
 
@@ -474,27 +475,35 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         selector.appendChild(refreshBtn);
     }
 
-    // Thêm nút "Tải phần trước" ở đầu danh sách
-    if (playlistRenderStartIndex > 0) {
-        const loadPrevBtn = document.createElement('button');
-        loadPrevBtn.id = 'load-prev-btn';
-        loadPrevBtn.className = "w-full mb-2 py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2";
-        const prevText = typeof t === 'function' ? t('btn_load_prev_hidden').replace('{count}', playlistRenderStartIndex) : `TẢI PHẦN TRƯỚC (${playlistRenderStartIndex} BỊ ẨN)`;
-        loadPrevBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg> ${prevText}`;
-        loadPrevBtn.onclick = () => {
-            playlistRenderStartIndex = Math.max(0, playlistRenderStartIndex - PLAYLIST_MAX_VISIBLE);
-            renderSongList();
-            selector.scrollTop = 0;
-        };
-        selector.appendChild(loadPrevBtn);
-    }
-
     const todayStr = new Date().toISOString().split('T')[0];
     const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
 
-    const songCardsFragment = document.createDocumentFragment();
+    appendSongCardsBatch(selector, displayIndices, currentRenderId, isAdmin, todayStr, false);
 
-    displayIndices.forEach((originalIndex, i) => {
+    updateSongInfiniteSentinel();
+
+    if (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex !== -1) {
+        updatePreviewUI(currentPreviewIndex, 'playing');
+    }
+
+    // Giữ trạng thái hiển thị của ô tìm kiếm & bộ lọc nếu người dùng đã ghim mở hoặc có bộ lọc/từ khóa hoạt động
+    const activeSearchFilterSec = document.getElementById('song-search-filter-section');
+    if (activeSearchFilterSec) {
+        const hasActiveFilter = !!(window.selectedArtistFilter || window.selectedGenreFilter || window.selectedCopyrightFilter);
+        const hasSearchTerm = songSearchInput && songSearchInput.value.trim().length > 0;
+        if (window._searchSectionUserPinned || hasActiveFilter || hasSearchTerm) {
+            activeSearchFilterSec.classList.add('is-expanded');
+        }
+    }
+}
+
+function appendSongCardsBatch(selector, batchIndices, currentRenderId, isAdmin, todayStr, isAppending = false) {
+    if (!selector || !Array.isArray(batchIndices) || batchIndices.length === 0) return;
+
+    const songCardsFragment = document.createDocumentFragment();
+    const animClass = isAppending ? 'song-card-entering' : '';
+
+    batchIndices.forEach((originalIndex, i) => {
         const song = playlist[originalIndex];
         if (!song || (!song.name && !song.title)) return;
 
@@ -534,7 +543,7 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         const isCurrentlyActive = selectedSongIndex === originalIndex;
         const isCurrentlyPreviewing = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === originalIndex);
         const discPaletteIdx = getSongDiscPaletteIndex(song, originalIndex);
-        opt.className = `song-option ui2-song-card ${isCurrentlyActive ? 'active' : ''} ${isCurrentlyPreviewing ? 'is-previewing' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-xl border hover:border-cyan-400/50 flex flex-col transition-all duration-200`;
+        opt.className = `song-option ui2-song-card ${animClass} ${isCurrentlyActive ? 'active' : ''} ${isCurrentlyPreviewing ? 'is-previewing' : ''} ${extraOptClasses} group cursor-pointer p-2.5 rounded-xl border hover:border-cyan-400/50 flex flex-col transition-all duration-200`;
         opt.dataset.index = originalIndex;
         const isExpanded = (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex === originalIndex);
         const isKnownCached = (song.loaded && song.beats && song.beats.length > 4) || song._isCached === true;
@@ -851,65 +860,163 @@ function renderSongList(filterTerm = null, specificIndices = null) {
         }
     });
 
-    selector.appendChild(songCardsFragment);
-
-    if (window.UIAnimator && typeof window.UIAnimator.staggerChildren === 'function') {
-        window.UIAnimator.staggerChildren(selector, '.song-option', {
-            y: 10,
-            step: 20,
-            duration: 240,
-            maxAnimated: 12
-        });
+    const sentinel = document.getElementById('song-infinite-sentinel');
+    if (isAppending && sentinel && sentinel.parentNode === selector) {
+        selector.insertBefore(songCardsFragment, sentinel);
+    } else {
+        selector.appendChild(songCardsFragment);
     }
 
-    // Xóa nút "Tải thêm" cũ nếu có
+    if (window.UIAnimator && typeof window.UIAnimator.staggerChildren === 'function') {
+        const staggerSel = isAppending ? '.song-card-entering' : '.song-option';
+        window.UIAnimator.staggerChildren(selector, staggerSel, {
+            y: 10,
+            step: isAppending ? 16 : 20,
+            duration: isAppending ? 200 : 240,
+            maxAnimated: isAppending ? 10 : 12
+        });
+        if (isAppending) {
+            selector.querySelectorAll('.song-card-entering').forEach((el) => el.classList.remove('song-card-entering'));
+        }
+    }
+}
+
+function updateSongInfiniteSentinel(state = 'idle') {
+    const selector = document.getElementById('song-selector');
+    if (!selector) return;
+
     const oldLoadMoreBtn = document.getElementById('load-more-btn');
     if (oldLoadMoreBtn) oldLoadMoreBtn.remove();
     const oldLoadNextBtn = document.getElementById('load-next-btn');
     if (oldLoadNextBtn) oldLoadNextBtn.remove();
 
-    // Thêm nút "Tải phần tiếp theo" (từ bộ nhớ) hoặc "Tải thêm" (từ API)
-    if (endIndex < totalItems) {
-        const hiddenCount = totalItems - endIndex;
-        const loadNextBtn = document.createElement('button');
-        loadNextBtn.id = 'load-next-btn';
-        loadNextBtn.className = "w-full mt-2 py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2";
-        const nextText = typeof t === 'function' ? t('btn_load_next_hidden').replace('{count}', hiddenCount) : `TẢI PHẦN TIẾP THEO (${hiddenCount} BỊ ẨN)`;
-        loadNextBtn.innerHTML = `${nextText} <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
-        loadNextBtn.onclick = () => {
-            playlistRenderStartIndex = Math.min(totalItems - PLAYLIST_MAX_VISIBLE, playlistRenderStartIndex + PLAYLIST_MAX_VISIBLE);
-            renderSongList();
-            selector.scrollTop = 0;
-        };
-        selector.appendChild(loadNextBtn);
-    } else if (typeof hasMore !== 'undefined' && hasMore && !currentFilterTerm && typeof isLoadingMore !== 'undefined' && !isLoadingMore) {
-        const loadMoreBtn = document.createElement('button');
-        loadMoreBtn.id = 'load-more-btn';
-        loadMoreBtn.className = "w-full mt-2 py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all flex items-center justify-center gap-2";
-        const moreText = typeof t === 'function' ? t('btn_load_more') : `TẢI THÊM DỮ LIỆU`;
-        loadMoreBtn.innerHTML = `${moreText} <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
-        loadMoreBtn.onclick = () => {
-            if (typeof loadMoreSongs === 'function') {
-                loadMoreSongs();
-            }
-        };
-        selector.appendChild(loadMoreBtn);
+    const hasMoreInMemory = playlistRenderedCount < filteredIndices.length;
+    const hasMoreOnServer = (typeof hasMore !== 'undefined' && hasMore && typeof nextCursor !== 'undefined' && nextCursor !== null);
+    let sentinel = document.getElementById('song-infinite-sentinel');
+
+    if (!hasMoreInMemory && !hasMoreOnServer) {
+        if (_songInfiniteObserver) _songInfiniteObserver.disconnect();
+        if (sentinel) sentinel.remove();
+        return;
     }
+
+    if (!sentinel) {
+        sentinel = document.createElement('button');
+        sentinel.type = 'button';
+        sentinel.id = 'song-infinite-sentinel';
+        sentinel.className = "w-full mt-2 py-2.5 text-xs font-bold text-cyan-400 border border-cyan-500/20 hover:bg-cyan-950/20 rounded-xl uppercase font-orbitron transition-all flex items-center justify-center gap-2";
+        sentinel.onclick = () => {
+            maybeTriggerSongInfiniteLoad(true);
+        };
+        selector.appendChild(sentinel);
+    } else if (sentinel.parentNode !== selector || selector.lastElementChild !== sentinel) {
+        selector.appendChild(sentinel);
+    }
+
+    const isBusy = state === 'loading' || (typeof isLoadingMore !== 'undefined' && isLoadingMore);
+    if (state === 'error') {
+        sentinel.disabled = false;
+        sentinel.classList.remove('opacity-80', 'cursor-wait');
+        const errText = typeof t === 'function' ? (t('msg_error_retry') || 'Lỗi, nhấn để thử lại') : 'Lỗi, nhấn để thử lại';
+        sentinel.innerHTML = `<span class="text-rose-400">${errText}</span>`;
+    } else if (isBusy) {
+        sentinel.disabled = true;
+        sentinel.classList.add('opacity-80', 'cursor-wait');
+        const loadText = typeof t === 'function' ? (t('msg_loading') || 'Đang tải...') : 'Đang tải...';
+        sentinel.innerHTML = `<svg class="w-4 h-4 text-cyan-300 magic-loader shrink-0" viewBox="25 25 50 50" fill="none"><circle class="loader-track" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-opacity="0.25"></circle><circle class="loader-path" r="20" cy="50" cx="50" stroke="currentColor" stroke-width="4" stroke-linecap="round"></circle><circle class="loader-core" r="4" cy="50" cx="50" fill="currentColor"></circle></svg> <span>${loadText}</span>`;
+    } else {
+        sentinel.disabled = false;
+        sentinel.classList.remove('opacity-80', 'cursor-wait');
+        const moreText = hasMoreInMemory
+            ? `${typeof t === 'function' ? (t('btn_load_more') || 'TẢI THÊM BÀI HÁT') : 'TẢI THÊM BÀI HÁT'} (${filteredIndices.length - playlistRenderedCount})`
+            : (typeof t === 'function' ? (t('btn_load_more') || 'TẢI THÊM DỮ LIỆU') : 'TẢI THÊM DỮ LIỆU');
+        sentinel.innerHTML = `${moreText} <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+    }
+
+    setupSongInfiniteObserver(sentinel);
+}
+window.updateSongInfiniteSentinel = updateSongInfiniteSentinel;
+
+function maybeTriggerSongInfiniteLoad(fromClick = false) {
+    const selector = document.getElementById('song-selector');
+    if (!selector) return;
+
+    // 1. Nếu danh sách đã lọc trong bộ nhớ vẫn còn bài chưa render -> nối tiếp ngay lập tức
+    if (playlistRenderedCount < filteredIndices.length) {
+        const nextEnd = Math.min(playlistRenderedCount + PLAYLIST_MAX_VISIBLE, filteredIndices.length);
+        const batch = filteredIndices.slice(playlistRenderedCount, nextEnd);
+        playlistRenderedCount = nextEnd;
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
+        appendSongCardsBatch(selector, batch, renderId, isAdmin, todayStr, true);
+        updateSongInfiniteSentinel();
+        if (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex !== -1) {
+            updatePreviewUI(currentPreviewIndex, 'playing');
+        }
+        return;
+    }
+
+    // 2. Nếu hết danh sách local và Backend vẫn còn trang (cursor) -> tự động gọi API
+    const canFetchServer = typeof hasMore !== 'undefined' && hasMore && typeof nextCursor !== 'undefined' && nextCursor !== null;
+    const notLoading = typeof isLoadingMore === 'undefined' || !isLoadingMore;
+    if (canFetchServer && notLoading && typeof loadMoreSongs === 'function') {
+        loadMoreSongs();
+    } else if (fromClick) {
+        updateSongInfiniteSentinel();
+    }
+}
+
+function setupSongInfiniteObserver(sentinel) {
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return;
+    const scrollBox = document.getElementById('song-scroll-container');
+    if (!_songInfiniteObserver) {
+        _songInfiniteObserver = new IntersectionObserver((entries) => {
+            for (let i = 0; i < entries.length; i++) {
+                if (entries[i].isIntersecting) {
+                    maybeTriggerSongInfiniteLoad(false);
+                    break;
+                }
+            }
+        }, {
+            root: scrollBox || null,
+            rootMargin: '360px 0px',
+            threshold: 0.01
+        });
+    } else {
+        _songInfiniteObserver.disconnect();
+    }
+    _songInfiniteObserver.observe(sentinel);
+}
+
+window.appendSongCards = function (newlyAddedIndices = []) {
+    const selector = document.getElementById('song-selector');
+    if (!selector) return;
+
+    const prevSet = new Set(filteredIndices.slice(0, playlistRenderedCount));
+    updateFilteredList(currentFilterTerm, false, typeof currentPlaylistIndices !== 'undefined' ? currentPlaylistIndices : null);
+    populateFilterDropdowns();
+
+    const toAppend = [];
+    for (let i = 0; i < filteredIndices.length; i++) {
+        const idx = filteredIndices[i];
+        if (!prevSet.has(idx)) {
+            toAppend.push(idx);
+        }
+    }
+
+    if (toAppend.length > 0) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isAdmin = typeof isCurrentUserAdmin === 'function' ? isCurrentUserAdmin() : false;
+        appendSongCardsBatch(selector, toAppend, renderId, isAdmin, todayStr, true);
+        playlistRenderedCount = filteredIndices.length;
+    }
+
+    updateSongInfiniteSentinel();
 
     if (typeof currentPreviewIndex !== 'undefined' && currentPreviewIndex !== -1) {
         updatePreviewUI(currentPreviewIndex, 'playing');
     }
-
-    // Giữ trạng thái hiển thị của ô tìm kiếm & bộ lọc nếu người dùng đã ghim mở hoặc có bộ lọc/từ khóa hoạt động
-    const activeSearchFilterSec = document.getElementById('song-search-filter-section');
-    if (activeSearchFilterSec) {
-        const hasActiveFilter = !!(window.selectedArtistFilter || window.selectedGenreFilter || window.selectedCopyrightFilter);
-        const hasSearchTerm = songSearchInput && songSearchInput.value.trim().length > 0;
-        if (window._searchSectionUserPinned || hasActiveFilter || hasSearchTerm) {
-            activeSearchFilterSec.classList.add('is-expanded');
-        }
-    }
-}
+};
 
 function updateSongWaveBadge(index) {
     // Legacy helper kept for safety
@@ -1909,6 +2016,10 @@ function initFeaturedDiscHero() {
                     } else if (st < 20 && !hasSearchTerm && !hasActiveFilter && !isAnyInputFocused && !isAnyDropdownOpen && !window._searchSectionUserPinned) {
                         searchFilterSection.classList.remove('is-expanded');
                         searchFilterSection.classList.remove('has-open-dropdown');
+                    }
+                    // Fallback Infinite Scroll prefetch khi gần chạm đáy container
+                    if (st + scrollBox.clientHeight >= scrollBox.scrollHeight - 360) {
+                        maybeTriggerSongInfiniteLoad(false);
                     }
                     isScrollTicking = false;
                 });

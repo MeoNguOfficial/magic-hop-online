@@ -183,6 +183,8 @@
   "aa_title": "Anticrénelage",
   "aa_desc": "Lisse les bords des blocs et de la balle en direct sans rechargement, optimisé pour votre GPU.",
   "audio_controls": "COMMANDES AUDIO",
+  "master_vol": "VOLUME PRINCIPAL",
+  "master_vol_desc": "Volume principal contrôlant tout l'audio du jeu.",
   "mute_all": "MUTE TOUT",
   "unmute_all": "RÉACTIVER TOUT",
   "menu_vol_desc": "Volume de la musique de fond dans le menu principal.",

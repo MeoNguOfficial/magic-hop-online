@@ -147,6 +147,8 @@
   "aa_title": "抗鋸齒",
   "aa_desc": "即時平滑方塊與球體邊緣，無需重新整理頁面，依據 GPU 效能智慧最佳化。",
   "audio_controls": "音訊控制",
+  "master_vol": "主音量",
+  "master_vol_desc": "控制遊戲內所有音訊的主音量。",
   "mute_all": "全部靜音",
   "unmute_all": "全部取消靜音",
   "menu_vol_desc": "主選單中的背景音樂音量。",

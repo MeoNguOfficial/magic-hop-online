@@ -31,19 +31,33 @@ localStorage.getItem = function (key) {
 };
 
 const dict = {};
-const availableLangs = ['vi', 'en', 'fr', 'zh-CN', 'zh-TW', 'ko', 'ja', 'es', 'pt', 'ru'];
+const availableLangs = [
+    'vi', 'en', 'fr', 'zh-CN', 'zh-TW', 'ko', 'ja', 'es', 'pt', 'ru',
+    'de', 'id', 'th', 'hi', 'ar', 'it', 'tr', 'pl', 'nl', 'ms'
+];
 
-// Tải dữ liệu ngôn ngữ từ thư mục language/ (luôn bypass cache cũ trên PC/PWA)
-const langCacheTag = (typeof window !== 'undefined' && (window.ASSET_CACHE_TAG || window.SCRIPT_BUILD_VERSION)) || '1.1.0-4';
-const translationsPromise = Promise.all(
-    availableLangs.map(lang => 
-        fetch(`language/${lang}.json?v=${encodeURIComponent(langCacheTag)}`, { cache: 'no-store' })
+// Tải dữ liệu ngôn ngữ từ thư mục language/ (tải trước ngôn ngữ đang dùng + fallback 'en' để tăng tốc khởi động, các ngôn ngữ khác lazy-load khi chọn)
+const langCacheTag = (typeof window !== 'undefined' && (window.ASSET_CACHE_TAG || window.SCRIPT_BUILD_VERSION)) || '1.1.0-6';
+const langPromises = {};
+
+function ensureLanguageLoaded(lang) {
+    const targetLang = availableLangs.includes(lang) ? lang : 'en';
+    if (dict[targetLang]) return Promise.resolve(dict[targetLang]);
+    if (!langPromises[targetLang]) {
+        langPromises[targetLang] = fetch(`language/${targetLang}.json?v=${encodeURIComponent(langCacheTag)}`, { cache: 'no-store' })
             .then(r => r.json())
-            .then(data => { dict[lang] = data; })
-    )
-).catch(err => {
-    console.error("Lỗi tải ngôn ngữ:", err);
-});
+            .then(data => {
+                dict[targetLang] = data;
+                return data;
+            })
+            .catch(err => {
+                delete langPromises[targetLang];
+                console.error(`Lỗi tải ngôn ngữ (${targetLang}):`, err);
+                return null;
+            });
+    }
+    return langPromises[targetLang];
+}
 
 let userLang = localStorage.getItem('selectedLanguage') || 'auto';
 let activeLang = 'en';
@@ -59,11 +73,18 @@ function detectLanguage() {
             activeLang = matched || 'en';
         }
     } else {
-        activeLang = userLang;
+        activeLang = availableLangs.includes(userLang) ? userLang : 'en';
     }
 }
 
 detectLanguage();
+
+const initialLangsToLoad = activeLang === 'en' ? ['en'] : [activeLang, 'en'];
+const translationsPromise = Promise.all(
+    initialLangsToLoad.map(lang => ensureLanguageLoaded(lang))
+).catch(err => {
+    console.error("Lỗi tải ngôn ngữ:", err);
+});
 
 function t(key) {
     return dict[activeLang]?.[key] || dict['en']?.[key] || key;
@@ -175,11 +196,12 @@ function applyTranslations() {
     }
 }
 
-window.setGameLanguage = function (lang) {
-    if (!availableLangs.includes(lang)) return;
+window.setGameLanguage = async function (lang) {
+    if (!availableLangs.includes(lang) && lang !== 'auto') return;
     localStorage.setItem('selectedLanguage', lang);
     userLang = lang;
     detectLanguage();
+    await ensureLanguageLoaded(activeLang);
     applyTranslations();
     if (typeof window.checkPWAInstallationStatus === 'function') {
         window.checkPWAInstallationStatus();
@@ -209,12 +231,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (langOptions) {
         const radioButtons = langOptions.querySelectorAll('input[name="selected-language"]');
         radioButtons.forEach(radio => {
-            radio.addEventListener('change', (e) => {
+            radio.addEventListener('change', async (e) => {
                 if (e.target.checked) {
                     const selectedVal = e.target.value;
                     localStorage.setItem('selectedLanguage', selectedVal);
                     userLang = selectedVal;
                     detectLanguage();
+                    await ensureLanguageLoaded(activeLang);
                     applyTranslations();
 
                     if (typeof renderSongList === 'function') {
@@ -230,10 +253,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const webglLangVi = document.getElementById('webgl-lang-vi');
     const webglLangEn = document.getElementById('webgl-lang-en');
     if (webglLangVi) {
-        webglLangVi.addEventListener('click', () => {
+        webglLangVi.addEventListener('click', async () => {
             localStorage.setItem('selectedLanguage', 'vi');
             userLang = 'vi';
             detectLanguage();
+            await ensureLanguageLoaded(activeLang);
             applyTranslations();
         });
     }

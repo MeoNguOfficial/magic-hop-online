@@ -183,6 +183,8 @@
   "aa_title": "Anti-Aliasing",
   "aa_desc": "Suaviza as bordas dos blocos e da bola ao vivo sem recarregar, otimizado para sua GPU.",
   "audio_controls": "CONTROLES DE ÁUDIO",
+  "master_vol": "VOLUME PRINCIPAL",
+  "master_vol_desc": "Volume principal que controla todo o áudio do jogo.",
   "mute_all": "SILENCIAR TUDO",
   "unmute_all": "ATIVAR MUTE TODOS",
   "menu_vol_desc": "Volume da música de fundo no menu principal.",

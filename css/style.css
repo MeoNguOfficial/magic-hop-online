@@ -110,6 +110,11 @@ html, body {
     transition: border-color 0.3s, background-color 0.3s, box-shadow 0.3s;
 }
 
+#song-selector .song-option.ui2-song-card {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 76px;
+}
+
 .song-option:hover { border-color: var(--theme-border, rgba(6, 182, 212, 0.6)); background: var(--theme-bg-surface, rgba(8, 47, 73, 0.4)); }
 .song-option.active {
     border-color: var(--theme-color, #22d3ee);
@@ -2103,7 +2108,7 @@ body.disable-animations .song-option.is-previewing .song-mini-disc {
 #panel-personalize .bg-option-card,
 #panel-music > div > div,
 #panel-account .bg-black\/40,
-#panel-settings .tab-pane:not(#tab-extensions) label[class*="border"]:not(.difficulty-item):not(.extension-item):not(.no-difficulty-theme):not([class*="yellow"]):not([class*="red"]):not([class*="emerald"]),
+#panel-settings .tab-pane:not(#tab-extensions):not(#tab-audio) label[class*="border"]:not(.difficulty-item):not(.extension-item):not(.no-difficulty-theme):not([class*="yellow"]):not([class*="red"]):not([class*="emerald"]),
 #panel-settings .tab-pane:not(#tab-extensions) .bg-black\/40,
 #panel-settings .tab-pane:not(#tab-extensions) .bg-cyan-950\/20,
 #panel-settings .tab-pane:not(#tab-extensions) .bg-cyan-950\/30 {
@@ -2111,7 +2116,7 @@ body.disable-animations .song-option.is-previewing .song-mini-disc {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 14px rgba(0, 0, 0, 0.32);
 }
 
-#panel-settings .tab-pane:not(#tab-extensions) label[class*="border"]:not(.difficulty-item):not(.extension-item):not([class*="yellow"]):not([class*="red"]):has(input:checked) {
+#panel-settings .tab-pane:not(#tab-extensions):not(#tab-audio) label[class*="border"]:not(.difficulty-item):not(.extension-item):not([class*="yellow"]):not([class*="red"]):has(input:checked) {
     background: var(--ui2-card-active);
     border-color: var(--theme-color, #22d3ee) !important;
     box-shadow: 0 0 14px var(--theme-glow, rgba(34, 211, 238, 0.35)), inset 0 1px 0 rgba(251, 191, 36, 0.25);

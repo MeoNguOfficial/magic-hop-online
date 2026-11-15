@@ -186,6 +186,8 @@
   "aa_title": "Khử răng cưa (Anti-Aliasing)",
   "aa_desc": "Làm mịn cạnh khối và viền bóng trực tiếp không cần tải lại, tự tối ưu theo GPU.",
   "audio_controls": "ĐIỀU KHIỂN ÂM THANH",
+  "master_vol": "ÂM LƯỢNG TỔNG",
+  "master_vol_desc": "Âm lượng tổng điều chỉnh toàn bộ âm thanh trong game.",
   "mute_all": "MUTE ALL",
   "unmute_all": "UNMUTE ALL",
   "menu_vol_desc": "Âm lượng nhạc nền tại giao diện chính.",

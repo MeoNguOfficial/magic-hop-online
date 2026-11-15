@@ -186,6 +186,8 @@
   "aa_title": "Anti-Aliasing",
   "aa_desc": "Smoothes block and ball edges live with zero reload, automatically tuned for your GPU.",
   "audio_controls": "AUDIO CONTROLS",
+  "master_vol": "MASTER VOLUME",
+  "master_vol_desc": "Master volume controlling all in-game audio.",
   "mute_all": "MUTE ALL",
   "unmute_all": "UNMUTE ALL",
   "menu_vol_desc": "Background music volume in main menu.",
