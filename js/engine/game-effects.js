@@ -36,11 +36,13 @@ window.GameEffectsManager = {
     MAX_BOUNDARY_DUST: 60,
     boundaryBurstMesh: null,
     boundaryBurstPool: [],
+    activeBoundaryBursts: [],
     boundaryBurstWavePool: [],
     boundaryBurstCursor: 0,
     MAX_BOUNDARY_BURSTS: 160,
     cachedBoundarySparkTexture: null,
     boundaryBurstTempColor: null,
+    _boundaryBurstSlotColors: null,
 
     // --- 4. ĐUÔI BÓNG (BALL TRAIL INSTANCED MESH) ---
     ballTrailInstancedMesh: null,
@@ -59,6 +61,8 @@ window.GameEffectsManager = {
     dashGlideWakeMesh: null,
     dashSprayMesh: null,
     dashSprayPool: [],
+    activeDashSprays: [],
+    dashSprayCursor: 0,
     MAX_DASH_SPRAYS: (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple') ? 24 : 60,
     cachedDashGlideTexture: null,
     sprayUpVector: null,
@@ -809,8 +813,11 @@ window.GameEffectsManager = {
         if (!this.boundaryBurstMesh) {
             this.MAX_BOUNDARY_BURSTS = isSimple ? 48 : (isMobile ? 72 : 160);
             this.boundaryBurstPool = [];
+            this.activeBoundaryBursts = [];
             this.boundaryBurstWavePool = [];
             this.boundaryBurstCursor = 0;
+            this._boundaryBurstSlotColors = new Int32Array(this.MAX_BOUNDARY_BURSTS);
+            this._boundaryBurstSlotColors.fill(-1);
             if (!this.boundaryBurstTempColor) {
                 this.boundaryBurstTempColor = new THREE.Color(0x00ffff);
             }
@@ -847,9 +854,11 @@ window.GameEffectsManager = {
                     baseScale: 1.0,
                     stretch: 1.0,
                     gravity: 10.0,
-                    drag: 1.5
+                    drag: 1.5,
+                    colorHex: 0x00ffff
                 });
             }
+            this.boundaryBurstMesh.count = 0;
             this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
             if (this.boundaryBurstMesh.instanceColor) {
                 this.boundaryBurstMesh.instanceColor.needsUpdate = true;
@@ -888,14 +897,12 @@ window.GameEffectsManager = {
                 this.boundaryBurstWavePool[i].active = false;
             }
         }
+        this.activeBoundaryBursts.length = 0;
         if (this.boundaryBurstMesh && this.boundaryBurstPool) {
-            const zeroMat = this.sprayDummyMatrix || new THREE.Matrix4();
-            zeroMat.makeScale(0, 0, 0);
             for (let i = 0; i < this.boundaryBurstPool.length; i++) {
                 this.boundaryBurstPool[i].active = false;
-                this.boundaryBurstMesh.setMatrixAt(i, zeroMat);
             }
-            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+            this.boundaryBurstMesh.count = 0;
             this.boundaryBurstMesh.visible = false;
         }
     },
@@ -917,7 +924,10 @@ window.GameEffectsManager = {
         this.boundaryBurstCursor = (slotIdx + 1) % maxCount;
 
         const p = pool[slotIdx];
-        p.active = true;
+        if (!p.active) {
+            p.active = true;
+            this.activeBoundaryBursts.push(p);
+        }
         p.x = x;
         p.y = y;
         p.z = z;
@@ -930,15 +940,7 @@ window.GameEffectsManager = {
         p.stretch = stretch;
         p.gravity = gravity;
         p.drag = drag;
-
-        if (this.boundaryBurstMesh.setColorAt) {
-            if (!this.boundaryBurstTempColor) this.boundaryBurstTempColor = new THREE.Color();
-            this.boundaryBurstTempColor.setHex(colorHex);
-            this.boundaryBurstMesh.setColorAt(slotIdx, this.boundaryBurstTempColor);
-            if (this.boundaryBurstMesh.instanceColor) {
-                this.boundaryBurstMesh.instanceColor.needsUpdate = true;
-            }
-        }
+        p.colorHex = colorHex;
     },
 
     spawnBoundaryParticles: function (impactZ, furthestZ, activeColor = 0x00ffff, isVortex = false) {
@@ -1089,27 +1091,28 @@ window.GameEffectsManager = {
             return;
         }
 
-        // 2. Cập nhật vị trí và ma trận toàn bộ tia hạt bắn ra
-        let hasActiveSpark = false;
-        const maxCount = this.MAX_BOUNDARY_BURSTS;
-        const pool = this.boundaryBurstPool;
+        // 2. Cập nhật vị trí và ma trận các tia hạt đang active (compact stack + set count -> tránh duyệt toàn bộ 160 slot mỗi frame)
+        const activeList = this.activeBoundaryBursts;
         const mArray = this.boundaryBurstMesh.instanceMatrix.array;
+        const slotColors = this._boundaryBurstSlotColors;
+        const hasSetColorAt = typeof this.boundaryBurstMesh.setColorAt === 'function';
+        let colorsDirty = false;
+        if (hasSetColorAt && !this.boundaryBurstTempColor) {
+            this.boundaryBurstTempColor = new THREE.Color();
+        }
 
-        for (let i = 0; i < maxCount; i++) {
-            const p = pool[i];
-            if (!p.active) continue;
-
+        for (let i = activeList.length - 1; i >= 0; i--) {
+            const p = activeList[i];
             p.life -= delta;
             if (p.life <= 0) {
                 p.active = false;
-                const offset = i << 4;
-                mArray[offset + 0] = 0;
-                mArray[offset + 5] = 0;
-                mArray[offset + 10] = 0;
+                const last = activeList.pop();
+                if (i < activeList.length) {
+                    activeList[i] = last;
+                }
                 continue;
             }
 
-            hasActiveSpark = true;
             const damp = Math.max(0.0, 1.0 - p.drag * delta);
             p.vx *= damp;
             p.vz *= damp;
@@ -1118,7 +1121,11 @@ window.GameEffectsManager = {
             p.x += p.vx * delta;
             p.y += p.vy * delta;
             p.z += p.vz * delta;
+        }
 
+        const activeCount = activeList.length;
+        for (let i = 0; i < activeCount; i++) {
+            const p = activeList[i];
             const progress = Math.max(0.0, p.life / p.maxLife);
             const curScale = progress * p.baseScale;
 
@@ -1133,13 +1140,25 @@ window.GameEffectsManager = {
             this.sprayDummyScale.set(curScale, curScale * p.stretch, curScale);
             this.sprayDummyMatrix.compose(this.sprayDummyPosition, this.sprayDummyQuaternion, this.sprayDummyScale);
             this.sprayDummyMatrix.toArray(mArray, i << 4);
+
+            if (hasSetColorAt && slotColors && slotColors[i] !== p.colorHex) {
+                slotColors[i] = p.colorHex;
+                this.boundaryBurstTempColor.setHex(p.colorHex);
+                this.boundaryBurstMesh.setColorAt(i, this.boundaryBurstTempColor);
+                colorsDirty = true;
+            }
         }
 
-        if (hasActiveSpark || hasActiveWave) {
+        this.boundaryBurstMesh.count = activeCount;
+        if (activeCount > 0) {
+            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+            if (colorsDirty && this.boundaryBurstMesh.instanceColor) {
+                this.boundaryBurstMesh.instanceColor.needsUpdate = true;
+            }
             this.boundaryBurstMesh.visible = true;
-            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
+        } else if (hasActiveWave) {
+            this.boundaryBurstMesh.visible = true;
         } else if (this.boundaryBurstMesh.visible) {
-            this.boundaryBurstMesh.instanceMatrix.needsUpdate = true;
             this.boundaryBurstMesh.visible = false;
         }
     },
@@ -1565,10 +1584,13 @@ window.GameEffectsManager = {
             this.dashSprayMesh = new THREE.InstancedMesh(sprayGeo, sprayMat, this.MAX_DASH_SPRAYS);
             this.dashSprayMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
             this.dashSprayMesh.frustumCulled = false;
+            this.dashSprayMesh.count = 0;
             this.dashSprayMesh.visible = false;
             this.scene.add(this.dashSprayMesh);
 
             this.dashSprayPool = [];
+            this.activeDashSprays = [];
+            this.dashSprayCursor = 0;
             for (let i = 0; i < this.MAX_DASH_SPRAYS; i++) {
                 this.dashSprayPool.push({
                     x: 0, y: 0, z: 0,
@@ -1618,18 +1640,22 @@ window.GameEffectsManager = {
             const cosA = Math.cos(angleZ);
             const sinA = Math.sin(angleZ);
 
+            const poolLen = this.dashSprayPool.length;
             for (let side = -1; side <= 1; side += 2) {
                 for (let s = 0; s < spawnCount; s++) {
                     let p = null;
-                    for (let k = 0; k < this.dashSprayPool.length; k++) {
-                        if (!this.dashSprayPool[k].active) {
-                            p = this.dashSprayPool[k];
+                    for (let step = 0; step < poolLen; step++) {
+                        const probe = (this.dashSprayCursor + step) % poolLen;
+                        if (!this.dashSprayPool[probe].active) {
+                            p = this.dashSprayPool[probe];
+                            this.dashSprayCursor = (probe + 1) % poolLen;
                             break;
                         }
                     }
                     if (!p) break;
 
                     p.active = true;
+                    this.activeDashSprays.push(p);
                     p.maxLife = 0.16 + Math.random() * 0.10;
                     p.life = p.maxLife;
                     p.baseScale = 0.75 + Math.random() * 0.45;
@@ -1660,41 +1686,30 @@ window.GameEffectsManager = {
             }
         }
 
-        // Cập nhật tọa độ và ma trận các tia toé sáng đang bay (chỉ xử lý khi đang Dash hoặc vẫn còn hạt hiển thị)
+        // Cập nhật tọa độ và ma trận các tia toé sáng đang bay (compact active list + set count -> zero wasted slot loop)
         if (this.dashSprayMesh && (isDashingActive || this.dashSprayMesh.visible)) {
-            let hasActive = false;
-            let matrixDirty = false;
-            for (let i = 0; i < this.dashSprayPool.length; i++) {
-                const p = this.dashSprayPool[i];
-
-                if (!p.active) {
-                    if (p._matrixCleared !== true) {
-                        this.sprayDummyMatrix.makeScale(0, 0, 0);
-                        this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
-                        p._matrixCleared = true;
-                        matrixDirty = true;
-                    }
-                    continue;
-                }
-
+            const activeList = this.activeDashSprays;
+            for (let i = activeList.length - 1; i >= 0; i--) {
+                const p = activeList[i];
                 p.life -= delta;
                 if (p.life <= 0) {
                     p.active = false;
-                    p._matrixCleared = true;
-                    this.sprayDummyMatrix.makeScale(0, 0, 0);
-                    this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
-                    matrixDirty = true;
+                    const last = activeList.pop();
+                    if (i < activeList.length) {
+                        activeList[i] = last;
+                    }
                     continue;
                 }
-
-                hasActive = true;
-                matrixDirty = true;
-                p._matrixCleared = false;
                 p.x += p.vx * delta;
                 p.y += p.vy * delta;
                 p.z += p.vz * delta;
                 p.vy -= 7.5 * delta; // Trọng lực nhẹ
+            }
 
+            const activeCount = activeList.length;
+            const mArray = this.dashSprayMesh.instanceMatrix.array;
+            for (let i = 0; i < activeCount; i++) {
+                const p = activeList[i];
                 const progress = p.life / p.maxLife;
                 const curScale = progress * p.baseScale;
 
@@ -1704,13 +1719,14 @@ window.GameEffectsManager = {
                 this.sprayDummyPosition.set(p.x, p.y, p.z);
                 this.sprayDummyScale.set(curScale, curScale, curScale);
                 this.sprayDummyMatrix.compose(this.sprayDummyPosition, this.sprayDummyQuaternion, this.sprayDummyScale);
-                this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
+                this.sprayDummyMatrix.toArray(mArray, i << 4);
             }
 
-            if (matrixDirty) {
+            this.dashSprayMesh.count = activeCount;
+            if (activeCount > 0) {
                 this.dashSprayMesh.instanceMatrix.needsUpdate = true;
             }
-            if (!hasActive && !isDashingActive) {
+            if (activeCount === 0 && !isDashingActive) {
                 this.dashSprayMesh.visible = false;
             }
         }
@@ -1721,16 +1737,14 @@ window.GameEffectsManager = {
             this.dashGlideWakeMesh.visible = false;
             this.dashGlideWakeMesh.material.opacity = 0;
         }
+        this.activeDashSprays.length = 0;
         if (this.dashSprayMesh) {
+            this.dashSprayMesh.count = 0;
             this.dashSprayMesh.visible = false;
             if (this.dashSprayPool) {
                 for (let i = 0; i < this.dashSprayPool.length; i++) {
                     this.dashSprayPool[i].active = false;
-                    this.dashSprayPool[i]._matrixCleared = true;
-                    this.sprayDummyMatrix.makeScale(0, 0, 0);
-                    this.dashSprayMesh.setMatrixAt(i, this.sprayDummyMatrix);
                 }
-                this.dashSprayMesh.instanceMatrix.needsUpdate = true;
             }
         }
     },

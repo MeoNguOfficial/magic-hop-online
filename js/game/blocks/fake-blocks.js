@@ -152,6 +152,22 @@ window.FakeBlocksManager = {
     // Các biến trạng thái kiểm soát số lượng block chính trên cùng một hàng Z
     realBlocksOnCurrentZ: 0,
     usedSlotsOnCurrentZ: [],
+
+    // Scratch buffers tái sử dụng để triệt tiêu GC allocation khi spawn tile ở tốc độ cao
+    _trackSlots: [-4.5, 0, 4.5],
+    _candScratch: [],
+    _sideCandScratch: [],
+    _spawnPosScratch: [],
+    _availSlotsScratch: [],
+    _altCandScratch: [],
+    _pairA: [0, 0],
+    _pairB: [0, 0],
+    _pairC: [0, 0],
+    _singleA: [0],
+    _singleB: [0],
+    _twoCfgScratch: [],
+    _oneCfgScratch: [],
+    _rowCountsScratch: {},
     
     createFakeTile: function(realTile, timeDiff, forceCount = null) {
         if (!realTile || (realTile.userData && realTile.userData.isDashTile)) return;
@@ -172,15 +188,16 @@ window.FakeBlocksManager = {
             else spawnCount = 1;
         }
 
-        let positionsToSpawn = [];
+        let positionsToSpawn = this._spawnPosScratch;
+        positionsToSpawn.length = 0;
 
         // Khoảng cách cố định (offset = 4.5) để khoảng trắng giữa các block là 0.5
         const offset = 4.5;
         // Thu hẹp 2 biên (Max track = 4.5)
         const maxTrackX = 4.5;
+        const slots = this._trackSlots;
 
         if (forceCount === 'SNAP_3_ONE_FAKE') {
-            const slots = [-maxTrackX, 0, maxTrackX];
             let pick = slots[1]; // default middle
             
             try {
@@ -189,18 +206,26 @@ window.FakeBlocksManager = {
                 const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
                 const maxTrailing = isHardMode ? 1 : 2;
                 
-                let candidates = slots.slice();
-                if (trailing >= maxTrailing && prevVal !== null) {
-                    candidates = candidates.filter(s => s !== prevVal);
+                const candidates = this._candScratch;
+                candidates.length = 0;
+                for (let si = 0; si < 3; si++) {
+                    const s = slots[si];
+                    if (!(trailing >= maxTrailing && prevVal !== null && s === prevVal)) candidates.push(s);
                 }
-                if (candidates.length === 0) candidates = slots.slice();
+                if (candidates.length === 0) {
+                    candidates.push(slots[0], slots[1], slots[2]);
+                }
                 
                 if (isHardMode && candidates.includes(0) && candidates.length > 1) {
                     const roll = Math.random();
                     if (roll < 0.15) {
                         pick = 0;
                     } else {
-                        const sides = candidates.filter(s => s !== 0);
+                        const sides = this._sideCandScratch;
+                        sides.length = 0;
+                        for (let ci = 0; ci < candidates.length; ci++) {
+                            if (candidates[ci] !== 0) sides.push(candidates[ci]);
+                        }
                         pick = sides[Math.floor(Math.random() * sides.length)];
                     }
                 } else {
@@ -230,26 +255,13 @@ window.FakeBlocksManager = {
             
             realTile.position.x = pick;
             
-            if (pick === slots[0]) {
-                positionsToSpawn = [slots[1]];
-            } else if (pick === slots[2]) {
-                positionsToSpawn = [slots[1]];
+            if (pick === slots[0] || pick === slots[2]) {
+                positionsToSpawn.push(slots[1]);
             } else { // pick === slots[1]
-                positionsToSpawn = [Math.random() < 0.5 ? slots[0] : slots[2]];
+                positionsToSpawn.push(Math.random() < 0.5 ? slots[0] : slots[2]);
             }
         } else if (spawnCount === 2 && forceCount === 2) {
             // CƠ CHẾ 3 BLOCK (FORCE_3): Luôn khít 2 biên, có khoảng trắng đều (slots: -4.5, 0, 4.5)
-            const slots = [-maxTrackX, 0, maxTrackX];
-            let closestSlot = slots[0];
-            let minDiff = Infinity;
-            
-            for (let s of slots) {
-                const diff = Math.abs(s - mainX);
-                if (diff < minDiff) {
-                    minDiff = diff;
-                    closestSlot = s;
-                }
-            }
             // Thêm xác suất để tạo pattern 1-3 hoặc 3-1 (real tile ở biên trái hoặc phải),
             // hoặc fallback về slot gần nhất.
             // Chọn real slot: left / middle / right — phân phối đều hơn,
@@ -260,11 +272,15 @@ window.FakeBlocksManager = {
                 const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
                 const maxTrailing = isHardMode ? 1 : 2;
                 
-                let candidates = slots.slice();
-                if (trailing >= maxTrailing && prevVal !== null) {
-                    candidates = candidates.filter(s => s !== prevVal);
+                const candidates = this._candScratch;
+                candidates.length = 0;
+                for (let si = 0; si < 3; si++) {
+                    const s = slots[si];
+                    if (!(trailing >= maxTrailing && prevVal !== null && s === prevVal)) candidates.push(s);
                 }
-                if (candidates.length === 0) candidates = slots.slice();
+                if (candidates.length === 0) {
+                    candidates.push(slots[0], slots[1], slots[2]);
+                }
                 
                 let pick;
                 if (isHardMode && candidates.includes(0) && candidates.length > 1) {
@@ -272,7 +288,11 @@ window.FakeBlocksManager = {
                     if (roll < 0.15) {
                         pick = 0;
                     } else {
-                        const sides = candidates.filter(s => s !== 0);
+                        const sides = this._sideCandScratch;
+                        sides.length = 0;
+                        for (let ci = 0; ci < candidates.length; ci++) {
+                            if (candidates[ci] !== 0) sides.push(candidates[ci]);
+                        }
                         pick = sides[Math.floor(Math.random() * sides.length)];
                     }
                 } else {
@@ -280,31 +300,33 @@ window.FakeBlocksManager = {
                 }
                 
                 realTile.position.x = pick;
-                positionsToSpawn = slots.filter(s => s !== pick);
+                for (let si = 0; si < 3; si++) {
+                    if (slots[si] !== pick) positionsToSpawn.push(slots[si]);
+                }
             } catch (e) {
                 const r = Math.random();
                 const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
                 if (isHardMode) {
                     if (r < 0.425) {
                         realTile.position.x = slots[0];
-                        positionsToSpawn = [slots[1], slots[2]];
+                        positionsToSpawn.push(slots[1], slots[2]);
                     } else if (r < 0.85) {
                         realTile.position.x = slots[2];
-                        positionsToSpawn = [slots[1], slots[0]];
+                        positionsToSpawn.push(slots[1], slots[0]);
                     } else {
                         realTile.position.x = slots[1];
-                        positionsToSpawn = [slots[0], slots[2]];
+                        positionsToSpawn.push(slots[0], slots[2]);
                     }
                 } else {
                     if (r < 0.33) {
                         realTile.position.x = slots[0];
-                        positionsToSpawn = [slots[1], slots[2]];
+                        positionsToSpawn.push(slots[1], slots[2]);
                     } else if (r < 0.66) {
                         realTile.position.x = slots[1];
-                        positionsToSpawn = [slots[0], slots[2]];
+                        positionsToSpawn.push(slots[0], slots[2]);
                     } else {
                         realTile.position.x = slots[2];
-                        positionsToSpawn = [slots[1], slots[0]];
+                        positionsToSpawn.push(slots[1], slots[0]);
                     }
                 }
             }
@@ -314,19 +336,38 @@ window.FakeBlocksManager = {
             const left1 = mainX - offset;
             const left2 = mainX - offset * 2;
             
-            const validTwoBlockConfigs = [];
-            if (right2 <= maxTrackX) validTwoBlockConfigs.push([right1, right2]);
-            if (left2 >= -maxTrackX) validTwoBlockConfigs.push([left1, left2]);
-            if (left1 >= -maxTrackX && right1 <= maxTrackX) validTwoBlockConfigs.push([left1, right1]);
+            const validTwoBlockConfigs = this._twoCfgScratch;
+            validTwoBlockConfigs.length = 0;
+            if (right2 <= maxTrackX) {
+                this._pairA[0] = right1; this._pairA[1] = right2;
+                validTwoBlockConfigs.push(this._pairA);
+            }
+            if (left2 >= -maxTrackX) {
+                this._pairB[0] = left1; this._pairB[1] = left2;
+                validTwoBlockConfigs.push(this._pairB);
+            }
+            if (left1 >= -maxTrackX && right1 <= maxTrackX) {
+                this._pairC[0] = left1; this._pairC[1] = right1;
+                validTwoBlockConfigs.push(this._pairC);
+            }
             
-            const validOneBlockConfigs = [];
-            if (right1 <= maxTrackX) validOneBlockConfigs.push([right1]);
-            if (left1 >= -maxTrackX) validOneBlockConfigs.push([left1]);
+            const validOneBlockConfigs = this._oneCfgScratch;
+            validOneBlockConfigs.length = 0;
+            if (right1 <= maxTrackX) {
+                this._singleA[0] = right1;
+                validOneBlockConfigs.push(this._singleA);
+            }
+            if (left1 >= -maxTrackX) {
+                this._singleB[0] = left1;
+                validOneBlockConfigs.push(this._singleB);
+            }
             
             if (spawnCount === 2 && validTwoBlockConfigs.length > 0) {
-                positionsToSpawn = validTwoBlockConfigs[Math.floor(Math.random() * validTwoBlockConfigs.length)];
+                const picked = validTwoBlockConfigs[Math.floor(Math.random() * validTwoBlockConfigs.length)];
+                positionsToSpawn.push(picked[0], picked[1]);
             } else if (validOneBlockConfigs.length > 0) {
-                positionsToSpawn = validOneBlockConfigs[Math.floor(Math.random() * validOneBlockConfigs.length)];
+                const picked = validOneBlockConfigs[Math.floor(Math.random() * validOneBlockConfigs.length)];
+                positionsToSpawn.push(picked[0]);
             } else {
                 return;
             }
@@ -497,19 +538,31 @@ window.FakeBlocksManager = {
         return count;
     },
 
-    // Trả về object { key: count } cho các X của khối thật trên cùng một hàng (row)
+    // Trả về object { key: count } cho các X của khối thật trên cùng một hàng (row) - O(1) duyệt ngược từ cuối mảng tiles
     _scanRealTilesInSameRow: function(tile) {
-        const counts = {};
+        const counts = this._rowCountsScratch;
+        for (const k in counts) {
+            if (Object.prototype.hasOwnProperty.call(counts, k)) {
+                counts[k] = 0;
+            }
+        }
         try {
             if (typeof tiles === 'undefined' || !Array.isArray(tiles)) return counts;
 
             const zTolerance = 0.5;
             const currentTileTime = (tile.userData && typeof tile.userData.time !== 'undefined') ? tile.userData.time : null;
             const currentTileRowId = (tile.userData && typeof tile.userData.rowId !== 'undefined') ? tile.userData.rowId : null;
+            const curTargetZ = (tile.userData && tile.userData.targetZ !== undefined) ? tile.userData.targetZ : (tile.position ? tile.position.z : 0);
 
-            for (let i = 0; i < tiles.length; i++) {
+            for (let i = tiles.length - 1; i >= 0; i--) {
                 const t = tiles[i];
                 if (!t || !t.userData) continue;
+
+                const tTargetZ = (t.userData.targetZ !== undefined) ? t.userData.targetZ : (t.position ? t.position.z : 0);
+                if (tTargetZ - curTargetZ > 1.0) {
+                    break;
+                }
+
                 // Skip fake tiles in tiles[] if any
                 if (t.userData.isFake) continue;
 
@@ -625,7 +678,7 @@ window.FakeBlocksManager = {
             // ĐÂY LÀ BLOCK CHÍNH (REAL) TIẾP THEO XUẤT HIỆN TRÊN CÙNG HÀNG NGANG ĐÃ QUÉT!
             
             if (spawnMode === 'FORCE_3' || spawnMode === 'SNAP_3_ONE_FAKE') {
-                const slots = [-4.5, 0, 4.5];
+                const slots = this._trackSlots;
 
                 // Đã có 3 block chính trên hàng này -> Ép sang hàng tiếp theo (Z mới)
                 if (this.realBlocksOnCurrentZ >= 3) {
@@ -658,7 +711,8 @@ window.FakeBlocksManager = {
                     this.lastRowId = currentTileRowId;
                     
                     this.realBlocksOnCurrentZ = 1;
-                    this.usedSlotsOnCurrentZ = [freeSlot];
+                    this.usedSlotsOnCurrentZ.length = 0;
+                    this.usedSlotsOnCurrentZ.push(freeSlot);
 
                     // Ghi lịch sử X cho rule "không quá 2 gạch thẳng"
                     try { this._recordRealX(tile.position.x); } catch (e) {}
@@ -666,7 +720,13 @@ window.FakeBlocksManager = {
                 }
 
                 // Chọn slot chưa dùng trên hàng hiện tại để khớp cột cho block chính tiếp theo
-                const availableSlots = slots.filter(s => !this.usedSlotsOnCurrentZ.includes(s));
+                const availableSlots = this._availSlotsScratch;
+                availableSlots.length = 0;
+                for (let si = 0; si < 3; si++) {
+                    if (!this.usedSlotsOnCurrentZ.includes(slots[si])) {
+                        availableSlots.push(slots[si]);
+                    }
+                }
 
                 if (availableSlots.length > 0) {
                     let bestSlot = availableSlots[0];
@@ -755,7 +815,8 @@ window.FakeBlocksManager = {
                     try {
                         const rowCounts = this._scanRealTilesInSameRow(tile);
                         // find candidate that has <2 in row and within bounds
-                        const candidates = [];
+                        const candidates = this._altCandScratch;
+                        candidates.length = 0;
                         const tryRight = tile.position.x + offset;
                         const tryLeft = tile.position.x - offset;
                         if (tryRight <= maxTrackX) candidates.push(tryRight);
@@ -784,7 +845,8 @@ window.FakeBlocksManager = {
         } catch (e) {}
 
         this.realBlocksOnCurrentZ = 1;
-        this.usedSlotsOnCurrentZ = [tile.position.x];
+        this.usedSlotsOnCurrentZ.length = 0;
+        this.usedSlotsOnCurrentZ.push(tile.position.x);
 
         // Ghi lại vị trí X của khối thật mới này vào lịch sử
         try { this._recordRealX(tile.position.x); } catch (e) {}

@@ -1343,7 +1343,11 @@ function initBoundaries() {
     if (typeof initBoundaryParticleStyleForBeatmap === 'function') {
         initBoundaryParticleStyleForBeatmap();
     }
-    if (leftBoundaryLine) scene.remove(leftBoundaryLine);
+    if (leftBoundaryLine) {
+        scene.remove(leftBoundaryLine);
+        if (leftBoundaryLine.geometry) leftBoundaryLine.geometry.dispose();
+        if (leftBoundaryLine.material) leftBoundaryLine.material.dispose();
+    }
     if (rightBoundaryLine) scene.remove(rightBoundaryLine);
 
     const boundaryMat = new THREE.MeshBasicMaterial({
@@ -1356,16 +1360,19 @@ function initBoundaries() {
 
     const boundaryGeo = new THREE.BoxGeometry(0.20, 0.04, 500);
 
-    leftBoundaryLine = new THREE.Mesh(boundaryGeo, boundaryMat);
-    leftBoundaryLine.position.set(-6.75, (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02, 0);
+    // Gộp 2 đường biên trái/phải thành 1 InstancedMesh (1 Draw Call thay vì 2)
+    leftBoundaryLine = new THREE.InstancedMesh(boundaryGeo, boundaryMat, 2);
+    leftBoundaryLine.position.set(0, (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02, 0);
     leftBoundaryLine.frustumCulled = false;
+    const _bMat = new THREE.Matrix4();
+    _bMat.makeTranslation(-6.75, 0, 0);
+    leftBoundaryLine.setMatrixAt(0, _bMat);
+    _bMat.makeTranslation(6.75, 0, 0);
+    leftBoundaryLine.setMatrixAt(1, _bMat);
+    leftBoundaryLine.instanceMatrix.needsUpdate = true;
 
-    rightBoundaryLine = new THREE.Mesh(boundaryGeo, boundaryMat);
-    rightBoundaryLine.position.set(6.75, (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02, 0);
-    rightBoundaryLine.frustumCulled = false;
-
+    rightBoundaryLine = null;
     scene.add(leftBoundaryLine);
-    scene.add(rightBoundaryLine);
 
     initBoundaryFlames();
     updateBoundariesVisibility();
@@ -3355,24 +3362,28 @@ function animate(rafTime) {
         }
 
         // --- CẬP NHẬT BIÊN (BOUNDARIES) ---
-        if (leftBoundaryLine && rightBoundaryLine && camera) {
+        if (leftBoundaryLine && camera) {
             const targetBoundaryZ = camera.position.z - 150;
             const targetBoundaryY = (typeof surfaceY !== 'undefined' ? surfaceY : 0.2) - 0.02;
             if (leftBoundaryLine.position.z !== targetBoundaryZ) {
                 leftBoundaryLine.position.z = targetBoundaryZ;
-                rightBoundaryLine.position.z = targetBoundaryZ;
+                if (rightBoundaryLine) rightBoundaryLine.position.z = targetBoundaryZ;
             }
             if (leftBoundaryLine.position.y !== targetBoundaryY) {
                 leftBoundaryLine.position.y = targetBoundaryY;
-                rightBoundaryLine.position.y = targetBoundaryY;
+                if (rightBoundaryLine) rightBoundaryLine.position.y = targetBoundaryY;
             }
 
             if (dynamicColorsEnabled && typeof tempColor !== 'undefined') {
                 leftBoundaryLine.material.color.copy(tempColor);
-                rightBoundaryLine.material.color.copy(tempColor);
+                if (rightBoundaryLine && rightBoundaryLine.material !== leftBoundaryLine.material) {
+                    rightBoundaryLine.material.color.copy(tempColor);
+                }
             } else if (leftBoundaryLine.material.color.getHex() !== 0x00ffff) {
                 leftBoundaryLine.material.color.setHex(0x00ffff);
-                rightBoundaryLine.material.color.setHex(0x00ffff);
+                if (rightBoundaryLine && rightBoundaryLine.material !== leftBoundaryLine.material) {
+                    rightBoundaryLine.material.color.setHex(0x00ffff);
+                }
             }
         }
 

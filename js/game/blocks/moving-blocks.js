@@ -4,6 +4,7 @@
 
 window.MovingBlocksManager = {
     allMovingTiles: [],
+    _typesScratch: [],
     movingGroupCount: 0,
     activeGroupType: null, // Lưu kiểu di chuyển hiện tại của nhóm: 'ALIGNED', 'WAVY', 'ALTERNATING', 'RANDOM'
     groupBasePhase: 0,     // Pha cơ bản (phase) để đồng bộ hóa cho nhóm
@@ -13,6 +14,10 @@ window.MovingBlocksManager = {
 
     removeTile: function (tile) {
         if (!tile) return;
+        let idx = (tile.userData && typeof tile.userData._movingIdx === 'number') ? tile.userData._movingIdx : -1;
+        if (idx < 0 || idx >= this.allMovingTiles.length || this.allMovingTiles[idx] !== tile) {
+            idx = this.allMovingTiles.indexOf(tile);
+        }
         if (tile.userData) {
             tile.userData.isMoving = false;
             tile.userData.moveType = null;
@@ -20,11 +25,14 @@ window.MovingBlocksManager = {
             tile.userData.moveTime = 0;
             tile.userData.amplitude = 0;
             tile.userData.baseX = 0;
+            tile.userData._movingIdx = -1;
         }
-        const idx = this.allMovingTiles.indexOf(tile);
         if (idx !== -1) {
             const last = this.allMovingTiles.pop();
-            if (idx < this.allMovingTiles.length) this.allMovingTiles[idx] = last;
+            if (idx < this.allMovingTiles.length) {
+                this.allMovingTiles[idx] = last;
+                if (last && last.userData) last.userData._movingIdx = idx;
+            }
         }
     },
 
@@ -36,11 +44,17 @@ window.MovingBlocksManager = {
      * @param {number} timeDiff - Khoảng thời gian so với block trước
      */
     processTile: function (tile, canBeMoving, roundCount, timeDiff = 1.0) {
-        // Xóa sạch tham chiếu cũ của tile trong allMovingTiles bằng O(1) in-place không tạo mảng rác
-        const oldIdx = this.allMovingTiles.indexOf(tile);
+        // Xóa sạch tham chiếu cũ của tile trong allMovingTiles bằng O(1) nhờ _movingIdx
+        let oldIdx = (tile.userData && typeof tile.userData._movingIdx === 'number') ? tile.userData._movingIdx : -1;
+        if (oldIdx < 0 || oldIdx >= this.allMovingTiles.length || this.allMovingTiles[oldIdx] !== tile) {
+            oldIdx = this.allMovingTiles.indexOf(tile);
+        }
         if (oldIdx !== -1) {
             const last = this.allMovingTiles.pop();
-            if (oldIdx < this.allMovingTiles.length) this.allMovingTiles[oldIdx] = last;
+            if (oldIdx < this.allMovingTiles.length) {
+                this.allMovingTiles[oldIdx] = last;
+                if (last && last.userData) last.userData._movingIdx = oldIdx;
+            }
         }
 
         // Đảm bảo xóa sạch trạng thái cũ từ Object Pool để tránh lỗi tái sử dụng
@@ -51,8 +65,9 @@ window.MovingBlocksManager = {
             tile.userData.moveTime = 0;
             tile.userData.amplitude = 0;
             tile.userData.baseX = 0;
+            tile.userData._movingIdx = -1;
         } else {
-            tile.userData = {};
+            tile.userData = { _movingIdx: -1 };
         }
 
         let isMovingThisTile = false;
@@ -81,7 +96,9 @@ window.MovingBlocksManager = {
             this.movingGroupCount = Math.floor(Math.random() * maxAllowed) + 1;
             
             // SPAWN THÔNG MINH: Hạn chế các quỹ đạo khó ('ALTERNATING', 'RANDOM') ở nhịp quá nhanh hoặc màn chơi thấp
-            let types = ['ALIGNED'];
+            const types = this._typesScratch;
+            types.length = 0;
+            types.push('ALIGNED');
             if (isHardMode || timeDiff >= 0.25) types.push('WAVY');
             if (isHardMode || (timeDiff >= 0.35 && roundCount >= 2)) types.push('ALTERNATING');
             if (isHardMode || (timeDiff >= 0.45 && roundCount >= 3)) types.push('RANDOM');
@@ -151,6 +168,7 @@ window.MovingBlocksManager = {
             let newAngle = Math.asin(ratio);
             tile.userData.moveTime = Math.cos(tile.userData.moveTime) < 0 ? Math.PI - newAngle : newAngle;
 
+            tile.userData._movingIdx = this.allMovingTiles.length;
             this.allMovingTiles.push(tile);
         }
     },
@@ -180,9 +198,11 @@ window.MovingBlocksManager = {
                     }
                     this.disposeHierarchy(tile);
                 }
+                if (tile && tile.userData) tile.userData._movingIdx = -1;
                 const last = this.allMovingTiles.pop();
                 if (i < this.allMovingTiles.length) {
                     this.allMovingTiles[i] = last;
+                    if (last && last.userData) last.userData._movingIdx = i;
                 }
                 continue;
             }

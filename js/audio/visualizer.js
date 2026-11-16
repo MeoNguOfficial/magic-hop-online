@@ -67,9 +67,10 @@ window.VisualizerManager = {
         const height = this.canvas.height;
         this.ctx.clearRect(0, 0, width, Math.ceil(height * 0.35));
 
-        if (this._cachedW !== width || this._cachedH !== height) {
+        if (this._cachedW !== width || this._cachedH !== height || this._cachedBufferLen !== bufferLength) {
             this._cachedW = width;
             this._cachedH = height;
+            this._cachedBufferLen = bufferLength;
             this._centerY = height * 0.25;
             this._numBars = Math.max(1, Math.floor(width / 24));
             this._barSpacing = width / this._numBars;
@@ -79,8 +80,11 @@ window.VisualizerManager = {
             this._blockGap = 3;
             this._halfNumBars = this._numBars / 2;
             this._barX = new Float32Array(this._numBars);
+            this._barBinIdx = new Uint16Array(this._numBars);
             for (let i = 0; i < this._numBars; i++) {
                 this._barX[i] = i * this._barSpacing + (this._barSpacing - this._barWidth) / 2;
+                const centerDist = Math.abs(i - this._halfNumBars);
+                this._barBinIdx[i] = Math.floor((centerDist / this._halfNumBars) * (bufferLength * 0.6));
             }
         }
 
@@ -89,15 +93,14 @@ window.VisualizerManager = {
         const blockHeight = this._blockHeight;
         const blockGap = this._blockGap;
         const barWidth = this._barWidth;
-        const halfNumBars = this._halfNumBars;
         const maxBlocks = this._maxBlocks;
         const barX = this._barX;
+        const barBinIdx = this._barBinIdx;
+        const inv255 = 1.0 / 255.0;
 
         this.cachedBarData.length = numBars;
         for (let i = 0; i < numBars; i++) {
-            let centerDist = Math.abs(i - halfNumBars);
-            let dataIdx = Math.floor((centerDist / halfNumBars) * (bufferLength * 0.6));
-            let v = this.visDataArray[dataIdx] / 255.0;
+            let v = this.visDataArray[barBinIdx[i]] * inv255;
             if (v > 0.1) v = v * (0.8 + Math.random() * 0.2);
             this.cachedBarData[i] = Math.ceil(v * maxBlocks);
         }

@@ -49,6 +49,7 @@ const glowFragmentShader = `
     }
 `;
 
+const WARMUP_MILESTONES = [20, 40, 60, 80];
 let baseGlowMaterial = null;
 let capMaterial = null;
 
@@ -771,6 +772,11 @@ function getTileFromPool(forceNew = false) {
             };
             cachedGlowGeo = new THREE.ExtrudeGeometry(tileShape, glowExtrudeSettings);
             cachedGlowGeo.center();
+            if (cachedGlowGeo.groups && cachedGlowGeo.groups.length > 1) {
+                const sideGroup = cachedGlowGeo.groups[1];
+                cachedGlowGeo.clearGroups();
+                cachedGlowGeo.addGroup(sideGroup.start, sideGroup.count, 1);
+            }
         }
         if (!window.globalTileGlowMatCyan) {
             window.globalTileGlowMatCyan = createTileGlowMaterial(0x00ffff);
@@ -1422,12 +1428,12 @@ function spawnTile(isFirst = false) {
 
     // --- LOGIC HIỆN PHẦN TRĂM TIẾN ĐỘ WARM-UP ---
     if (!isFirst && !activeEndlessMode && roundCount === 0 && beatmapBeats.length > 10) {
-        const milestones = [20, 40, 60, 80];
         // currentBeatIndex đã được tăng lên ở đoạn trên, nên ta lấy giá trị thực tế của tile đang spawn
         const currentProgressIdx = currentBeatIndex - 1;
 
-        for (let m of milestones) {
-            const targetIdx = Math.floor(beatmapBeats.length * (m / 100));
+        for (let mi = 0; mi < WARMUP_MILESTONES.length; mi++) {
+            const m = WARMUP_MILESTONES[mi];
+            const targetIdx = Math.floor(beatmapBeats.length * (m * 0.01));
             if (currentProgressIdx === targetIdx) {
                 tile.add(createPercentLabel(m));
                 break; // Tìm thấy mốc thì thoát vòng lặp
