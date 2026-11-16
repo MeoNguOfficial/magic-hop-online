@@ -1762,7 +1762,8 @@ async function initThree() {
         window.updateBackgroundStyle();
     }
 
-    // Tiền biên dịch toàn bộ Shader trên GPU tránh drop FPS khi vào nhịp
+    // Tiền biên dịch toàn bộ Shader trên GPU tránh drop FPS khi vào nhịp (tách sang frame kế tiếp để không nghẽn Intro)
+    await waitIntroFrames(1);
     if (typeof prewarmAllGpuShaders === 'function') {
         prewarmAllGpuShaders(renderer, scene, camera);
     }
@@ -3177,6 +3178,18 @@ function animate(rafTime) {
     }
 
     if (delta > 0.1) delta = 0.1;
+
+    const isIntroOpaqueCovering = !isPlaying &&
+        window.introCompleted !== true &&
+        typeof introOverlay !== 'undefined' && introOverlay &&
+        introOverlay.style.display !== 'none' &&
+        !introOverlay.classList.contains('hidden');
+
+    // Khi Intro còn đang che kín toàn màn hình, tạm dừng render & cập nhật cảnh 3D ẩn phía sau
+    // để nhường 100% CPU/GPU/compositor cho SVG Intro & màn hình tải.
+    if (isIntroOpaqueCovering && !window._forceIdleSceneRender) {
+        return;
+    }
 
     const isStartMenuOpaqueIdle = !isPlaying &&
         typeof startScreen !== 'undefined' && startScreen &&
@@ -5952,6 +5965,17 @@ function resetGameScene() {
     clock.getDelta();
 }
 
+function waitIntroFrames(count = 1) {
+    return new Promise(resolve => {
+        let remaining = Math.max(1, count | 0);
+        const step = () => {
+            if (--remaining <= 0) resolve();
+            else requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    });
+}
+
 // --- INTRO & GAME FLOW ---
 // Helper to show a fading splash slide (auto-fades out after duration)
 function showIntroSlide(slideId, duration = 2000) {
@@ -5962,20 +5986,25 @@ function showIntroSlide(slideId, duration = 2000) {
             return;
         }
 
-        // Tái khởi tạo SVG animation để đảm bảo chu kỳ chạy chính xác từ 0.0s
+        // Chỉ clone lại SVG nếu slide được phát lại lần 2+ (lần đầu dùng ngay bản đã preload để không rớt frame đầu)
         const img = slide.querySelector('img');
         if (img) {
-            const rawSrc = img.getAttribute('src');
-            if (rawSrc) {
-                const clonedImg = img.cloneNode(true);
-                img.parentNode.replaceChild(clonedImg, img);
+            if (img.dataset.introPlayed === '1') {
+                const rawSrc = img.getAttribute('src');
+                if (rawSrc) {
+                    const clonedImg = img.cloneNode(true);
+                    img.parentNode.replaceChild(clonedImg, img);
+                }
+            } else {
+                img.dataset.introPlayed = '1';
             }
         }
 
         slide.classList.remove('hidden');
-        void slide.offsetWidth; // force reflow
-        slide.classList.remove('opacity-0');
-        slide.classList.add('opacity-100');
+        requestAnimationFrame(() => {
+            slide.classList.remove('opacity-0');
+            slide.classList.add('opacity-100');
+        });
 
         setTimeout(() => {
             slide.classList.remove('opacity-100');
@@ -6000,9 +6029,10 @@ function showIntroDisclaimer(slideId) {
             return;
         }
         slide.classList.remove('hidden');
-        void slide.offsetWidth;
-        slide.classList.remove('opacity-0');
-        slide.classList.add('opacity-100');
+        requestAnimationFrame(() => {
+            slide.classList.remove('opacity-0');
+            slide.classList.add('opacity-100');
+        });
 
         // Hide tap text initially
         const tapText = document.getElementById('disclaimer-tap-text');
@@ -6048,9 +6078,10 @@ async function handleIntro() {
     const loadingSlide = document.getElementById('intro-slide-loading');
     if (loadingSlide) {
         loadingSlide.classList.remove('hidden');
-        void loadingSlide.offsetWidth;
-        loadingSlide.classList.remove('opacity-0');
-        loadingSlide.classList.add('opacity-100');
+        requestAnimationFrame(() => {
+            loadingSlide.classList.remove('opacity-0');
+            loadingSlide.classList.add('opacity-100');
+        });
     }
 
     // 5. Wait for background resource init (if not yet completed)
@@ -6119,8 +6150,11 @@ async function handleIntro() {
     }, 100);
 
     function doStartGameTransition() {
-        // Đánh dấu intro đã hoàn thành, cho phép các cơ chế âm thanh & focus hoạt động bình thường
+        // Đánh dấu intro đã hoàn thành, gỡ cờ tối ưu Intro và cho phép các cơ chế âm thanh & 3D hoạt động bình thường
         window.introCompleted = true;
+        if (document.body) {
+            document.body.classList.remove('ui2-intro-active');
+        }
 
         // KIỂM TRA OFFLINE MÀ CHƯA CÓ NHẠC
         if (!navigator.onLine && (!audio || !audio.src || audio.src === window.location.href)) {
@@ -7123,6 +7157,7 @@ function isWebGLSupported() {
 // --- KHỞI CHẠY HỆ THỐNG ---
 async function bootGame() {
     if (!isWebGLSupported()) {
+        if (document.body) document.body.classList.remove('ui2-intro-active');
         const webglOverlay = document.getElementById('webgl-error-overlay');
         if (webglOverlay) {
             webglOverlay.classList.remove('hidden');
@@ -7134,10 +7169,16 @@ async function bootGame() {
         return;
     }
 
-    // Bắt đầu khởi tạo tài nguyên ngầm ngay lập tức
+    if (document.body) {
+        document.body.classList.add('ui2-intro-active');
+    }
+
+    // Bắt đầu khởi tạo tài nguyên ngầm ngay lập tức (nhường 2 frame đầu cho SVG Intro lên hình mượt trước khi dựng DOM & biên dịch WebGL)
     window.bgInitPromise = (async () => {
+        await waitIntroFrames(2);
         if (typeof loadPlaylistData === 'function') {
             await loadPlaylistData();
+            await waitIntroFrames(1);
             if (typeof renderSongList === 'function') {
                 renderSongList('', currentPlaylistIndices);
             }
@@ -7206,6 +7247,7 @@ async function bootGame() {
         selectedSongIndex = foundIndex !== -1 ? foundIndex : 0;
         if (typeof window.updateFeaturedDisc === 'function') window.updateFeaturedDisc(selectedSongIndex);
 
+        await waitIntroFrames(1);
         await initThree();
 
         if (typeof initAudio === 'function') {

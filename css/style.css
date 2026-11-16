@@ -2371,5 +2371,16 @@ body.disable-animations .song-option.is-previewing .song-mini-disc {
     contain: layout style;
 }
 
+/* Khi Intro đang che kín màn hình: tạm dừng SVG mạch PCB & ẩn sơn lại Start Screen phía sau để tránh nghẽn FPS */
+body.ui2-intro-active #start-screen {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+body.ui2-intro-active #menu-bg-hexagons .ui2-pcb-flow,
+body.ui2-intro-active #menu-bg-hexagons .ui2-pcb-pins * {
+    animation-play-state: paused !important;
+}
+
 
 
