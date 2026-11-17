@@ -161,8 +161,6 @@
   "sw_desc": "Hiệu ứng vòng tròn lan tỏa khi bóng chạm khối.",
   "color_title": "Màu block đổi liên tục",
   "color_desc": "Các khối gạch tự động chuyển màu theo thời gian.",
-  "vis_title": "Audio Visualizer (Sóng nhạc)",
-  "vis_desc": "Hiển thị sóng âm thanh động ở nền.",
   "particle_title": "Hạt nền Neon (Particles)",
   "particle_desc": "Thêm bụi sáng bay trong không gian (tốn GPU).",
   "anim_title": "Block nhún (Bouncy Blocks)",

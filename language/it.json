@@ -161,8 +161,6 @@
   "sw_desc": "Effetto onda circolare quando la palla colpisce un blocco.",
   "color_title": "Colori Dinamici",
   "color_desc": "I blocchi cambiano colore automaticamente nel tempo.",
-  "vis_title": "Visualizzatore Audio",
-  "vis_desc": "Mostra onde dello spettro audio sullo sfondo.",
   "particle_title": "Particelle Neon",
   "particle_desc": "Aggiunge polvere luminosa fluttuante (uso intenso GPU).",
   "anim_title": "Blocchi Elastici",

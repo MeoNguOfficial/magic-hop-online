@@ -8,13 +8,14 @@ const targetDirs = [
     path.join(rootDir, 'android', 'app', 'src', 'main', 'assets', 'public')
 ];
 
-// 1. Quét toàn bộ file .html ở thư mục gốc (index.html, license.html, terms.html, warning.html, beat_editor.html, admin.html, ...)
+// 1. Quét toàn bộ file .html công khai ở thư mục gốc (index.html, license.html, terms.html, warning.html, ...)
 const rootFiles = fs.readdirSync(rootDir);
 const htmlFiles = rootFiles.filter(f => f.toLowerCase().endsWith('.html'));
 
 // 2. Danh sách các file & thư mục tài nguyên cần đồng bộ
 const staticFiles = [
     'manifest.json',
+    'robots.txt',
     'favicon.ico',
     'apple-touch-icon.png',
     'LICENSE',
@@ -27,8 +28,12 @@ const staticDirs = [
     'js',
     'icons',
     'language',
-    'resources'
+    'resources',
+    'admin',
+    'beat-editor'
 ];
+
+const staleRootFilesToRemove = ['admin.html', 'beat_editor.html'];
 
 const copyItems = [...htmlFiles, ...staticFiles, ...staticDirs];
 
@@ -54,10 +59,16 @@ targetDirs.forEach(targetDir => {
         fs.mkdirSync(targetDir, { recursive: true });
     }
     console.log(`[Build] Dang sao chep asset vao ${path.relative(rootDir, targetDir)}/ ...`);
-    // Dọn dẹp thư mục con www lồng nhau nếu có
+    // Dọn dẹp thư mục con www lồng nhau và các entry admin.html / beat_editor.html cũ ở root
     const nestedSubWww = path.join(targetDir, 'www');
     if (fs.existsSync(nestedSubWww)) {
         try { fs.rmSync(nestedSubWww, { recursive: true, force: true }); } catch (e) { }
+    }
+    for (const staleFile of staleRootFilesToRemove) {
+        const stalePath = path.join(targetDir, staleFile);
+        if (fs.existsSync(stalePath)) {
+            try { fs.rmSync(stalePath, { force: true }); } catch (e) { }
+        }
     }
     for (const item of copyItems) {
         const srcPath = path.join(rootDir, item);

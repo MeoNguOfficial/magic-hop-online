@@ -37,8 +37,6 @@ const toggleAntialiasing = document.getElementById('toggle-antialiasing');
 const antialiasingModeSelect = document.getElementById('antialiasing-mode-select');
 const aaStatusBadge = document.getElementById('aa-status-badge');
 const toggleDynamicColors = document.getElementById('toggle-dynamic-colors');
-const toggleVisualizer = document.getElementById('toggle-visualizer');
-const bgVisualizerCanvas = document.getElementById('bg-visualizer');
 const toggleBgParticles = document.getElementById('toggle-bg-particles');
 const toggleTileBounce = document.getElementById('toggle-tile-bounce');
 const toggleDynamicBounceSpeed = document.getElementById('toggle-dynamic-bounce-speed');
@@ -1479,46 +1477,6 @@ async function submitScoreToServer(finalScore, isNormalModePassed = false, beatH
 }
 window.submitScoreToServer = submitScoreToServer;
 
-// --- ADMIN TOOL (UI ACCOUNT TAB) ---
-const btnOpenAdminModal = document.getElementById('btn-open-admin-modal');
-if (btnOpenAdminModal) {
-    btnOpenAdminModal.addEventListener('click', () => {
-        if (adminPanelModal) {
-            if (window.UIAnimator && typeof window.UIAnimator.showModal === 'function') {
-                window.UIAnimator.showModal(adminPanelModal, adminPanelModal.firstElementChild, {
-                    staggerSelector: '.space-y-4 > *',
-                    staggerStep: 28
-                });
-            } else {
-                adminPanelModal.style.display = 'flex';
-            }
-            if (adminAutoplayToggle) {
-                adminAutoplayToggle.checked = typeof isAutoplay !== 'undefined' ? isAutoplay : false;
-            }
-            if (document.getElementById('admin-natural-autoplay-toggle')) {
-                document.getElementById('admin-natural-autoplay-toggle').checked = typeof isNaturalAutoplay !== 'undefined' ? isNaturalAutoplay : false;
-            }
-            if (adminDevModeToggle && typeof window.getDevMode === 'function') {
-                adminDevModeToggle.checked = window.getDevMode();
-            }
-            if (adminSpeedGainInput) {
-                adminSpeedGainInput.value = typeof SPEED_GAIN_PER_ROUND !== 'undefined' ? SPEED_GAIN_PER_ROUND : 0.21;
-            }
-        }
-    });
-}
-
-function checkAdminVisibility() {
-    const adminContainer = document.getElementById('admin-tools-container');
-    if (!adminContainer) return;
-
-    // Ẩn hoàn toàn container cũ đi vì tính năng quản lý đã được chuyển gọn gàng vào Tab Manage bên trong account.js
-    adminContainer.style.display = 'none';
-}
-
-// Kiểm tra định kỳ để ẩn/hiện nút Admin (Hữu ích khi tài khoản Logout / Login)
-checkAdminVisibility();
-
 // --- CREDITS & INFO MODAL ---
 if (secretCreditBtn) {
     secretCreditBtn.addEventListener('click', () => {
@@ -1587,7 +1545,6 @@ if (typeof cacheStaticResources === 'function') {
         'js/ui/personalize.js',
         'js/engine/game-effects.js',
         'js/engine/game-camera.js',
-        'js/audio/visualizer.js',
         'js/engine/game.js',
         'js/game/assists/autoplay.js',
         'js/audio/music-player.js',
@@ -2479,38 +2436,39 @@ document.addEventListener('click', (e) => {
 
 
 // ============================================================
-// IN-GAME VIEWER (Mở Beat Editor & Admin Panel qua In-Game Viewer)
+// IN-GAME VIEWER (Mở Beat Editor & Admin Panel tách luồng riêng qua In-Game Viewer)
 // + Sử dụng chung 100% localStorage (Token Admin có sẵn, không Access Denied)
-// + Không lộ token ra ngoài URL
+// + Không lộ token ra ngoài URL & không tạo link <a href> cho search bot
 // + Không cần tải lại (reload) toàn bộ game khi đóng mở
 // ============================================================
 window.openExternalWebApp = function(pathOrUrl) {
-    if (pathOrUrl.includes('admin.html')) {
-        window.openInGameViewer('admin.html', 'ADMIN DASHBOARD - BẢNG QUẢN TRỊ');
-    } else if (pathOrUrl.includes('beat_editor.html')) {
-        window.openInGameViewer('beat_editor.html', 'BEAT EDITOR PRO - BIÊN TẬP NHỊP');
+    if (!pathOrUrl) return;
+    if (pathOrUrl.includes('admin/index.html') || pathOrUrl === 'admin' || pathOrUrl === '/admin/' || pathOrUrl.includes('admin.html')) {
+        window.openInGameViewer('admin/index.html', 'ADMIN DASHBOARD - BẢNG QUẢN TRỊ');
+    } else if (pathOrUrl.includes('beat-editor/index.html') || pathOrUrl === 'beat-editor' || pathOrUrl === '/beat-editor/' || pathOrUrl.includes('beat_editor.html')) {
+        window.openInGameViewer('beat-editor/index.html', 'BEAT EDITOR PRO - BIÊN TẬP NHỊP');
     } else {
         window.openInGameViewer(pathOrUrl, 'CYBER BEAT HOPPER');
     }
 };
 
-// Đảm bảo click vào link admin.html và beat_editor.html luôn mở qua In-Game Viewer
+// Đảm bảo click vào bất kỳ link nội bộ dẫn tới luồng admin hoặc beat-editor luôn mở qua In-Game Viewer
 document.addEventListener('click', (e) => {
     const link = e.target.closest && e.target.closest('a');
     if (!link) return;
     const href = link.getAttribute('href');
     if (!href) return;
 
-    if (href.endsWith('admin.html') || href.includes('admin.html')) {
+    if (href.includes('admin/index.html') || href === '/admin/' || href.endsWith('/admin')) {
         e.preventDefault();
         e.stopPropagation();
-        window.openInGameViewer('admin.html', 'ADMIN DASHBOARD - BẢNG QUẢN TRỊ');
+        window.openInGameViewer('admin/index.html', 'ADMIN DASHBOARD - BẢNG QUẢN TRỊ');
         return;
     }
-    if (href.endsWith('beat_editor.html') || href.includes('beat_editor.html')) {
+    if (href.includes('beat-editor/index.html') || href === '/beat-editor/' || href.endsWith('/beat-editor')) {
         e.preventDefault();
         e.stopPropagation();
-        window.openInGameViewer('beat_editor.html', 'BEAT EDITOR PRO - BIÊN TẬP NHỊP');
+        window.openInGameViewer('beat-editor/index.html', 'BEAT EDITOR PRO - BIÊN TẬP NHỊP');
         return;
     }
 }, true);

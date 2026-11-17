@@ -161,8 +161,6 @@
   "sw_desc": "Cirkelvormig rimpeleffect wanneer de bal een tegel raakt.",
   "color_title": "Dynamische Blokkleuren",
   "color_desc": "Tegels veranderen automatisch van kleur.",
-  "vis_title": "Audio Visualizer",
-  "vis_desc": "Toont dynamische audiospectrumgolven op de achtergrond.",
   "particle_title": "Neondeeltjes",
   "particle_desc": "Voegt zwevende lichtdeeltjes toe (GPU-intensief).",
   "anim_title": "Verende Blokken",

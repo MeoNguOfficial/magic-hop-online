@@ -19,9 +19,6 @@ let audio, audioCtx, source, filterNode, gainNode;
 let tapeStopDelayNode = null;
 let failAudioTransitionMode = 'none';
 const _tapeStopCurveCache = new Map();
-let analyserNode = null;
-let visualizerCtx = null;
-let visDataArray = null; // Dùng chung mảng dữ liệu Visualizer để tránh GC
 let menuAudio, menuSource, menuFilterNode, menuGainNode;
 let roundStartAudio, roundStartSource, roundGainNode;
 let scoreTickAudio, scoreTickSource, newBestAudio, newBestSource;
@@ -191,12 +188,7 @@ function initAudio() {
         gainNode = audioCtx.createGain();
         gainNode.gain.value = gameVolume;
 
-        analyserNode = audioCtx.createAnalyser();
-        analyserNode.fftSize = 256;
-        analyserNode.smoothingTimeConstant = 0.7;
-
-        source.connect(analyserNode);
-        analyserNode.connect(tapeStopDelayNode);
+        source.connect(tapeStopDelayNode);
         tapeStopDelayNode.connect(filterNode);
         filterNode.connect(gainNode);
         gainNode.connect(audioCtx.destination);

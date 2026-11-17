@@ -2004,7 +2004,7 @@ function exitBeatEditor() {
         window.close();
         return;
     }
-    window.location.href = "index.html";
+    window.location.href = "../index.html";
 }
 
 if (exitNoSaveBtn) exitNoSaveBtn.onclick = () => exitBeatEditor();

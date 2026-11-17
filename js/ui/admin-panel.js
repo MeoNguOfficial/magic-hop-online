@@ -2062,9 +2062,11 @@ function bindAdminBeatmapsTableDelegation(tbody) {
                     localStorage.setItem('beatEditor_import_request', JSON.stringify(importData));
                     if (typeof logToConsole === 'function') logToConsole(`Đang mở ${map.title} trong Beat Editor...`, 'success');
                     if (typeof window.openExternalWebApp === 'function') {
-                        window.openExternalWebApp('beat_editor.html');
+                        window.openExternalWebApp('beat-editor/index.html');
+                    } else if (window.parent && window.parent !== window && typeof window.parent.openExternalWebApp === 'function') {
+                        window.parent.openExternalWebApp('beat-editor/index.html');
                     } else {
-                        window.open('beat_editor.html', '_blank');
+                        window.open('../beat-editor/index.html', '_blank', 'noopener');
                     }
                 }
             }

@@ -161,8 +161,6 @@
   "sw_desc": "Efekt kręgów po uderzeniu piłki w blok.",
   "color_title": "Dynamiczne kolory bloków",
   "color_desc": "Bloki automatycznie zmieniają kolor z czasem.",
-  "vis_title": "Wizualizator audio",
-  "vis_desc": "Wyświetla spektrum dźwięku w tle.",
   "particle_title": "Cząsteczki neonowe",
   "particle_desc": "Latający świecący pył w tle (obciąża GPU).",
   "anim_title": "Sprężyste bloki",

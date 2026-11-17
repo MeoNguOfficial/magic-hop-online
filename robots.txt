@@ -1,0 +1,14 @@
+# Cyber Beat Hopper - Search Engine Crawler Rules
+# Admin Panel (/admin/) and Beat Editor (/beat-editor/) are isolated flows and must never be indexed.
+# Removed legacy root files (/admin.html, /beat_editor.html) intentionally remain unblocked here
+# so search engines can recrawl them, observe HTTP 404 + X-Robots-Tag: noindex, and purge stale index entries.
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /admin
+Disallow: /beat-editor/
+Disallow: /beat-editor
+Disallow: /read-only/
+Disallow: /scripts/
+Disallow: /scratch/

@@ -161,8 +161,6 @@
   "sw_desc": "Top karoya dokunduğunda dairesel dalga efekti.",
   "color_title": "Dinamik Blok Rengi",
   "color_desc": "Karolar zamanla otomatik olarak renk değiştirir.",
-  "vis_title": "Ses Görselleştirici",
-  "vis_desc": "Arka planda dinamik ses spektrumu dalgaları gösterir.",
   "particle_title": "Neon Parçacıklar",
   "particle_desc": "Uzayda süzülen ışık parçacıkları ekler (GPU yoğundur).",
   "anim_title": "Zıplayan Bloklar",

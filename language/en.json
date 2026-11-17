@@ -161,8 +161,6 @@
   "sw_desc": "Circular ripple effect when the ball hits a tile.",
   "color_title": "Dynamic Block Colors",
   "color_desc": "Tiles automatically change colors over time.",
-  "vis_title": "Audio Visualizer",
-  "vis_desc": "Displays dynamic audio spectrum waves in the background.",
   "particle_title": "Neon Particles",
   "particle_desc": "Adds floating glowing dust particles in space (GPU intensive).",
   "anim_title": "Bouncy Blocks",

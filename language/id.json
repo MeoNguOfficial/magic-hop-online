@@ -161,8 +161,6 @@
   "sw_desc": "Efek riak melingkar saat bola menyentuh ubin.",
   "color_title": "Warna Blok Dinamis",
   "color_desc": "Ubin otomatis berubah warna seiring waktu.",
-  "vis_title": "Visualizer Audio",
-  "vis_desc": "Menampilkan gelombang spektrum audio dinamis di latar belakang.",
   "particle_title": "Partikel Neon",
   "particle_desc": "Menambahkan partikel cahaya melayang di ruang (berat di GPU).",
   "anim_title": "Blok Membal",

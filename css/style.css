@@ -997,8 +997,7 @@ body.disable-animations #music-progress-bar {
    GPU-FIRST COMPOSITING & ZERO-LAYOUT-THRASHING HUD OPTIMIZATION
    ============================================================ */
 #canvas-container,
-#canvas-container canvas,
-#bg-visualizer {
+#canvas-container canvas {
     contain: strict;
     transform: translate3d(0, 0, 0);
     will-change: transform;

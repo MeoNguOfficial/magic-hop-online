@@ -528,8 +528,8 @@ function renderLoggedInState(user) {
                     </div>
                     <p class="text-xs text-gray-400 mb-4 font-orbitron" data-i18n="admin_dashboard_tools">${t('admin_dashboard_tools')}</p>
                     <div class="space-y-2">
-                        <a href="admin.html" onclick="event.preventDefault(); window.openExternalWebApp('admin.html');" target="_blank" class="w-full block py-3 text-xs font-bold text-white bg-pink-600/80 hover:bg-pink-500 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(236,72,153,0.3)] cursor-pointer">Admin Dashboard</a>
-                        <a href="beat_editor.html" onclick="event.preventDefault(); window.openExternalWebApp('beat_editor.html');" target="_blank" class="w-full block py-3 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] text-center cursor-pointer">Beat Editor Pro</a>
+                        <button type="button" onclick="window.openExternalWebApp('admin/index.html');" class="w-full block py-3 text-xs font-bold text-white bg-pink-600/80 hover:bg-pink-500 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(236,72,153,0.3)] cursor-pointer">Admin Dashboard</button>
+                        <button type="button" onclick="window.openExternalWebApp('beat-editor/index.html');" class="w-full block py-3 text-xs font-bold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-950/20 rounded uppercase font-orbitron transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)] text-center cursor-pointer">Beat Editor Pro</button>
                         <button id="btn-open-admin-modal-inside" class="w-full py-3 text-xs font-bold text-pink-400 border border-pink-500/30 hover:bg-pink-950/20 rounded uppercase font-orbitron transition-all" data-i18n="admin_open_ingame">${t('admin_open_ingame')}</button>
                     </div>
                 </div>

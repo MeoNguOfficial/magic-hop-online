@@ -161,8 +161,6 @@
   "sw_desc": "Kesan riak bulat apabila bola menyentuh jubin.",
   "color_title": "Warna Blok Dinamik",
   "color_desc": "Jubin bertukar warna secara automatik dari semasa ke semasa.",
-  "vis_title": "Penvisual Audio",
-  "vis_desc": "Memaparkan gelombang spektrum audio dinamik di latar belakang.",
   "particle_title": "Zarah Neon",
   "particle_desc": "Menambah zarah cahaya terapung di angkasa (berat pada GPU).",
   "anim_title": "Blok Melantun",

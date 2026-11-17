@@ -67,7 +67,6 @@ const CORE_ASSETS = [
     './js/ui/personalize.js',
     './js/engine/game-effects.js',
     './js/engine/game-camera.js',
-    './js/audio/visualizer.js',
     './js/engine/antialiasing.js',
     './js/engine/adaptive-performance.js',
     './js/engine/fps-graph.js',
@@ -82,10 +81,7 @@ const CORE_ASSETS = [
     './js/game/modes/asian-mode.js',
     './js/ui/account.js',
     './js/ui/chat.js',
-    './js/ui/admin-panel.js',
     './js/core/pwa-installer.js',
-    './beat_editor.html',
-    './admin.html',
     './terms.html',
     './license.html',
     './js/core/mobile-app.js',
@@ -151,6 +147,9 @@ self.addEventListener('fetch', event => {
 
     // Bỏ qua file âm thanh
     if (url.pathname.match(/\.(mp3|m4a|wav|ogg)$/i)) return;
+
+    // Tách riêng luồng Admin Panel & Beat Editor: không precache hay giữ trong DYNAMIC_CACHE của game
+    if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/beat-editor')) return;
 
     // Không bao giờ cache version.json để tránh thông báo sai phiên bản sau khi đã cập nhật
     if (url.pathname.endsWith('/version.json')) {

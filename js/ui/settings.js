@@ -17,7 +17,6 @@ const VALID_LOCAL_STORAGE_KEYS = new Set([
     'antialiasingMode',
     'shockwavesEnabled',
     'dynamicColorsEnabled',
-    'visualizerEnabled',
     'tileBounceEnabled',
     'dynamicBounceSpeedEnabled',
     'blockShatterEnabled',
@@ -220,7 +219,6 @@ window.performanceModeEnabled = performanceModeEnabled;
 window.currentGraphicsQuality = currentGraphicsQuality;
 let shockwavesEnabled = JSON.parse(localStorage.getItem('shockwavesEnabled')) !== false;
 let dynamicColorsEnabled = JSON.parse(localStorage.getItem('dynamicColorsEnabled')) !== false;
-let visualizerEnabled = JSON.parse(localStorage.getItem('visualizerEnabled')) === true;
 let tileBounceEnabled = JSON.parse(localStorage.getItem('tileBounceEnabled') !== null ? localStorage.getItem('tileBounceEnabled') : localStorage.getItem('tileAnimationsEnabled')) !== false;
 let dynamicBounceSpeedEnabled = JSON.parse(localStorage.getItem('dynamicBounceSpeedEnabled')) === true; // Mặc định false (không biến thiên theo speed)
 let blockShatterEnabled = JSON.parse(localStorage.getItem('blockShatterEnabled')) !== false;
@@ -978,7 +976,6 @@ if (performanceModeEnabled) {
     window.antialiasingMode = 'off';
     window.antialiasingEnabled = false;
     shockwavesEnabled = false;
-    visualizerEnabled = false;
     tileBounceEnabled = false;
     dynamicBounceSpeedEnabled = false;
     blockShatterEnabled = false;
@@ -1287,7 +1284,6 @@ function applySettings() {
                     antialiasingMode: localStorage.getItem('antialiasingMode') || (localStorage.getItem('antialiasingEnabled') === 'false' ? 'off' : 'auto'),
                     antialiasingEnabled: localStorage.getItem('antialiasingEnabled') !== 'false',
                     shockwavesEnabled: localStorage.getItem('shockwavesEnabled') !== 'false',
-                    visualizerEnabled: localStorage.getItem('visualizerEnabled') === 'true',
                     tileBounceEnabled: localStorage.getItem('tileBounceEnabled') !== 'false',
                     dynamicBounceSpeedEnabled: localStorage.getItem('dynamicBounceSpeedEnabled') === 'true',
                     blockShatterEnabled: localStorage.getItem('blockShatterEnabled') !== 'false',
@@ -1327,11 +1323,6 @@ function applySettings() {
                             const val = backup.shockwavesEnabled === true || backup.shockwavesEnabled === 'true';
                             localStorage.setItem('shockwavesEnabled', val);
                             if (toggleShockwaves) toggleShockwaves.checked = val;
-                        }
-                        if (backup.visualizerEnabled !== undefined) {
-                            const val = backup.visualizerEnabled === true || backup.visualizerEnabled === 'true';
-                            localStorage.setItem('visualizerEnabled', val);
-                            if (toggleVisualizer) toggleVisualizer.checked = val;
                         }
                         if (backup.tileBounceEnabled !== undefined || backup.tileAnimationsEnabled !== undefined) {
                             const val = (backup.tileBounceEnabled !== undefined) ?
@@ -1393,7 +1384,6 @@ function applySettings() {
         antialiasingEnabled = false;
         window.antialiasingEnabled = false;
         shockwavesEnabled = false;
-        visualizerEnabled = false;
         tileBounceEnabled = false;
         dynamicBounceSpeedEnabled = false;
         ballGlowEnabled = false;
@@ -1408,9 +1398,6 @@ function applySettings() {
         if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.value = 'off';
         if (toggleAntialiasing) toggleAntialiasing.checked = false;
         if (toggleShockwaves) toggleShockwaves.checked = false;
-        if (toggleVisualizer) toggleVisualizer.checked = false;
-        const canvasEl = document.getElementById('bg-visualizer');
-        if (canvasEl) canvasEl.style.display = 'none';
         if (toggleTileBounce) toggleTileBounce.checked = false;
         if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.checked = false;
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.checked = false;
@@ -1430,7 +1417,6 @@ function applySettings() {
         if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.disabled = true;
         if (toggleAntialiasing) toggleAntialiasing.disabled = true;
         if (toggleShockwaves) toggleShockwaves.disabled = true;
-        if (toggleVisualizer) toggleVisualizer.disabled = true;
         if (toggleTileBounce) toggleTileBounce.disabled = true;
         if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.disabled = true;
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.disabled = true;
@@ -1459,7 +1445,6 @@ function applySettings() {
         if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.disabled = false;
         if (toggleAntialiasing) toggleAntialiasing.disabled = false;
         if (toggleShockwaves) toggleShockwaves.disabled = false;
-        if (toggleVisualizer) toggleVisualizer.disabled = false;
         if (toggleTileBounce) toggleTileBounce.disabled = false;
         if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.disabled = !tileBounceEnabled;
         if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.disabled = false;
@@ -1747,14 +1732,6 @@ function applySettings() {
     if (toggleDynamicColors) {
         dynamicColorsEnabled = toggleDynamicColors.checked;
         localStorage.setItem('dynamicColorsEnabled', dynamicColorsEnabled);
-    }
-    if (toggleVisualizer && !performanceModeEnabled) {
-        visualizerEnabled = toggleVisualizer.checked;
-        localStorage.setItem('visualizerEnabled', visualizerEnabled);
-        const canvasEl = document.getElementById('bg-visualizer');
-        if (canvasEl) {
-            canvasEl.style.display = visualizerEnabled ? 'block' : 'none';
-        }
     }
     if (toggleTileBounce && !performanceModeEnabled) {
         tileBounceEnabled = toggleTileBounce.checked;
@@ -2476,7 +2453,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof antialiasingModeSelect !== 'undefined' && antialiasingModeSelect) antialiasingModeSelect.addEventListener('change', applySettings);
     if (toggleAntialiasing) toggleAntialiasing.addEventListener('change', applySettings);
     if (toggleDynamicColors) toggleDynamicColors.addEventListener('change', applySettings);
-    if (toggleVisualizer) toggleVisualizer.addEventListener('change', applySettings);
     if (toggleTileBounce) toggleTileBounce.addEventListener('change', applySettings);
     if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.addEventListener('change', applySettings);
     if (typeof toggleBlockShatter !== 'undefined' && toggleBlockShatter) toggleBlockShatter.addEventListener('change', applySettings);

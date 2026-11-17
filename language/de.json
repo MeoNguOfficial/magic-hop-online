@@ -161,8 +161,6 @@
   "sw_desc": "Kreisförmiger Welleneffekt beim Auftreffen auf ein Feld.",
   "color_title": "Dynamische Blockfarben",
   "color_desc": "Blöcke ändern mit der Zeit automatisch ihre Farbe.",
-  "vis_title": "Audio-Visualizer",
-  "vis_desc": "Zeigt dynamische Audio-Spektrumwellen im Hintergrund.",
   "particle_title": "Neon-Partikel",
   "particle_desc": "Fügt schwebende leuchtende Staubpartikel hinzu (GPU-intensiv).",
   "anim_title": "Federnde Blöcke",

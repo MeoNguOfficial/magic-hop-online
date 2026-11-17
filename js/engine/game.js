@@ -1065,10 +1065,6 @@ function onWindowResize() {
     camera.fov = aspect < 1 ? 75 : 60;
     camera.updateProjectionMatrix();
     renderer.setSize(width, height);
-    if (bgVisualizerCanvas) {
-        bgVisualizerCanvas.width = width;
-        bgVisualizerCanvas.height = height;
-    }
 
 
 
@@ -1701,12 +1697,6 @@ async function initThree() {
     renderer.setClearColor(scene.fog.color);
     container.appendChild(renderer.domElement);
 
-    if (bgVisualizerCanvas) {
-        bgVisualizerCanvas.width = window.innerWidth;
-        bgVisualizerCanvas.height = window.innerHeight;
-        visualizerCtx = bgVisualizerCanvas.getContext('2d');
-    }
-
     // Ánh sáng môi trường dịu nhẹ, cân bằng phổ RGB tránh làm mất màu/đen ngòm nửa dưới quả bóng
     const ambientLight = new THREE.AmbientLight(0x3a4866, ambientIntensity);
     scene.add(ambientLight);
@@ -1729,7 +1719,6 @@ async function initThree() {
     // --- KHỞI TẠO CÁC MANAGER HIỆU ỨNG & CAMERA ---
     if (typeof GameEffectsManager !== 'undefined') GameEffectsManager.init(scene);
     if (typeof GameCameraManager !== 'undefined') GameCameraManager.init(camera);
-    if (typeof VisualizerManager !== 'undefined') VisualizerManager.init(bgVisualizerCanvas, analyserNode);
 
     // --- HẠT NỀN NEON DUST ---
     initParticles();
@@ -2244,7 +2233,6 @@ async function initThree() {
     if (toggleAntialiasing) toggleAntialiasing.checked = antialiasingEnabled;
     if (typeof window.updateAntiAliasingStatusUI === 'function') window.updateAntiAliasingStatusUI();
     if (toggleDynamicColors) toggleDynamicColors.checked = dynamicColorsEnabled;
-    if (toggleVisualizer) toggleVisualizer.checked = visualizerEnabled;
     if (toggleBgParticles) toggleBgParticles.checked = bgParticlesEnabled;
     if (toggleTileBounce) toggleTileBounce.checked = tileBounceEnabled;
     if (typeof toggleDynamicBounceSpeed !== 'undefined' && toggleDynamicBounceSpeed) toggleDynamicBounceSpeed.checked = (typeof dynamicBounceSpeedEnabled !== 'undefined' ? dynamicBounceSpeedEnabled : false);
@@ -2999,12 +2987,10 @@ let dashStartCenterHit = false;
 window.isDashing = false;
 window.dashTargetTile = null;
 
-// FPS Counter & Visualizer / Trail Cache Variables
+// FPS Counter & Cache Variables
 let fpsLastTime = performance.now();
 let fpsFrameCount = 0;
 let lastFrameTime = performance.now();
-let cachedBarData = [];
-let visualizerWasCleared = false;
 let fpsHudEl = null;
 const IS_MOBILE = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 window.IS_MOBILE = IS_MOBILE;
@@ -3237,12 +3223,6 @@ function animate(rafTime) {
             } else if (autoResult.targetX !== null && !isInEndingTransition) {
                 ballTargetX = autoResult.targetX;
             }
-        }
-
-        // --- RENDER VISUALIZER ---
-        if (typeof VisualizerManager !== 'undefined') {
-            const nowTime = clock.getElapsedTime();
-            VisualizerManager.update(nowTime, isPlaying, isFailTransition, isHoldExit, currentGraphicsQuality);
         }
 
         // --- ĐỒNG BỘ ROUND & TỐC ĐỘ (ĐỒ THỊ TUYẾN TÍNH y = ax + b) ---
@@ -4521,12 +4501,7 @@ function animate(rafTime) {
                 if (_ledBoardElapsed > 3600.0) _ledBoardElapsed -= 3600.0;
                 ledBoardUniforms.uTime.value = _ledBoardElapsed;
 
-                let targetPulse = 0.15 + 0.12 * Math.sin(_ledBoardElapsed * 2.5);
-                if (isPlaying && window.VisualizerManager && window.VisualizerManager.cachedBarData && window.VisualizerManager.cachedBarData.length > 0) {
-                    const bars = window.VisualizerManager.cachedBarData;
-                    const mid = bars.length >> 1;
-                    targetPulse = (bars[mid] || 0) * 0.65 + (bars[0] || 0) * 0.35;
-                }
+                const targetPulse = 0.15 + 0.12 * Math.sin(_ledBoardElapsed * 2.5);
                 _ledBoardPulse += (targetPulse - _ledBoardPulse) * (1 - Math.exp(-12.0 * delta));
                 ledBoardUniforms.uPulse.value = _ledBoardPulse;
                 ledBoardMesh.matrix.elements[14] = camera.position.z - 175;

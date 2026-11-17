@@ -126,8 +126,6 @@
   "sw_desc": "球擊中方塊時的擴散漣漪效果。",
   "color_title": "動態方塊顏色",
   "color_desc": "方塊隨着時間推移自動變色。",
-  "vis_title": "音訊視覺化 (Audio Visualizer)",
-  "vis_desc": "在背景中顯示動態音訊頻譜波浪。",
   "anim_title": "方塊下壓彈跳 (Bouncy Blocks)",
   "anim_desc": "球接觸時方塊會輕微下沉並彈起。",
   "block_shatter_title": "方塊碎裂特效 (Block Shatter)",

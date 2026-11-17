@@ -160,8 +160,6 @@
   "sw_desc": "Efeito de onda circular quando a bola atinge um bloco.",
   "color_title": "Cores dinâmicas dos blocos",
   "color_desc": "Os blocos mudam de cor automaticamente ao longo do tempo.",
-  "vis_title": "Visualizador de áudio (Audio Visualizer)",
-  "vis_desc": "Exibe ondas de espectro de áudio dinâmicas em segundo plano.",
   "particle_title": "Partículas de néon (Particles)",
   "particle_desc": "Adiciona poeira brilhante flutuante no espaço (uso intensivo de GPU).",
   "anim_title": "Blocos saltitantes (Bouncy Blocks)",
