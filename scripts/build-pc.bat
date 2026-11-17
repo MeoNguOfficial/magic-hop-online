@@ -16,10 +16,10 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
-:: 2. Bien dich trinh khoi chay C# CyberBeatHopper.exe
-echo [2/4] Dang bien dich CyberBeatHopper.exe bang C# Compiler ...
+:: 2. Bien dich trinh khoi chay C# CyberBeatHopper.exe (Roslyn C# moi nhat tu .NET SDK)
+echo [2/4] Dang bien dich CyberBeatHopper.exe bang Roslyn C# Compiler ...
 if not exist "dist-pc" mkdir "dist-pc"
-"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /win32icon:"src-pc\app.ico" /optimize+ /out:"dist-pc\CyberBeatHopper.exe" "src-pc\Program.cs"
+powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\compile-pc.ps1" -Source "src-pc\Program.cs" -Icon "src-pc\app.ico" -Output "dist-pc\CyberBeatHopper.exe"
 if %errorlevel% neq 0 (
     echo [LOI] Bien dich CyberBeatHopper.exe that bai!
     pause
@@ -35,7 +35,7 @@ xcopy /e /i /y "www\*" "dist-pc\www\" >nul
 echo [4/4] Dang nen file ZIP phat hanh ...
 for /f "delims=" %%v in ('node -p "require('./package.json').version"') do set "APP_VER=%%v"
 set "ZIP_PATH=dist-pc\CyberBeatHopper-v%APP_VER%-PC.zip"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path '%ZIP_PATH%') { Remove-Item -Force '%ZIP_PATH%' }; Compress-Archive -Path 'dist-pc\CyberBeatHopper.exe','dist-pc\www' -DestinationPath '%ZIP_PATH%' -CompressionLevel Optimal"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ProgressPreference = 'SilentlyContinue'; if (Test-Path '%ZIP_PATH%') { Remove-Item -Force '%ZIP_PATH%' }; Compress-Archive -Path 'dist-pc\CyberBeatHopper.exe','dist-pc\www' -DestinationPath '%ZIP_PATH%' -CompressionLevel Optimal"
 if %errorlevel% neq 0 (
     echo [LOI] Nen file ZIP that bai!
     pause
