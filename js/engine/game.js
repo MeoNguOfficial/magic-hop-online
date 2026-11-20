@@ -473,43 +473,66 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
     }
 }
 
-// --- HỆ THỐNG HIỂN THỊ SCORE & COMBO PERFECT TỐI ƯU TUYỆT ĐỐI (GPU-ONLY, ZERO-REFLOW, ZERO-GC PRE-CACHED LOOKUPS) ---
+// --- HỆ THỐNG HIỂN THỊ SCORE & COMBO PERFECT SIÊU NHẸ (ZERO-BLUR, ZERO-REFLOW, ZERO-GC) ---
 const MAX_COMBO_PRECACHE = 600;
 const COMBO_TEXT_CACHE = new Array(MAX_COMBO_PRECACHE);
-const COMBO_CLASS_CACHE_A = new Array(MAX_COMBO_PRECACHE);
-const COMBO_CLASS_CACHE_B = new Array(MAX_COMBO_PRECACHE);
 
 for (let i = 1; i < MAX_COMBO_PRECACHE; i++) {
     COMBO_TEXT_CACHE[i] = 'PERFECT x' + i;
-    let tier = 'combo-tier-1';
-    if (i >= 15) tier = 'combo-tier-4';
-    else if (i >= 8) tier = 'combo-tier-3';
-    else if (i >= 5) tier = 'combo-tier-2';
-    const baseComboClass = 'text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none py-2 px-5 combo-visible ' + tier;
-    COMBO_CLASS_CACHE_A[i] = baseComboClass + ' combo-pop-a';
-    COMBO_CLASS_CACHE_B[i] = baseComboClass + ' combo-pop-b';
 }
 
 let comboHideDeadline = 0;
 let comboAnimToggle = false;
+let lastComboVisible = false;
+let lastComboTierClass = '';
 
 function triggerPerfectComboUI(comboCount) {
     if (!comboEl) return;
 
-    const animAllowed = (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+    const isLowPerf = (typeof performanceModeEnabled !== 'undefined' && performanceModeEnabled) ||
+        (typeof currentGraphicsQuality !== 'undefined' && currentGraphicsQuality === 'simple');
+    const animAllowed = !isLowPerf && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
     comboAnimToggle = !comboAnimToggle;
 
-    // 1. Gán Text & Dual-Keyframe Class từ Cache O(1) - Zero Allocation & Zero Forced Reflow
+    // 1. Gán Text từ Cache O(1) - Zero Allocation
     const newText = COMBO_TEXT_CACHE[comboCount] || ('PERFECT x' + comboCount);
     if (comboEl.textContent !== newText) {
         comboEl.textContent = newText;
     }
-    const cacheIdx = comboCount < MAX_COMBO_PRECACHE ? comboCount : (MAX_COMBO_PRECACHE - 1);
-    const classCache = comboAnimToggle ? COMBO_CLASS_CACHE_A : COMBO_CLASS_CACHE_B;
-    comboEl.className = classCache[cacheIdx] || classCache[MAX_COMBO_PRECACHE - 1];
 
-    // 2. Bật nhẹ Score khi chạm Perfect (chỉ animate GPU transform, giữ nguyên class màu mode)
-    if (scoreEl && animAllowed) {
+    // 2. Chỉ cập nhật token class thực sự thay đổi (không ghi đè lại 9 class layout cố định)
+    if (!lastComboVisible) {
+        comboEl.classList.remove('opacity-0');
+        comboEl.classList.add('combo-visible');
+        lastComboVisible = true;
+    }
+
+    let tierClass = 'combo-tier-1';
+    if (comboCount >= 15) tierClass = 'combo-tier-4';
+    else if (comboCount >= 8) tierClass = 'combo-tier-3';
+    else if (comboCount >= 5) tierClass = 'combo-tier-2';
+
+    if (lastComboTierClass !== tierClass) {
+        if (lastComboTierClass) comboEl.classList.remove(lastComboTierClass);
+        comboEl.classList.add(tierClass);
+        lastComboTierClass = tierClass;
+    }
+
+    if (animAllowed) {
+        if (comboAnimToggle) {
+            comboEl.classList.remove('combo-pop-b');
+            comboEl.classList.add('combo-pop-a');
+        } else {
+            comboEl.classList.remove('combo-pop-a');
+            comboEl.classList.add('combo-pop-b');
+        }
+    } else if (comboEl.classList.contains('combo-pop-a') || comboEl.classList.contains('combo-pop-b')) {
+        comboEl.classList.remove('combo-pop-a', 'combo-pop-b');
+    }
+
+    // 3. Bật nhẹ Score khi chạm Perfect trên máy đủ khỏe (bỏ qua trên mobile / low-perf để tránh rasterize lại text-shadow lớn)
+    const isMobileEnv = typeof window !== 'undefined' && window.IS_MOBILE;
+    if (scoreEl && animAllowed && !isMobileEnv) {
         if (comboAnimToggle) {
             scoreEl.classList.remove('score-pop-b');
             scoreEl.classList.add('score-pop-a');
@@ -519,15 +542,16 @@ function triggerPerfectComboUI(comboCount) {
         }
     }
 
-    // 3. Smooth Zoom Out tự động sau 1.5 giây bằng deadline frame-driven (Zero GC timer)
+    // 4. Smooth Zoom Out tự động sau 1.5 giây bằng deadline frame-driven (Zero GC timer)
     comboHideDeadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 1500;
 }
 
 function clearPerfectComboUI() {
     comboHideDeadline = 0;
+    lastComboVisible = false;
 
     if (comboEl) {
-        // Gỡ pop class trước khi bỏ combo-visible để CSS transition zoom-fade-out chạy mượt
+        // Gỡ pop class trước khi bỏ combo-visible để CSS transition thu gọn mượt mà
         comboEl.classList.remove('combo-visible', 'combo-pop-a', 'combo-pop-b');
     }
     if (scoreEl) {
