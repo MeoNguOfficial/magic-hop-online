@@ -37,7 +37,7 @@ const availableLangs = [
 ];
 
 // Tải dữ liệu ngôn ngữ từ thư mục language/ (tải trước ngôn ngữ đang dùng + fallback 'en' để tăng tốc khởi động, các ngôn ngữ khác lazy-load khi chọn)
-const langCacheTag = (typeof window !== 'undefined' && (window.ASSET_CACHE_TAG || window.SCRIPT_BUILD_VERSION)) || '1.1.0-10';
+const langCacheTag = (typeof window !== 'undefined' && (window.ASSET_CACHE_TAG || window.SCRIPT_BUILD_VERSION)) || '1.1.0-11';
 const langPromises = {};
 
 function ensureLanguageLoaded(lang) {

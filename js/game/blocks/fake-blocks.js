@@ -379,12 +379,16 @@ window.FakeBlocksManager = {
         const realHex = (realTile.userData && realTile.userData.themeColor !== undefined)
             ? realTile.userData.themeColor
             : (realMat && realMat.color ? realMat.color.getHex() : 0x00ffff);
+        const staticHex = (realHex === 0xff00ff) ? 0xff00ff : 0x00ffff;
+        const liveDynamicHex = (isDynamicMode && realMat && realMat.color)
+            ? realMat.color.getHex()
+            : ((typeof currentFrameHex !== 'undefined') ? currentFrameHex : realHex);
         const targetMatSet = isDynamicMode
             ? this._sharedFakeMats.dynamic
-            : (realHex === 0xff00ff ? this._sharedFakeMats.magenta : this._sharedFakeMats.cyan);
-        if (isDynamicMode && realMat && realMat.color && this._lastDynamicHex !== realHex) {
-            this._lastDynamicHex = realHex;
-            this._syncMatSetColorAndOpacity(this._sharedFakeMats.dynamic, realHex, realMat.color);
+            : (staticHex === 0xff00ff ? this._sharedFakeMats.magenta : this._sharedFakeMats.cyan);
+        if (isDynamicMode && realMat && realMat.color && this._lastDynamicHex !== liveDynamicHex) {
+            this._lastDynamicHex = liveDynamicHex;
+            this._syncMatSetColorAndOpacity(this._sharedFakeMats.dynamic, liveDynamicHex, realMat.color);
         }
 
         for (let pIdx = 0; pIdx < positionsToSpawn.length; pIdx++) {
@@ -431,7 +435,8 @@ window.FakeBlocksManager = {
             fud.baseY = 0;
             fud.targetZ = targetZVal;
             fud.scale = realTile.userData.scale || 1.0;
-            fud.themeColor = realTile.userData.themeColor;
+            fud.staticThemeColor = staticHex;
+            fud.themeColor = isDynamicMode ? liveDynamicHex : staticHex;
             fud.isEntering = realTile.userData.isEntering || false;
             fud.isDelayedAppearance = realTile.userData.isDelayedAppearance || false;
             
@@ -915,17 +920,36 @@ window.FakeBlocksManager = {
         }
     },
 
-    shatterTile: function(fTile) {
+    shatterTile: function(fTile, frameHex) {
         if (typeof blockShatterEnabled !== 'undefined' && !blockShatterEnabled) return;
         if (!this.fragments) this.fragments = [];
         this.prewarmFragmentPool();
-        
+
+        const isDynamicMode = typeof dynamicColorsEnabled !== 'undefined' && dynamicColorsEnabled;
         let hexColor = 0x00ffff;
-        if (fTile.userData && fTile.userData.themeColor) {
-            hexColor = fTile.userData.themeColor;
-        } else if (fTile.material && fTile.material.color) {
-            hexColor = fTile.material.color.getHex();
+        if (isDynamicMode) {
+            if (frameHex !== undefined) {
+                hexColor = frameHex;
+            } else if (this._lastDynamicHex !== undefined && this._lastDynamicHex !== -1) {
+                hexColor = this._lastDynamicHex;
+            } else if (fTile && fTile.material && fTile.material.color) {
+                hexColor = fTile.material.color.getHex();
+            } else if (typeof currentFrameHex !== 'undefined') {
+                hexColor = currentFrameHex;
+            } else if (fTile && fTile.userData && fTile.userData.themeColor !== undefined) {
+                hexColor = fTile.userData.themeColor;
+            }
+        } else {
+            if (fTile && fTile.material && fTile.material.color) {
+                hexColor = fTile.material.color.getHex();
+            } else if (fTile && fTile.userData && fTile.userData.themeColor !== undefined) {
+                hexColor = fTile.userData.themeColor;
+            }
         }
+
+        const staticColorHex = (fTile && fTile.userData && fTile.userData.staticThemeColor !== undefined)
+            ? fTile.userData.staticThemeColor
+            : hexColor;
         
         const isMobile = (typeof window.IS_MOBILE !== 'undefined') ? window.IS_MOBILE : /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         const count = isMobile ? 5 : 6;
@@ -988,6 +1012,8 @@ window.FakeBlocksManager = {
             frUd.ry = ry;
             frUd.rz = rz;
             frUd.opacity = 0.95;
+            frUd.staticHex = staticColorHex;
+            frUd.lastDynamicHex = isDynamicMode ? hexColor : -1;
             
             this.fragments.push(frag);
         }
@@ -1015,16 +1041,24 @@ window.FakeBlocksManager = {
         const isSlidingMode = animMode === 'slide' || animMode === 'mix';
         const enterSpeed = isSlidingMode ? (1 - Math.exp(-12 * Math.max(1.0, safeGameSpeed * 0.8) * delta)) : 1.0;
 
-        if (isDynamicMode && hasFakeTiles) {
-            let hex = frameHex;
-            if (hex === undefined && typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
+        let activeDynamicHex = undefined;
+        let syncedColorObj = null;
+        if (isDynamicMode) {
+            activeDynamicHex = frameHex;
+            if (activeDynamicHex === undefined && typeof clock !== 'undefined' && typeof tempColor !== 'undefined') {
                 const hue = (clock.getElapsedTime() * 0.2) % 1;
                 tempColor.setHSL(hue, 0.8, 0.5);
-                hex = tempColor.getHex();
+                activeDynamicHex = tempColor.getHex();
+                syncedColorObj = tempColor;
+            } else if (activeDynamicHex !== undefined && typeof tempColor !== 'undefined' && tempColor.getHex() === activeDynamicHex) {
+                syncedColorObj = tempColor;
             }
-            if (hex !== undefined && this._lastDynamicHex !== hex && this._sharedFakeMats && this._sharedFakeMats.dynamic) {
-                this._lastDynamicHex = hex;
-                this._syncMatSetColorAndOpacity(this._sharedFakeMats.dynamic, hex, typeof tempColor !== 'undefined' ? tempColor : null);
+            if (activeDynamicHex === undefined && this._lastDynamicHex !== -1) {
+                activeDynamicHex = this._lastDynamicHex;
+            }
+            if (hasFakeTiles && activeDynamicHex !== undefined && this._lastDynamicHex !== activeDynamicHex && this._sharedFakeMats && this._sharedFakeMats.dynamic) {
+                this._lastDynamicHex = activeDynamicHex;
+                this._syncMatSetColorAndOpacity(this._sharedFakeMats.dynamic, activeDynamicHex, syncedColorObj);
             }
         }
         
@@ -1042,10 +1076,12 @@ window.FakeBlocksManager = {
                         const exitSet = this._exitingMatPool.length > 0
                             ? this._exitingMatPool.pop()
                             : this._createFakeMatSet(fTile, 0x00ffff);
-                        const activeHex = (this._lastDynamicHex !== -1 && isDynamicMode)
-                            ? this._lastDynamicHex
-                            : (fTile.userData.themeColor !== undefined ? fTile.userData.themeColor : 0x00ffff);
-                        this._syncMatSetColorAndOpacity(exitSet, activeHex);
+                        const activeHex = (isDynamicMode && activeDynamicHex !== undefined)
+                            ? activeDynamicHex
+                            : ((this._lastDynamicHex !== -1 && isDynamicMode)
+                                ? this._lastDynamicHex
+                                : (fTile.userData.themeColor !== undefined ? fTile.userData.themeColor : 0x00ffff));
+                        this._syncMatSetColorAndOpacity(exitSet, activeHex, isDynamicMode ? syncedColorObj : null);
                         fTile.userData._exitMatSet = exitSet;
                         this._applyFakeMatSet(fTile, exitSet);
                     }
@@ -1102,8 +1138,19 @@ window.FakeBlocksManager = {
                 if (!fTile.visible && !fTile.userData.isDelayedAppearance) fTile.visible = true;
             }
 
-            if (isDynamicMode && this._sharedFakeMats && this._sharedFakeMats.dynamic && fTile.material !== this._sharedFakeMats.dynamic.bodyMat) {
-                this._applyFakeMatSet(fTile, this._sharedFakeMats.dynamic);
+            if (isDynamicMode) {
+                if (this._sharedFakeMats && this._sharedFakeMats.dynamic && fTile.material !== this._sharedFakeMats.dynamic.bodyMat) {
+                    this._applyFakeMatSet(fTile, this._sharedFakeMats.dynamic);
+                }
+                if (activeDynamicHex !== undefined) {
+                    fTile.userData.themeColor = activeDynamicHex;
+                }
+            } else if (this._sharedFakeMats && this._sharedFakeMats.dynamic && fTile.material === this._sharedFakeMats.dynamic.bodyMat) {
+                const staticSet = (fTile.userData.staticThemeColor === 0xff00ff)
+                    ? this._sharedFakeMats.magenta
+                    : this._sharedFakeMats.cyan;
+                if (staticSet) this._applyFakeMatSet(fTile, staticSet);
+                fTile.userData.themeColor = fTile.userData.staticThemeColor !== undefined ? fTile.userData.staticThemeColor : 0x00ffff;
             }
             
             // Xử lý xuất hiện trễ (đồng bộ thời gian phản xạ theo Round với block thật ở tốc độ 1x chuẩn: Warmup & Round 1 = 1.0s, chia đều 10 Round tới min 0.25s ở Round 10)
@@ -1161,8 +1208,8 @@ window.FakeBlocksManager = {
                                 playBreakBlockSound();
                             }
                             
-                            // Tạo các mảnh vỡ
-                            this.shatterTile(fTile);
+                            // Tạo các mảnh vỡ (đồng bộ đúng màu động / tĩnh tại thời điểm vỡ)
+                            this.shatterTile(fTile, activeDynamicHex);
                             
                             // Dọn dẹp & thu hồi khối fake lập tức
                             this._recycleTile(fTile);
@@ -1206,7 +1253,21 @@ window.FakeBlocksManager = {
                 
                 frag.userData.opacity -= 1.2 * delta;
                 const currentOp = Math.max(0, frag.userData.opacity);
-                if (frag.material) frag.material.opacity = currentOp;
+                if (frag.material) {
+                    frag.material.opacity = currentOp;
+                    if (frag.material.color) {
+                        if (isDynamicMode && activeDynamicHex !== undefined) {
+                            if (frag.userData.lastDynamicHex !== activeDynamicHex) {
+                                if (syncedColorObj) frag.material.color.copy(syncedColorObj);
+                                else frag.material.color.setHex(activeDynamicHex);
+                                frag.userData.lastDynamicHex = activeDynamicHex;
+                            }
+                        } else if (!isDynamicMode && frag.userData.lastDynamicHex !== undefined && frag.userData.lastDynamicHex !== -1) {
+                            frag.material.color.setHex(frag.userData.staticHex !== undefined ? frag.userData.staticHex : 0x00ffff);
+                            frag.userData.lastDynamicHex = -1;
+                        }
+                    }
+                }
                 
                 if (frag.position.y < -20 || currentOp <= 0) {
                     frag.visible = false;
@@ -1243,6 +1304,7 @@ window.FakeBlocksManager = {
         this.lastRowId = null;
         this.realBlocksOnCurrentZ = 0;
         this.usedSlotsOnCurrentZ = [];
+        this._lastDynamicHex = -1;
     },
     
     destroy: function() {
