@@ -473,79 +473,11 @@ function triggerShockwave(tile, themeColor, customOffsetScale = 1.0, tileScale =
     }
 }
 
-// --- HỆ THỐNG HIỂN THỊ COMBO PERFECT TỐI ƯU HỆ THỐNG 60/120 FPS ---
-let lastPerfectComboText = "";
-let lastPerfectComboClass = "";
-let lastPerfectAnimTime = 0;
-
-// DOM Element Pools (Tái sử dụng phần tử DOM để tránh rác RAM & khựng lag)
-const MAX_SPARKS_POOL = 16;
-const sparkPool = [];
-let sparkPoolInitialized = false;
-let ghostElement = null;
-
-function initComboUiPools() {
-    const container = typeof comboUiWrapper !== 'undefined' && comboUiWrapper ? comboUiWrapper : (document.getElementById('combo-ui-wrapper') || (comboEl ? comboEl.parentElement : null));
-    if (!container || sparkPoolInitialized) return;
-
-    // 1. Element bóng ma Shockwave (Tái sử dụng 1 phần tử duy nhất)
-    ghostElement = document.createElement('div');
-    ghostElement.className = 'perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none py-4 px-6';
-    ghostElement.style.display = 'none';
-    container.appendChild(ghostElement);
-
-    // 2. Element Pool các hạt tia sáng (Sparkles Pool)
-    for (let i = 0; i < MAX_SPARKS_POOL; i++) {
-        const spark = document.createElement('div');
-        spark.className = 'perfect-spark-anime';
-        spark.style.display = 'none';
-        container.appendChild(spark);
-        sparkPool.push(spark);
-    }
-
-    sparkPoolInitialized = true;
-}
-
-function spawnPerfectShockwaveGhost(text, tierClass) {
-    if (!sparkPoolInitialized) initComboUiPools();
-    if (!ghostElement || !text) return;
-
-    if (typeof performanceModeEnabled !== 'undefined' && performanceModeEnabled) return;
-
-    if (typeof anime !== 'undefined') {
-        anime.remove(ghostElement);
-    }
-
-    ghostElement.className = `perfect-ghost-text text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none py-4 px-6 ${tierClass}`;
-    ghostElement.innerText = text;
-    ghostElement.style.display = 'block';
-
-    if (typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled)) {
-        anime({
-            targets: ghostElement,
-            scale: [1.0, 1.8],
-            opacity: [0.8, 0],
-            duration: 260,
-            easing: 'easeOutQuad',
-            complete: () => {
-                if (ghostElement) ghostElement.style.display = 'none';
-            }
-        });
-    } else {
-        setTimeout(() => {
-            if (ghostElement) ghostElement.style.display = 'none';
-        }, 180);
-    }
-}
-
-// --- HỆ THỐNG HIỂN THỊ COMBO PERFECT TỐI ƯU TUYỆT ĐỐI (0ms CPU, ZERO-GC PRE-CACHED LOOKUPS) ---
-let comboHideTimer = null;
-let sparkAnimToggle = false;
-
-// Bộ đệm chuỗi & Class tĩnh định vị trước (Triệt tiêu 100% việc cấp phát String trong Heap)
+// --- HỆ THỐNG HIỂN THỊ SCORE & COMBO PERFECT TỐI ƯU TUYỆT ĐỐI (GPU-ONLY, ZERO-REFLOW, ZERO-GC PRE-CACHED LOOKUPS) ---
 const MAX_COMBO_PRECACHE = 600;
 const COMBO_TEXT_CACHE = new Array(MAX_COMBO_PRECACHE);
-const COMBO_CLASS_CACHE = new Array(MAX_COMBO_PRECACHE);
+const COMBO_CLASS_CACHE_A = new Array(MAX_COMBO_PRECACHE);
+const COMBO_CLASS_CACHE_B = new Array(MAX_COMBO_PRECACHE);
 
 for (let i = 1; i < MAX_COMBO_PRECACHE; i++) {
     COMBO_TEXT_CACHE[i] = 'PERFECT x' + i;
@@ -553,54 +485,55 @@ for (let i = 1; i < MAX_COMBO_PRECACHE; i++) {
     if (i >= 15) tier = 'combo-tier-4';
     else if (i >= 8) tier = 'combo-tier-3';
     else if (i >= 5) tier = 'combo-tier-2';
-    COMBO_CLASS_CACHE[i] = 'text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none combo-visible ' + tier;
+    const baseComboClass = 'text-2xl md:text-3xl font-black uppercase font-orbitron tracking-wider select-none py-2 px-5 combo-visible ' + tier;
+    COMBO_CLASS_CACHE_A[i] = baseComboClass + ' combo-pop-a';
+    COMBO_CLASS_CACHE_B[i] = baseComboClass + ' combo-pop-b';
 }
 
-// Mảng màu tĩnh định sẵn (Không tạo Array mới mỗi nhịp)
-const SPARK_COLORS_TIER4 = ['#f0abfc', '#d946ef', '#a855f7', '#38bdf8', '#ffffff'];
-const SPARK_COLORS_TIER3 = ['#ff5500', '#ff0055', '#ffaa00', '#ffffff'];
-const SPARK_COLORS_TIER2 = ['#ffaa00', '#ffee00', '#38bdf8', '#ffffff'];
-
 let comboHideDeadline = 0;
+let comboAnimToggle = false;
 
 function triggerPerfectComboUI(comboCount) {
     if (!comboEl) return;
 
-    // 1. Gán Text & Class từ Cache O(1) không tốn bộ nhớ (Zero Allocation)
+    const animAllowed = (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
+    comboAnimToggle = !comboAnimToggle;
+
+    // 1. Gán Text & Dual-Keyframe Class từ Cache O(1) - Zero Allocation & Zero Forced Reflow
     const newText = COMBO_TEXT_CACHE[comboCount] || ('PERFECT x' + comboCount);
     if (comboEl.textContent !== newText) {
         comboEl.textContent = newText;
     }
-    const newClass = COMBO_CLASS_CACHE[comboCount] || COMBO_CLASS_CACHE[MAX_COMBO_PRECACHE - 1];
-    if (comboEl.className !== newClass) {
-        comboEl.className = newClass;
+    const cacheIdx = comboCount < MAX_COMBO_PRECACHE ? comboCount : (MAX_COMBO_PRECACHE - 1);
+    const classCache = comboAnimToggle ? COMBO_CLASS_CACHE_A : COMBO_CLASS_CACHE_B;
+    comboEl.className = classCache[cacheIdx] || classCache[MAX_COMBO_PRECACHE - 1];
+
+    // 2. Bật nhẹ Score khi chạm Perfect (chỉ animate GPU transform, giữ nguyên class màu mode)
+    if (scoreEl && animAllowed) {
+        if (comboAnimToggle) {
+            scoreEl.classList.remove('score-pop-b');
+            scoreEl.classList.add('score-pop-a');
+        } else {
+            scoreEl.classList.remove('score-pop-a');
+            scoreEl.classList.add('score-pop-b');
+        }
     }
 
-    // 2. Smooth Zoom Out tự động sau 1.5 giây bằng deadline frame-driven (Zero GC timer)
+    // 3. Smooth Zoom Out tự động sau 1.5 giây bằng deadline frame-driven (Zero GC timer)
     comboHideDeadline = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 1500;
 }
 
 function clearPerfectComboUI() {
-    if (!comboEl) return;
-
     comboHideDeadline = 0;
-    if (comboHideTimer) {
-        clearTimeout(comboHideTimer);
-        comboHideTimer = null;
+
+    if (comboEl) {
+        // Gỡ pop class trước khi bỏ combo-visible để CSS transition zoom-fade-out chạy mượt
+        comboEl.classList.remove('combo-visible', 'combo-pop-a', 'combo-pop-b');
     }
-
-    lastPerfectComboText = "";
-    lastPerfectComboClass = "";
-    lastPerfectAnimTime = 0;
-
-    // Smooth Zoom Out êm ái
-    comboEl.classList.remove('combo-visible');
+    if (scoreEl) {
+        scoreEl.classList.remove('score-pop-a', 'score-pop-b');
+    }
 }
-
-function spawnPerfectSparks(comboCount) { }
-
-// Replaced/Removed perfect ring
-function triggerPerfectRing(position) { }
 
 let ballTrailInstancedMesh = null;
 const MAX_TRAIL_INSTANCES = 60;
@@ -4830,67 +4763,12 @@ async function gameVictory() {
 
     gameoverScreen.style.display = 'flex';
 
-    let gameOverMiniCard = document.getElementById('gameover-mini-music-card');
-    if (!gameOverMiniCard) {
-        gameOverMiniCard = document.createElement('div');
-        gameOverMiniCard.id = 'gameover-mini-music-card';
-        gameoverScreen.appendChild(gameOverMiniCard);
-    }
-
-    let cardBorder = "border-cyan-500/40 bg-cyan-950/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]";
-    let iconColor = "text-cyan-400";
-    let iconBg = "bg-cyan-900/50 border-cyan-500/50";
-    let textColor = "text-cyan-300";
-    let textShadow = "0 0 8px rgba(34,211,238,0.6)";
-
-    if (isAsian) {
-        cardBorder = "border-red-500/40 bg-red-950/80 shadow-[0_0_20px_rgba(239,68,68,0.2)]";
-        iconColor = "text-red-400";
-        iconBg = "bg-red-900/50 border-red-500/50";
-        textColor = "text-red-300";
-        textShadow = "0 0 8px rgba(239,68,68,0.6)";
-    } else if (isRage) {
-        cardBorder = "border-orange-500/40 bg-orange-950/80 shadow-[0_0_20px_rgba(249,115,22,0.2)]";
-        iconColor = "text-orange-400";
-        iconBg = "bg-orange-900/50 border-orange-500/50";
-        textColor = "text-orange-300";
-        textShadow = "0 0 8px rgba(249,115,22,0.6)";
-    } else if (isEasy) {
-        cardBorder = "border-emerald-500/40 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.2)]";
-        iconColor = "text-emerald-400";
-        iconBg = "bg-emerald-900/50 border-emerald-500/50";
-        textColor = "text-emerald-300";
-        textShadow = "0 0 8px rgba(16,185,129,0.6)";
-    }
-
-    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} bg-[#030916]/95 shadow-[inset_0_1px_0_rgba(251,191,36,0.16)] min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
-
-    const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
-    const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
-    const songArtist = song.artist || (typeof t === 'function' ? t('unknown_artist') : "Unknown Artist");
-    const victoryMiniCardKey = `${selectedSongIndex}_vic_${isAsian ? 'a' : (isRage ? 'r' : (isEasy ? 'e' : 'n'))}`;
-
-    if (gameOverMiniCard.dataset.cardKey !== victoryMiniCardKey) {
-        gameOverMiniCard.dataset.cardKey = victoryMiniCardKey;
-        gameOverMiniCard.innerHTML = `
-            <div class="flex items-center gap-3 w-full">
-                <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
-                    <svg class="w-5 h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                </div>
-                <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
-                    <div class="${textColor} font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
-                        <span class="marquee-text inline-block">${songName}</span>
-                    </div>
-                    <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
-                </div>
-            </div>
-        `;
-
-        const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
-        if (gameOverMarquee && typeof window.applyMarquee === 'function') {
-            window.applyMarquee(gameOverMarquee);
-        }
-    }
+    const gameOverMiniCard = renderGameOverMiniMusicCard({
+        isVictory: true,
+        isAsian,
+        isRage,
+        isEasy
+    });
 
     const hasAnime = typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
     const statsRow = document.getElementById('gameover-stats-row');
@@ -5295,6 +5173,84 @@ window.DefaultGameOverParticleManager = {
     }
 };
 
+// Shared Mini Song Card Renderer for Victory & Game Over screens (in-flow inside #gameover-song-card-slot)
+function renderGameOverMiniMusicCard({ isVictory = false, isAsian = false, isRage = false, isEasy = false } = {}) {
+    const slot = document.getElementById('gameover-song-card-slot');
+    const mountParent = slot || gameoverScreen;
+    if (!mountParent) return null;
+
+    let gameOverMiniCard = document.getElementById('gameover-mini-music-card');
+    if (!gameOverMiniCard) {
+        gameOverMiniCard = document.createElement('div');
+        gameOverMiniCard.id = 'gameover-mini-music-card';
+    }
+    if (gameOverMiniCard.parentElement !== mountParent) {
+        mountParent.appendChild(gameOverMiniCard);
+    }
+
+    let cardBorder = isVictory
+        ? "border-cyan-500/40 bg-cyan-950/80 shadow-[0_0_20px_rgba(34,211,238,0.2)]"
+        : "border-pink-500/40 bg-[#030916]/95 shadow-[0_0_20px_rgba(236,72,153,0.2)]";
+    let iconColor = isVictory ? "text-cyan-400" : "text-pink-400";
+    let iconBg = isVictory ? "bg-cyan-900/50 border-cyan-500/50" : "bg-pink-900/50 border-pink-500/50";
+    let textColor = isVictory ? "text-cyan-300" : "text-pink-300";
+    let textShadow = isVictory ? "0 0 8px rgba(34,211,238,0.6)" : "0 0 8px rgba(236,72,153,0.6)";
+
+    if (isAsian) {
+        cardBorder = "border-red-500/40 bg-red-950/80 shadow-[0_0_20px_rgba(239,68,68,0.2)]";
+        iconColor = "text-red-400";
+        iconBg = "bg-red-900/50 border-red-500/50";
+        textColor = "text-red-300";
+        textShadow = "0 0 8px rgba(239,68,68,0.6)";
+    } else if (isRage) {
+        cardBorder = "border-orange-500/40 bg-orange-950/80 shadow-[0_0_20px_rgba(249,115,22,0.2)]";
+        iconColor = "text-orange-400";
+        iconBg = "bg-orange-900/50 border-orange-500/50";
+        textColor = "text-orange-300";
+        textShadow = "0 0 8px rgba(249,115,22,0.6)";
+    } else if (isEasy) {
+        cardBorder = "border-emerald-500/40 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.2)]";
+        iconColor = "text-emerald-400";
+        iconBg = "bg-emerald-900/50 border-emerald-500/50";
+        textColor = "text-emerald-300";
+        textShadow = "0 0 8px rgba(16,185,129,0.6)";
+    }
+
+    const victoryExtras = isVictory ? " bg-[#030916]/95 shadow-[inset_0_1px_0_rgba(251,191,36,0.16)]" : "";
+    gameOverMiniCard.className = `relative z-20 flex flex-col items-center justify-center px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-2xl border ${cardBorder}${victoryExtras} w-max max-w-[92vw] sm:max-w-md pointer-events-none`;
+
+    const songList = typeof activePlaylist !== 'undefined' ? activePlaylist : playlist;
+    const song = (songList && songList[selectedSongIndex]) ? songList[selectedSongIndex] : {};
+    const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
+    const songArtist = song.artist || (typeof t === 'function' ? t('unknown_artist') : "Unknown Artist");
+    const modeTag = isAsian ? 'a' : (isRage ? 'r' : (isEasy ? 'e' : 'n'));
+    const cardKey = `${selectedSongIndex}_${isVictory ? 'vic' : 'go'}_${modeTag}`;
+
+    if (gameOverMiniCard.dataset.cardKey !== cardKey) {
+        gameOverMiniCard.dataset.cardKey = cardKey;
+        gameOverMiniCard.innerHTML = `
+            <div class="flex items-center gap-2.5 sm:gap-3 w-full">
+                <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                </div>
+                <div class="flex flex-col items-start overflow-hidden min-w-0 flex-1 max-w-[200px] sm:max-w-[260px]">
+                    <div class="${textColor} font-orbitron font-bold text-xs sm:text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
+                        <span class="marquee-text inline-block">${songName}</span>
+                    </div>
+                    <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
+                </div>
+            </div>
+        `;
+
+        const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
+        if (gameOverMarquee && typeof window.applyMarquee === 'function') {
+            window.applyMarquee(gameOverMarquee);
+        }
+    }
+
+    return gameOverMiniCard;
+}
+
 // --- GAME OVER ---
 async function gameOver() {
     releaseGameplayPointerLock();
@@ -5451,67 +5407,12 @@ async function gameOver() {
         if (window.DefaultGameOverParticleManager) window.DefaultGameOverParticleManager.stop();
     }
 
-    let gameOverMiniCard = document.getElementById('gameover-mini-music-card');
-    if (!gameOverMiniCard) {
-        gameOverMiniCard = document.createElement('div');
-        gameOverMiniCard.id = 'gameover-mini-music-card';
-        gameoverScreen.appendChild(gameOverMiniCard);
-    }
-
-    let cardBorder = "border-pink-500/40 bg-[#030916]/95 shadow-[0_0_20px_rgba(236,72,153,0.2)]";
-    let iconColor = "text-pink-400";
-    let iconBg = "bg-pink-900/50 border-pink-500/50";
-    let textColor = "text-pink-300";
-    let textShadow = "0 0 8px rgba(236,72,153,0.6)";
-
-    if (isAsian) {
-        cardBorder = "border-red-500/40 bg-red-950/80 shadow-[0_0_20px_rgba(239,68,68,0.2)]";
-        iconColor = "text-red-400";
-        iconBg = "bg-red-900/50 border-red-500/50";
-        textColor = "text-red-300";
-        textShadow = "0 0 8px rgba(239,68,68,0.6)";
-    } else if (isRage) {
-        cardBorder = "border-orange-500/40 bg-orange-950/80 shadow-[0_0_20px_rgba(249,115,22,0.2)]";
-        iconColor = "text-orange-400";
-        iconBg = "bg-orange-900/50 border-orange-500/50";
-        textColor = "text-orange-300";
-        textShadow = "0 0 8px rgba(249,115,22,0.6)";
-    } else if (isEasy) {
-        cardBorder = "border-emerald-500/40 bg-emerald-950/80 shadow-[0_0_20px_rgba(16,185,129,0.2)]";
-        iconColor = "text-emerald-400";
-        iconBg = "bg-emerald-900/50 border-emerald-500/50";
-        textColor = "text-emerald-300";
-        textShadow = "0 0 8px rgba(16,185,129,0.6)";
-    }
-
-    gameOverMiniCard.className = `absolute top-3 sm:top-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center justify-center px-5 py-2 rounded-2xl border ${cardBorder} min-w-[200px] max-w-[90vw] md:max-w-md pointer-events-none`;
-
-    const song = typeof activePlaylist !== 'undefined' ? activePlaylist[selectedSongIndex] : playlist[selectedSongIndex];
-    const songName = song.name || song.title || (typeof t === 'function' ? t('unknown_track') : "Unknown Track");
-    const songArtist = song.artist || (typeof t === 'function' ? t('unknown_artist') : "Unknown Artist");
-    const goCardKey = `${selectedSongIndex}_go_${isAsian ? 'a' : (isRage ? 'r' : (isEasy ? 'e' : 'n'))}`;
-
-    if (gameOverMiniCard.dataset.cardKey !== goCardKey) {
-        gameOverMiniCard.dataset.cardKey = goCardKey;
-        gameOverMiniCard.innerHTML = `
-            <div class="flex items-center gap-3 w-full">
-                <div class="w-10 h-10 rounded-full ${iconBg} flex items-center justify-center shrink-0">
-                    <svg class="w-5 h-5 ${iconColor} animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
-                </div>
-                <div class="flex flex-col items-start overflow-hidden w-full max-w-[150px]">
-                    <div class="${textColor} font-orbitron font-bold text-sm overflow-hidden whitespace-nowrap w-full relative flex justify-start marquee-container" style="text-shadow: ${textShadow}">
-                        <span class="marquee-text inline-block">${songName}</span>
-                    </div>
-                    <span class="text-gray-400 text-[10px] tracking-widest uppercase mt-0.5 truncate w-full">${songArtist}</span>
-                </div>
-            </div>
-        `;
-
-        const gameOverMarquee = gameOverMiniCard.querySelector('.marquee-text');
-        if (gameOverMarquee && typeof window.applyMarquee === 'function') {
-            window.applyMarquee(gameOverMarquee);
-        }
-    }
+    const gameOverMiniCard = renderGameOverMiniMusicCard({
+        isVictory: false,
+        isAsian,
+        isRage,
+        isEasy
+    });
 
     const hasAnime = typeof anime !== 'undefined' && (typeof uiAnimationsEnabled === 'undefined' || uiAnimationsEnabled);
     const statsRow = document.getElementById('gameover-stats-row');

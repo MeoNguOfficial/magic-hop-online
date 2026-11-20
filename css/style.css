@@ -790,62 +790,113 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     transform: scale(0.96) !important;
 }
 
-/* --- PERFECT TEXT ANIMATION & MULTI-TIER NEON VISUALS --- */
+/* --- SCORE & PERFECT TEXT ANIMATION (REMASTERED GPU-ONLY ZERO-GC) --- */
 
-/* Dynamic Pop & Spring Elastic Animation for PERFECT Text */
-@keyframes perfectPopImpact {
+/* Subtle Score Micro-Pulse on Perfect Hit (GPU transform only) */
+@keyframes scorePerfectPopA {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    32% {
+        transform: translate3d(0, -1.25px, 0) scale(1.0325);
+    }
+    68% {
+        transform: translate3d(0, 0.25px, 0) scale(0.996);
+    }
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@keyframes scorePerfectPopB {
+    0% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    32% {
+        transform: translate3d(0, -1.25px, 0) scale(1.0325);
+    }
+    68% {
+        transform: translate3d(0, 0.25px, 0) scale(0.996);
+    }
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+body:not(.disable-animations) #score.score-pop-a {
+    animation: scorePerfectPopA 0.18s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+body:not(.disable-animations) #score.score-pop-b {
+    animation: scorePerfectPopB 0.18s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Remastered Dual-Keyframe Elastic Pop for PERFECT Text (No filter blur, pure GPU) */
+@keyframes perfectRemasterPopA {
+    0% {
+        opacity: 0.72;
+        transform: translate3d(0, 8px, 0) scale(0.76);
+    }
+    34% {
+        opacity: 1;
+        transform: translate3d(0, -4px, 0) scale(1.18);
+    }
+    68% {
+        opacity: 1;
+        transform: translate3d(0, 1px, 0) scale(0.96);
+    }
+    100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@keyframes perfectRemasterPopB {
+    0% {
+        opacity: 0.72;
+        transform: translate3d(0, 8px, 0) scale(0.76);
+    }
+    34% {
+        opacity: 1;
+        transform: translate3d(0, -4px, 0) scale(1.18);
+    }
+    68% {
+        opacity: 1;
+        transform: translate3d(0, 1px, 0) scale(0.96);
+    }
+    100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+}
+
+@keyframes perfectSweepFlareA {
     0% {
         opacity: 0;
-        transform: scale(0.25) translateY(18px);
-        filter: brightness(2.2) blur(3px);
+        transform: translate3d(0, 0, 0) scaleX(0.22);
     }
     30% {
-        opacity: 1;
-        transform: scale(1.38) translateY(-6px);
-        filter: brightness(1.6) blur(0px);
-    }
-    60% {
-        transform: scale(0.92) translateY(2px);
-        filter: brightness(1.2);
-    }
-    82% {
-        transform: scale(1.08) translateY(-1px);
-        filter: brightness(1.05);
-    }
-    100% {
-        opacity: 1;
-        transform: scale(1) translateY(0);
-        filter: brightness(1);
-    }
-}
-
-/* Hyper Tier Shimmering Rainbow Gradient animation */
-@keyframes hyperShimmer {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* Score Pulse Bounce on hit */
-@keyframes scorePulseHit {
-    0% { transform: scale(1); }
-    40% { transform: scale(1.14); }
-    100% { transform: scale(1); }
-}
-
-.score-pulse {
-    animation: scorePulseHit 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-/* Sparkle Floating Particle Animation */
-@keyframes sparkFloatOut {
-    0% {
-        opacity: 1;
-        transform: translate(-50%, -50%) translate(0, 0) scale(1.2) rotate(0deg);
+        opacity: 0.92;
+        transform: translate3d(0, 0, 0) scaleX(1.06);
     }
     100% {
         opacity: 0;
-        transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(0.1) rotate(var(--rot));
+        transform: translate3d(0, 0, 0) scaleX(0.58);
+    }
+}
+
+@keyframes perfectSweepFlareB {
+    0% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) scaleX(0.22);
+    }
+    30% {
+        opacity: 0.92;
+        transform: translate3d(0, 0, 0) scaleX(1.06);
+    }
+    100% {
+        opacity: 0;
+        transform: translate3d(0, 0, 0) scaleX(0.58);
     }
 }
 
@@ -855,18 +906,33 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     align-items: center;
     justify-content: center;
     pointer-events: none;
-    contain: layout style paint;
+    contain: layout style;
 }
 
 #combo-ui {
     position: relative;
-    /* display: inline-block; */
     will-change: transform, opacity;
-    transform: translate3d(0, 0, 0) scale(0.75);
+    transform: translate3d(0, 6px, 0) scale(0.84);
     transform-origin: center center;
-    transition: transform 0.28s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.28s cubic-bezier(0.25, 1, 0.5, 1);
+    transition: transform 0.22s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.22s ease-out;
     opacity: 0;
     letter-spacing: 0.08em;
+    backface-visibility: hidden;
+}
+
+#combo-ui::after {
+    content: '';
+    position: absolute;
+    left: 16%;
+    right: 16%;
+    bottom: 4px;
+    height: 2px;
+    border-radius: 9999px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0;
+    transform: translate3d(0, 0, 0) scaleX(0.22);
+    pointer-events: none;
+    will-change: transform, opacity;
 }
 
 #combo-ui.combo-visible {
@@ -874,70 +940,52 @@ html:not([data-scrollbar-mode="hidden"]).is-scrolling {
     transform: translate3d(0, 0, 0) scale(1.0);
 }
 
-/* Tier 1: Electric Yellow/Cyan Glow (Combo 1-4) */
-#combo-ui.combo-tier-1 {
-    color: #ffee00;
+body:not(.disable-animations) #combo-ui.combo-visible.combo-pop-a {
+    animation: perfectRemasterPopA 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* Tier 2: Fire Gold Neon Flare (Combo 5-7) */
+body:not(.disable-animations) #combo-ui.combo-visible.combo-pop-b {
+    animation: perfectRemasterPopB 0.24s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+body:not(.disable-animations) #combo-ui.combo-visible.combo-pop-a::after {
+    animation: perfectSweepFlareA 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+body:not(.disable-animations) #combo-ui.combo-visible.combo-pop-b::after {
+    animation: perfectSweepFlareB 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+body.disable-animations #score.score-pop-a,
+body.disable-animations #score.score-pop-b,
+body.disable-animations #combo-ui.combo-visible.combo-pop-a,
+body.disable-animations #combo-ui.combo-visible.combo-pop-b {
+    animation: none !important;
+}
+
+/* Tier 1: Electric Gold/Yellow Neon Glow (Combo 1-4) */
+#combo-ui.combo-tier-1 {
+    color: #fde047;
+    text-shadow: 0 0 8px rgba(253, 224, 71, 0.65), 0 0 18px rgba(250, 204, 21, 0.25);
+}
+
+/* Tier 2: Fire Amber Neon Flare (Combo 5-7) */
 #combo-ui.combo-tier-2 {
     color: #ffaa00;
+    text-shadow: 0 0 9px rgba(255, 170, 0, 0.72), 0 0 20px rgba(255, 136, 0, 0.32);
 }
 
 /* Tier 3: Cyber Orange Flame (Combo 8-14) */
 #combo-ui.combo-tier-3 {
-    color: #ff5500;
+    color: #ff6b1a;
+    text-shadow: 0 0 10px rgba(255, 107, 26, 0.78), 0 0 22px rgba(255, 68, 0, 0.38);
 }
 
 /* Tier 4: Royal Cyber Purple Neon (Combo 15+) */
 #combo-ui.combo-tier-4 {
     color: #f0abfc;
+    text-shadow: 0 0 10px rgba(240, 171, 252, 0.85), 0 0 24px rgba(192, 38, 211, 0.45);
 }
-
-/* Dual-State GPU Spark Particle Elements (Zero-GC Fixed Directions) */
-.perfect-spark {
-    position: absolute;
-    pointer-events: none;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #ffffff;
-    box-shadow: 0 0 8px currentColor, 0 0 16px currentColor;
-    transform: translate3d(-50%, -50%, 0);
-    will-change: transform, opacity;
-    z-index: 20;
-}
-
-@keyframes sparkDir0A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(28px, -24px, 0) scale(0.1); } }
-@keyframes sparkDir0B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(28px, -24px, 0) scale(0.1); } }
-
-@keyframes sparkDir1A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-28px, -24px, 0) scale(0.1); } }
-@keyframes sparkDir1B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-28px, -24px, 0) scale(0.1); } }
-
-@keyframes sparkDir2A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(34px, 6px, 0) scale(0.1); } }
-@keyframes sparkDir2B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(34px, 6px, 0) scale(0.1); } }
-
-@keyframes sparkDir3A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-34px, 6px, 0) scale(0.1); } }
-@keyframes sparkDir3B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-34px, 6px, 0) scale(0.1); } }
-
-@keyframes sparkDir4A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(18px, 30px, 0) scale(0.1); } }
-@keyframes sparkDir4B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(18px, 30px, 0) scale(0.1); } }
-
-@keyframes sparkDir5A { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-18px, 30px, 0) scale(0.1); } }
-@keyframes sparkDir5B { 0% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.3); } 100% { opacity: 0; transform: translate3d(-18px, 30px, 0) scale(0.1); } }
-
-.spark-dir-0-a { animation: sparkDir0A 0.38s ease-out forwards; }
-.spark-dir-0-b { animation: sparkDir0B 0.38s ease-out forwards; }
-.spark-dir-1-a { animation: sparkDir1A 0.38s ease-out forwards; }
-.spark-dir-1-b { animation: sparkDir1B 0.38s ease-out forwards; }
-.spark-dir-2-a { animation: sparkDir2A 0.38s ease-out forwards; }
-.spark-dir-2-b { animation: sparkDir2B 0.38s ease-out forwards; }
-.spark-dir-3-a { animation: sparkDir3A 0.38s ease-out forwards; }
-.spark-dir-3-b { animation: sparkDir3B 0.38s ease-out forwards; }
-.spark-dir-4-a { animation: sparkDir4A 0.38s ease-out forwards; }
-.spark-dir-4-b { animation: sparkDir4B 0.38s ease-out forwards; }
-.spark-dir-5-a { animation: sparkDir5A 0.38s ease-out forwards; }
-.spark-dir-5-b { animation: sparkDir5B 0.38s ease-out forwards; }
 
 /* --- CYBERPUNK MAGIC LOADER --- */
 .magic-loader {
@@ -1006,13 +1054,19 @@ body.disable-animations #music-progress-bar {
 
 #speed,
 #fps-hud,
-#perfect-streak-hud,
-#score,
-#combo-ui-wrapper {
+#perfect-streak-hud {
     contain: layout style paint;
     transform: translate3d(0, 0, 0);
     will-change: transform, opacity;
     isolation: isolate;
+    backface-visibility: hidden;
+}
+
+#score,
+#combo-ui-wrapper {
+    contain: layout style;
+    transform: translate3d(0, 0, 0);
+    will-change: transform, opacity;
     backface-visibility: hidden;
 }
 
