@@ -264,7 +264,7 @@
     </script>
     <!-- AnimeJS for UI animations (Local Vendor) -->
     <script src="js/libs/anime.min.js?v=1.1.0-1"></script>
-    <link rel="stylesheet" href="css/style.css?v=1.1.0-15">
+    <link rel="stylesheet" href="css/style.css?v=1.1.0-17">
 
     <style>
         /* Custom styles for extreme neon glow and layout corrections */
@@ -4835,6 +4835,7 @@
         const scripts = [
             "js/core/config.js",
             "js/services/api.js",
+            "js/core/beatmap-format.js",
             "js/audio/playlist.js",
             "js/services/cacheManager.js",
             "js/services/storage-manager.js",
@@ -4872,7 +4873,7 @@
         ];
 
         const SCRIPT_BUILD_VERSION = window.SCRIPT_BUILD_VERSION = '1.1.0';
-        const ASSET_CACHE_TAG = window.ASSET_CACHE_TAG = '1.1.0-15';
+        const ASSET_CACHE_TAG = window.ASSET_CACHE_TAG = '1.1.0-17';
         function loadScript(src) {
             return new Promise((resolve, reject) => {
                 const s = document.createElement('script');

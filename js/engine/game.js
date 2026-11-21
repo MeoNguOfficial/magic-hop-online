@@ -6011,9 +6011,18 @@ async function handleIntro() {
         bootBeats = [0, 1, 2, 3];
         activePlaylist[selectedSongIndex].beats = bootBeats;
     }
-    beatmapBeats = bootBeats;
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.expandBeatmapForRuntime === 'function') {
+        const expandedBoot = window.BeatmapFormat.expandBeatmapForRuntime(bootBeats);
+        beatmapBeats = expandedBoot.beats.length > 0 ? expandedBoot.beats : [0, 1, 2, 3];
+        beatmapGroupIds = expandedBoot.groupIds;
+    } else {
+        beatmapBeats = bootBeats;
+        beatmapGroupIds = [];
+    }
     const lastBeatVal = beatmapBeats[beatmapBeats.length - 1];
-    BEATMAP_TOTAL_TIME = (Array.isArray(lastBeatVal) ? (lastBeatVal.length >= 2 ? lastBeatVal[1] : lastBeatVal[0]) : lastBeatVal) || 10;
+    BEATMAP_TOTAL_TIME = (window.BeatmapFormat && typeof window.BeatmapFormat.getBeatEndTime === 'function')
+        ? (window.BeatmapFormat.getBeatEndTime(lastBeatVal) || 10)
+        : ((Array.isArray(lastBeatVal) ? (lastBeatVal.length >= 2 ? lastBeatVal[1] : lastBeatVal[0]) : lastBeatVal) || 10);
 
     if (typeof playlistRenderStartIndex !== 'undefined') {
         playlistRenderStartIndex = 0;

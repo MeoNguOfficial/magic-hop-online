@@ -170,7 +170,7 @@ window.FakeBlocksManager = {
     _rowCountsScratch: {},
     
     createFakeTile: function(realTile, timeDiff, forceCount = null) {
-        if (!realTile || (realTile.userData && realTile.userData.isDashTile)) return;
+        if (!realTile || (realTile.userData && (realTile.userData.isDashTile || realTile.userData.forceStraightGroupId > 0))) return;
         const mainX = realTile.position.x;
         const realScale = realTile.userData.scale || 1.0;
         
@@ -589,7 +589,8 @@ window.FakeBlocksManager = {
         return counts;
     },
     
-    willSpawnFakeForNextTile: function(isFirst, timeDiff, isTooClose, nextTimeDiff = 1.0) {
+    willSpawnFakeForNextTile: function(isFirst, timeDiff, isTooClose, nextTimeDiff = 1.0, isInForceStraightGroup = false) {
+        if (isInForceStraightGroup) return false;
         if (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled) return false;
         if (typeof activePlaylist !== 'undefined' && typeof selectedSongIndex !== 'undefined') {
             if (activePlaylist[selectedSongIndex] && activePlaylist[selectedSongIndex].no_fake_block) return false;
@@ -623,6 +624,31 @@ window.FakeBlocksManager = {
                 try { this._recordRealX(tile.position.x); } catch (e) {}
                 return;
             }
+        }
+
+        // Tuyệt đối không sinh khối giả (Fake Block) và không xê dịch vị trí đối với các block thuộc Group Force Straight
+        if (tile && tile.userData && tile.userData.forceStraightGroupId > 0) {
+            const zTolerance = 0.5;
+            this.lastSpawnZ = tile.position.z;
+            this.lastSpawnTime = (typeof tile.userData.time !== 'undefined') ? tile.userData.time : null;
+            this.lastRowId = (typeof tile.userData.rowId !== 'undefined') ? tile.userData.rowId : null;
+            this.realBlocksOnCurrentZ = 1;
+            this.usedSlotsOnCurrentZ.length = 0;
+            this.usedSlotsOnCurrentZ.push(tile.position.x);
+
+            for (let i = this.fakeTiles.length - 1; i >= 0; i--) {
+                const fTile = this.fakeTiles[i];
+                if (Math.abs(fTile.position.z - tile.position.z) < zTolerance) {
+                    this._recycleTile(fTile);
+                    const last = this.fakeTiles.pop();
+                    if (i < this.fakeTiles.length) {
+                        this.fakeTiles[i] = last;
+                    }
+                }
+            }
+
+            try { this._recordRealX(tile.position.x); } catch (e) {}
+            return;
         }
 
         // Bỏ qua các block 16 đầu tiên (Giai đoạn khởi động Warmup), block quá gần nhau về thời gian hoặc block chuyển vòng chơi
@@ -708,7 +734,9 @@ window.FakeBlocksManager = {
                         }
                     } catch (e) {}
 
-                    tile.position.x = freeSlot;
+                    if (!(tile.userData && tile.userData.isForceStraightGroupContinue)) {
+                        tile.position.x = freeSlot;
+                    }
 
                     // Reset và khởi tạo bộ đếm định danh hàng mới cho block thứ 4 này
                     this.lastSpawnZ = tile.position.z;
@@ -717,7 +745,7 @@ window.FakeBlocksManager = {
                     
                     this.realBlocksOnCurrentZ = 1;
                     this.usedSlotsOnCurrentZ.length = 0;
-                    this.usedSlotsOnCurrentZ.push(freeSlot);
+                    this.usedSlotsOnCurrentZ.push(tile.position.x);
 
                     // Ghi lịch sử X cho rule "không quá 2 gạch thẳng"
                     try { this._recordRealX(tile.position.x); } catch (e) {}
@@ -745,34 +773,37 @@ window.FakeBlocksManager = {
                         }
                     }
 
-                    // Nếu 2 khối thật trước đó cùng X và bestSlot cũng giống vậy,
-                    // ép chọn slot khác để tránh 3 khối thẳng liên tiếp.
                     let chosenSlot = bestSlot;
-                    try {
-                        const rowCounts = this._scanRealTilesInSameRow(tile);
-                        const bestKey = Math.round(bestSlot * 100) / 100;
-                        const bestCount = rowCounts[bestKey] || 0;
+                    const isGroupForcedStraightRow = !!(tile.userData && tile.userData.isForceStraightGroupContinue);
+                    if (isGroupForcedStraightRow) {
+                        chosenSlot = tile.position.x;
+                    } else {
+                        try {
+                            const rowCounts = this._scanRealTilesInSameRow(tile);
+                            const bestKey = Math.round(bestSlot * 100) / 100;
+                            const bestCount = rowCounts[bestKey] || 0;
 
-                        // Không chọn slot mà đã có >=2 real tiles
-                        if (bestCount >= 2) {
-                            const alt = availableSlots.find(s => (rowCounts[Math.round(s * 100) / 100] || 0) < 2) || availableSlots.find(s => s !== bestSlot) || availableSlots[0];
-                            if (typeof alt !== 'undefined') chosenSlot = alt;
-                        } else {
-                            const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
-                            const maxTrailing = isHardMode ? 1 : 2;
-                            const trailingCount = this._countTrailingSame(bestSlot);
-                            if (trailingCount >= maxTrailing) {
-                                const alt = availableSlots.find(s => s !== bestSlot) || availableSlots[0];
+                            // Không chọn slot mà đã có >=2 real tiles
+                            if (bestCount >= 2) {
+                                const alt = availableSlots.find(s => (rowCounts[Math.round(s * 100) / 100] || 0) < 2) || availableSlots.find(s => s !== bestSlot) || availableSlots[0];
                                 if (typeof alt !== 'undefined') chosenSlot = alt;
-                            } else if (maxTrailing > 1 && this._lastTwoEqual()) {
-                                const prevVal = this.prevRealXs[this.prevRealXs.length - 1];
-                                if (prevVal === bestSlot) {
-                                    const alt = availableSlots.find(s => s !== bestSlot && s !== prevVal) || availableSlots.find(s => s !== bestSlot);
+                            } else {
+                                const isHardMode = (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled);
+                                const maxTrailing = isHardMode ? 1 : 2;
+                                const trailingCount = this._countTrailingSame(bestSlot);
+                                if (trailingCount >= maxTrailing) {
+                                    const alt = availableSlots.find(s => s !== bestSlot) || availableSlots[0];
                                     if (typeof alt !== 'undefined') chosenSlot = alt;
+                                } else if (maxTrailing > 1 && this._lastTwoEqual()) {
+                                    const prevVal = this.prevRealXs[this.prevRealXs.length - 1];
+                                    if (prevVal === bestSlot) {
+                                        const alt = availableSlots.find(s => s !== bestSlot && s !== prevVal) || availableSlots.find(s => s !== bestSlot);
+                                        if (typeof alt !== 'undefined') chosenSlot = alt;
+                                    }
                                 }
                             }
-                        }
-                    } catch (e) {}
+                        } catch (e) {}
+                    }
 
                     tile.position.x = chosenSlot;
 
@@ -809,6 +840,9 @@ window.FakeBlocksManager = {
         this.lastRowId = currentTileRowId;
         
         // Áp rule: nếu 2 khối thật trước đó có cùng X, thì block thứ 3 không được cùng X nữa
+        // (Ngoại lệ: tile thuộc Group Force Straight <a,b,c,...> bắt buộc giữ nguyên tọa độ X thẳng hàng)
+        const isGroupForcedStraight = !!(tile.userData && tile.userData.isForceStraightGroupContinue);
+        if (!isGroupForcedStraight) {
         try {
             const offset = 4.5;
             const maxTrackX = 4.5;
@@ -848,6 +882,7 @@ window.FakeBlocksManager = {
                 }
             }
         } catch (e) {}
+        }
 
         this.realBlocksOnCurrentZ = 1;
         this.usedSlotsOnCurrentZ.length = 0;

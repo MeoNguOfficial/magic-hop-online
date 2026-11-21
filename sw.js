@@ -29,6 +29,7 @@ const CORE_ASSETS = [
     './warning.html',
     './js/ui/warning-alert.js',
     './js/core/config.js',
+    './js/core/beatmap-format.js',
     './js/core/ui-animations.js',
     './js/core/app-main.js',
     './js/audio/playlist.js',

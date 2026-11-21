@@ -445,6 +445,7 @@ let selectedSongIndex = parseInt(localStorage.getItem('selectedSongIndex')) || 0
 let activePlaylist = [{ name: 'Loading...', url: '', beats: [0, 1, 2, 3] }];
 
 let beatmapBeats = activePlaylist[0].beats;
+let beatmapGroupIds = [];
 let BEATMAP_TOTAL_TIME = 10;
 let SPEED_GAIN_PER_ROUND = 0.21;
 window.SPEED_GAIN_PER_ROUND = SPEED_GAIN_PER_ROUND;
@@ -998,9 +999,18 @@ async function changeSong(index, autoStart = false) {
         changeSongBeats = [0, 1, 2, 3];
         activePlaylist[index].beats = changeSongBeats;
     }
-    beatmapBeats = changeSongBeats;
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.expandBeatmapForRuntime === 'function') {
+        const expanded = window.BeatmapFormat.expandBeatmapForRuntime(changeSongBeats);
+        beatmapBeats = expanded.beats.length > 0 ? expanded.beats : [0, 1, 2, 3];
+        beatmapGroupIds = expanded.groupIds;
+    } else {
+        beatmapBeats = changeSongBeats;
+        beatmapGroupIds = [];
+    }
     const lastBeatVal = beatmapBeats[beatmapBeats.length - 1];
-    BEATMAP_TOTAL_TIME = (Array.isArray(lastBeatVal) ? (lastBeatVal.length >= 2 ? lastBeatVal[1] : lastBeatVal[0]) : lastBeatVal) || 10;
+    BEATMAP_TOTAL_TIME = (window.BeatmapFormat && typeof window.BeatmapFormat.getBeatEndTime === 'function')
+        ? (window.BeatmapFormat.getBeatEndTime(lastBeatVal) || 10)
+        : ((Array.isArray(lastBeatVal) ? (lastBeatVal.length >= 2 ? lastBeatVal[1] : lastBeatVal[0]) : lastBeatVal) || 10);
 
     // --- ÁP DỤNG SPEED TỪ PLAYLIST (NẾU CÓ) ---
     if (activePlaylist[index].speed != null) {

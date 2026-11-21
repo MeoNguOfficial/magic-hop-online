@@ -871,9 +871,15 @@ let rapidBurstState = {
 };
 
 function getBeatStartTime(item) {
+    if (typeof window !== 'undefined' && window.BeatmapFormat && typeof window.BeatmapFormat.getBeatStartTime === 'function') {
+        return window.BeatmapFormat.getBeatStartTime(item);
+    }
     return Array.isArray(item) ? item[0] : (item || 0);
 }
 function getBeatEndTime(item) {
+    if (typeof window !== 'undefined' && window.BeatmapFormat && typeof window.BeatmapFormat.getBeatEndTime === 'function') {
+        return window.BeatmapFormat.getBeatEndTime(item);
+    }
     return Array.isArray(item) ? (item.length >= 2 ? item[1] : item[0]) : (item || 0);
 }
 function isDashBeat(item) {
@@ -897,8 +903,12 @@ function spawnTile(isFirst = false) {
     let currentItem = 0;
     let currStartTime = 0;
     let currEndTime = 0;
+    let spawnedBeatIdx = 0;
+    let prevBeatIdx = -1;
 
     if (isFirst) {
+        spawnedBeatIdx = 0;
+        prevBeatIdx = -1;
         tileX = 0;
         currentBeatIndex = 1;
         transitionStep = 0;
@@ -949,16 +959,22 @@ function spawnTile(isFirst = false) {
 
         currentItem = 0;
         if (currentBeatIndex === 0) {
+            spawnedBeatIdx = 0;
+            prevBeatIdx = -1;
             timeDiff = 2.0;
             currentBeatIndex = 1;
             tileX = prevX;
             currentItem = beatmapBeats[0];
         } else if (currentBeatIndex === 1) {
+            spawnedBeatIdx = 1;
+            prevBeatIdx = 0;
             currentItem = beatmapBeats[1];
             timeDiff = getBeatStartTime(currentItem) - prevEndTime;
             if (timeDiff < 0.1) timeDiff = Math.max(0.3, timeDiff);
             currentBeatIndex = 2;
         } else {
+            spawnedBeatIdx = currentBeatIndex;
+            prevBeatIdx = currentBeatIndex - 1;
             currentItem = beatmapBeats[currentBeatIndex];
             timeDiff = getBeatStartTime(currentItem) - prevEndTime;
             currentBeatIndex++;
@@ -983,6 +999,16 @@ function spawnTile(isFirst = false) {
         tileZ = startZ;
         lastTileZ = tileZ;
     }
+
+    // Kiểm tra xem block hiện tại có nằm trong cùng Group Force Straight <a,b,c,...> hay không
+    const currGroupId = (typeof beatmapGroupIds !== 'undefined' && Array.isArray(beatmapGroupIds) && spawnedBeatIdx >= 0)
+        ? (beatmapGroupIds[spawnedBeatIdx] || 0)
+        : 0;
+    const prevGroupId = (typeof beatmapGroupIds !== 'undefined' && Array.isArray(beatmapGroupIds) && prevBeatIdx >= 0)
+        ? (beatmapGroupIds[prevBeatIdx] || 0)
+        : 0;
+    const isInForceStraightGroup = currGroupId > 0;
+    const isForceStraightGroupContinue = (!isFirst && !isRoundStartBlock && currGroupId > 0 && currGroupId === prevGroupId);
 
     // Giai đoạn khởi động: 16 block đầu của lượt đầu tiên (dựa trên currentBeatIndex & roundCount)
     const isInitial16Blocks = roundCount === 0 && currentBeatIndex <= 16;
@@ -1071,6 +1097,13 @@ function spawnTile(isFirst = false) {
             maxDeltaX = window.EasyModeManager.calculateMaxDeltaX(timeDiff, maxDeltaX);
         }
 
+        // Group Force Straight <a,b,c,...>: buộc thẳng hàng tuyệt đối trong cùng group (ghi đè toàn bộ rule lệch của mọi độ khó)
+        if (isForceStraightGroupContinue) {
+            fixedDeltaX = null;
+            forceStraight = true;
+            maxDeltaX = 0;
+        }
+
         if (!isRoundStartBlock) {
             if (fixedDeltaX !== null) {
                 // Biên làn là ±4.5 (khớp clamp bên dưới); với offset 1 block (4.3) biên 4.2 cũ sẽ loại gần hết vị trí
@@ -1108,7 +1141,7 @@ function spawnTile(isFirst = false) {
                     tileX = prevX;
                 } else {
                     const isAsianMode = typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled;
-                    const willSpawnFake = typeof window.FakeBlocksManager !== 'undefined' && window.FakeBlocksManager.willSpawnFakeForNextTile(isFirst, timeDiff, isTooClose, nextTimeDiff);
+                    const willSpawnFake = !isInForceStraightGroup && typeof window.FakeBlocksManager !== 'undefined' && window.FakeBlocksManager.willSpawnFakeForNextTile(isFirst, timeDiff, isTooClose, nextTimeDiff, isInForceStraightGroup);
                     // Asian Mode: Chỉ khoảng 0.25s - <0.30s mới giữ nguyên logic Asian slot cũ (slot >= 4.0: [-4.5, 0, 4.5])
                     // Còn >= 0.30s dùng logic khoảng cách bình thường như Hard Mode!
                     const isNoFakeInAsianMode = isAsianMode && !willSpawnFake && !isInitial16Blocks && (timeDiff >= 0.25 && timeDiff < 0.30);
@@ -1147,7 +1180,7 @@ function spawnTile(isFirst = false) {
         const isAsian = (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled);
         const isNormal = (window.chosenPlayMode === 'normal' || window.chosenPlayMode === 'endless') && !isEasy;
 
-        if (!isEasy && (isNormal || isHard || isAsian)) {
+        if (!isEasy && (isNormal || isHard || isAsian) && !isInForceStraightGroup) {
             const diagonalChance = isAsian ? 0.75 : (isHard ? 0.65 : 0.50);
             if (Math.random() < diagonalChance) {
                 const maxSlant = isAsian ? 3.5 : (isHard ? 3.0 : 2.5);
@@ -1268,11 +1301,8 @@ function spawnTile(isFirst = false) {
     let tileTime = 0;
     if (beatmapBeats && beatmapBeats.length > 0) {
         let idx = Math.max(0, currentBeatIndex - 1);
-        if (idx < beatmapBeats.length) {
-            tileTime = beatmapBeats[idx];
-        } else {
-            tileTime = beatmapBeats[beatmapBeats.length - 1];
-        }
+        const targetItem = idx < beatmapBeats.length ? beatmapBeats[idx] : beatmapBeats[beatmapBeats.length - 1];
+        tileTime = getBeatStartTime(targetItem);
     }
 
     const isVortex = isVortexBeat(currentItem);
@@ -1301,6 +1331,8 @@ function spawnTile(isFirst = false) {
     ud.bounceIntensity = 1.0;
     ud.baseY = 0;
     ud.isDashTile = isDash;
+    ud.forceStraightGroupId = currGroupId;
+    ud.isForceStraightGroupContinue = isForceStraightGroupContinue;
     ud.dashLength = isDash ? dashInfo.dashLength : 0;
     ud.dashStartTime = isDash ? dashInfo.startTime : currStartTime;
     ud.dashEndTime = isDash ? dashInfo.endTime : currEndTime;
@@ -1372,11 +1404,14 @@ function spawnTile(isFirst = false) {
         } else if (typeof window.HardModeManager !== 'undefined' && window.HardModeManager.isEnabled) {
             threshold = window.HardModeManager.getMovingBlockThreshold();
         }
-        let canBeMoving = isEndlessMode && !isInitialWarmup && !isTooClose && (timeDiff >= threshold) && (nextTimeDiff >= threshold);
+        let canBeMoving = isEndlessMode && !isInitialWarmup && !isTooClose && !isInForceStraightGroup && (timeDiff >= threshold) && (nextTimeDiff >= threshold);
         if (isDash && dashInfo && Math.abs(dashInfo.deltaX || 0) > 0.01) {
             canBeMoving = false;
         }
         window.MovingBlocksManager.processTile(tile, canBeMoving, roundCount, timeDiff);
+        if (isInForceStraightGroup && ud.isMoving) {
+            ud.isMoving = false;
+        }
         if (isDash && window.DashBlocksManager) {
             window.DashBlocksManager.enforceOrientation(tile);
         }

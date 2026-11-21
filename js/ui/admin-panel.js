@@ -2365,22 +2365,50 @@ function attachBeatmapEvents() {
 }
 
 // --- BEATMAP CRUD LOGIC ---
+function parseBeatmapJsonTextSafe(jsonStr) {
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.parseBeatmapJsonText === 'function') {
+        return window.BeatmapFormat.parseBeatmapJsonText(jsonStr);
+    }
+    return JSON.parse(jsonStr);
+}
+
 function getValidBeatsArray(beatsStr) {
     if (!beatsStr || !beatsStr.trim()) throw new Error("Dữ liệu Beats không được để trống.");
+    const trimmed = beatsStr.trim();
+
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.normalizeBeatsArray === 'function') {
+        if (trimmed.startsWith('[')) {
+            let parsed;
+            try { parsed = parseBeatmapJsonTextSafe(trimmed); }
+            catch (e) { throw new Error("Sai định dạng JSON (Beats phải là một mảng)."); }
+            if (!Array.isArray(parsed) || parsed.length === 0) {
+                throw new Error("Dữ liệu Beats phải là một mảng không rỗng.");
+            }
+            const normalized = window.BeatmapFormat.normalizeBeatsArray(parsed, false);
+            if (!normalized || normalized.length === 0) {
+                throw new Error("Dữ liệu Beats không chứa mốc beat hợp lệ.");
+            }
+            return normalized;
+        }
+        const normalizedFromText = window.BeatmapFormat.normalizeBeatsArray(trimmed, false);
+        if (!normalizedFromText || normalizedFromText.length === 0) {
+            throw new Error("Sai định dạng JSON (Beats phải là một mảng).");
+        }
+        return normalizedFromText;
+    }
+
     let parsed;
-    try { parsed = JSON.parse(beatsStr); }
+    try { parsed = JSON.parse(trimmed); }
     catch (e) { throw new Error("Sai định dạng JSON (Beats phải là một mảng)."); }
     if (!Array.isArray(parsed) || parsed.length === 0) {
         throw new Error("Dữ liệu Beats phải là một mảng không rỗng.");
     }
     return parsed.map(item => {
         if (Array.isArray(item)) {
-            // 1. Vortex / Beat Accent: Mảng 1 phần tử [x]
             if (item.length === 1) {
                 const single = Number(item[0]);
                 return (!isNaN(single) && single >= 0) ? [single] : null;
             }
-            // 2. Dash Block: Mảng >= 2 phần tử [start, end]
             const start = Number(item[0]);
             const end = Number(item[item.length - 1]);
             if (!isNaN(start) && !isNaN(end) && end > start && start >= 0) {
@@ -2463,7 +2491,10 @@ async function processImportQueue() {
         const file = importQueue[0];
         try {
             const jsonString = await file.text();
-            const data = JSON.parse(jsonString);
+            const data = parseBeatmapJsonTextSafe(jsonString);
+            if (data && Array.isArray(data.beats) && window.BeatmapFormat && typeof window.BeatmapFormat.normalizeBeatsArray === 'function') {
+                data.beats = window.BeatmapFormat.normalizeBeatsArray(data.beats, false) || data.beats;
+            }
             await ApiService.importBeatmapJson(data);
             logToConsole(`Beatmap ${file.name} imported successfully.`, 'success');
             successCount++;
@@ -2510,7 +2541,10 @@ document.getElementById('admin-beatmap-import-form')?.addEventListener('submit',
         setSubmitButtonState(btnSubmit, 'loading', { text: 'ĐANG NẠP JSON...' });
 
         if (jsonString) {
-            const data = JSON.parse(jsonString);
+            const data = parseBeatmapJsonTextSafe(jsonString);
+            if (data && Array.isArray(data.beats) && window.BeatmapFormat && typeof window.BeatmapFormat.normalizeBeatsArray === 'function') {
+                data.beats = window.BeatmapFormat.normalizeBeatsArray(data.beats, false) || data.beats;
+            }
             await ApiService.importBeatmapJson(data);
             logToConsole(`Beatmap imported from text successfully.`, 'success');
             if (jsonInput) jsonInput.value = '';

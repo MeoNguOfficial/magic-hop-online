@@ -20,6 +20,7 @@ const prevFrameBtn = document.getElementById("prevFrameBtn");
 const nextFrameBtn = document.getElementById("nextFrameBtn");
 const dashToggleBtn = document.getElementById("dashToggleBtn");
 const vortexToggleBtn = document.getElementById("vortexToggleBtn");
+const straightToggleBtn = document.getElementById("straightToggleBtn");
 const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
 const quickAlignBtn = document.getElementById("quickAlignBtn");
 
@@ -104,13 +105,38 @@ const ctxClearSelection = document.getElementById("ctxClearSelection");
 const ctxAddBeatHere = document.getElementById("ctxAddBeatHere");
 const ctxToggleDash = document.getElementById("ctxToggleDash");
 const ctxToggleVortex = document.getElementById("ctxToggleVortex");
+const ctxToggleStraight = document.getElementById("ctxToggleStraight");
 
-// --- HELPER FUNCTIONS CHO DASH TILE [start, end] & VORTEX TILE [x] ---
+// --- HELPER FUNCTIONS CHO DASH TILE [start, end], VORTEX TILE [x] & FORCE STRAIGHT GROUP "<a,b,c,...>" ---
+function parseStraightGroup(b) {
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.parseForceStraightGroup === "function") {
+        return window.BeatmapFormat.parseForceStraightGroup(b);
+    }
+    return null;
+}
+
+function isStraightGroupBeat(b) {
+    return parseStraightGroup(b) !== null;
+}
+
+function formatStraightGroup(items) {
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.formatForceStraightGroup === "function") {
+        return window.BeatmapFormat.formatForceStraightGroup(items);
+    }
+    return "<" + items.map(v => Array.isArray(v) ? JSON.stringify(v) : String(v)).join(",") + ">";
+}
+
 function getBeatStartTime(b) {
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.getBeatStartTime === "function") {
+        return window.BeatmapFormat.getBeatStartTime(b);
+    }
     return Array.isArray(b) ? b[0] : b;
 }
 
 function getBeatEndTime(b) {
+    if (window.BeatmapFormat && typeof window.BeatmapFormat.getBeatEndTime === "function") {
+        return window.BeatmapFormat.getBeatEndTime(b);
+    }
     return Array.isArray(b) ? (b.length >= 2 ? b[1] : b[0]) : b;
 }
 
@@ -327,8 +353,8 @@ function checkAndHighlightBeats(currentTime) {
 
     markers.forEach(marker => {
         const startTime = parseFloat(marker.dataset.time);
-        const isDash = marker.dataset.isDash === "true";
-        const endTime = isDash ? parseFloat(marker.dataset.endTime) : startTime;
+        const isRange = marker.dataset.isDash === "true" || marker.dataset.isStraight === "true";
+        const endTime = isRange ? parseFloat(marker.dataset.endTime) : startTime;
         if (currentTime >= startTime && currentTime <= endTime + tolerance) {
             if (!marker.classList.contains("active-beat")) {
                 marker.classList.add("active-beat");
@@ -416,7 +442,9 @@ async function loadFromAdmin() {
         
         // Load beats
         if (Array.isArray(data.beats)) {
-            beats = [...data.beats];
+            beats = (window.BeatmapFormat && typeof window.BeatmapFormat.normalizeBeatsArray === "function")
+                ? window.BeatmapFormat.normalizeBeatsArray(data.beats, false)
+                : [...data.beats];
             updateBeatList();
         }
 
@@ -579,12 +607,30 @@ function updateSelectionIndicator() {
     }
 
     if (vortexToggleBtn) {
-        vortexToggleBtn.disabled = (selectedBeatsIndices.size === 0);
-        if (selectedBeatsIndices.size > 0) {
-            const allVortex = Array.from(selectedBeatsIndices).every(idx => isVortexBeat(beats[idx]));
+        const nonGroupIndices = Array.from(selectedBeatsIndices).filter(idx => !isDashBeat(beats[idx]) && !isStraightGroupBeat(beats[idx]));
+        vortexToggleBtn.disabled = (nonGroupIndices.length === 0);
+        if (nonGroupIndices.length > 0) {
+            const allVortex = nonGroupIndices.every(idx => isVortexBeat(beats[idx]));
             vortexToggleBtn.title = allVortex ? "Chuyển thành Gạch Thường (V)" : "Chuyển thành Gạch Xoáy [x] (V)";
         } else {
             vortexToggleBtn.title = "Chọn mốc nhịp để chuyển Gạch Xoáy (V)";
+        }
+    }
+
+    if (straightToggleBtn) {
+        if (selectedBeatsIndices.size === 1) {
+            const idx = Array.from(selectedBeatsIndices)[0];
+            const isGroup = isStraightGroupBeat(beats[idx]);
+            straightToggleBtn.disabled = !isGroup;
+            straightToggleBtn.title = isGroup
+                ? "Tách Group Thẳng Hàng <a,b,c,...> thành các nhịp riêng (S)"
+                : "Chọn >= 2 nhịp để gộp Group Thẳng Hàng (S)";
+        } else if (selectedBeatsIndices.size >= 2) {
+            straightToggleBtn.disabled = false;
+            straightToggleBtn.title = "Gộp các nhịp đã chọn thành Group Thẳng Hàng <a,b,c,...> (S)";
+        } else {
+            straightToggleBtn.disabled = true;
+            straightToggleBtn.title = "Chọn >= 2 nhịp để tạo Group Thẳng Hàng (S)";
         }
     }
 
@@ -635,9 +681,9 @@ document.addEventListener("mousemove", (e) => {
         const markers = timelineBeats.querySelectorAll(".timeline-beat-marker");
         markers.forEach((marker) => {
             const index = parseInt(marker.dataset.index);
-            const isDash = marker.dataset.isDash === "true";
+            const isRange = marker.dataset.isDash === "true" || marker.dataset.isStraight === "true";
             const sTime = parseFloat(marker.dataset.time);
-            const eTime = isDash ? parseFloat(marker.dataset.endTime) : sTime;
+            const eTime = isRange ? parseFloat(marker.dataset.endTime) : sTime;
             const markerLeft = (sTime / duration) * rect.width;
             const markerRight = (eTime / duration) * rect.width;
             if (markerRight >= x && markerLeft <= x + width) selectedBeatsIndices.add(index);
@@ -874,6 +920,31 @@ function renderTimelineMarkers() {
             tooltip.className = "marker-tooltip";
             tooltip.textContent = `[${startTime.toFixed(3)}s → ${endTime.toFixed(3)}s]`;
             marker.appendChild(tooltip);
+        } else if (isStraightGroupBeat(beat)) {
+            const groupItems = parseStraightGroup(beat) || [];
+            const endPercent = Math.min(100, (endTime / duration) * 100);
+            const widthPercent = Math.max(0.001, endPercent - startPercent);
+            marker.className = "timeline-beat-marker timeline-straight-marker";
+            marker.style.left = `${startPercent}%`;
+            marker.style.width = `${widthPercent}%`;
+            marker.dataset.isStraight = "true";
+            marker.dataset.time = startTime;
+            marker.dataset.endTime = endTime;
+            marker.dataset.index = index;
+
+            const span = Math.max(0.0001, endTime - startTime);
+            groupItems.forEach((member) => {
+                const mStart = getBeatStartTime(member);
+                const pip = document.createElement("div");
+                pip.className = "straight-pip";
+                pip.style.left = `${((mStart - startTime) / span) * 100}%`;
+                marker.appendChild(pip);
+            });
+
+            const tooltip = document.createElement("div");
+            tooltip.className = "marker-tooltip";
+            tooltip.textContent = `📏 ${beat}`;
+            marker.appendChild(tooltip);
         } else {
             const isVortex = isVortexBeat(beat);
             marker.className = isVortex ? "timeline-beat-marker timeline-vortex-marker" : "timeline-beat-marker";
@@ -962,6 +1033,25 @@ document.addEventListener("mousemove", (e) => {
                 const min = Math.floor(newTime / 60); const sec = Math.floor(newTime % 60); const ms = Math.floor((newTime % 1) * 1000);
                 timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
             }
+        } else if (isStraightGroupBeat(initialTime)) {
+            const shifted = (window.BeatmapFormat && typeof window.BeatmapFormat.shiftBeatItem === "function")
+                ? window.BeatmapFormat.shiftBeatItem(initialTime, deltaTime, duration)
+                : initialTime;
+            const newS = getBeatStartTime(shifted);
+            const newE = getBeatEndTime(shifted);
+
+            const marker = timelineBeats.querySelector(`.timeline-beat-marker[data-index="${index}"]`);
+            if (marker) {
+                marker.style.left = `${(newS / duration) * 100}%`;
+                marker.style.width = `${((newE - newS) / duration) * 100}%`;
+                const tooltip = marker.querySelector(".marker-tooltip");
+                if (tooltip) tooltip.textContent = `📏 ${shifted}`;
+            }
+
+            if (parseInt(draggedMarker.dataset.index) === index) {
+                const min = Math.floor(newS / 60); const sec = Math.floor(newS % 60); const ms = Math.floor((newS % 1) * 1000);
+                timeLabel.textContent = `${String(min).padStart(2, "0")}:${String(sec).padStart(2, "0")}.${String(ms).padStart(3, "0")}`;
+            }
         } else {
             let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
 
@@ -1007,6 +1097,12 @@ document.addEventListener("mouseup", (e) => {
                     const tuple = [newTime];
                     beats[index] = tuple;
                     updatedIndicesValue.push(tuple);
+                } else if (isStraightGroupBeat(initialTime)) {
+                    const shifted = (window.BeatmapFormat && typeof window.BeatmapFormat.shiftBeatItem === "function")
+                        ? window.BeatmapFormat.shiftBeatItem(initialTime, deltaTime, duration)
+                        : initialTime;
+                    beats[index] = shifted;
+                    updatedIndicesValue.push(shifted);
                 } else {
                     let newTime = Math.max(0, Math.min(duration, Number((initialTime + deltaTime).toFixed(3))));
                     beats[index] = newTime;
@@ -1035,28 +1131,14 @@ importBtn.onclick = () => {
     const rawData = output.value.trim();
     if (!rawData) { showNotification("Khung văn bản trống. Vui lòng nhập chuỗi JSON Beatmap vào!", "Lỗi nhập liệu", true); return; }
     try {
-        const parsedData = JSON.parse(rawData);
-        if (parsedData && Array.isArray(parsedData.beats)) {
-            const newBeats = [];
-            parsedData.beats.forEach(b => {
-                if (Array.isArray(b) && b.length >= 2) {
-                    const s = Number(b[0]);
-                    const e = Number(b[1]);
-                    if (!isNaN(s) && !isNaN(e) && s >= 0 && e > s) {
-                        newBeats.push([Number(s.toFixed(3)), Number(e.toFixed(3))]);
-                    }
-                } else if (Array.isArray(b) && b.length === 1) {
-                    const s = Number(b[0]);
-                    if (!isNaN(s) && s >= 0) {
-                        newBeats.push([Number(s.toFixed(3))]);
-                    }
-                } else {
-                    const t = Number(b);
-                    if (!isNaN(t) && t >= 0) {
-                        newBeats.push(Number(t.toFixed(3)));
-                    }
-                }
-            });
+        const parsedData = (window.BeatmapFormat && typeof window.BeatmapFormat.parseBeatmapJsonText === "function")
+            ? window.BeatmapFormat.parseBeatmapJsonText(rawData)
+            : JSON.parse(rawData);
+        const rawBeats = Array.isArray(parsedData) ? parsedData : (parsedData && Array.isArray(parsedData.beats) ? parsedData.beats : null);
+        if (rawBeats) {
+            const newBeats = (window.BeatmapFormat && typeof window.BeatmapFormat.normalizeBeatsArray === "function")
+                ? window.BeatmapFormat.normalizeBeatsArray(rawBeats, true)
+                : rawBeats;
             if (audio.duration && newBeats.some(b => getBeatEndTime(b) > audio.duration)) {
                 showNotification("Cảnh báo: Có mốc beat vượt quá độ dài bài hát.", "Lưu ý");
             }
@@ -1065,7 +1147,7 @@ importBtn.onclick = () => {
             clearSelection(); updateBeatList(); playTickSound(1000, 0.08);
             status.textContent = "Đã cập nhật danh sách beat từ JSON thành công!"; status.className = "active";
             setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
-        } else showNotification("Cấu trúc JSON thiếu thuộc tính 'beats'. Ví dụ: {\"beats\": [1.2, [3.4, 5.0]]}", "Định dạng sai", true);
+        } else showNotification("Cấu trúc JSON thiếu thuộc tính 'beats'. Ví dụ: {\"beats\": [1.2, \"<2.0,2.5,3.0>\", [3.4, 5.0]]}", "Định dạng sai", true);
     } catch (err) { showNotification("Không thể phân tích cú pháp chuỗi JSON này.", "Lỗi cú pháp JSON", true); }
 };
 
@@ -1185,6 +1267,12 @@ btnGroupShift.onclick = () => {
             const tuple = [newTime];
             beats[index] = tuple;
             updatedTimes.push(tuple);
+        } else if (isStraightGroupBeat(initialVal)) {
+            const shifted = (window.BeatmapFormat && typeof window.BeatmapFormat.shiftBeatItem === "function")
+                ? window.BeatmapFormat.shiftBeatItem(initialVal, shiftSeconds, duration)
+                : initialVal;
+            beats[index] = shifted;
+            updatedTimes.push(shifted);
         } else {
             let newTime = Math.max(0, Math.min(duration, Number((initialVal + shiftSeconds).toFixed(3))));
             beats[index] = newTime;
@@ -1212,6 +1300,9 @@ function copySelectedBeats() {
     const baseTime = getBeatStartTime(selectedItems[0]);
 
     clipboardBeats = selectedItems.map(item => {
+        if (window.BeatmapFormat && typeof window.BeatmapFormat.offsetBeatItemFromBase === "function") {
+            return window.BeatmapFormat.offsetBeatItemFromBase(item, baseTime);
+        }
         if (isDashBeat(item)) {
             return [Number((item[0] - baseTime).toFixed(3)), Number((item[1] - baseTime).toFixed(3))];
         }
@@ -1229,7 +1320,10 @@ function pasteBeats(targetTime) {
     if (clipboardBeats.length === 0) { showNotification("Clipboard trống!", "Lưu ý"); return; }
     const duration = audio.duration || 9999, newPastedBeats = [];
     clipboardBeats.forEach(offset => {
-        if (isDashBeat(offset)) {
+        if (window.BeatmapFormat && typeof window.BeatmapFormat.applyBaseOffsetToBeatItem === "function") {
+            const shifted = window.BeatmapFormat.applyBaseOffsetToBeatItem(offset, targetTime, duration);
+            if (shifted !== null) newPastedBeats.push(shifted);
+        } else if (isDashBeat(offset)) {
             const s = Number((targetTime + offset[0]).toFixed(3));
             const e = Number((targetTime + offset[1]).toFixed(3));
             if (s >= 0 && e <= duration) newPastedBeats.push([s, e]);
@@ -1512,6 +1606,10 @@ function toggleDashBeat() {
         const indices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
         const b1 = beats[indices[0]];
         const b2 = beats[indices[1]];
+        if (isStraightGroupBeat(b1) || isStraightGroupBeat(b2)) {
+            showNotification("Hãy tách Group Thẳng Hàng (S) trước khi gộp thành Gạch Lướt.", "Lưu ý");
+            return;
+        }
         const s = Number(getBeatStartTime(b1).toFixed(3));
         const e = Number(getBeatEndTime(b2).toFixed(3));
 
@@ -1545,17 +1643,17 @@ function toggleVortexBeat() {
         return;
     }
 
+    const sortedIndices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
+    const nonDashIndices = sortedIndices.filter(idx => !isDashBeat(beats[idx]) && !isStraightGroupBeat(beats[idx]));
+
+    if (nonDashIndices.length === 0) {
+        showNotification("Không thể áp dụng Gạch Xoáy trực tiếp cho Gạch Lướt hoặc Group Thẳng Hàng.", "Lưu ý");
+        return;
+    }
+
     pushHistory();
     let vortexCount = 0;
     let normalCount = 0;
-
-    const sortedIndices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
-    const nonDashIndices = sortedIndices.filter(idx => !isDashBeat(beats[idx]));
-
-    if (nonDashIndices.length === 0) {
-        showNotification("Không thể áp dụng Gạch Xoáy cho Gạch Lướt (Dash Tile).", "Lưu ý");
-        return;
-    }
 
     const allVortex = nonDashIndices.every(idx => isVortexBeat(beats[idx]));
 
@@ -1582,6 +1680,78 @@ function toggleVortexBeat() {
     }
     status.className = "active";
     setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+}
+
+function toggleStraightGroup() {
+    if (selectedBeatsIndices.size === 1) {
+        const idx = Array.from(selectedBeatsIndices)[0];
+        const target = beats[idx];
+        const items = parseStraightGroup(target);
+        if (items && items.length >= 1) {
+            pushHistory();
+            beats.splice(idx, 1, ...items);
+            sortBeatsArray(beats);
+            selectedBeatsIndices.clear();
+            items.forEach(val => {
+                const foundIdx = beats.findIndex(b => {
+                    if (isDashBeat(val) && isDashBeat(b)) return b[0] === val[0] && b[1] === val[1];
+                    if (isVortexBeat(val) && isVortexBeat(b)) return b[0] === val[0];
+                    return b === val;
+                });
+                if (foundIdx !== -1) selectedBeatsIndices.add(foundIdx);
+            });
+            updateBeatList();
+            playTickSound(900, 0.08);
+            status.textContent = `📏 Đã tách Group Thẳng Hàng thành ${items.length} mốc nhịp`;
+            status.className = "active";
+            setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+            return;
+        }
+    }
+
+    if (selectedBeatsIndices.size >= 2) {
+        const indices = Array.from(selectedBeatsIndices).sort((a, b) => a - b);
+        const collected = [];
+        indices.forEach(idx => {
+            const item = beats[idx];
+            const parsedGroup = parseStraightGroup(item);
+            if (parsedGroup && parsedGroup.length > 0) {
+                collected.push(...parsedGroup);
+            } else {
+                collected.push(item);
+            }
+        });
+
+        if (collected.length < 2) {
+            showNotification("Cần ít nhất 2 mốc nhịp để tạo Group Thẳng Hàng <a,b,...>.", "Group Thẳng Hàng");
+            return;
+        }
+
+        const groupToken = formatStraightGroup(collected);
+        if (!groupToken) {
+            showNotification("Không thể tạo Group Thẳng Hàng từ các mốc đã chọn.", "Lỗi Group", true);
+            return;
+        }
+
+        pushHistory();
+        for (let i = indices.length - 1; i >= 0; i--) {
+            beats.splice(indices[i], 1);
+        }
+        beats.push(groupToken);
+        sortBeatsArray(beats);
+        selectedBeatsIndices.clear();
+        const newIdx = beats.indexOf(groupToken);
+        if (newIdx !== -1) selectedBeatsIndices.add(newIdx);
+
+        updateBeatList();
+        playTickSound(1150, 0.12);
+        status.textContent = `📏 Đã tạo Group Thẳng Hàng (${collected.length} nhịp): ${groupToken}`;
+        status.className = "active";
+        setTimeout(() => { if (!recording) { status.textContent = "Sẵn sàng"; status.className = ""; } }, 3000);
+        return;
+    }
+
+    showNotification("Chọn >= 2 mốc nhịp để gộp thành Group Thẳng Hàng <a,b,c,...> (nhấn S), hoặc chọn 1 Group để tách lại.", "Group Thẳng Hàng");
 }
 
 // --- CHUỘT PHẢI ---
@@ -1633,7 +1803,7 @@ function showContextMenu(clientX, clientY, isClickedOnMarker) {
 
     if (ctxToggleVortex) {
         if (selectedBeatsIndices.size > 0) {
-            const nonDashIndices = Array.from(selectedBeatsIndices).filter(idx => !isDashBeat(beats[idx]));
+            const nonDashIndices = Array.from(selectedBeatsIndices).filter(idx => !isDashBeat(beats[idx]) && !isStraightGroupBeat(beats[idx]));
             if (nonDashIndices.length > 0) {
                 ctxToggleVortex.classList.remove("disabled");
                 const allVortex = nonDashIndices.every(idx => isVortexBeat(beats[idx]));
@@ -1644,6 +1814,29 @@ function showContextMenu(clientX, clientY, isClickedOnMarker) {
             }
         } else {
             ctxToggleVortex.classList.add("disabled");
+        }
+    }
+
+    if (ctxToggleStraight) {
+        if (selectedBeatsIndices.size === 1) {
+            const idx = Array.from(selectedBeatsIndices)[0];
+            if (isStraightGroupBeat(beats[idx])) {
+                ctxToggleStraight.classList.remove("disabled");
+                const label = ctxToggleStraight.querySelector("span");
+                if (label) label.textContent = "📏 Tách Group Thẳng Hàng";
+            } else {
+                ctxToggleStraight.classList.add("disabled");
+                const label = ctxToggleStraight.querySelector("span");
+                if (label) label.textContent = "📏 Group Thẳng Hàng <a,b>";
+            }
+        } else if (selectedBeatsIndices.size >= 2) {
+            ctxToggleStraight.classList.remove("disabled");
+            const label = ctxToggleStraight.querySelector("span");
+            if (label) label.textContent = "📏 Gộp Group Thẳng Hàng";
+        } else {
+            ctxToggleStraight.classList.add("disabled");
+            const label = ctxToggleStraight.querySelector("span");
+            if (label) label.textContent = "📏 Group Thẳng Hàng <a,b>";
         }
     }
 
@@ -1678,6 +1871,9 @@ if (ctxToggleDash) {
 if (ctxToggleVortex) {
     ctxToggleVortex.onclick = (e) => { e.stopPropagation(); toggleVortexBeat(); hideContextMenu(); };
 }
+if (ctxToggleStraight) {
+    ctxToggleStraight.onclick = (e) => { e.stopPropagation(); toggleStraightGroup(); hideContextMenu(); };
+}
 ctxGroupAlign.onclick = (e) => { e.stopPropagation(); quickGroupAlign(); hideContextMenu(); };
 ctxGroupShift.onclick = (e) => { e.stopPropagation(); openGroupActions(); hideContextMenu(); };
 ctxSelectAll.onclick = (e) => { e.stopPropagation(); if (beats.length > 0) { selectedBeatsIndices.clear(); beats.forEach((_, index) => { if (index > 0) selectedBeatsIndices.add(index); }); updateSelectionIndicator(); playTickSound(1000, 0.05); } hideContextMenu(); };
@@ -1704,6 +1900,7 @@ document.addEventListener("keydown", e => {
     if (e.code === "Space") { e.preventDefault(); togglePlayPause(); return; }
     if (!e.ctrlKey && key === "d") { e.preventDefault(); toggleDashBeat(); return; }
     if (!e.ctrlKey && key === "v") { e.preventDefault(); toggleVortexBeat(); return; }
+    if (!e.ctrlKey && key === "s") { e.preventDefault(); toggleStraightGroup(); return; }
     if (e.ctrlKey && key === "g") { e.preventDefault(); openGroupActions(); return; }
     if (!e.ctrlKey && key === "e") { e.preventDefault(); quickGroupAlign(); return; }
     if (e.code === "ArrowLeft") {
@@ -1757,6 +1954,7 @@ if (prevFrameBtn) prevFrameBtn.onclick = () => stepFrame(-0.05);
 if (nextFrameBtn) nextFrameBtn.onclick = () => stepFrame(0.05);
 if (dashToggleBtn) dashToggleBtn.onclick = () => toggleDashBeat();
 if (vortexToggleBtn) vortexToggleBtn.onclick = () => toggleVortexBeat();
+if (straightToggleBtn) straightToggleBtn.onclick = () => toggleStraightGroup();
 if (deleteSelectedBtn) deleteSelectedBtn.onclick = () => deleteSelectedBeats();
 if (quickAlignBtn) quickAlignBtn.onclick = () => quickGroupAlign();
 

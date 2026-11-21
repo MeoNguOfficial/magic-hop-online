@@ -1,6 +1,9 @@
 const MENU_BGM_URL = "https://an4sdmu4yskbqrq6.public.blob.vercel-storage.com/new-bg-menu.mp3";
 
 function normalizeBeats(beats) {
+    if (typeof window !== 'undefined' && window.BeatmapFormat && typeof window.BeatmapFormat.normalizeBeatsArray === 'function') {
+        return window.BeatmapFormat.normalizeBeatsArray(beats, false);
+    }
     if (!beats) return null;
     let arr = null;
     if (Array.isArray(beats)) {

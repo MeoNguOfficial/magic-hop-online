@@ -70,6 +70,14 @@ window.MovingBlocksManager = {
             tile.userData = { _movingIdx: -1 };
         }
 
+        // Tuyệt đối không cho phép khối di chuyển (Move Block) bên trong Group Force Straight
+        if (tile.userData.forceStraightGroupId > 0) {
+            canBeMoving = false;
+            this.movingGroupCount = 0;
+            this.activeGroupType = null;
+            return;
+        }
+
         let isMovingThisTile = false;
         const isEasyMode = (typeof window.EasyModeManager !== 'undefined' && window.EasyModeManager.isEnabled);
         const isAsianMode = (typeof window.AsianModeManager !== 'undefined' && window.AsianModeManager.isEnabled);
@@ -190,8 +198,8 @@ window.MovingBlocksManager = {
         for (let i = this.allMovingTiles.length - 1; i >= 0; i--) {
             const tile = this.allMovingTiles[i];
 
-            // Loại khỏi danh sách khi block đã bị thu hồi về pool (parent = null), không phải khối di chuyển hoặc đã cập nhật trong frame
-            if (!tile || !tile.userData || !tile.userData.isMoving || !tile.parent || tile.position.z > ballZ + 30 || tile.userData._lastMoveFrame === frameId) {
+            // Loại khỏi danh sách khi block đã bị thu hồi về pool (parent = null), không phải khối di chuyển, thuộc Group Force Straight hoặc đã cập nhật trong frame
+            if (!tile || !tile.userData || !tile.userData.isMoving || tile.userData.forceStraightGroupId > 0 || !tile.parent || tile.position.z > ballZ + 30 || tile.userData._lastMoveFrame === frameId) {
                 if (tile && tile.userData && tile.userData.isClone) {
                     if (typeof scene !== 'undefined' && scene) {
                         scene.remove(tile);
